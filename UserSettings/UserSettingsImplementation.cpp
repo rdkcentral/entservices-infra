@@ -26,7 +26,8 @@
 namespace WPEFramework {
 namespace Plugin {
 
-const std::map<string, string> UserSettingsImplementation::usersettingsDefaultMap = {{USERSETTINGS_AUDIO_DESCRIPTION_KEY, "false"},
+const std::map<string, string> UserSettingsImplementation::usersettingsDefaultMap =
+                                                                 {{USERSETTINGS_AUDIO_DESCRIPTION_KEY, "false"},
                                                                  {USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY, ""},
                                                                  {USERSETTINGS_PRESENTATION_LANGUAGE_KEY, ""},
                                                                  {USERSETTINGS_CAPTIONS_KEY, "false"},
@@ -38,7 +39,11 @@ const std::map<string, string> UserSettingsImplementation::usersettingsDefaultMa
                                                                  {USERSETTINGS_LIVE_WATERSHED_KEY, "false"},
                                                                  {USERSETTINGS_PLAYBACK_WATERSHED_KEY, "false"},
                                                                  {USERSETTINGS_BLOCK_NOT_RATED_CONTENT_KEY, "false"},
-                                                                 {USERSETTINGS_PIN_ON_PURCHASE_KEY, "false"}};
+                                                                 {USERSETTINGS_PIN_ON_PURCHASE_KEY, "false"},
+                                                                 {USERSETTINGS_HIGH_CONTRAST_KEY, "false"},
+                                                                 {USERSETTINGS_VOICE_GUIDANCE_KEY, "false"},
+                                                                 {USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, "0.0"},
+                                                                 {USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, "false"}};
 
 SERVICE_REGISTRATION(UserSettingsImplementation, 1, 0);
 
@@ -291,8 +296,40 @@ void UserSettingsImplementation::Dispatch(Event event, const JsonValue params)
               }
          break;
 
+         case HIGH_CONTRAST_CHANGED:
+              while (index != _userSettingNotification.end())
+              {
+                  (*index)->OnHighContrastChanged(params.Boolean());
+                  ++index;
+              }
+         break;
+
+         case VOICE_GUIDANCE_CHANGED:
+              while (index != _userSettingNotification.end())
+              {
+                  (*index)->OnVoiceGuidanceChanged(params.Boolean());
+                  ++index;
+              }
+         break;
+
+         case VOICE_GUIDANCE_RATE_CHANGED:
+              while (index != _userSettingNotification.end())
+              {
+                  (*index)->OnVoiceGuidanceRateChanged(params.Double());
+                  ++index;
+              }
+         break;
+
+         case VOICE_GUIDANCE_HINTS_CHANGED:
+              while (index != _userSettingNotification.end())
+              {
+                  (*index)->OnVoiceGuidanceHintsChanged(params.Boolean());
+                  ++index;
+              }
+         break;
+
          default:
-             break;
+           break;
      }
 
      _adminLock.Unlock();
@@ -353,6 +390,22 @@ void UserSettingsImplementation::ValueChanged(const Exchange::IStore2::ScopeType
     else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_PIN_ON_PURCHASE_KEY) == 0))
     {
         dispatchEvent(PIN_ON_PURCHASE_CHANGED, JsonValue((bool)(value.compare("true")==0)?true:false));
+    }
+    else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_HIGH_CONTRAST_KEY) == 0))
+    {
+        dispatchEvent(HIGH_CONTRAST_CHANGED, JsonValue((bool)(value.compare("true")==0)?true:false));
+    }
+    else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_VOICE_GUIDANCE_KEY) == 0))
+    {
+        dispatchEvent(VOICE_GUIDANCE_CHANGED, JsonValue((bool)(value.compare("true")==0)?true:false));
+    }
+    else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_VOICE_GUIDANCE_RATE_KEY) == 0))
+    {
+        dispatchEvent(VOICE_GUIDANCE_RATE_CHANGED, JsonValue((double)value));
+    }
+    else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY) == 0))
+    {
+        dispatchEvent(VOICE_GUIDANCE_HINTS_CHANGED, JsonValue((bool)(value.compare("true")==0)?true:false));
     }
     else
     {
@@ -731,6 +784,125 @@ uint32_t UserSettingsImplementation::GetPinOnPurchase(bool &pinOnPurchase) const
     }
     return status;
 }
+
+uint32_t UserSettingsImplementation::SetHighContrast(const bool enabled)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+
+    LOGINFO("enabled: %d", enabled);
+    status = SetUserSettingsValue(USERSETTINGS_HIGH_CONTRAST_KEY, (enabled)?"true":"false");
+    return status;
+}
+
+uint32_t UserSettingsImplementation::GetHighContrast(bool &enabled) const
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    std::string value = "";
+
+    status = GetUserSettingsValue(USERSETTINGS_HIGH_CONTRAST_KEY, value);
+
+    if(Core::ERROR_NONE == status)
+    {
+
+        if (0 == value.compare("true"))
+        {
+            enabled = true;
+        }
+        else
+        {
+            enabled = false;
+        }
+    }
+    return status;
+}
+
+uint32_t UserSettingsImplementation::SetVoiceGuidance(const bool enabled)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+
+    LOGINFO("enabled: %d", enabled);
+    status = SetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_KEY, (enabled)?"true":"false");
+    return status;
+}
+
+uint32_t UserSettingsImplementation::GetVoiceGuidance(bool &enabled) const
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    std::string value = "";
+
+    status = GetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_KEY, value);
+
+    if(Core::ERROR_NONE == status)
+    {
+
+        if (0 == value.compare("true"))
+        {
+            enabled = true;
+        }
+        else
+        {
+            enabled = false;
+        }
+    }
+    return status;
+}
+
+uint32_t UserSettingsImplementation::SetVoiceGuidanceRate(const double rate)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+
+    LOGINFO("rate: %lf", rate);
+    status = SetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, rate);
+    return status;
+}
+
+uint32_t UserSettingsImplementation::GetVoiceGuidanceRate(double &rate) const
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    std::string value = "";
+
+    status = GetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, value);
+
+    if(Core::ERROR_NONE == status)
+    {
+
+        if (0 == value.compare("true"))
+        {
+            pinOnPurchase = true;
+        }
+        else
+        {
+            pinOnPurchase = false;
+        }
+    }
+    return status;
+}
+
+uint32_t UserSettingsImplementation::SetVoiceGuidanceHints(const bool hints)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+
+    LOGINFO("hints: %d", hints);
+    status = SetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, (hints)?"true":"false");
+    return status;
+}
+
+uint32_t UserSettingsImplementation::GetVoiceGuidanceHints(bool &hints) const
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    std::string value = std::to_string(hints);
+
+    status = GetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, value);
+
+    if(Core::ERROR_NONE == status)
+    {
+        hints = std::stod(value);
+    }
+    return status;
+}
+
+
+
 
 } // namespace Plugin
 } // namespace WPEFramework

@@ -147,6 +147,30 @@ namespace Plugin {
                     Exchange::JUserSettings::Event::OnPinOnPurchaseChanged(_parent, pinOnPurchase);
                 }
 
+                void OnHighContrastChanged(const bool enabled) override
+                {
+                    LOGINFO("HighContrastChanged: %d\n", enabled);
+                    Exchange::JUserSettings::Event::OnHighContrastChanged(_parent, enabled);
+                }
+
+                void OnVoiceGuidanceChanged(const bool enabled) override
+                {
+                    LOGINFO("VoiceGuidanceChanged: %d\n", enabled);
+                    Exchange::JUserSettings::Event::OnVoiceGuidanceChanged(_parent, enabled);
+                }
+
+                void OnVoiceGuidanceRateChanged(const double rate) override
+                {
+                    LOGINFO("GuidanceRateChanged: %lf\n", rate);
+                    Exchange::JUserSettings::Event::OnVoiceGuidanceRateChanged(_parent, rate);
+                }
+
+                void OnVoiceGuidanceHintsChanged(const bool hints) override
+                {
+                    LOGINFO("GuidanceHintsChanged: %d\n", hints);
+                    Exchange::JUserSettings::Event::OnVoiceGuidanceHintsChanged(_parent, hints);
+                }
+
             private:
                 UserSettings& _parent;
         };
