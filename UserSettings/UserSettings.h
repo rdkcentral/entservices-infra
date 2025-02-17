@@ -60,12 +60,10 @@ namespace Plugin {
 
                 void Activated(RPC::IRemoteConnection*) override
                 {
-                    LOGINFO("UserSettings Notification Activated");
                 }
 
                 void Deactivated(RPC::IRemoteConnection *connection) override
                 {
-                   LOGINFO("UserSettings Notification Deactivated");
                    _parent.Deactivated(connection);
                 }
 
