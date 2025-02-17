@@ -164,6 +164,7 @@ namespace WPEFramework
     {
         if (connection->Id() == _connectionId) {
             ASSERT(nullptr != _service);
+            LOGINFO("UserSettings Notification Deactivated");
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
