@@ -401,7 +401,7 @@ void UserSettingsImplementation::ValueChanged(const Exchange::IStore2::ScopeType
     }
     else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_VOICE_GUIDANCE_RATE_KEY) == 0))
     {
-        dispatchEvent(VOICE_GUIDANCE_RATE_CHANGED, JsonValue((double)value));
+        dispatchEvent(VOICE_GUIDANCE_RATE_CHANGED, JsonValue((double)(std::stod(value))));
     }
     else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY) == 0))
     {
@@ -852,7 +852,7 @@ uint32_t UserSettingsImplementation::SetVoiceGuidanceRate(const double rate)
     uint32_t status = Core::ERROR_GENERAL;
 
     LOGINFO("rate: %lf", rate);
-    status = SetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, rate);
+    status = SetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, std::to_string(rate));
     return status;
 }
 
@@ -862,18 +862,9 @@ uint32_t UserSettingsImplementation::GetVoiceGuidanceRate(double &rate) const
     std::string value = "";
 
     status = GetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, value);
-
     if(Core::ERROR_NONE == status)
     {
-
-        if (0 == value.compare("true"))
-        {
-            pinOnPurchase = true;
-        }
-        else
-        {
-            pinOnPurchase = false;
-        }
+        rate = std::stod(value);
     }
     return status;
 }
@@ -890,19 +881,23 @@ uint32_t UserSettingsImplementation::SetVoiceGuidanceHints(const bool hints)
 uint32_t UserSettingsImplementation::GetVoiceGuidanceHints(bool &hints) const
 {
     uint32_t status = Core::ERROR_GENERAL;
-    std::string value = std::to_string(hints);
+    std::string value = "";
 
     status = GetUserSettingsValue(USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, value);
-
     if(Core::ERROR_NONE == status)
     {
-        hints = std::stod(value);
+
+        if (0 == value.compare("true"))
+        {
+            hints = true;
+        }
+        else
+        {
+            hints = false;
+        }
     }
     return status;
 }
-
-
-
 
 } // namespace Plugin
 } // namespace WPEFramework
