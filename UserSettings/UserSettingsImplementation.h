@@ -121,7 +121,7 @@ namespace Plugin {
             HIGH_CONTRAST_CHANGED,
             VOICE_GUIDANCE_CHANGED,
             VOICE_GUIDANCE_RATE_CHANGED,
-            VOICE_GUIDANCE_HINTS_CHANGED,
+            VOICE_GUIDANCE_HINTS_CHANGED
         };
 
         class EXTERNAL Job : public Core::IDispatch {
@@ -192,14 +192,14 @@ namespace Plugin {
         uint32_t GetBlockNotRatedContent(bool &blockNotRatedContent) const override;
         uint32_t SetPinOnPurchase(const bool pinOnPurchase) override;
         uint32_t GetPinOnPurchase(bool &pinOnPurchase) const override;
-        uint32_t SetHighContrast(const bool enabled);
-        uint32_t GetHighContrast(bool &enabled) const;
-        uint32_t SetVoiceGuidance(const bool enabled);
-        uint32_t GetVoiceGuidance(bool &enabled) const;
-        uint32_t SetVoiceGuidanceRate(const double rate);
-        uint32_t GetVoiceGuidanceRate(double &rate) const;
-        uint32_t SetVoiceGuidanceHints(const bool hints);
-        uint32_t GetVoiceGuidanceHints(bool &hints) const;
+        uint32_t SetHighContrast(const bool enabled) override;
+        uint32_t GetHighContrast(bool &enabled) const override;
+        uint32_t SetVoiceGuidance(const bool enabled) override;
+        uint32_t GetVoiceGuidance(bool &enabled) const override;
+        uint32_t SetVoiceGuidanceRate(const double rate) override;
+        uint32_t GetVoiceGuidanceRate(double &rate) const override;
+        uint32_t SetVoiceGuidanceHints(const bool hints) override;
+        uint32_t GetVoiceGuidanceHints(bool &hints) const override;
 
         // IConfiguration methods
         uint32_t Configure(PluginHost::IShell* service) override;
