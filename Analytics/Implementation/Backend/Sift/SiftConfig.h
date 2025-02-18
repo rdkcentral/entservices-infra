@@ -24,6 +24,8 @@
 #include <mutex>
 #include <memory>
 
+#include <interfaces/IAuthService.h>
+
 namespace WPEFramework
 {
     namespace Plugin
@@ -123,6 +125,34 @@ namespace WPEFramework
                 std::map<std::string, std::map<std::string, Callback>> mCallbacks;
             };
 
+            class MonitorAuthService : public Exchange::IAuthService::INotification {
+            private:
+                MonitorAuthService(const MonitorKeys&) = delete;
+                MonitorAuthService& operator=(const MonitorAuthService&) = delete;
+            
+            public:
+                MonitorAuthService() {}
+                ~MonitorAuthService() = default;
+
+                typedef std::function<void(const std::string &)> Callback;
+
+                void OnActivationStatusChanged(const string &oldActivationStatus, const string &newActivationStatus) override;
+                void OnServiceAccountIdChanged(const string &oldServiceAccountId, const string &newServiceAccountId) override {}
+                void AuthTokenChanged() override {}
+                void SessionTokenChanged() override {}
+                void ServiceAccessTokenChanged() override {}
+
+                void RegisterActivationStatusCallback(Callback callback) { mActivationStatusCallback = callback; }
+
+                BEGIN_INTERFACE_MAP(MonitorAuthService)
+                INTERFACE_ENTRY(Exchange::IAuthService::INotification)
+                END_INTERFACE_MAP
+
+            private:
+                Callback mActivationStatusCallback;
+            };
+
+
         private:
             void TriggerInitialization();
             void InitializeKeysMap();
@@ -131,7 +161,7 @@ namespace WPEFramework
             uint32_t GetValueFromPersistent(const string &ns, const string &key, string &value);
             void UpdateXboValues();
             bool UpdateTimeZone();
-            void OnActivationStatusChanged(const JsonObject& parameters);
+            void OnActivationStatusChanged(const string &newServiceAccountId);
 
             static void ActivatePlugin(PluginHost::IShell *shell, const char *callSign);
             static bool IsPluginActivated(PluginHost::IShell *shell, const char *callSign);
@@ -139,6 +169,7 @@ namespace WPEFramework
 
             std::thread mInitializationThread;
             Core::Sink<MonitorKeys> mMonitorKeys;
+            Core::Sink<MonitorAuthService> mMonitorAuthService;
             std::mutex mMutex;
             Attributes mAttributes;
             StoreConfig mStoreConfig;
@@ -146,7 +177,7 @@ namespace WPEFramework
             PluginHost::IShell *mShell;
             std::map<std::string, std::map<std::string, std::string*>> mKeysMap;
             SystemTimePtr mSystemTime;
-            std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> mAuthServiceLink;
+            Exchange::IAuthService *mAuthservicePlugin;
         };
 
         typedef std::unique_ptr<SiftConfig> SiftConfigPtr;
