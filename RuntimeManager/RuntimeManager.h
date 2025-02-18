@@ -21,16 +21,16 @@
 
 #include "Module.h"
 #include <interfaces/IRuntimeManager.h>
+#include <interfaces/IConfiguration.h>
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
-#include <mutex>
 
 namespace WPEFramework
 {
     namespace Plugin
     {
         class RuntimeManager : public PluginHost::IPlugin
-	{
+        {
             public:
                 RuntimeManager(const RuntimeManager&) = delete;
                 RuntimeManager& operator=(const RuntimeManager&) = delete;
@@ -40,7 +40,7 @@ namespace WPEFramework
 
                 BEGIN_INTERFACE_MAP(RuntimeManager)
                 INTERFACE_ENTRY(PluginHost::IPlugin)
-                INTERFACE_AGGREGATE(Exchange::IRuntimeManager, mRuntimeManagerImplementation)
+                INTERFACE_AGGREGATE(Exchange::IRuntimeManager, mRuntimeManagerImpl)
                 END_INTERFACE_MAP
 
                 /* IPlugin methods  */
@@ -54,10 +54,11 @@ namespace WPEFramework
             public /* members */:
                 static RuntimeManager* sInstance;
 
-	    private: /* members */
-                PluginHost::IShell* _service{};
+            private: /* members */
+                PluginHost::IShell* mCurrentService{};
                 uint32_t mConnectionId;
-                Exchange::IRuntimeManager* mRuntimeManagerImplementation;
+                Exchange::IRuntimeManager* mRuntimeManagerImpl;
+                Exchange::IConfiguration* mRuntimeManagerConfigure;
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */

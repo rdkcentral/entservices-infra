@@ -1,4 +1,4 @@
-# If not stated otherwise in this file or this component's license file the
+# If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
 # Copyright 2024 RDK Management
@@ -17,8 +17,9 @@
 
 set(PLUGIN_NAME RuntimeManager)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
-set(PLUGIN_RUNTIME_MANAGER_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
+set(PLUGIN_RUNTIME_MANAGER_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_RUNTIME_MANAGER_AUTOSTART false CACHE STRING "Automatically start RuntimeManager plugin")
 set(PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES "")
 set(PLUGIN_RUNTIME_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start RuntimeManager plugin")
@@ -26,6 +27,9 @@ set(PLUGIN_RUNTIME_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start Run
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_MAJOR=1)
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_MINOR=0)
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_PATCH=0)
+
+set(RUNTIME_MANAGER_IMPLEMENTATION ${PLUGIN_NAME}Implementation)
+add_definitions(-DPLUGIN_RUNTIME_MANAGER_IMPLEMENTATION_NAME="${RUNTIME_MANAGER_IMPLEMENTATION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -35,7 +39,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         RuntimeManager.cpp
-	RuntimeManagerImplementation.cpp
         Module.cpp
 )
 
@@ -54,10 +57,24 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
+add_library(${PLUGIN_IMPLEMENTATION} SHARED
+    RuntimeManagerImplementation.cpp
+    Module.cpp)
+
 include_directories(../helpers)
+
+set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
 
 set(RUNTIME_MANAGER_INCLUDES $ENV{RUNTIME_MANAGER_INCLUDES})
 separate_arguments(RUNTIME_MANAGER_INCLUDES)
 include_directories(BEFORE ${RUNTIME_MANAGER_INCLUDES})
+
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
+    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES})
+
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

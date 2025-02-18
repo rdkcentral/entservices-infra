@@ -44,7 +44,11 @@ namespace WPEFramework
 
         RuntimeManager* RuntimeManager::sInstance = nullptr;
 
-        RuntimeManager::RuntimeManager(): _service(nullptr), mConnectionId(0), mRuntimeManagerImplementation(nullptr)
+        RuntimeManager::RuntimeManager():
+            mCurrentService(nullptr),
+            mConnectionId(0),
+            mRuntimeManagerImpl(nullptr),
+            mRuntimeManagerConfigure(nullptr)
         {
             SYSLOG(Logging::Startup, (_T("RuntimeManager Constructor")));
             RuntimeManager::sInstance = this;
@@ -54,38 +58,83 @@ namespace WPEFramework
         {
             SYSLOG(Logging::Startup, (_T("RuntimeManager Destructor")));
             RuntimeManager::sInstance = nullptr;
-	    mRuntimeManagerImplementation = nullptr;
         }
 
         const string RuntimeManager::Initialize(PluginHost::IShell* service )
         {
-            //uint32_t result = Core::ERROR_GENERAL;
-            string retStatus = "";
+            string retMessage = "";
+
             ASSERT(nullptr != service);
             ASSERT(0 == mConnectionId);
-            ASSERT(nullptr == _service);
+            ASSERT(nullptr == mCurrentService);
+            ASSERT(nullptr == mRuntimeManagerImpl);
+
             SYSLOG(Logging::Startup, (_T("RuntimeManager::Initialize: PID=%u"), getpid()));
-            //{
-            //    SYSLOG(Logging::Startup, (_T("RuntimeManager::Initialize: service is not valid")));
-            //    retStatus = _T("RuntimeManager plugin could not be initialised");
-            //}
-	    _service = service;
-	    _service->AddRef(); 
-	    mRuntimeManagerImplementation = _service->Root<Exchange::IRuntimeManager>(mConnectionId, 5000, _T("RuntimeManagerImplementation"));
-            return retStatus;
+            mCurrentService = service;
+
+            if (nullptr != mCurrentService)
+            {
+                mCurrentService->AddRef();
+
+                if (nullptr == (mRuntimeManagerImpl = mCurrentService->Root<Exchange::IRuntimeManager>(mConnectionId, 5000, _T("RuntimeManagerImplementation"))))
+                {
+                    SYSLOG(Logging::Startup, (_T("RuntimeManager::Initialize: object creation failed")));
+                    retMessage = _T("RuntimeManager plugin could not be initialised");
+                }
+                else if (nullptr == (mRuntimeManagerConfigure = mRuntimeManagerImpl->QueryInterface<Exchange::IConfiguration>()))
+                {
+                    SYSLOG(Logging::Startup, (_T("RuntimeManager::Initialize: did not provide a configuration interface")));
+                    retMessage = _T("RuntimeManager implementation did not provide a configuration interface");
+                }
+                else
+                {
+                    if (Core::ERROR_NONE != mRuntimeManagerConfigure->Configure(mCurrentService))
+                    {
+                        SYSLOG(Logging::Startup, (_T("RuntimeManager::Initialize: could not be configured")));
+                        retMessage = _T("RuntimeManager could not be configured");
+                    }
+                }
+            }
+            else
+            {
+                SYSLOG(Logging::Startup, (_T("RuntimeManager::Initialize: service is not valid")));
+                retMessage = _T("RuntimeManager plugin could not be initialised");
+            }
+
+            if (0 != retMessage.length())
+            {
+                Deinitialize(service);
+            }
+
+            return retMessage;
         }
 
         void RuntimeManager::Deinitialize(PluginHost::IShell* service)
         {
-            SYSLOG(Logging::Startup, (_T("RuntimeManager::Deinitialize: PID=%u"), getpid()));
-            ASSERT(_service == service);
-            if (nullptr != mRuntimeManagerImplementation)
+            ASSERT(mCurrentService == service);
+
+            SYSLOG(Logging::Shutdown, (string(_T("RuntimeManager::Deinitialize"))));
+
+            if (nullptr != mRuntimeManagerImpl)
             {
+                if (nullptr != mRuntimeManagerConfigure)
+                {
+                    mRuntimeManagerConfigure->Release();
+                    mRuntimeManagerConfigure = nullptr;
+                }
+
                 // Stop processing:
                 RPC::IRemoteConnection* connection = service->RemoteConnection(mConnectionId);
-                VARIABLE_IS_NOT_USED uint32_t result = mRuntimeManagerImplementation->Release();
-                mRuntimeManagerImplementation = nullptr;
+                VARIABLE_IS_NOT_USED uint32_t result = mRuntimeManagerImpl->Release();
+
+                mRuntimeManagerImpl = nullptr;
+
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
                 ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // If this was running in a (container) process...
                 if (nullptr != connection)
                 {
                    // Lets trigger the cleanup sequence for
@@ -96,9 +145,10 @@ namespace WPEFramework
                    connection->Release();
                 }
             }
+
             mConnectionId = 0;
-            _service->Release();
-	    _service = nullptr;
+            mCurrentService->Release();
+            mCurrentService = nullptr;
             SYSLOG(Logging::Shutdown, (string(_T("RuntimeManager de-initialised"))));
         }
 

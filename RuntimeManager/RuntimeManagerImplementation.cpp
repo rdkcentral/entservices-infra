@@ -24,22 +24,39 @@ namespace WPEFramework
     namespace Plugin
     {
         SERVICE_REGISTRATION(RuntimeManagerImplementation, 1, 0);
+        RuntimeManagerImplementation* RuntimeManagerImplementation::_instance = nullptr;
 
         RuntimeManagerImplementation::RuntimeManagerImplementation()
+        : mRuntimeManagerImplLock()
+        , mCurrentservice(nullptr)
         {
             LOGINFO("Create RuntimeManagerImplementation Instance");
+            if (nullptr == RuntimeManagerImplementation::_instance)
+            {
+                RuntimeManagerImplementation::_instance = this;
+            }
+        }
+
+        RuntimeManagerImplementation* RuntimeManagerImplementation::getInstance()
+        {
+            return _instance;
         }
 
         RuntimeManagerImplementation::~RuntimeManagerImplementation()
         {
             LOGINFO("Delete RuntimeManagerImplementation Instance");
+            if (nullptr != mCurrentservice)
+            {
+               mCurrentservice->Release();
+               mCurrentservice = nullptr;
+            }
         }
 
         Core::hresult RuntimeManagerImplementation::Register(Exchange::IRuntimeManager::INotification *notification)
         {
             ASSERT (nullptr != notification);
         
-            mAdminLock.Lock();
+            mRuntimeManagerImplLock.Lock();
         
             /* Make sure we can't register the same notification callback multiple times */
             if (std::find(mRuntimeManagerNotification.begin(), mRuntimeManagerNotification.end(), notification) == mRuntimeManagerNotification.end())
@@ -49,7 +66,7 @@ namespace WPEFramework
                 notification->AddRef();
             }
         
-            mAdminLock.Unlock();
+            mRuntimeManagerImplLock.Unlock();
         
             return Core::ERROR_NONE;
         }
@@ -60,7 +77,7 @@ namespace WPEFramework
         
             ASSERT (nullptr != notification);
         
-            mAdminLock.Lock();
+            mRuntimeManagerImplLock.Lock();
         
             /* Make sure we can't unregister the same notification callback multiple times */
             auto itr = std::find(mRuntimeManagerNotification.begin(), mRuntimeManagerNotification.end(), notification);
@@ -76,13 +93,32 @@ namespace WPEFramework
                 LOGERR("notification not found");
             }
         
-            mAdminLock.Unlock();
+            mRuntimeManagerImplLock.Unlock();
         
             return status;
         }
+
+        uint32_t RuntimeManagerImplementation::Configure(PluginHost::IShell* service)
+        {
+            uint32_t result = Core::ERROR_GENERAL;
+
+            if (service != nullptr)
+            {
+                mCurrentservice = service;
+                mCurrentservice->AddRef();
+
+                LOGINFO("Create Thread for calling OCI Container methods\n");
+
+                result = Core::ERROR_NONE;
+            }
+            else
+            {
+                LOGERR("service is null \n");
+            }
         
-        //mRuntimeManager->dispatchEvent(RuntimeManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, JsonValue(minutes));
-        
+            return result;
+        }
+
         void RuntimeManagerImplementation::dispatchEvent(EventNames event, const JsonValue &params)
         {
             Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));
@@ -90,7 +126,7 @@ namespace WPEFramework
         
         void RuntimeManagerImplementation::Dispatch(EventNames event, const JsonValue params)
         {
-             mAdminLock.Lock();
+             mRuntimeManagerImplLock.Lock();
         
              std::list<Exchange::IRuntimeManager::INotification*>::const_iterator index(mRuntimeManagerNotification.begin());
         
@@ -99,9 +135,8 @@ namespace WPEFramework
                  case RUNTIME_MANAGER_EVENT_STATECHANGED:
                      while (index != mRuntimeManagerNotification.end())
                      {
-                         // const string& appId, const string& state
-        		 string appId("");
-        		 string state("Starting");
+                         string appId("");
+                         RuntimeState state = RUNTIME_STATE_STARTING;
                          (*index)->OnStateChanged(appId, state);
                          ++index;
                      }
@@ -112,84 +147,105 @@ namespace WPEFramework
                      break;
              }
         
-             mAdminLock.Unlock();
+             mRuntimeManagerImplLock.Unlock();
         }
         
+        Core::hresult RuntimeManagerImplementation::Run(const string& appInstanceId, const string& appPath, const string& runtimePath, IStringIterator* const& envVars, const uint32_t userId, const uint32_t groupId, IValueIterator* const& ports, IStringIterator* const& paths, IStringIterator* const& debugSettings)
+        {
+            Core::hresult status = Core::ERROR_NONE;
 
-        Core::hresult RuntimeManagerImplementation::Run(const string& appInstanceId, const string& appPath, const string& runtimePath, IStringIterator* const& envVars, const uint32_t userId, const uint32_t groupId, IValueIterator* const& ports, IStringIterator* const& paths, IStringIterator* const& debugSettings, bool& success)
-        {
-            Core::hresult status = Core::ERROR_NONE;
-            success = true;
-            return status;
-        }
-        
-        Core::hresult RuntimeManagerImplementation::Hibernate(const string& appInstanceId, bool& success) const
-        {
-            Core::hresult status = Core::ERROR_NONE;
-            success = true;
-            return status;
-        }
-        
-        Core::hresult RuntimeManagerImplementation::Wake(const string& appInstanceId, const string& state, bool& success) const
-        {
-            Core::hresult status = Core::ERROR_NONE;
-            success = true;
-            return status;
-        }
-        
-        Core::hresult RuntimeManagerImplementation::Suspend(const string& appInstanceId , bool& success) const
-        {
-            printf("Madana Gopal suspend \n");
-	    fflush(stdout);
-            Core::hresult status = Core::ERROR_NONE;
-            success = true;
-            return status;
-        }
-        
-        Core::hresult RuntimeManagerImplementation::Resume(const string& appInstanceId, bool& success) const
-        {
-            Core::hresult status = Core::ERROR_NONE;
-            success = true;
-            return status;
-        }
-        
-        Core::hresult RuntimeManagerImplementation::Terminate(const string& appInstanceId, bool& success) const
-        {
-            Core::hresult status = Core::ERROR_NONE;
-            success = true;
-            return status;
-        }
-        
-        Core::hresult RuntimeManagerImplementation::Kill(const string& appInstanceId, bool& success) const
-        {
-            Core::hresult status = Core::ERROR_NONE;
-            success = true;
-            return status;
-        }
+            LOGINFO("Entered Run Implementation");
 
-        Core::hresult RuntimeManagerImplementation::GetInfo(const string& appInstanceId, const string& info, bool& success) const
-        {
-            Core::hresult status = Core::ERROR_NONE;
-            success = true;
             return status;
         }
-
-        Core::hresult RuntimeManagerImplementation::Annotate(const string& appInstanceId, const string& key, const string& value , bool& success) const
+        
+        Core::hresult RuntimeManagerImplementation::Hibernate(const string& appInstanceId)
         {
             Core::hresult status = Core::ERROR_NONE;
-            success = true;
+
+            LOGINFO("Entered Hibernate Implementation");
+
+            return status;
+        }
+        
+        Core::hresult RuntimeManagerImplementation::Wake(const string& appInstanceId, const RuntimeState runtimeState)
+        {
+            Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered Wake Implementation");
+
+            return status;
+        }
+        
+        Core::hresult RuntimeManagerImplementation::Suspend(const string& appInstanceId)
+        {
+            Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered Suspend Implementation");
+
+            return status;
+        }
+        
+        Core::hresult RuntimeManagerImplementation::Resume(const string& appInstanceId)
+        {
+            Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered Resume Implementation");
+
+            return status;
+        }
+        
+        Core::hresult RuntimeManagerImplementation::Terminate(const string& appInstanceId)
+        {
+            Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered Terminate Implementation");
+
+            return status;
+        }
+        
+        Core::hresult RuntimeManagerImplementation::Kill(const string& appInstanceId)
+        {
+            Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered Kill Implementation");
+
             return status;
         }
 
-        Core::hresult RuntimeManagerImplementation::Mount() const
+        Core::hresult RuntimeManagerImplementation::GetInfo(const string& appInstanceId, string& info) const
         {
             Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered GetInfo Implementation");
+
             return status;
         }
 
-        Core::hresult RuntimeManagerImplementation::Unmount() const
+        Core::hresult RuntimeManagerImplementation::Annotate(const string& appInstanceId, const string& key, const string& value)
         {
             Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered Annotate Implementation");
+
+            return status;
+        }
+
+        Core::hresult RuntimeManagerImplementation::Mount()
+        {
+            Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered Mount Implementation");
+
+            return status;
+        }
+
+        Core::hresult RuntimeManagerImplementation::Unmount()
+        {
+            Core::hresult status = Core::ERROR_NONE;
+
+            LOGINFO("Entered Unmount Implementation");
+
             return status;
         }
     } /* namespace Plugin */

@@ -21,6 +21,7 @@
 
 #include "Module.h"
 #include <interfaces/IRuntimeManager.h>
+#include <interfaces/IConfiguration.h>
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <mutex>
@@ -29,53 +30,55 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-        class RuntimeManagerImplementation : public Exchange::IRuntimeManager
-	{
+        class RuntimeManagerImplementation : public Exchange::IRuntimeManager, public Exchange::IConfiguration
+        {
             public:
                 enum EventNames
                 {
                     RUNTIME_MANAGER_EVENT_STATECHANGED
                 };
+
                 class EXTERNAL Job : public Core::IDispatch
-	        {
+                {
                     protected:
-                         Job(RuntimeManagerImplementation *runtimeManagerImplementation, EventNames event, JsonValue &params)
-                            : mRuntimeManagerImplementation(runtimeManagerImplementation)
-                            , _event(event)
-                            , _params(params)
-	                {
+                    Job(RuntimeManagerImplementation *mRuntimeManagerImpl, EventNames event, JsonValue &params)
+                    : mRuntimeManagerImplementation(mRuntimeManagerImpl)
+                    , _event(event)
+                    , _params(params)
+                    {
+                        if (mRuntimeManagerImplementation != nullptr)
+                        {
+                            mRuntimeManagerImplementation->AddRef();
+                        }
+                    }
+
+                    public:
+                        Job() = delete;
+                        Job(const Job&) = delete;
+                        Job& operator=(const Job&) = delete;
+                        ~Job()
+                        {
                             if (mRuntimeManagerImplementation != nullptr)
-	            	    {
-                                mRuntimeManagerImplementation->AddRef();
+                            {
+                                mRuntimeManagerImplementation->Release();
                             }
                         }
 
                     public:
-                         Job() = delete;
-                         Job(const Job&) = delete;
-                         Job& operator=(const Job&) = delete;
-                         ~Job()
-	                 {
-                             if (mRuntimeManagerImplementation != nullptr)
-	            	     {
-                                 mRuntimeManagerImplementation->Release();
-                             }
-                         }
-
-                    public:
-                         static Core::ProxyType<Core::IDispatch> Create(RuntimeManagerImplementation *runtimeManagerImplementation, EventNames event, JsonValue params)
-	                 {
+                        static Core::ProxyType<Core::IDispatch> Create(RuntimeManagerImplementation *mRuntimeManagerImpl, EventNames event, JsonValue params)
+                        {
 #ifndef  USE_THUNDER_R4
-                             return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(runtimeManagerImplementation, event, params)));
+                            return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(mRuntimeManagerImpl, event, params)));
 #else
-                             return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(runtimeManagerImplementation, event, params)));
+                            return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(mRuntimeManagerImpl, event, params)));
 #endif
-                         }
+                        }
 
-                         virtual void Dispatch()
-	                 {
-                             mRuntimeManagerImplementation->Dispatch(_event, _params);
-                         }
+                        virtual void Dispatch()
+                        {
+                            mRuntimeManagerImplementation->Dispatch(_event, _params);
+                        }
+
                     private:
                         RuntimeManagerImplementation *mRuntimeManagerImplementation;
                         const EventNames _event;
@@ -84,38 +87,49 @@ namespace WPEFramework
 
                 RuntimeManagerImplementation ();
                 ~RuntimeManagerImplementation () override;
+
                 RuntimeManagerImplementation (const RuntimeManagerImplementation &) = delete;
                 RuntimeManagerImplementation & operator=(const RuntimeManagerImplementation &) = delete;
 
-		BEGIN_INTERFACE_MAP(RuntimeManagerImplementation)
-		INTERFACE_ENTRY(Exchange::IRuntimeManager)
-	        END_INTERFACE_MAP
+                static RuntimeManagerImplementation* getInstance();
+
+                BEGIN_INTERFACE_MAP(RuntimeManagerImplementation)
+                INTERFACE_ENTRY(Exchange::IRuntimeManager)
+                INTERFACE_ENTRY(Exchange::IConfiguration)
+                END_INTERFACE_MAP
 
                 /* IRuntimeManager methods  */
                 virtual Core::hresult Register(Exchange::IRuntimeManager::INotification *notification) override;
                 virtual Core::hresult Unregister(Exchange::IRuntimeManager::INotification *notification) override;
 
-                virtual Core::hresult Run(const string& appInstanceId, const string& appPath, const string& runtimePath, IStringIterator* const& envVars, const uint32_t userId, const uint32_t groupId, IValueIterator* const& ports, IStringIterator* const& paths, IStringIterator* const& debugSettings, bool& success);
-                virtual Core::hresult Hibernate(const string& appInstanceId, bool& success) const override;
-                virtual Core::hresult Wake(const string& appInstanceId, const string& state, bool& success) const override;
-                virtual Core::hresult Suspend(const string& appInstanceId, bool& success) const override;
-                virtual Core::hresult Resume(const string& appInstanceId, bool& success) const override;
-                virtual Core::hresult Terminate(const string& appInstanceId, bool& success) const override;
-                virtual Core::hresult Kill(const string& appInstanceId, bool& success) const override;
-                virtual Core::hresult GetInfo(const string& appInstanceId, const string& info , bool& success) const override;
-                virtual Core::hresult Annotate(const string& appInstanceId, const string& key , const string& value , bool& success) const override;
-                virtual Core::hresult Mount() const override;
-                virtual Core::hresult Unmount() const override;
+                virtual Core::hresult Run(const string& appInstanceId, const string& appPath, const string& runtimePath, IStringIterator* const& envVars, const uint32_t userId, const uint32_t groupId, IValueIterator* const& ports, IStringIterator* const& paths, IStringIterator* const& debugSettings);
+                virtual Core::hresult Hibernate(const string& appInstanceId) override;
+                virtual Core::hresult Wake(const string& appInstanceId, const RuntimeState runtimeState) override;
+                virtual Core::hresult Suspend(const string& appInstanceId) override;
+                virtual Core::hresult Resume(const string& appInstanceId) override;
+                virtual Core::hresult Terminate(const string& appInstanceId) override;
+                virtual Core::hresult Kill(const string& appInstanceId) override;
+                virtual Core::hresult GetInfo(const string& appInstanceId, string& info) const override;
+                virtual Core::hresult Annotate(const string& appInstanceId, const string& key, const string& value) override;
+                virtual Core::hresult Mount() override;
+                virtual Core::hresult Unmount() override;
 
-	    private: /* members */
-                mutable Core::CriticalSection mAdminLock;
-	        std::list<Exchange::IRuntimeManager::INotification*> mRuntimeManagerNotification;;	
+                // IConfiguration methods
+                uint32_t Configure(PluginHost::IShell* service) override;
 
-	    private: /* internal methods */
+            private: /* members */
+                mutable Core::CriticalSection mRuntimeManagerImplLock;
+                PluginHost::IShell* mCurrentservice;
+                std::list<Exchange::IRuntimeManager::INotification*> mRuntimeManagerNotification;
+
+            private: /* internal methods */
                 void dispatchEvent(EventNames, const JsonValue &params);
                 void Dispatch(EventNames event, const JsonValue params);
 
                 friend class Job;
+
+            public/*members*/:
+                static RuntimeManagerImplementation* _instance;
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */
