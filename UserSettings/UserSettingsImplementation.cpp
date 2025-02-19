@@ -42,7 +42,7 @@ const std::map<string, string> UserSettingsImplementation::usersettingsDefaultMa
                                                                  {USERSETTINGS_PIN_ON_PURCHASE_KEY, "false"},
                                                                  {USERSETTINGS_HIGH_CONTRAST_KEY, "false"},
                                                                  {USERSETTINGS_VOICE_GUIDANCE_KEY, "false"},
-                                                                 {USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, "0.0"},
+                                                                 {USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, "1"},
                                                                  {USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, "false"}};
 
 SERVICE_REGISTRATION(UserSettingsImplementation, 1, 0);
