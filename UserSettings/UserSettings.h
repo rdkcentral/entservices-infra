@@ -46,7 +46,10 @@ namespace Plugin {
             explicit Notification(UserSettings* parent)
                 : _parent(*parent)
                 {
-                    ASSERT(parent != nullptr);
+                    if (_parent == nullptr)
+                    {
+                       LOGERR("_parent is null");
+                    }
                 }
 
                 virtual ~Notification()

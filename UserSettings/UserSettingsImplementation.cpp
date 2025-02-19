@@ -90,13 +90,14 @@ UserSettingsImplementation* UserSettingsImplementation::instance(UserSettingsImp
 {
    static UserSettingsImplementation *UserSettingsImpl_instance = nullptr;
 
-   ASSERT ((nullptr == UserSettingsImpl_instance) || (nullptr == UserSettingsImpl));
-
    if (UserSettingsImpl != nullptr)
    {
       UserSettingsImpl_instance = UserSettingsImpl;
    }
-
+   else
+   {
+      LOGERR("UserSettingsImpl is null \n");
+   }
    return(UserSettingsImpl_instance);
 }
 
@@ -133,8 +134,6 @@ void UserSettingsImplementation::registerEventHandlers()
  */
 uint32_t UserSettingsImplementation::Register(Exchange::IUserSettings::INotification *notification)
 {
-    ASSERT (nullptr != notification);
-
     _adminLock.Lock();
 
     // Make sure we can't register the same notification callback multiple times
@@ -143,6 +142,10 @@ uint32_t UserSettingsImplementation::Register(Exchange::IUserSettings::INotifica
         LOGINFO("Register notification");
         _userSettingNotification.push_back(notification);
         notification->AddRef();
+    }
+    else
+    {
+        LOGERR("notification is already available in the _userSettingNotification");
     }
 
     _adminLock.Unlock();
@@ -156,8 +159,6 @@ uint32_t UserSettingsImplementation::Register(Exchange::IUserSettings::INotifica
 uint32_t UserSettingsImplementation::Unregister(Exchange::IUserSettings::INotification *notification )
 {
     uint32_t status = Core::ERROR_GENERAL;
-
-    ASSERT (nullptr != notification);
 
     _adminLock.Lock();
 
@@ -440,6 +441,7 @@ uint32_t UserSettingsImplementation::GetUserSettingsValue(const string& key, str
     if (nullptr != _remotStoreObject)
     {
         status = _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, key, value, ttl);
+        LOGINFO("status[%d]", status);
         if(Core::ERROR_UNKNOWN_KEY == status || Core::ERROR_NOT_EXIST == status)
         {
             if(usersettingsDefaultMap.find(key)!=usersettingsDefaultMap.end())
