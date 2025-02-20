@@ -57,7 +57,7 @@ namespace WPEFramework
             mActiveSessionId = id;
         }
 
-        void ApplicationContext::setLastIntent(const std::string& intent)
+        void ApplicationContext::setMostRecentIntent(const std::string& intent)
         {
             mMostRecentIntent = intent;
         }

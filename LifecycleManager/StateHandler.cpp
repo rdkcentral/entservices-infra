@@ -235,8 +235,7 @@ namespace WPEFramework
 
                 if (nullptr != eventHandler)
                 {
-                    //PENDING ILifecycleStateHook
-                    //send appLifecycleStateChanged to ripple here
+                    //Need to populate intent as event parameter
                     JsonObject eventData;
                     eventData["appId"] = context->getAppId();
                     eventData["state"] = (uint32_t)(((State*)context->getState())->getValue());
