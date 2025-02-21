@@ -21,11 +21,13 @@
 
 #include "Module.h"
 #include <interfaces/IStore2.h>
+#include <interfaces/IConfiguration.h>
+#include <interfaces/IAuthService.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class CloudStoreImplementation : public Exchange::IStore2 {
+    class CloudStoreImplementation : public Exchange::IStore2, public Exchange::IConfiguration {
     private:
         CloudStoreImplementation(const CloudStoreImplementation&) = delete;
         CloudStoreImplementation& operator=(const CloudStoreImplementation&) = delete;
@@ -33,9 +35,12 @@ namespace Plugin {
     public:
         CloudStoreImplementation();
         ~CloudStoreImplementation() override;
+        
+        virtual uint32_t Configure(PluginHost::IShell* service) override;
 
         BEGIN_INTERFACE_MAP(CloudStoreImplementation)
         INTERFACE_ENTRY(IStore2)
+        INTERFACE_ENTRY(Exchange::IConfiguration)
         END_INTERFACE_MAP
 
     private:
@@ -84,6 +89,7 @@ namespace Plugin {
 
     private:
         IStore2* _accountStore2;
+        Exchange::IAuthService *_authservicePlugin;
     };
 
 } // namespace Plugin

@@ -24,6 +24,7 @@
 #include <fstream>
 #include <grpcpp/create_channel.h>
 #include <interfaces/IStore2.h>
+#include <interfaces/IAuthService.h>
 #ifdef WITH_SYSMGR
 #include <libIBus.h>
 #include <sysMgr.h>
@@ -68,14 +69,15 @@ namespace Plugin {
             Store2& operator=(const Store2&) = delete;
 
         public:
-            Store2()
-                : Store2(getenv(URI_ENV), getenv(TOKEN_ENV))
+            Store2(Exchange::IAuthService *_authservicePlugin)
+                : Store2(getenv(URI_ENV), getenv(TOKEN_ENV), _authservicePlugin)
             {
             }
-            Store2(const string& uri, const string& token)
+            Store2(const string& uri, const string& token, Exchange::IAuthService *_authservicePlugin)
                 : IStore2()
                 , _uri(uri)
                 , _token(token)
+                , _authservicePlugin(_authservicePlugin)
                 , _authorization((_uri.find("localhost") == string::npos) && (_uri.find("0.0.0.0") == string::npos))
             {
                 Open();
@@ -121,25 +123,14 @@ namespace Plugin {
             string GetToken() const
             {
                 // Get actual token, as it may change at any time...
-                string result;
+                if (_authservicePlugin != nullptr) {
+                    WPEFramework::Exchange::IAuthService::GetServiceAccessTokenResult atRes;
 
-                Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:9998")));
-                auto link = Core::ProxyType<JSONRPC::LinkType<Core::JSON::IElement>>::Create(
-                    _T("org.rdk.AuthService"), _T(""), false, "token=" + _token);
-
-                JsonObject json;
-                auto status = link->Invoke<JsonObject, JsonObject>(
-                    JSON_RPC_TIMEOUT, // Timeout
-                    _T("getServiceAccessToken"),
-                    JsonObject(),
-                    json);
-                if (status == Core::ERROR_NONE) {
-                    result = json[_T("token")].String();
-                } else {
-                    TRACE(Trace::Error, (_T("sat status %d"), status));
+                    if (_authservicePlugin->GetServiceAccessToken(atRes) == Core::ERROR_NONE)
+                        return atRes.token;
                 }
 
-                return result;
+                return "";
             }
             string GetPartnerId() const
             {
@@ -203,6 +194,7 @@ namespace Plugin {
                 if (_authorization) {
                     context.AddMetadata("authorization", "Bearer " + GetToken());
                 }
+
                 context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(GRPC_TIMEOUT)); // Timeout
                 ::distp::gateway::secure_storage::v1::UpdateValueRequest request;
                 request.set_partner_id(GetPartnerId());
@@ -401,6 +393,7 @@ namespace Plugin {
         private:
             const string _uri;
             const string _token;
+            Exchange::IAuthService *_authservicePlugin;
             const bool _authorization;
             std::unique_ptr<::distp::gateway::secure_storage::v1::SecureStorageService::Stub> _stub;
             std::list<INotification*> _clients;
