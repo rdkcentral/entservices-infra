@@ -59,7 +59,7 @@ install(TARGETS ${MODULE_NAME}
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
     AppManagerImplementation.cpp
-    LifeCycleInterfaceConnector.cpp
+    LifecycleInterfaceConnector.cpp
     Module.cpp)
 
 include_directories(../helpers)

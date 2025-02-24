@@ -22,7 +22,6 @@
 #include "Module.h"
 #include <interfaces/ILifecycleManager.h>
 #include <interfaces/ILifecycleManagerState.h>
-#include <interfaces/ILifecycleManagerRuntime.h>
 #include <interfaces/IConfiguration.h>
 #include "IEventHandler.h"
 #include "UtilsLogging.h"
@@ -36,7 +35,6 @@ namespace WPEFramework
     {
         class LifecycleManagerImplementation : public Exchange::ILifecycleManager
 					     , public Exchange::ILifecycleManagerState
-				             , public Exchange::ILifecycleManagerRuntime
 					     , public Exchange::IConfiguration
 					     , public IEventHandler
 	{
@@ -100,7 +98,6 @@ namespace WPEFramework
 		BEGIN_INTERFACE_MAP(LifecycleManagerImplementation)
 		INTERFACE_ENTRY(Exchange::ILifecycleManager)
                 INTERFACE_ENTRY(Exchange::ILifecycleManagerState)
-                INTERFACE_ENTRY(Exchange::ILifecycleManagerRuntime)
                 INTERFACE_ENTRY(Exchange::IConfiguration)
 	        END_INTERFACE_MAP
 
@@ -119,9 +116,6 @@ namespace WPEFramework
 		virtual Core::hresult AppReady(const string& appId) override;
 		virtual Core::hresult StateChangeComplete(const string& appId, const uint32_t stateChangedId, const bool success) override;
 		virtual Core::hresult CloseApp(const string& appId, const AppCloseReason closeReason) override;
-
-                /* ILifecycleManagerRuntime methods  */
-		virtual Core::hresult RuntimeTerminated(const string& appInstanceId, const Exchange::ILifecycleManagerRuntime::AppTerminatedReason terminatedReason) override;
 
                 /* IConfiguration methods */
                 uint32_t Configure(PluginHost::IShell* service) override;

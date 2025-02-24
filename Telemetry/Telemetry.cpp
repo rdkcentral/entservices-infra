@@ -104,8 +104,6 @@ namespace WPEFramework
             Register(TELEMETRY_METHOD_ABORT_REPORT, &Telemetry::abortReport, this);
 
             Utils::Telemetry::init();
-            _engine = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
-            _communicatorClient = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(_engine));
         }
 
         Telemetry::~Telemetry()
@@ -114,6 +112,8 @@ namespace WPEFramework
 
         const string Telemetry::Initialize(PluginHost::IShell* service )
         {
+            m_service = service;
+            m_service->AddRef();
             InitializePowerManager();
 
 #ifdef HAS_RBUS
@@ -249,15 +249,6 @@ namespace WPEFramework
                 _powerManagerPlugin.Reset();
             }
 
-            LOGINFO("Disconnect from the COM-RPC socket\n");
-            // Disconnect from the COM-RPC socket
-            if (_communicatorClient.IsValid()) {
-                _communicatorClient->Close(RPC::CommunicationTimeOut);
-                _communicatorClient.Release();
-            }
-            if (_engine.IsValid()) {
-                _engine.Release();
-            }
             _registeredEventHandlers = false;
 
             Telemetry::_instance = nullptr;
@@ -272,9 +263,8 @@ namespace WPEFramework
         void Telemetry::InitializePowerManager()
         {
             LOGINFO("Connect the COM-RPC socket\n");
-            _powerManagerPlugin = PowerManagerInterfaceBuilder(_communicatorClient, _T("org.rdk.PowerManager"))
-                                    .withTimeout(3000)
-                                    .withVersion(~0)
+            _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
+                                    .withIShell(m_service)
                                     .createInterface();
             registerEventHandlers();
         }
@@ -287,6 +277,20 @@ namespace WPEFramework
             if(!_registeredEventHandlers && _powerManagerPlugin) {
                 _registeredEventHandlers = true;
                 _powerManagerPlugin->Register(&_pwrMgrNotification);
+            }
+        }
+
+        void Telemetry::Dispatch(Event event)
+        {
+            switch(event)
+            {
+                case TELEMETRY_EVENT_UPLOADREPORT:
+                    Telemetry::_instance->UploadReport();
+                    break;
+
+                case TELEMETRY_EVENT_ABORTREPORT:
+                    Telemetry::_instance->AbortReport();
+                    break;
             }
         }
 
@@ -303,12 +307,14 @@ namespace WPEFramework
             {
                 if (WPEFramework::Exchange::IPowerManager::POWER_STATE_ON == currentState)
                 {
-                    Telemetry::_instance->UploadReport();
+                    Core::IWorkerPool::Instance().Submit(Telemetry::Job::Create(Telemetry::_instance,
+                                                Telemetry::TELEMETRY_EVENT_UPLOADREPORT));
                 }
             }
             else if(WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY_DEEP_SLEEP == newState)
             {
-                Telemetry::_instance->AbortReport();
+                    Core::IWorkerPool::Instance().Submit(Telemetry::Job::Create(Telemetry::_instance,
+                                                Telemetry::TELEMETRY_EVENT_ABORTREPORT));
             }
         }
 

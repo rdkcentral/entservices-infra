@@ -18,7 +18,7 @@
 **/
 
 #include "Module.h"
-#include "LifeCycleInterfaceConnector.h"
+#include "LifecycleInterfaceConnector.h"
 #include <string>
 #include <memory>
 #include <iostream>
@@ -29,7 +29,7 @@
 #include <unistd.h>
 #include <plugins/System.h>
 
-#include <interfaces/ILifeCycleManager.h>
+#include <interfaces/ILifecycleManager.h>
 
 #include "UtilsString.h"
 #include "AppManagerImplementation.h"
@@ -41,33 +41,33 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-        class NotificationHandler : public Exchange::ILifeCycleManager::INotification {
+        class NotificationHandler : public Exchange::ILifecycleManager::INotification {
 
             public:
-                NotificationHandler(LifeCycleInterfaceConnector& parent) : mParent(parent){}
+                NotificationHandler(LifecycleInterfaceConnector& parent) : mParent(parent){}
                 ~NotificationHandler(){}
 
-                void OnAppStateChanged(const string& appId, Exchange::ILifeCycleManager::LifeCycleState state, const string& errorReason)
+                void OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason)
                 {
                     mParent.OnAppStateChanged(appId, state, errorReason);
                 }
 
                 BEGIN_INTERFACE_MAP(NotificationHandler)
-                INTERFACE_ENTRY(Exchange::ILifeCycleManager::INotification)
+                INTERFACE_ENTRY(Exchange::ILifecycleManager::INotification)
                 END_INTERFACE_MAP
 
             private:
-                LifeCycleInterfaceConnector& mParent;
+                LifecycleInterfaceConnector& mParent;
         };
 
-        LifeCycleInterfaceConnector* LifeCycleInterfaceConnector::_instance = nullptr;
+        LifecycleInterfaceConnector* LifecycleInterfaceConnector::_instance = nullptr;
 
-        LifeCycleInterfaceConnector::LifeCycleInterfaceConnector(PluginHost::IShell* service)
-		: mLifeCycleManagerRemoteObject(nullptr),
+        LifecycleInterfaceConnector::LifecycleInterfaceConnector(PluginHost::IShell* service)
+		: mLifecycleManagerRemoteObject(nullptr),
 		  mCurrentservice(nullptr)
         {
-            LOGINFO("Create LifeCycleInterfaceConnector Instance");
-            LifeCycleInterfaceConnector::_instance = this;
+            LOGINFO("Create LifecycleInterfaceConnector Instance");
+            LifecycleInterfaceConnector::_instance = this;
             if (service != nullptr)
             {
                 mCurrentservice = service;
@@ -75,17 +75,17 @@ namespace WPEFramework
             }
         }
 
-        LifeCycleInterfaceConnector::~LifeCycleInterfaceConnector()
+        LifecycleInterfaceConnector::~LifecycleInterfaceConnector()
         {
             if (nullptr != mCurrentservice)
             {
                mCurrentservice->Release();
                mCurrentservice = nullptr;
             }
-            LifeCycleInterfaceConnector::_instance = nullptr;
+            LifecycleInterfaceConnector::_instance = nullptr;
         }
 
-        Core::hresult LifeCycleInterfaceConnector::createLifeCycleManagerRemoteObject()
+        Core::hresult LifecycleInterfaceConnector::createLifecycleManagerRemoteObject()
         {
             Core::hresult status = Core::ERROR_GENERAL;
             Core::Sink<NotificationHandler> notification(*this);
@@ -94,28 +94,28 @@ namespace WPEFramework
             {
                 LOGWARN("mCurrentservice is null \n");
             }
-            else if (nullptr == (mLifeCycleManagerRemoteObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ILifeCycleManager>("org.rdk.LifeCycleManager")))
+            else if (nullptr == (mLifecycleManagerRemoteObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ILifecycleManager>("org.rdk.LifecycleManager")))
             {
-                LOGWARN("Failed to create LifeCycleManager Remote object\n");
+                LOGWARN("Failed to create LifecycleManager Remote object\n");
             }
             else
             {
-                LOGINFO("Created LifeCycleManager Remote Object \n");
-                mLifeCycleManagerRemoteObject->AddRef();
-                mLifeCycleManagerRemoteObject->Register(&notification);
-                LOGINFO("LifeCycleManager notification registered");
+                LOGINFO("Created LifecycleManager Remote Object \n");
+                mLifecycleManagerRemoteObject->AddRef();
+                mLifecycleManagerRemoteObject->Register(&notification);
+                LOGINFO("LifecycleManager notification registered");
                 status = Core::ERROR_NONE;
             }
             return status;
         }
 
-        void LifeCycleInterfaceConnector::releaseLifeCycleManagerRemoteObject()
+        void LifecycleInterfaceConnector::releaseLifecycleManagerRemoteObject()
         {
-            ASSERT(nullptr != mLifeCycleManagerRemoteObject );
-            if(mLifeCycleManagerRemoteObject )
+            ASSERT(nullptr != mLifecycleManagerRemoteObject );
+            if(mLifecycleManagerRemoteObject )
             {
-                mLifeCycleManagerRemoteObject ->Release();
-                mLifeCycleManagerRemoteObject = nullptr;
+                mLifecycleManagerRemoteObject ->Release();
+                mLifecycleManagerRemoteObject = nullptr;
             }
         }
 
@@ -124,7 +124,7 @@ namespace WPEFramework
  * @Params  : const string& appId , const string& intent , const string& launchArgs
  * @return  : Core::hresult
  */
-        Core::hresult LifeCycleInterfaceConnector::launch(const string& appId, const string& intent, const string& launchArgs)
+        Core::hresult LifecycleInterfaceConnector::launch(const string& appId, const string& intent, const string& launchArgs)
         {
             Core::hresult status = Core::ERROR_GENERAL;
             AppManagerImplementation::LoadedAppInfo loadedAppInfo;
@@ -148,21 +148,21 @@ namespace WPEFramework
             else
             {
                 mAdminLock.Lock();
-                /* Checking if mLifeCycleManagerRemoteObject is not valid then create the object */
-                if (nullptr == mLifeCycleManagerRemoteObject)
+                /* Checking if mLifecycleManagerRemoteObject is not valid then create the object */
+                if (nullptr == mLifecycleManagerRemoteObject)
                 {
-                    LOGINFO("Create LifeCycleManager Remote store object");
-                    if (Core::ERROR_NONE != createLifeCycleManagerRemoteObject())
+                    LOGINFO("Create LifecycleManager Remote store object");
+                    if (Core::ERROR_NONE != createLifecycleManagerRemoteObject())
                     {
-                        LOGERR("Failed to create LifeCycleInterfaceConnector");
+                        LOGERR("Failed to create LifecycleInterfaceConnector");
                     }
                 }
-                ASSERT (nullptr != mLifeCycleManagerRemoteObject);
+                ASSERT (nullptr != mLifecycleManagerRemoteObject);
 
-                if (nullptr != mLifeCycleManagerRemoteObject)
+                if (nullptr != mLifecycleManagerRemoteObject)
                 {
-                    status = mLifeCycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
-                                                                  enableDebugger, Exchange::ILifeCycleManager::LifeCycleState::ACTIVE, launchArgs, appInstanceId, errorReason, success);
+                    status = mLifecycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
+                                                                  enableDebugger, Exchange::ILifecycleManager::LifecycleState::ACTIVE, launchArgs, appInstanceId, errorReason, success);
 
                     if (status == Core::ERROR_NONE)
                     {
@@ -171,7 +171,7 @@ namespace WPEFramework
                         loadedAppInfo.type = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
                         loadedAppInfo.appIntent = intent;
                         loadedAppInfo.currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
-                        loadedAppInfo.currentAppLifecycleState = Exchange::ILifeCycleManager::LOADING;
+                        loadedAppInfo.currentAppLifecycleState = Exchange::ILifecycleManager::LOADING;
                         loadedAppInfo.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
 
                         /*Insert/update loaded app info*/
@@ -191,7 +191,7 @@ namespace WPEFramework
         }
 
         /* PreloadApp invokes it */
-        Core::hresult LifeCycleInterfaceConnector::preLoadApp(const string& appId, const string& launchArgs, string& error)
+        Core::hresult LifecycleInterfaceConnector::preLoadApp(const string& appId, const string& launchArgs, string& error)
         {
             Core::hresult status = Core::ERROR_GENERAL;
             AppManagerImplementation::LoadedAppInfo loadedAppInfo;
@@ -215,27 +215,27 @@ namespace WPEFramework
             else
             {
                 mAdminLock.Lock();
-                /* Checking if mLifeCycleManagerRemoteObject is not valid then create the object */
-                if (nullptr == mLifeCycleManagerRemoteObject)
+                /* Checking if mLifecycleManagerRemoteObject is not valid then create the object */
+                if (nullptr == mLifecycleManagerRemoteObject)
                 {
-                    LOGINFO("Create LifeCycleManager Remote store object");
-                    if (Core::ERROR_NONE != createLifeCycleManagerRemoteObject())
+                    LOGINFO("Create LifecycleManager Remote store object");
+                    if (Core::ERROR_NONE != createLifecycleManagerRemoteObject())
                     {
-                        LOGERR("Failed to create LifeCycleInterfaceConnector");
+                        LOGERR("Failed to create LifecycleInterfaceConnector");
                     }
                 }
-                ASSERT (nullptr != mLifeCycleManagerRemoteObject);
-                if (nullptr != mLifeCycleManagerRemoteObject)
+                ASSERT (nullptr != mLifecycleManagerRemoteObject);
+                if (nullptr != mLifecycleManagerRemoteObject)
                 {
-                    status = mLifeCycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
-                          enableDebugger, Exchange::ILifeCycleManager::LifeCycleState::RUNNING, launchArgs, appInstanceId, error, success);
+                    status = mLifecycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
+                          enableDebugger, Exchange::ILifecycleManager::LifecycleState::RUNNING, launchArgs, appInstanceId, error, success);
                     if (status == Core::ERROR_NONE)
                     {
                         LOGINFO("Update App Info");
                         loadedAppInfo.appInstanceId = std::move(appInstanceId);
                         loadedAppInfo.type = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
                         loadedAppInfo.currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
-                        loadedAppInfo.currentAppLifecycleState = Exchange::ILifeCycleManager::LOADING;
+                        loadedAppInfo.currentAppLifecycleState = Exchange::ILifecycleManager::LOADING;
                         loadedAppInfo.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_RUNNING;
 
                         /*Insert/update loaded app info*/
@@ -255,7 +255,7 @@ namespace WPEFramework
         }
 
         /* Close App invokes it */
-        Core::hresult LifeCycleInterfaceConnector::closeApp(const string& appId)
+        Core::hresult LifecycleInterfaceConnector::closeApp(const string& appId)
         {
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
@@ -281,10 +281,10 @@ namespace WPEFramework
                         /* Check targetLifecycleState is in ACTIVE state */
                         if(targetLifecycleState == Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE)
                         {
-                            if (nullptr != mLifeCycleManagerRemoteObject)
+                            if (nullptr != mLifecycleManagerRemoteObject)
                             {
                                 /* Call setTargetAppState from Adapter file once ready */
-                                 status = mLifeCycleManagerRemoteObject->SetTargetAppState(appInstanceId, Exchange::ILifeCycleManager::LifeCycleState::SUSPENDED, appIntent);
+                                 status = mLifecycleManagerRemoteObject->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::SUSPENDED, appIntent);
                                 if(status == Core::ERROR_NONE)
                                 {
                                     appIterator->second.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
@@ -312,7 +312,7 @@ namespace WPEFramework
         }
 
         /* Terminate App invokes it */
-        Core::hresult LifeCycleInterfaceConnector::terminateApp(const string& appId)
+        Core::hresult LifecycleInterfaceConnector::terminateApp(const string& appId)
         {
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
@@ -339,9 +339,9 @@ namespace WPEFramework
                         /* Check targetLifecycleState is in RUNNING state */
                         if(targetLifecycleState == Exchange::IAppManager::AppLifecycleState::APP_STATE_RUNNING)
                         {
-                            if (nullptr != mLifeCycleManagerRemoteObject)
+                            if (nullptr != mLifecycleManagerRemoteObject)
                             {
-                                 status = mLifeCycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
+                                 status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
                                 if (status != Core::ERROR_NONE)
                                 {
                                     if (!errorReason.empty())
@@ -378,7 +378,7 @@ namespace WPEFramework
         }
 
         /* Kill App invokes it */
-        Core::hresult LifeCycleInterfaceConnector::killApp(const string& appId)
+        Core::hresult LifecycleInterfaceConnector::killApp(const string& appId)
         {
             LOGINFO("killApp entered");
             Core::hresult result = Core::ERROR_GENERAL;
@@ -389,16 +389,16 @@ namespace WPEFramework
                 return result;
             }
 
-            if (nullptr == mLifeCycleManagerRemoteObject)
+            if (nullptr == mLifecycleManagerRemoteObject)
             {
-                LOGINFO("Create LifeCycleManager Remote store object");
-                if (Core::ERROR_NONE != createLifeCycleManagerRemoteObject())
+                LOGINFO("Create LifecycleManager Remote store object");
+                if (Core::ERROR_NONE != createLifecycleManagerRemoteObject())
                 {
-                    LOGERR("Failed to create LifeCycleInterfaceConnector");
+                    LOGERR("Failed to create LifecycleInterfaceConnector");
                 }
             }
-            ASSERT (nullptr != mLifeCycleManagerRemoteObject);
-            if (nullptr != mLifeCycleManagerRemoteObject)
+            ASSERT (nullptr != mLifecycleManagerRemoteObject);
+            if (nullptr != mLifecycleManagerRemoteObject)
             {
                 mAdminLock.Lock();
                 string appInstanceId = GetAppInstanceId(appId);
@@ -411,7 +411,7 @@ namespace WPEFramework
                     string errorReason{};
                     bool success{};
 
-                    result = mLifeCycleManagerRemoteObject->KillApp(appInstanceId, errorReason, success);
+                    result = mLifecycleManagerRemoteObject->KillApp(appInstanceId, errorReason, success);
 
                     if (!(result == Core::ERROR_NONE && success))
                     {
@@ -429,7 +429,7 @@ namespace WPEFramework
         }
 
         /* Send Intent invokes it */
-        Core::hresult LifeCycleInterfaceConnector::sendIntent(const string& appId, const string& intent)
+        Core::hresult LifecycleInterfaceConnector::sendIntent(const string& appId, const string& intent)
         {
             LOGINFO("sendIntent Entered");
             Core::hresult result = Core::ERROR_GENERAL;
@@ -440,16 +440,16 @@ namespace WPEFramework
                 return result;
             }
 
-            if (nullptr == mLifeCycleManagerRemoteObject)
+            if (nullptr == mLifecycleManagerRemoteObject)
             {
-                LOGINFO("Create LifeCycleManager Remote store object");
-                if (Core::ERROR_NONE != createLifeCycleManagerRemoteObject())
+                LOGINFO("Create LifecycleManager Remote store object");
+                if (Core::ERROR_NONE != createLifecycleManagerRemoteObject())
                 {
-                    LOGERR("Failed to create LifeCycleInterfaceConnector");
+                    LOGERR("Failed to create LifecycleInterfaceConnector");
                 }
             }
 
-            if (nullptr != mLifeCycleManagerRemoteObject)
+            if (nullptr != mLifecycleManagerRemoteObject)
             {
                 mAdminLock.Lock();
                 string appInstanceId = GetAppInstanceId(appId);
@@ -462,7 +462,7 @@ namespace WPEFramework
                     string errorReason{};
                     bool success{};
 
-                    result = mLifeCycleManagerRemoteObject->SendIntentToActiveApp(appInstanceId, intent, errorReason, success);
+                    result = mLifecycleManagerRemoteObject->SendIntentToActiveApp(appInstanceId, intent, errorReason, success);
 
                     if (!(result == Core::ERROR_NONE && success))
                     {
@@ -476,25 +476,25 @@ namespace WPEFramework
         }
 
         /* GetLoadedApps invokes it */
-        Core::hresult LifeCycleInterfaceConnector::getLoadedApps(string& apps)
+        Core::hresult LifecycleInterfaceConnector::getLoadedApps(string& apps)
         {
             LOGINFO("getLoadedApps Entered");
             Core::hresult result = Core::ERROR_GENERAL;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
 
             mAdminLock.Lock();
-            /* Checking if mLifeCycleManagerRemoteObject is not valid then create the object */
-            if (nullptr == mLifeCycleManagerRemoteObject)
+            /* Checking if mLifecycleManagerRemoteObject is not valid then create the object */
+            if (nullptr == mLifecycleManagerRemoteObject)
             {
-                LOGINFO("Create LifeCycleManager Remote store object");
-                if (Core::ERROR_NONE != createLifeCycleManagerRemoteObject())
+                LOGINFO("Create LifecycleManager Remote store object");
+                if (Core::ERROR_NONE != createLifecycleManagerRemoteObject())
                 {
-                    LOGERR("Failed to create LifeCycleInterfaceConnector");
+                    LOGERR("Failed to create LifecycleInterfaceConnector");
                 }
             }
 
-            ASSERT (nullptr != mLifeCycleManagerRemoteObject);
-            if (nullptr != mLifeCycleManagerRemoteObject)
+            ASSERT (nullptr != mLifecycleManagerRemoteObject);
+            if (nullptr != mLifecycleManagerRemoteObject)
             {
                 JsonArray loadedAppsArray;
                 if (nullptr != appManagerImplInstance)
@@ -525,7 +525,7 @@ namespace WPEFramework
             return result;
         }
 
-        void LifeCycleInterfaceConnector::OnAppStateChanged(const string& appId, Exchange::ILifeCycleManager::LifeCycleState state, const string& errorReason)
+        void LifecycleInterfaceConnector::OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason)
         {
             string appInstanceId = "";
             Exchange::IAppManager::AppLifecycleState oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
@@ -536,20 +536,20 @@ namespace WPEFramework
 
             switch(state)
             {
-                case Exchange::ILifeCycleManager::LifeCycleState::INITIALIZING:
-                case Exchange::ILifeCycleManager::LifeCycleState::TERMINATEREQUESTED:
-                case Exchange::ILifeCycleManager::LifeCycleState::TERMINATING:
-                case Exchange::ILifeCycleManager::LifeCycleState::RUNNING:
+                case Exchange::ILifecycleManager::LifecycleState::INITIALIZING:
+                case Exchange::ILifecycleManager::LifecycleState::TERMINATEREQUESTED:
+                case Exchange::ILifecycleManager::LifecycleState::TERMINATING:
+                case Exchange::ILifecycleManager::LifecycleState::RUNNING:
                     newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_RUNNING;
                     break;
 
-                case Exchange::ILifeCycleManager::LifeCycleState::ACTIVATEREQUESTED:
-                case Exchange::ILifeCycleManager::LifeCycleState::ACTIVE:
+                case Exchange::ILifecycleManager::LifecycleState::ACTIVATEREQUESTED:
+                case Exchange::ILifecycleManager::LifecycleState::ACTIVE:
                     newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
                     break;
 
-                case Exchange::ILifeCycleManager::LifeCycleState::SUSPENDREQUESTED:
-                case Exchange::ILifeCycleManager::LifeCycleState::SUSPENDED:
+                case Exchange::ILifecycleManager::LifecycleState::SUSPENDREQUESTED:
+                case Exchange::ILifecycleManager::LifecycleState::SUSPENDED:
                     newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
 
                 default:
@@ -582,7 +582,7 @@ namespace WPEFramework
         /* Returns appInstanceId for appId. Does not synchronize access to LoadedAppInfo.
          * Caller should take care about the synchronization.
          */
-        string LifeCycleInterfaceConnector::GetAppInstanceId(const string& appId) const
+        string LifecycleInterfaceConnector::GetAppInstanceId(const string& appId) const
         {
             AppManagerImplementation* appManagerImpl = AppManagerImplementation::getInstance();
             if (!appManagerImpl)
@@ -595,7 +595,7 @@ namespace WPEFramework
                 return it->second.appInstanceId;
         }
 
-        void LifeCycleInterfaceConnector::RemoveApp(const string& appId)
+        void LifecycleInterfaceConnector::RemoveApp(const string& appId)
         {
             AppManagerImplementation* appManagerImpl = AppManagerImplementation::getInstance();
             if (!appManagerImpl)

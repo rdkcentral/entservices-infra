@@ -71,10 +71,6 @@ if(PLUGIN_RDKSHELL)
     add_subdirectory(RDKShell)
 endif()
 
-if(PLUGIN_USBACCESS)
-    add_subdirectory(UsbAccess)
-endif()
-
 if(PLUGIN_RUSTADAPTER)
     add_subdirectory(RustAdapter)
 endif()

@@ -201,6 +201,7 @@ namespace WPEFramework
 		mLoadedApplications.push_back(context);
 	    }
             context->setTargetLifecycleState(targetLifecycleState);
+            context->setMostRecentIntent(launchIntent);
             success = RequestHandler::getInstance()->launch(context, launchIntent, targetLifecycleState, errorReason);
             if (!success)
 	    {
@@ -226,17 +227,13 @@ namespace WPEFramework
 
             string errorReason("");
             context->setTargetLifecycleState(targetLifecycleState);
+            context->setMostRecentIntent(launchIntent);
 
             bool success = RequestHandler::getInstance()->updateState(context, targetLifecycleState, errorReason);
             if (false == success)
             {
                 status = Core::ERROR_GENERAL;
                 return status;
-            }
-            success = RequestHandler::getInstance()->sendIntent(context, launchIntent, errorReason);
-            if (false == success)
-            {
-                status = Core::ERROR_GENERAL;
             }
             return status;
         }
@@ -323,8 +320,8 @@ namespace WPEFramework
 	Core::hresult LifecycleManagerImplementation::AppReady(const string& appId)
         {
             Core::hresult status = Core::ERROR_NONE;
-            //QUESTION
-	    //Anything to do here?
+	    printf("[LifecycleManager] Received appReady event for [%s] \n", appId.c_str());
+	    fflush(stdout);
 	    return status;
 	}
 
@@ -338,10 +335,8 @@ namespace WPEFramework
 
 	Core::hresult LifecycleManagerImplementation::CloseApp(const string& appId, const Exchange::ILifecycleManagerState::AppCloseReason closeReason)
         {
-            //QUESTION
-	    //This needs to be appInstaneId ?
             Core::hresult status = Core::ERROR_NONE;
-            ApplicationContext* context = getContext(appId, "");
+            ApplicationContext* context = getContext("", appId);
             if (nullptr == context)
 	    {
                 status = Core::ERROR_GENERAL;
@@ -350,7 +345,7 @@ namespace WPEFramework
 	    bool success = false;
             bool activate = false;
             string errorReason(""), appInstanceId("");
-            status = KillApp(appId, errorReason, success); 
+            status = KillApp(context->getAppInstanceId(), errorReason, success); 
             if (status != Core::ERROR_NONE)
 	    {
                 printf("Failed to close the app [%s]\n", appId.c_str());
@@ -365,24 +360,6 @@ namespace WPEFramework
 
             ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
 	    status = SpawnApp(launchParams.mAppId, launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchIntent, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, activate?Exchange::ILifecycleManager::LifecycleState::ACTIVE:Exchange::ILifecycleManager::LifecycleState::RUNNING, launchParams.mLaunchArgs, appInstanceId, errorReason, success);
-	    return status;
-	}
-
-        Core::hresult LifecycleManagerImplementation::RuntimeTerminated(const string& appInstanceId, const Exchange::ILifecycleManagerRuntime::AppTerminatedReason terminatedReason)
-	{
-            Core::hresult status = Core::ERROR_NONE;
-            ApplicationContext* context = getContext(appInstanceId, "");
-            if (nullptr == context)
-	    {
-                status = Core::ERROR_GENERAL;
-                return status;
-	    }
-            string errorReason("");
-            bool success = RequestHandler::getInstance()->updateState(context, Exchange::ILifecycleManager::LifecycleState::TERMINATING, errorReason);
-            if (!success || !(errorReason.empty()))
-	    {
-                status = Core::ERROR_GENERAL;
-	    }
 	    return status;
 	}
 

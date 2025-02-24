@@ -57,7 +57,7 @@ namespace WPEFramework
 
                 void setAppInstanceId(std::string& id);
                 void setActiveSessionId(std::string& id);
-                void setLastIntent(const std::string& intent);
+                void setMostRecentIntent(const std::string& intent);
                 void setLastLifecycleStateChangeTime(timespec changeTime);
 		void setState(void* state);
                 void setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState state);

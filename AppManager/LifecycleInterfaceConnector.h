@@ -33,23 +33,23 @@
 #include <core/core.h>
 #include <com/com.h>
 #include <plugins/plugins.h>
-#include <interfaces/ILifeCycleManager.h>
+#include <interfaces/ILifecycleManager.h>
 
 
 namespace WPEFramework
 {
     namespace Plugin
     {
-        class LifeCycleInterfaceConnector
+        class LifecycleInterfaceConnector
         {
                 public/*members*/:
-                    static LifeCycleInterfaceConnector* _instance;
+                    static LifecycleInterfaceConnector* _instance;
 
                 public:
-                    LifeCycleInterfaceConnector(PluginHost::IShell* service);
-                    ~LifeCycleInterfaceConnector();
-                    Core::hresult createLifeCycleManagerRemoteObject();
-                    void releaseLifeCycleManagerRemoteObject();
+                    LifecycleInterfaceConnector(PluginHost::IShell* service);
+                    ~LifecycleInterfaceConnector();
+                    Core::hresult createLifecycleManagerRemoteObject();
+                    void releaseLifecycleManagerRemoteObject();
                     Core::hresult launch(const string& appId, const string& intent, const string& launchArgs);
                     Core::hresult preLoadApp(const string& appId, const string& launchArgs, string& error);
                     Core::hresult closeApp(const string& appId);
@@ -57,13 +57,13 @@ namespace WPEFramework
                     Core::hresult killApp(const string& appId);
                     Core::hresult sendIntent(const string& appId, const string& intent);
                     Core::hresult getLoadedApps(string& apps);
-                    void OnAppStateChanged(const string& appId, Exchange::ILifeCycleManager::LifeCycleState state, const string& errorReason);
+                    void OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason);
                     string GetAppInstanceId(const string& appId) const;
                     void RemoveApp(const string& appId);
 
                 private:
                     mutable Core::CriticalSection mAdminLock;
-                    Exchange::ILifeCycleManager *mLifeCycleManagerRemoteObject;
+                    Exchange::ILifecycleManager *mLifecycleManagerRemoteObject;
                     PluginHost::IShell* mCurrentservice;
         };
     }

@@ -111,13 +111,58 @@ namespace WPEFramework {
 #endif
         public:
             static Telemetry* _instance;
+            enum Event
+            {
+                TELEMETRY_EVENT_UPLOADREPORT,
+                TELEMETRY_EVENT_ABORTREPORT
+            };
+
+        class EXTERNAL Job : public Core::IDispatch {
+        protected:
+            Job(Telemetry* telemetry, Event event)
+                : _telemetry(telemetry)
+                , _event(event) {
+                if (_telemetry != nullptr) {
+                    _telemetry->AddRef();
+                }
+            }
+
+       public:
+            Job() = delete;
+            Job(const Job&) = delete;
+            Job& operator=(const Job&) = delete;
+            ~Job() {
+                if (_telemetry != nullptr) {
+                    _telemetry->Release();
+                }
+            }
+
+       public:
+            static Core::ProxyType<Core::IDispatch> Create(Telemetry* Instance, Event event ) {
+#ifndef USE_THUNDER_R4
+                return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(Instance, event)));
+#else
+                return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(Instance, event)));
+#endif
+            }
+
+            virtual void Dispatch() {
+                _telemetry->Dispatch(_event);
+            }
         private:
+            Telemetry *_telemetry;
+            const Event _event;
+        };
+        private:
+
+            void Dispatch(Event event);
+            friend class Job;
+
             std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> m_systemServiceConnection;
-            Core::ProxyType<RPC::InvokeServerType<1, 0, 4> > _engine;
-            Core::ProxyType<RPC::CommunicatorClient> _communicatorClient;
             PowerManagerInterfaceRef _powerManagerPlugin;
             Core::Sink<PowerManagerNotification> _pwrMgrNotification;
             bool _registeredEventHandlers;
+            PluginHost::IShell* m_service;
         };
     } // namespace Plugin
 } // namespace WPEFramework

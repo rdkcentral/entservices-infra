@@ -25,6 +25,8 @@
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <mutex>
+#include <interfaces/IOCIContainer.h>
+#include <condition_variable>
 
 namespace WPEFramework
 {
@@ -33,15 +35,76 @@ namespace WPEFramework
         class RuntimeManagerImplementation : public Exchange::IRuntimeManager, public Exchange::IConfiguration
         {
             public:
-                enum EventNames
+                enum RuntimeEventType
                 {
+                    RUNTIME_MANAGER_EVENT_UNKNOWN = 0,
                     RUNTIME_MANAGER_EVENT_STATECHANGED
+                };
+                enum class OCIRequestType
+                {
+                    RUNTIME_OCI_REQUEST_METHOD_UNKNOWN = 0,
+                    RUNTIME_OCI_REQUEST_METHOD_RUN,
+                    RUNTIME_OCI_REQUEST_METHOD_HIBERNATE,
+                    RUNTIME_OCI_REQUEST_METHOD_WAKE,
+                    RUNTIME_OCI_REQUEST_METHOD_SUSPEND,
+                    RUNTIME_OCI_REQUEST_METHOD_RESUME,
+                    RUNTIME_OCI_REQUEST_METHOD_TERMINATE,
+                    RUNTIME_OCI_REQUEST_METHOD_KILL,
+                    RUNTIME_OCI_REQUEST_METHOD_GETINFO,
+                    RUNTIME_OCI_REQUEST_METHOD_ANNONATE,
+                    RUNTIME_OCI_REQUEST_METHOD_MOUNT,
+                    RUNTIME_OCI_REQUEST_METHOD_UNMOUNT
+                };
+
+                struct OCIContainerRequest
+                {
+                    OCIContainerRequest(OCIRequestType type, const std::string& containerId, const std::string& dobbySpec, const std::string& command, const std::string& westerosSocket);
+                    OCIContainerRequest(OCIRequestType type, const std::string& containerId);
+                    ~OCIContainerRequest();
+
+                    OCIRequestType mRequestType;
+                    std::string mContainerId;
+                    std::string mDobbySpec;
+                    std::string mCommand;
+                    std::string mWesterosSocket;
+                    sem_t mSemaphore;
+                    std::string mGetInfo;
+                    Core::hresult mResult;
+
+                    int32_t mDescriptor;
+                    bool mSuccess;
+                    std::string mErrorReason;
+                    std::string mRequestId;
+                };
+
+                typedef struct _RuntimeAppInfo
+                {
+                    std::string appInstanceId;
+                    std::string appPath;
+                    std::string runtimePath;
+                    uint32_t descriptor;
+                    Exchange::IRuntimeManager::RuntimeState containerState;
+                } RuntimeAppInfo;
+
+                /* ApplicationConfiguration To be removed once RDKEMW-1632 is ready */
+                struct ApplicationConfiguration
+                {
+                    ApplicationConfiguration() = default;
+                    std::string mAppInstanceId;
+                    std::string mAppPath;
+                    std::string mRuntimePath;
+                    std::vector<std::string> mEnvVars;
+                    uint32_t mUserId;
+                    uint32_t mGroupId;
+                    std::vector<uint32_t> mPorts;
+                    std::vector<std::string> mPaths;
+                    std::vector<std::string> mDebugSettings;
                 };
 
                 class EXTERNAL Job : public Core::IDispatch
                 {
                     protected:
-                    Job(RuntimeManagerImplementation *mRuntimeManagerImpl, EventNames event, JsonValue &params)
+                    Job(RuntimeManagerImplementation *mRuntimeManagerImpl, RuntimeEventType event, JsonValue &params)
                     : mRuntimeManagerImplementation(mRuntimeManagerImpl)
                     , _event(event)
                     , _params(params)
@@ -65,7 +128,7 @@ namespace WPEFramework
                         }
 
                     public:
-                        static Core::ProxyType<Core::IDispatch> Create(RuntimeManagerImplementation *mRuntimeManagerImpl, EventNames event, JsonValue params)
+                        static Core::ProxyType<Core::IDispatch> Create(RuntimeManagerImplementation *mRuntimeManagerImpl, RuntimeEventType event, JsonValue params)
                         {
 #ifndef  USE_THUNDER_R4
                             return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(mRuntimeManagerImpl, event, params)));
@@ -81,7 +144,7 @@ namespace WPEFramework
 
                     private:
                         RuntimeManagerImplementation *mRuntimeManagerImplementation;
-                        const EventNames _event;
+                        const RuntimeEventType _event;
                         const JsonValue _params;
                 };
 
@@ -109,7 +172,7 @@ namespace WPEFramework
                 virtual Core::hresult Resume(const string& appInstanceId) override;
                 virtual Core::hresult Terminate(const string& appInstanceId) override;
                 virtual Core::hresult Kill(const string& appInstanceId) override;
-                virtual Core::hresult GetInfo(const string& appInstanceId, string& info) const override;
+                virtual Core::hresult GetInfo(const string& appInstanceId, string& info) override;
                 virtual Core::hresult Annotate(const string& appInstanceId, const string& key, const string& value) override;
                 virtual Core::hresult Mount() override;
                 virtual Core::hresult Unmount() override;
@@ -117,14 +180,27 @@ namespace WPEFramework
                 // IConfiguration methods
                 uint32_t Configure(PluginHost::IShell* service) override;
 
+            private: /* private methods */
+                Core::hresult createOCIContainerPluginObject(Exchange::IOCIContainer*& ociContainerRemoteObject);
+                void releaseOCIContainerPluginObject(Exchange::IOCIContainer*& ociContainerRemoteObject);
+                void setRunningState(bool state);
+                bool getRunningState();
+                static bool generate(const ApplicationConfiguration& config, std::string& dobbySpec);
+
             private: /* members */
                 mutable Core::CriticalSection mRuntimeManagerImplLock;
+                std::mutex mContainerLock;
                 PluginHost::IShell* mCurrentservice;
                 std::list<Exchange::IRuntimeManager::INotification*> mRuntimeManagerNotification;
+                std::thread mContainerWorkerThread;
+                std::map<std::string, RuntimeAppInfo> mRuntimeAppInfo;
+                std::vector<std::shared_ptr<WPEFramework::Plugin::RuntimeManagerImplementation::OCIContainerRequest>> mContainerRequest;
+                std::condition_variable mContainerQueueCV;
 
             private: /* internal methods */
-                void dispatchEvent(EventNames, const JsonValue &params);
-                void Dispatch(EventNames event, const JsonValue params);
+                void dispatchEvent(RuntimeEventType, const JsonValue &params);
+                void Dispatch(RuntimeEventType event, const JsonValue params);
+                void OCIContainerWorkerThread(void);
 
                 friend class Job;
 

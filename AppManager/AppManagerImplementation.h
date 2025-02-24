@@ -28,7 +28,7 @@
 #include <com/com.h>
 #include <core/core.h>
 #include <plugins/plugins.h>
-#include "LifeCycleInterfaceConnector.h"
+#include "LifecycleInterfaceConnector.h"
 #include <map>
 
 
@@ -65,7 +65,7 @@ namespace Plugin {
             string appIntent;
             ApplicationType type;
             Exchange::IAppManager::AppLifecycleState currentAppState;
-            Exchange::ILifeCycleManager::LifeCycleState currentAppLifecycleState;
+            Exchange::ILifecycleManager::LifecycleState currentAppLifecycleState;
             Exchange::IAppManager::AppLifecycleState targetAppState;
         } LoadedAppInfo;
 
@@ -146,7 +146,7 @@ namespace Plugin {
     private:
         mutable Core::CriticalSection mAdminLock;
         std::list<Exchange::IAppManager::INotification*> mAppManagerNotification;
-        LifeCycleInterfaceConnector* mLifeCycleInterfaceConnector;
+        LifecycleInterfaceConnector* mLifecycleInterfaceConnector;
         Exchange::IStore2* mPersistentStoreRemoteStoreObject;
         PluginHost::IShell* mCurrentservice;
 

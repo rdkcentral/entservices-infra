@@ -35,7 +35,7 @@ namespace WPEFramework
 	}
 
         bool InitializingState::handle(string& errorReason)
-	{
+        {
             WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
             bool result = false;
             if (nullptr != windowManagerHandler)
@@ -46,14 +46,8 @@ namespace WPEFramework
                 result = windowManagerHandler->createDisplay(launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchArgs, errorReason);
             }
 
-            if (result)
-	    {
-                //PENDING ILifecycleStateHook
-                //Call appInitializing to ripple with appInstanceId, appId, appPath
-                //get loadParameters from this and pass to runtime manager
-	    }
-	    return result;
-	}
+            return result;
+        }
 
         bool RunRequestedState::handle(string& errorReason)
 	{

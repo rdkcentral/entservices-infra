@@ -100,20 +100,6 @@ namespace WPEFramework
         bool RequestHandler::launch(ApplicationContext* context, const string& launchIntent, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState, string& errorReason)
 	{
             bool success = updateState(context, targetLifecycleState, errorReason);
-            if (!success)
-	    {
-	        return false;
-	    }
-            if (!launchIntent.empty())
-	    {
-	        success = sendIntent(context, launchIntent, errorReason);
-	    }
-            if (!success)
-	    {
-                printf("Sending intent failed !!!");
-                fflush(stdout);
-		errorReason = "Send intent failure";
-	    }
             return success;
 	}
 
@@ -130,7 +116,7 @@ namespace WPEFramework
            bool ret = mRippleHandler->sendIntent(appId, intent, errorReason);
            if (ret)
 	   {
-               context->setLastIntent(intent);		   
+               context->setMostRecentIntent(intent);
 	   }
            return ret;
 	}

@@ -1,4 +1,0 @@
-precondition = ["Platform"]
-callsign = "org.rdk.UsbAccess"
-autostart = "false"
-startuporder = "@PLUGIN_USBACCESS_STARTUPORDER@"

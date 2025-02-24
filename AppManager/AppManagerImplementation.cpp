@@ -28,7 +28,7 @@ AppManagerImplementation* AppManagerImplementation::_instance = nullptr;
 AppManagerImplementation::AppManagerImplementation()
 : mAdminLock()
 , mAppManagerNotification()
-, mLifeCycleInterfaceConnector(nullptr)
+, mLifecycleInterfaceConnector(nullptr)
 , mPersistentStoreRemoteStoreObject(nullptr)
 , mCurrentservice(nullptr)
 {
@@ -48,11 +48,11 @@ AppManagerImplementation::~AppManagerImplementation()
 {
     LOGINFO("Delete AppManagerImplementation Instance");
     _instance = nullptr;
-    if (nullptr != mLifeCycleInterfaceConnector)
+    if (nullptr != mLifecycleInterfaceConnector)
     {
-        mLifeCycleInterfaceConnector->releaseLifeCycleManagerRemoteObject();
-        delete mLifeCycleInterfaceConnector;
-        mLifeCycleInterfaceConnector = nullptr;
+        mLifecycleInterfaceConnector->releaseLifecycleManagerRemoteObject();
+        delete mLifecycleInterfaceConnector;
+        mLifecycleInterfaceConnector = nullptr;
     }
     releasePersistentStoreRemoteStoreObject();
 
@@ -132,17 +132,17 @@ uint32_t AppManagerImplementation::Configure(PluginHost::IShell* service)
         mCurrentservice = service;
         mCurrentservice->AddRef();
 
-        if (nullptr == (mLifeCycleInterfaceConnector = new LifeCycleInterfaceConnector(mCurrentservice)))
+        if (nullptr == (mLifecycleInterfaceConnector = new LifecycleInterfaceConnector(mCurrentservice)))
         {
-            LOGERR("Failed to create LifeCycleInterfaceConnector");
+            LOGERR("Failed to create LifecycleInterfaceConnector");
         }
-        else if (Core::ERROR_NONE != mLifeCycleInterfaceConnector->createLifeCycleManagerRemoteObject())
+        else if (Core::ERROR_NONE != mLifecycleInterfaceConnector->createLifecycleManagerRemoteObject())
         {
-            LOGERR("Failed to create LifeCycleInterfaceConnector");
+            LOGERR("Failed to create LifecycleInterfaceConnector");
         }
         else
         {
-            LOGINFO("created LifeCycleManagerRemoteObject");
+            LOGINFO("created LifecycleManagerRemoteObject");
         }
 
         if (Core::ERROR_NONE != createPersistentStoreRemoteStoreObject())
@@ -207,9 +207,9 @@ Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const st
     LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
-    if (nullptr != mLifeCycleInterfaceConnector)
+    if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = mLifeCycleInterfaceConnector->launch(appId, intent, launchArgs);
+        status = mLifecycleInterfaceConnector->launch(appId, intent, launchArgs);
     }
     mAdminLock.Unlock();
 
@@ -239,9 +239,9 @@ Core::hresult AppManagerImplementation::CloseApp(const string& appId)
     if (!appId.empty())
     {
         mAdminLock.Lock();
-        if (nullptr != mLifeCycleInterfaceConnector)
+        if (nullptr != mLifecycleInterfaceConnector)
         {
-            status = mLifeCycleInterfaceConnector->closeApp(appId);
+            status = mLifecycleInterfaceConnector->closeApp(appId);
         }
         mAdminLock.Unlock();
     }
@@ -274,9 +274,9 @@ Core::hresult AppManagerImplementation::TerminateApp(const string& appId )
     if (!appId.empty())
     {
         mAdminLock.Lock();
-        if (nullptr != mLifeCycleInterfaceConnector)
+        if (nullptr != mLifecycleInterfaceConnector)
         {
-            status = mLifeCycleInterfaceConnector->terminateApp(appId);
+            status = mLifecycleInterfaceConnector->terminateApp(appId);
         }
         mAdminLock.Unlock();
     }
@@ -294,9 +294,9 @@ Core::hresult AppManagerImplementation::KillApp(const string& appId)
     LOGINFO("KillApp entered appId: '%s'", appId.c_str());
 
     mAdminLock.Lock();
-    if (nullptr != mLifeCycleInterfaceConnector)
+    if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = mLifeCycleInterfaceConnector->killApp(appId);
+        status = mLifecycleInterfaceConnector->killApp(appId);
     }
     mAdminLock.Unlock();
 
@@ -309,9 +309,9 @@ Core::hresult AppManagerImplementation::GetLoadedApps(string& appData)
     Core::hresult status = Core::ERROR_GENERAL;
     LOGINFO("GetLoadedApps Entered");
     mAdminLock.Lock();
-    if (nullptr != mLifeCycleInterfaceConnector)
+    if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = mLifeCycleInterfaceConnector->getLoadedApps(appData);
+        status = mLifecycleInterfaceConnector->getLoadedApps(appData);
     }
     mAdminLock.Unlock();
 
@@ -326,9 +326,9 @@ Core::hresult AppManagerImplementation::SendIntent(const string& appId , const s
     LOGINFO("SendIntent entered with appId '%s' and intent '%s'", appId.c_str(), intent.c_str());
 
     mAdminLock.Lock();
-    if (nullptr != mLifeCycleInterfaceConnector)
+    if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = mLifeCycleInterfaceConnector->sendIntent(appId, intent);
+        status = mLifecycleInterfaceConnector->sendIntent(appId, intent);
     }
     mAdminLock.Unlock();
 
@@ -352,9 +352,9 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
     LOGINFO(" PreloadApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
-    if (nullptr != mLifeCycleInterfaceConnector)
+    if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = mLifeCycleInterfaceConnector->preLoadApp(appId, launchArgs, error);
+        status = mLifecycleInterfaceConnector->preLoadApp(appId, launchArgs, error);
     }
     mAdminLock.Unlock();
 
