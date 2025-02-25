@@ -89,7 +89,7 @@ namespace Plugin {
 
     private:
         IStore2* _accountStore2;
-        Exchange::IAuthService *_authservicePlugin;
+        PluginHost::IShell* _service;
     };
 
 } // namespace Plugin

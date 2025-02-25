@@ -27,9 +27,8 @@ namespace Plugin {
 
     CloudStoreImplementation::CloudStoreImplementation()
         : _accountStore2(nullptr)
-        , _authservicePlugin(nullptr)
+        , _service(nullptr)
     {
-        ASSERT(_accountStore2 != nullptr);
     }
 
     CloudStoreImplementation::~CloudStoreImplementation()
@@ -39,23 +38,19 @@ namespace Plugin {
             _accountStore2 = nullptr;
         }
 
-        if (_authservicePlugin != nullptr) {
-            _authservicePlugin->Release();
-            _authservicePlugin = nullptr;
+        if (_service != nullptr) {
+            _service->Release();
+            _service= nullptr;
         }
     }
     
     uint32_t CloudStoreImplementation::Configure(PluginHost::IShell* service)
     {
-        _authservicePlugin = service->QueryInterfaceByCallsign<Exchange::IAuthService>("org.rdk.AuthService");
-        if (_authservicePlugin) {
-            _authservicePlugin->AddRef();
-            TRACE(Trace::Information, (_T("Got IAuthService")));
-        }
-        else 
-            TRACE(Trace::Error, (_T("Failed to get IAuthService")));
-     
-        _accountStore2 = Core::Service<Grpc::Store2>::Create<Exchange::IStore2>(_authservicePlugin);
+        ASSERT(service != nullptr);
+        _service = service;
+        _service->AddRef();
+             
+        _accountStore2 = Core::Service<Grpc::Store2>::Create<Exchange::IStore2>(_service);
         ASSERT(_accountStore2 != nullptr);
 
         return Core::ERROR_NONE;

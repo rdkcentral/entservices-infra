@@ -69,15 +69,18 @@ namespace Plugin {
             Store2& operator=(const Store2&) = delete;
 
         public:
-            Store2(Exchange::IAuthService *_authservicePlugin)
-                : Store2(getenv(URI_ENV), getenv(TOKEN_ENV), _authservicePlugin)
+            //Store2(Exchange::IAuthService *_authservicePlugin)
+            Store2(PluginHost::IShell* service)
+                : Store2(getenv(URI_ENV), getenv(TOKEN_ENV), service)
             {
             }
-            Store2(const string& uri, const string& token, Exchange::IAuthService *_authservicePlugin)
+            //Store2(const string& uri, const string& token, Exchange::IAuthService *_authservicePlugin)
+            Store2(const string& uri, const string& token, PluginHost::IShell* service)
                 : IStore2()
                 , _uri(uri)
                 , _token(token)
-                , _authservicePlugin(_authservicePlugin)
+                //, _authservicePlugin(_authservicePlugin)
+                , _service(service)
                 , _authorization((_uri.find("localhost") == string::npos) && (_uri.find("0.0.0.0") == string::npos))
             {
                 Open();
@@ -122,13 +125,23 @@ namespace Plugin {
             }
             string GetToken() const
             {
-                // Get actual token, as it may change at any time...
-                if (_authservicePlugin != nullptr) {
-                    WPEFramework::Exchange::IAuthService::GetServiceAccessTokenResult atRes;
+                if (_service == nullptr)
+                {
+                    TRACE(Trace::Error, (_T("No IShell")));
+                    return "";
+                }
 
-                    if (_authservicePlugin->GetServiceAccessToken(atRes) == Core::ERROR_NONE)
+                // Get actual token, as it may change at any time...
+                Exchange::IAuthService *authservicePlugin = _service->QueryInterfaceByCallsign<Exchange::IAuthService>("org.rdk.AuthService");
+                if (authservicePlugin != nullptr) {
+                    TRACE(Trace::Information, (_T("Got IAuthService")));
+
+                    WPEFramework::Exchange::IAuthService::GetServiceAccessTokenResult atRes;
+                    if (authservicePlugin->GetServiceAccessToken(atRes) == Core::ERROR_NONE)
                         return atRes.token;
                 }
+                else 
+                    TRACE(Trace::Error, (_T("Failed to get IAuthService")));
 
                 return "";
             }
@@ -393,7 +406,7 @@ namespace Plugin {
         private:
             const string _uri;
             const string _token;
-            Exchange::IAuthService *_authservicePlugin;
+            PluginHost::IShell* _service;
             const bool _authorization;
             std::unique_ptr<::distp::gateway::secure_storage::v1::SecureStorageService::Stub> _stub;
             std::list<INotification*> _clients;
