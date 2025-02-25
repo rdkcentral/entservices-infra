@@ -40,7 +40,7 @@ namespace WPEFramework
                 static uint32_t sStateChangeCount;
 
                 static State* createState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState lifeCycleState);
-                static bool isValidTransition(Exchange::ILifecycleManager::LifecycleState start, Exchange::ILifecycleManager::LifecycleState target, std::vector<Exchange::ILifecycleManager::LifecycleState>& foundPath);
+                static bool isValidTransition(Exchange::ILifecycleManager::LifecycleState start, Exchange::ILifecycleManager::LifecycleState target, std::map<Exchange::ILifecycleManager::LifecycleState, bool>& pathSequence, std::vector<Exchange::ILifecycleManager::LifecycleState>& foundPath);
 	        static bool updateState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState lifeCycleState, string& errorReason);
                 static std::map<Exchange::ILifecycleManager::LifecycleState, std::list<Exchange::ILifecycleManager::LifecycleState>> mPossibleStateTransitions;
                 static std::map<Exchange::ILifecycleManager::LifecycleState, std::string> mStateStrings;

@@ -41,6 +41,8 @@ namespace WPEFramework
 	    string mEnvironmentVars;
 	    bool   mEnableDebugger;
 	    string mLaunchArgs;
+            string mDisplayName;
+            string mXdgRuntimeDir;
 	};
 
         struct ApplicationKillParams
@@ -62,7 +64,7 @@ namespace WPEFramework
 		void setState(void* state);
                 void setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState state);
                 void setStateChangeId(uint32_t id);
-                void setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs);
+                void setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, const string& xdgRuntimeDirectory, const string& displayName);
                 void setApplicationKillParams(bool force);
 
                 void* getState();

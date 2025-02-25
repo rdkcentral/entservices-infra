@@ -22,7 +22,6 @@
 #include "Module.h"
 #include <interfaces/ILifecycleManager.h>
 #include <interfaces/ILifecycleManagerState.h>
-#include <interfaces/ILifecycleManagerRuntime.h>
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <mutex>
@@ -44,7 +43,6 @@ namespace WPEFramework
                 INTERFACE_ENTRY(PluginHost::IPlugin)
                 INTERFACE_AGGREGATE(Exchange::ILifecycleManager, mLifecycleManagerImplementation)
                 INTERFACE_AGGREGATE(Exchange::ILifecycleManagerState, mLifecycleManagerState)
-                INTERFACE_AGGREGATE(Exchange::ILifecycleManagerRuntime, mLifecycleManagerRuntime)
                 END_INTERFACE_MAP
 
                 /* IPlugin methods  */
@@ -63,7 +61,6 @@ namespace WPEFramework
                 uint32_t mConnectionId;
                 Exchange::ILifecycleManager* mLifecycleManagerImplementation;
                 Exchange::ILifecycleManagerState* mLifecycleManagerState;
-                Exchange::ILifecycleManagerRuntime* mLifecycleManagerRuntime;
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */

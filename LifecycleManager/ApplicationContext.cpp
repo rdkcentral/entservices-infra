@@ -24,7 +24,7 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-	ApplicationLaunchParams::ApplicationLaunchParams(): mAppId(""), mAppPath(""), mAppConfig(""), mRuntimeAppId(""), mRuntimePath(""), mRuntimeConfig(""), mLaunchIntent(""), mEnvironmentVars(""), mEnableDebugger(false), mLaunchArgs("")
+	ApplicationLaunchParams::ApplicationLaunchParams(): mAppId(""), mAppPath(""), mAppConfig(""), mRuntimeAppId(""), mRuntimePath(""), mRuntimeConfig(""), mLaunchIntent(""), mEnvironmentVars(""), mEnableDebugger(false), mLaunchArgs(""), mDisplayName(""), mXdgRuntimeDir("")
         {
 	}
 
@@ -82,7 +82,7 @@ namespace WPEFramework
             mStateChangeId = id;		
 	}
 
-        void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs)
+        void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, const string& xdgRuntimeDirectory, const string& displayName)
 	{
             mLaunchParams.mAppId = appId;
             mLaunchParams.mAppPath = appPath;
@@ -94,6 +94,8 @@ namespace WPEFramework
             mLaunchParams.mEnvironmentVars = environmentVars;
             mLaunchParams.mEnableDebugger = enableDebugger;
             mLaunchParams.mLaunchArgs = launchArgs;
+            mLaunchParams.mDisplayName = displayName;
+            mLaunchParams.mXdgRuntimeDir = xdgRuntimeDirectory;
 	}
 
         void ApplicationContext::setApplicationKillParams(bool force)

@@ -111,14 +111,14 @@ namespace WPEFramework
             return state;
 	}
 
-        bool StateHandler::isValidTransition(Exchange::ILifecycleManager::LifecycleState start, Exchange::ILifecycleManager::LifecycleState target, std::vector<Exchange::ILifecycleManager::LifecycleState>& foundPath)
+        bool StateHandler::isValidTransition(Exchange::ILifecycleManager::LifecycleState start, Exchange::ILifecycleManager::LifecycleState target, std::map<Exchange::ILifecycleManager::LifecycleState, bool>& pathSequence, std::vector<Exchange::ILifecycleManager::LifecycleState>& foundPath)
         {
             bool pathPresent = false;
             if (start == target)
             {
                 return true;
             }
-        
+            pathSequence[target] = true; 
             std::map<Exchange::ILifecycleManager::LifecycleState, std::list<Exchange::ILifecycleManager::LifecycleState>>::iterator transitionIter = mPossibleStateTransitions.find(target);
             if (transitionIter == mPossibleStateTransitions.end())
             {
@@ -127,7 +127,12 @@ namespace WPEFramework
             std::list<Exchange::ILifecycleManager::LifecycleState>& transitionList = transitionIter->second;
             for (auto iter = transitionList.begin(); iter != transitionList.end(); ++iter)
             {
-                pathPresent = isValidTransition(start, *iter, foundPath);
+                if (pathSequence.find(*iter) != pathSequence.end())
+                {
+                    continue;
+                }
+
+                pathPresent = isValidTransition(start, *iter, pathSequence, foundPath);
                 if (pathPresent)
                 {
 	            foundPath.push_back(*iter);		
@@ -207,7 +212,8 @@ namespace WPEFramework
 	    }
 
             std::vector<Exchange::ILifecycleManager::LifecycleState> statePath;
-            bool isValidRequest = StateHandler::isValidTransition(currentLifecycleState, lifecycleState, statePath);
+            std::map<Exchange::ILifecycleManager::LifecycleState, bool> seenPaths;
+            bool isValidRequest = StateHandler::isValidTransition(currentLifecycleState, lifecycleState, seenPaths, statePath);
             if (!isValidRequest)
             {
                 errorReason = "Invalid launch request in current state";
@@ -221,6 +227,7 @@ namespace WPEFramework
             // start from next state
 	    for (size_t stateIndex=1; stateIndex<statePath.size(); stateIndex++)
 	    {
+                Exchange::ILifecycleManager::LifecycleState oldLifecycleState = ((State*)context->getState())->getValue();
                 result = updateState(context, statePath[stateIndex], errorReason);
                 if (!result)
 		{
@@ -235,10 +242,16 @@ namespace WPEFramework
 
                 if (nullptr != eventHandler)
                 {
-                    //Need to populate intent as event parameter
+		    Exchange::ILifecycleManager::LifecycleState newLifecycleState = ((State*)context->getState())->getValue();
                     JsonObject eventData;
                     eventData["appId"] = context->getAppId();
-                    eventData["state"] = (uint32_t)(((State*)context->getState())->getValue());
+                    eventData["appInstanceId"] = context->getAppInstanceId();
+                    eventData["oldLifecycleState"] = (uint32_t)oldLifecycleState;
+                    eventData["newLifecycleState"] = (uint32_t)newLifecycleState;
+                    if (newLifecycleState == Exchange::ILifecycleManager::LifecycleState::ACTIVATEREQUESTED)
+                    {
+                        eventData["navigationIntent"] = context->getMostRecentIntent();
+                    }
                     eventData["errorReason"] = errorReason;
                     eventHandler->onStateChangeEvent(eventData);
                 }

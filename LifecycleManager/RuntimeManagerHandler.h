@@ -40,18 +40,13 @@ namespace Plugin {
                     : _parent(parent)
                 {
                 }
-                ~RuntimeManagerNotification() override = default;
-/*
-                void OnDevicePluggedIn(const USBDevice &device)
-                {
-                    _parent.OnDevicePluggedIn(device);
-                }
 
-                void OnDevicePluggedOut(const USBDevice &device)
-                {
-                    _parent.OnDevicePluggedOut(device);
-                }
-*/
+                virtual void OnStarted(const string& appInstanceId) override;
+                virtual void OnTerminated(const string& appInstanceId) override;
+                virtual void OnFailure(const string& appInstanceId, const string& error) override;
+                virtual void OnStateChanged(const string& appInstanceId, Exchange::IRuntimeManager::RuntimeState state) override;
+
+                ~RuntimeManagerNotification() override = default;
                 BEGIN_INTERFACE_MAP(RuntimeManagerNotification)
                 INTERFACE_ENTRY(Exchange::IRuntimeManager::INotification)
                 END_INTERFACE_MAP
@@ -71,17 +66,20 @@ namespace Plugin {
         public:
             bool initialize(PluginHost::IShell* service, IEventHandler* eventHandler);
 	    void deinitialize();
-            bool run(const string& appInstanceId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& environmentVars, const bool enableDebugger, const string& launchArgs, string& errorReason);
+            bool run(const string& appInstanceId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& environmentVars, const bool enableDebugger, const string& launchArgs, const string& xdgRuntimeDir, const string& displayName, string& errorReason);
             bool kill(const string& appInstanceId, string& errorReason);
             bool terminate(const string& appInstanceId, string& errorReason);
             bool suspend(const string& appInstanceId, string& errorReason);
             bool resume(const string& appInstanceId, string& errorReason);
             bool hibernate(const string& appInstanceId, string& errorReason);
-            string getRuntimeStats(ApplicationContext* context); //MADANA NEED TO PASS CONTEXT OR NEEDED INFO ONLY
+            bool wake(const string& appInstanceId, Exchange::ILifecycleManager::LifecycleState state, string& errorReason);
+            bool getRuntimeStats(const string& appInstanceId, string& info);
+            void onEvent(JsonObject& data);
 
         private:
-            PluginHost::IShell *mRuntimeManagerController;
             Exchange::IRuntimeManager* mRuntimeManager;
+            Core::Sink<RuntimeManagerNotification> mRuntimeManagerNotification;
+            uint32_t mFireboltAccessPort;
             IEventHandler* mEventHandler;
     };
 } // namespace Plugin

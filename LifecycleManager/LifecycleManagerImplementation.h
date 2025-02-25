@@ -41,7 +41,8 @@ namespace WPEFramework
             public:
                 enum EventNames
                 {
-                    LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED
+                    LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED,
+                    LIFECYCLE_MANAGER_EVENT_RUNTIME
                 };
 
                 class EXTERNAL Job : public Core::IDispatch
@@ -113,6 +114,10 @@ namespace WPEFramework
                 virtual Core::hresult SendIntentToActiveApp(const string& appInstanceId, const string& intent, string& errorReason, bool& success) override;
 
                 /* ILifecycleManagerState methods  */
+                /** Register notification interface */
+                virtual Core::hresult Register(Exchange::ILifecycleManagerState::INotification *notification) override;
+                /** Unregister notification interface */
+                virtual Core::hresult Unregister(Exchange::ILifecycleManagerState::INotification *notification) override;
 		virtual Core::hresult AppReady(const string& appId) override;
 		virtual Core::hresult StateChangeComplete(const string& appId, const uint32_t stateChangedId, const bool success) override;
 		virtual Core::hresult CloseApp(const string& appId, const AppCloseReason closeReason) override;
@@ -121,7 +126,7 @@ namespace WPEFramework
                 uint32_t Configure(PluginHost::IShell* service) override;
 
                 /* IEventHandler methods  */
-                virtual void onRuntimeManagerEvent(string name, JsonObject& data) override;
+                virtual void onRuntimeManagerEvent(JsonObject& data) override;
                 virtual void onWindowManagerEvent(string name, JsonObject& data) override;
                 virtual void onRippleEvent(string name, JsonObject& data) override;
                 virtual void onStateChangeEvent(JsonObject& data) override;
@@ -129,6 +134,7 @@ namespace WPEFramework
 	    private: /* members */
                 mutable Core::CriticalSection mAdminLock;
 	        std::list<Exchange::ILifecycleManager::INotification*> mLifecycleManagerNotification;
+	        std::list<Exchange::ILifecycleManagerState::INotification*> mLifecycleManagerStateNotification;
                 std::list<ApplicationContext*> mLoadedApplications;
                 PluginHost::IShell* mService;
 
@@ -137,6 +143,7 @@ namespace WPEFramework
                 void terminate();
                 void dispatchEvent(EventNames, const JsonValue &params);
                 void Dispatch(EventNames event, const JsonValue params);
+                void handleRuntimeManagerEvent(const JsonObject &data);
                 ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
 
                 friend class Job;

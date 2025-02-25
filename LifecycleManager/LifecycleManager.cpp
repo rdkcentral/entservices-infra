@@ -45,7 +45,7 @@ namespace WPEFramework
 
         LifecycleManager* LifecycleManager::sInstance = nullptr;
 
-        LifecycleManager::LifecycleManager(): _service(nullptr), mConnectionId(0), mLifecycleManagerImplementation(nullptr), mLifecycleManagerState(nullptr), mLifecycleManagerRuntime(nullptr)
+        LifecycleManager::LifecycleManager(): _service(nullptr), mConnectionId(0), mLifecycleManagerImplementation(nullptr), mLifecycleManagerState(nullptr)
         {
             SYSLOG(Logging::Startup, (_T("LifecycleManager Constructor")));
             LifecycleManager::sInstance = this;
@@ -56,7 +56,6 @@ namespace WPEFramework
             SYSLOG(Logging::Startup, (_T("LifecycleManager Destructor")));
             LifecycleManager::sInstance = nullptr;
 	    mLifecycleManagerState = nullptr;
-	    mLifecycleManagerRuntime = nullptr;
 	    mLifecycleManagerImplementation = nullptr;
         }
 
@@ -87,8 +86,6 @@ namespace WPEFramework
 	        lifeCycleManagerConfig->Release();
 	    }
             mLifecycleManagerState = mLifecycleManagerImplementation->QueryInterface<Exchange::ILifecycleManagerState>();
-            mLifecycleManagerRuntime = mLifecycleManagerImplementation->QueryInterface<Exchange::ILifecycleManagerRuntime>();
-            ASSERT(mLifecycleManagerRuntime != nullptr);
 	    ASSERT(mLifecycleManagerState != nullptr);
 
             return retStatus;
@@ -102,11 +99,6 @@ namespace WPEFramework
 	    {
 	        mLifecycleManagerState->Release();
 	        mLifecycleManagerState = nullptr;
-	    }
-	    if (mLifecycleManagerRuntime != nullptr)
-	    {
-	        mLifecycleManagerRuntime->Release();
-	        mLifecycleManagerRuntime = nullptr;
 	    }
 
             if (nullptr != mLifecycleManagerImplementation)

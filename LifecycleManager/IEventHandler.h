@@ -29,7 +29,7 @@ namespace WPEFramework
         class IEventHandler
 	{
             public:
-	        virtual void onRuntimeManagerEvent(std::string name, JsonObject& data) = 0;
+	        virtual void onRuntimeManagerEvent(JsonObject& data) = 0;
 	        virtual void onWindowManagerEvent(std::string name, JsonObject& data) = 0;
 	        virtual void onRippleEvent(std::string name, JsonObject& data) = 0;
 	        virtual void onStateChangeEvent(JsonObject& data) = 0;
