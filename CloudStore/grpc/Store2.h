@@ -69,17 +69,14 @@ namespace Plugin {
             Store2& operator=(const Store2&) = delete;
 
         public:
-            //Store2(Exchange::IAuthService *_authservicePlugin)
             Store2(PluginHost::IShell* service)
                 : Store2(getenv(URI_ENV), getenv(TOKEN_ENV), service)
             {
             }
-            //Store2(const string& uri, const string& token, Exchange::IAuthService *_authservicePlugin)
             Store2(const string& uri, const string& token, PluginHost::IShell* service)
                 : IStore2()
                 , _uri(uri)
                 , _token(token)
-                //, _authservicePlugin(_authservicePlugin)
                 , _service(service)
                 , _authorization((_uri.find("localhost") == string::npos) && (_uri.find("0.0.0.0") == string::npos))
             {
