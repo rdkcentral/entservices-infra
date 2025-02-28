@@ -56,10 +56,20 @@ namespace WPEFramework
                     RUNTIME_OCI_REQUEST_METHOD_UNMOUNT
                 };
 
+                typedef struct _ContainerRequestData
+                {
+                    std::string dobbySpec = "";
+                    std::string command = "";
+                    std::string westerosSocket = "";
+                    std::string getInfo = "";
+                    std::string key = "";
+                    std::string value = "";
+                    int32_t descriptor = -1;
+                } ContainerRequestData;
+
                 struct OCIContainerRequest
                 {
-                    OCIContainerRequest(OCIRequestType type, const std::string& containerId, const std::string& dobbySpec, const std::string& command, const std::string& westerosSocket);
-                    OCIContainerRequest(OCIRequestType type, const std::string& containerId);
+                    OCIContainerRequest(OCIRequestType type, const std::string& containerId, const ContainerRequestData& containerReqData);
                     ~OCIContainerRequest();
 
                     OCIRequestType mRequestType;
@@ -186,6 +196,9 @@ namespace WPEFramework
                 void setRunningState(bool state);
                 bool getRunningState();
                 static bool generate(const ApplicationConfiguration& config, std::string& dobbySpec);
+                Core::hresult handleContainerRequest(const std::string& appInstanceId, OCIRequestType type, ContainerRequestData& containerReqData);
+                void updateContainerInfo(OCIRequestType type, const std::string& appInstanceId, const OCIContainerRequest& request, ContainerRequestData& containerReqData);
+                void printContainerInfo();
 
             private: /* members */
                 mutable Core::CriticalSection mRuntimeManagerImplLock;
