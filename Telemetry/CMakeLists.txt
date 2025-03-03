@@ -17,6 +17,7 @@
 
 set(PLUGIN_NAME Telemetry)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
 set(PLUGIN_TELEMETRY_STARTUPORDER "" CACHE STRING "To configure startup order of Telemetry plugin")
 set(PLUGIN_T2_PERSISTENT_FOLDER /opt/.t2reportprofiles/ CACHE STRING "Path to t2 persistent folder")
@@ -32,11 +33,27 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
+include_directories(
+        ../helpers)
+
+target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
+install(TARGETS ${MODULE_NAME}
+        DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+add_library(${PLUGIN_IMPLEMENTATION} SHARED
+        TelemetryImplementation.cpp
+        Module.cpp)
+
+set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+
 if (RDK_SERVICE_L2_TEST)
    find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
    if (TESTMOCKLIB_LIBRARIES)
        message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")
-       target_link_libraries(${MODULE_NAME} PRIVATE ${TESTMOCKLIB_LIBRARIES})
+       target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${TESTMOCKLIB_LIBRARIES})
    else (TESTMOCKLIB_LIBRARIES)
        message ("Require ${TESTMOCKLIB_LIBRARIES} library")
    endif (TESTMOCKLIB_LIBRARIES)
@@ -69,10 +86,10 @@ if (NOT ${SEC_UTIL_LIB} STREQUAL "SEC_UTIL_LIB-NOTFOUND")
     set(SEC_UTIL_LIBRARIES ${SEC_UTIL_LIB})
 endif()
 
-target_include_directories(${MODULE_NAME} PRIVATE ${RFC_INCLUDE_DIRS} ${RBUS_API_HEADERS} ${IARMBUS_INCLUDE_DIRS} ../helpers)
-target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${RFC_LIBRARIES} ${RBUS_LIBRARIES} ${IARMBUS_LIBRARIES} ${SEC_UTIL_LIBRARIES})
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${RFC_INCLUDE_DIRS} ${RBUS_API_HEADERS} ${IARMBUS_INCLUDE_DIRS} ../helpers)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${RFC_LIBRARIES} ${RBUS_LIBRARIES} ${IARMBUS_LIBRARIES} ${SEC_UTIL_LIBRARIES})
 
-install(TARGETS ${MODULE_NAME}
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

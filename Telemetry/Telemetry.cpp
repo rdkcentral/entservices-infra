@@ -19,54 +19,9 @@
 
 #include "Telemetry.h"
 
-#include "UtilsJsonRpc.h"
-#include "UtilsTelemetry.h"
-#include "UtilsController.h"
-
-#include "rfcapi.h"
-
-#if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
-#include "UtilsIarm.h"
-#endif /* USE_IARMBUS || USE_IARM_BUS */
-
-
-#ifdef HAS_RBUS
-#include "rbus.h"
-
-#define RBUS_COMPONENT_NAME "TelemetryThunderPlugin"
-#define T2_ON_DEMAND_REPORT "Device.X_RDKCENTRAL-COM_T2.UploadDCMReport"
-#define T2_ABORT_ON_DEMAND_REPORT "Device.X_RDKCENTRAL-COM_T2.AbortDCMReport"
-#endif
-
-// Methods
-#define TELEMETRY_METHOD_SET_REPORT_PROFILE_STATUS "setReportProfileStatus"
-#define TELEMETRY_METHOD_LOG_APPLICATION_EVENT "logApplicationEvent"
-#define TELEMETRY_METHOD_UPLOAD_REPORT "uploadReport"
-#define TELEMETRY_METHOD_ABORT_REPORT "abortReport"
-
-#define TELEMETRY_METHOD_EVT_ON_REPORT_UPLOAD "onReportUpload"
-
-
-#define RFC_CALLERID "Telemetry"
-#define RFC_REPORT_PROFILES "Device.X_RDKCENTRAL-COM_T2.ReportProfiles"
-#define RFC_REPORT_DEFAULT_PROFILE_ENABLE "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.FTUEReport.Enable"
-#define T2_PERSISTENT_FOLDER "/opt/.t2reportprofiles/"
-#define DEFAULT_PROFILES_FILE "/etc/t2profiles/default.json"
-
-#define SYSTEMSERVICES_CALLSIGN "org.rdk.System"
-
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 2
 #define API_VERSION_NUMBER_PATCH 2
-
-#ifdef HAS_RBUS
-#define RBUS_PRIVACY_MODE_EVENT_NAME "Device.X_RDKCENTRAL-COM_Privacy.PrivacyMode"
-
-static rbusError_t rbusHandleStatus = RBUS_ERROR_NOT_INITIALIZED;
-static rbusHandle_t rbusHandle;
-
-#endif
-using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
 
 namespace WPEFramework
 {
@@ -87,455 +42,135 @@ namespace WPEFramework
 
     namespace Plugin
     {
-        SERVICE_REGISTRATION(Telemetry, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
 
-        Telemetry* Telemetry::_instance = nullptr;
+    /*
+     *Register Telemetry module as wpeframework plugin
+     **/
+    SERVICE_REGISTRATION(Telemetry, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
 
-        Telemetry::Telemetry()
-        : PluginHost::JSONRPC()
-        , _pwrMgrNotification(*this)
-        , _registeredEventHandlers(false)
+    Telemetry::Telemetry() : _service(nullptr), _connectionId(0), _telemetry(nullptr), _telemetryNotification(this)
+    {
+        SYSLOG(Logging::Startup, (_T("Telemetry Constructor")));
+    }
+
+    Telemetry::~Telemetry()
+    {
+        SYSLOG(Logging::Shutdown, (string(_T("Telemetry Destructor"))));
+    }
+
+    const string Telemetry::Initialize(PluginHost::IShell* service)
+    {
+        string message="";
+
+        ASSERT(nullptr != service);
+        ASSERT(nullptr == _service);
+        ASSERT(nullptr == _telemetry);
+        ASSERT(0 == _connectionId);
+
+        SYSLOG(Logging::Startup, (_T("Telemetry::Initialize: PID=%u"), getpid()));
+
+        _service = service;
+        _service->AddRef();
+        _service->Register(&_telemetryNotification);
+        _telemetry = _service->Root<Exchange::ITelemetry>(_connectionId, 5000, _T("TelemetryImplementation"));
+
+        if(nullptr != _telemetry)
         {
-            Telemetry::_instance = this;
-
-            Register(TELEMETRY_METHOD_SET_REPORT_PROFILE_STATUS, &Telemetry::setReportProfileStatus, this);
-            Register(TELEMETRY_METHOD_LOG_APPLICATION_EVENT, &Telemetry::logApplicationEvent, this);
-            Register(TELEMETRY_METHOD_UPLOAD_REPORT, &Telemetry::uploadReport, this);
-            Register(TELEMETRY_METHOD_ABORT_REPORT, &Telemetry::abortReport, this);
-
-            Utils::Telemetry::init();
-        }
-
-        Telemetry::~Telemetry()
-        {
-        }
-
-        const string Telemetry::Initialize(PluginHost::IShell* service )
-        {
-            m_service = service;
-            m_service->AddRef();
-            InitializePowerManager();
-
-#ifdef HAS_RBUS
-            PluginHost::IShell::state state;
-            if ((Utils::getServiceState(service, SYSTEMSERVICES_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
-                Utils::activatePlugin(service, SYSTEMSERVICES_CALLSIGN);
-
-            if ((Utils::getServiceState(service, SYSTEMSERVICES_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
+	    configure = _telemetry->QueryInterface<Exchange::IConfiguration>();
+	    if (configure != nullptr)
             {
-                m_systemServiceConnection = Utils::getThunderControllerClient(SYSTEMSERVICES_CALLSIGN);
-
-                if (!m_systemServiceConnection)
+		uint32_t result = configure->Configure(_service);
+		if(result != Core::ERROR_NONE)
                 {
-                    LOGERR("%s plugin initialisation failed", SYSTEMSERVICES_CALLSIGN);
-                }
-                else
-                {
-                    uint32_t err = m_systemServiceConnection->Subscribe<JsonObject>(2000, "onPrivacyModeChanged", [this](const JsonObject& parameters) {
-                        
-                        if (parameters.HasLabel("privacyMode"))
-                        {
-                            std::string privacyMode = parameters["privacyMode"].String();
-                            notifyT2PrivacyMode(privacyMode);
-                        }
-                        else
-                        {
-                            LOGERR("No 'privacyMode' parameter");
-                        }
-                    });
-
-                    if (err != Core::ERROR_NONE)
-                    {
-                        LOGERR("Failed to subscribe to onPrivacyModeChanged: %d", err);
-                    }
-
-                    JsonObject params;
-                    JsonObject res;
-                    m_systemServiceConnection->Invoke<JsonObject, JsonObject>(2000, "getPrivacyMode", params, res);
-                    if (res["success"].Boolean())
-                    {
-                        std::string privacyMode = res["privacyMode"].String();
-                        notifyT2PrivacyMode(privacyMode);
-                    }
-                    else
-                    {
-                        LOGERR("Failed to get privacy mode");
-                    }
+                    message = _T("Telemetry could not be configured");
                 }
             }
             else
             {
-                LOGERR("%s plugin is not activated", SYSTEMSERVICES_CALLSIGN);
+		message = _T("Telemetry implementation did not provide a configuration interface");
             }
-#endif
-
-
-            JsonObject config;
-            config.FromString(service->ConfigLine());
-            std::string t2PersistentFolder = config.HasLabel("t2PersistentFolder") ? config["t2PersistentFolder"].String() : T2_PERSISTENT_FOLDER;
-            bool isEMpty = true;
-            DIR *d = opendir(t2PersistentFolder.c_str());
-            if (NULL != d)
-            {
-                struct dirent *de;
-
-                while ((de = readdir(d)))
-                {
-                    if (0 == de->d_name[0] || 0 == strcmp(de->d_name, ".") || 0 == strcmp(de->d_name, ".."))
-                        continue;
-
-                    isEMpty = false;
-                    break;
-                }
-
-                closedir(d);
-            }
-
-            if (isEMpty)
-            {
-                Core::File file;
-                std::string defaultProfilesFile = config.HasLabel("defaultProfilesFile") ? config["defaultProfilesFile"].String() : DEFAULT_PROFILES_FILE;
-                file = defaultProfilesFile.c_str();
-                file.Open();
-                if (file.IsOpen())
-                {
-                    if (file.Size() > 0)
-                    {
-                        std::vector <char> defaultProfile;
-                        defaultProfile.resize(file.Size() + 1);
-                        uint32_t rs = file.Read((uint8_t *)defaultProfile.data(), file.Size());
-                        defaultProfile.data()[rs] = 0;
-                        if (file.Size() == rs)
-                        {
-
-                            std::stringstream ss;
-                            // Escaping quotes
-                            for (uint32_t n = 0; n < rs; n++)
-                            {
-                                char ch = defaultProfile.data()[n];
-                                if ('\"' == ch)
-                                    ss << "\\";
-                                ss << ch;
-                            }
-
-                            WDMP_STATUS wdmpStatus = setRFCParameter((char *)RFC_CALLERID, RFC_REPORT_PROFILES, ss.str().c_str(), WDMP_STRING);
-                            if (WDMP_SUCCESS != wdmpStatus)
-                            {
-                                LOGERR("Failed to set Device.X_RDKCENTRAL-COM_T2.ReportProfiles: %d", wdmpStatus);
-                            }
-                        }
-                        else
-                        {
-                            LOGERR("Got wrong number of bytes, %d instead of %d", rs, (int)file.Size());
-                        }
-                    }
-                    else
-                    {
-                        LOGERR("%s is 0 size", defaultProfilesFile.c_str());
-                    }
-                }
-                else
-                {
-                    LOGERR("Failed to open %s", defaultProfilesFile.c_str());
-                }
-            }
-
-            return "";
+            // Register for notifications
+            _telemetry->Register(&_telemetryNotification);
+            // Invoking Plugin API register to wpeframework
+            Exchange::JTelemetry::Register(*this, _telemetry);
         }
-
-        void Telemetry::Deinitialize(PluginHost::IShell* /* service */)
+        else
         {
-            if (_powerManagerPlugin) {
-                _powerManagerPlugin.Reset();
-            }
-
-            _registeredEventHandlers = false;
-
-            Telemetry::_instance = nullptr;
-#ifdef HAS_RBUS
-            if (RBUS_ERROR_SUCCESS == rbusHandleStatus) {
-                rbus_close(rbusHandle);
-                rbusHandleStatus = RBUS_ERROR_NOT_INITIALIZED;
-            }
-#endif
+            SYSLOG(Logging::Startup, (_T("Telemetry::Initialize: Failed to initialise Telemetry plugin")));
+            message = _T("Telemetry plugin could not be initialised");
         }
+        return message;
+    }
 
-        void Telemetry::InitializePowerManager()
+    void Telemetry::Deinitialize(PluginHost::IShell* service)
+    {
+        ASSERT(_service == service);
+
+        SYSLOG(Logging::Shutdown, (string(_T("Telemetry::Deinitialize"))));
+
+        // Make sure the Activated and Deactivated are no longer called before we start cleaning up..
+        _service->Unregister(&_telemetryNotification);
+
+        if (nullptr != _telemetry)
         {
-            LOGINFO("Connect the COM-RPC socket\n");
-            _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
-                                    .withIShell(m_service)
-                                    .createInterface();
-            registerEventHandlers();
-        }
 
+            _telemetry->Unregister(&_telemetryNotification);
+            Exchange::JTelemetry::Unregister(*this);
 
-        void Telemetry::registerEventHandlers()
-        {
-            ASSERT (_powerManagerPlugin);
+	    configure->Release();
 
-            if(!_registeredEventHandlers && _powerManagerPlugin) {
-                _registeredEventHandlers = true;
-                _powerManagerPlugin->Register(&_pwrMgrNotification);
-            }
-        }
+            // Stop processing:
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+            VARIABLE_IS_NOT_USED uint32_t result = _telemetry->Release();
 
-        void Telemetry::Dispatch(Event event)
-        {
-            switch(event)
+            _telemetry = nullptr;
+
+            // It should have been the last reference we are releasing,
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+            // If this was running in a (container) process...
+            if (nullptr != connection)
             {
-                case TELEMETRY_EVENT_UPLOADREPORT:
-                    Telemetry::_instance->UploadReport();
-                    break;
+               // Lets trigger the cleanup sequence for
+               // out-of-process code. Which will guard
+               // that unwilling processes, get shot if
+               // not stopped friendly :-)
+               try
+               {
+                   connection->Terminate();
+                   // Log success if needed
+                   LOGWARN("Connection terminated successfully.");
+               }
+               catch (const std::exception& e)
+               {
+                   std::string errorMessage = "Failed to terminate connection: ";
+                   errorMessage += e.what();
+                   LOGWARN("%s",errorMessage.c_str());
+               }
 
-                case TELEMETRY_EVENT_ABORTREPORT:
-                    Telemetry::_instance->AbortReport();
-                    break;
-            }
-        }
-
-        void Telemetry::onPowerModeChanged(const PowerState &currentState, const PowerState &newState)
-        {
-            if (nullptr == Telemetry::_instance)
-            {
-                LOGERR("Telemetry::_instance is NULL.\n");
-                return;
-            }
-
-            if (WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY == newState ||
-                  WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY_LIGHT_SLEEP == newState)
-            {
-                if (WPEFramework::Exchange::IPowerManager::POWER_STATE_ON == currentState)
-                {
-                    Core::IWorkerPool::Instance().Submit(Telemetry::Job::Create(Telemetry::_instance,
-                                                Telemetry::TELEMETRY_EVENT_UPLOADREPORT));
-                }
-            }
-            else if(WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY_DEEP_SLEEP == newState)
-            {
-                    Core::IWorkerPool::Instance().Submit(Telemetry::Job::Create(Telemetry::_instance,
-                                                Telemetry::TELEMETRY_EVENT_ABORTREPORT));
+               connection->Release();
             }
         }
 
+        _connectionId = 0;
+        _service->Release();
+        _service = nullptr;
+        SYSLOG(Logging::Shutdown, (string(_T("Telemetry de-initialised"))));
+    }
 
-        uint32_t Telemetry::setReportProfileStatus(const JsonObject& parameters, JsonObject& response)
-        {
-            LOGINFOMETHOD();
+    string Telemetry::Information() const
+    {
+       return ("This Telemetry Plugin facilitates to persist event data for monitoring applications");
+    }
 
-            if (parameters.HasLabel("status"))
-            {
-                string status;
-                getStringParameter("status", status);
-
-                if (status != "STARTED" && status != "COMPLETE")
-                {
-                    LOGERR("Only the 'STARTED' or 'COMPLETE' status is allowed");
-                    returnResponse(false);
-                }
-
-                WDMP_STATUS wdmpStatus = setRFCParameter((char *)RFC_CALLERID, RFC_REPORT_DEFAULT_PROFILE_ENABLE, status == "COMPLETE" ? "true" : "false", WDMP_BOOLEAN);
-                if (WDMP_SUCCESS != wdmpStatus)
-                {
-                    LOGERR("Failed to set %s: %d", RFC_REPORT_DEFAULT_PROFILE_ENABLE, wdmpStatus);
-                    returnResponse(false);
-                }
-
-                returnResponse(true);
-            }
-            else
-            {
-                LOGERR("No status' parameter");
-                returnResponse(false);
-            }
-
-            returnResponse(false);
+    void Telemetry::Deactivated(RPC::IRemoteConnection* connection)
+    {
+        if (connection->Id() == _connectionId) {
+            ASSERT(nullptr != _service);
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
-
-        uint32_t Telemetry::logApplicationEvent(const JsonObject& parameters, JsonObject& response)
-        {
-            // Temporary disabled since current DCA format doesn't allow grepping log statements with json formatted strings
-            //LOGINFOMETHOD();
-            LOGINFO();
-
-            if (parameters.HasLabel("eventName") && parameters.HasLabel("eventValue"))
-            {
-                string eventName;
-                getStringParameter("eventName", eventName);
-
-                string eventValue;
-                getStringParameter("eventValue", eventValue);
-
-                LOGINFO("eventName:%s, eventValue:%s", eventName.c_str(), eventValue.c_str());
-                Utils::Telemetry::sendMessage((char *)eventName.c_str(), (char *)eventValue.c_str());
-            }
-            else
-            {
-                LOGERR("No 'eventName' or 'eventValue' parameter");
-                returnResponse(false);
-            }
-
-            returnResponse(true);
-        }
-
-#ifdef HAS_RBUS
-        static void t2EventHandler(rbusHandle_t handle, char const* methodName, rbusError_t error, rbusObject_t param)
-        {
-            LOGINFO("Got %s rbus callback", methodName);
-
-            if (RBUS_ERROR_SUCCESS == error)
-            {
-                rbusValue_t uploadStatus = rbusObject_GetValue(param, "UPLOAD_STATUS");
-
-                if(uploadStatus)
-                {
-                    if (Telemetry::_instance)
-                        Telemetry::_instance->onReportUploadStatus(rbusValue_GetString(uploadStatus, NULL));
-                }
-                else
-                {
-                    LOGERR("No 'UPLOAD_STATUS' value");
-                    if (Telemetry::_instance)
-                        Telemetry::_instance->onReportUploadStatus("No 'UPLOAD_STATUS' value");
-                }
-            }
-            else
-            {
-                std::stringstream str;
-                str << "Call failed with " << error << " error"; 
-                LOGERR("%s", str.str().c_str());
-                if (Telemetry::_instance)
-                    Telemetry::_instance->onReportUploadStatus(str.str().c_str());
-            }
-        }
-
-        void Telemetry::onReportUploadStatus(const char* status)
-        {
-            JsonObject eventData;
-            std::string s(status);
-            eventData["telemetryUploadStatus"] = s == "SUCCESS" ? "UPLOAD_SUCCESS" : "UPLOAD_FAILURE";
-            sendNotify(TELEMETRY_METHOD_EVT_ON_REPORT_UPLOAD, eventData);
-        }
-
-        static void t2OnAbortEventHandler(rbusHandle_t handle, char const* methodName, rbusError_t error, rbusObject_t param)
-        {
-            LOGINFO("Got %s rbus callback", methodName);
-        }
-
-        void Telemetry::notifyT2PrivacyMode(std::string privacyMode)
-        {
-            LOGINFO("Privacy mode is %s", privacyMode.c_str());
-            if (RBUS_ERROR_SUCCESS != rbusHandleStatus)
-            {
-                rbusHandleStatus = rbus_open(&rbusHandle, RBUS_COMPONENT_NAME);
-            }
-
-            if (RBUS_ERROR_SUCCESS == rbusHandleStatus)
-            {
-                rbusValue_t value;
-                rbusSetOptions_t opts = {true, 0};
-
-                rbusValue_Init(&value);
-                rbusValue_SetString(value, privacyMode.c_str());
-                int rc = rbus_set(rbusHandle, RBUS_PRIVACY_MODE_EVENT_NAME, value, &opts);
-                if (rc != RBUS_ERROR_SUCCESS)
-                {
-                    std::stringstream str;
-                    str << "Failed to set property " << RBUS_PRIVACY_MODE_EVENT_NAME << ": " << rc;
-                    LOGERR("%s", str.str().c_str());
-                }
-                rbusValue_Release(value);
-            }
-            else
-            {
-                LOGERR("rbus_open failed with error code %d", rbusHandleStatus);
-            }
-
-        }
-
-#endif
-        uint32_t Telemetry::UploadReport()
-        {
-            LOGINFO("");
-#ifdef HAS_RBUS
-            if (RBUS_ERROR_SUCCESS != rbusHandleStatus)
-            {
-                rbusHandleStatus = rbus_open(&rbusHandle, RBUS_COMPONENT_NAME);
-            }
-
-            if (RBUS_ERROR_SUCCESS == rbusHandleStatus)
-            {
-                int rc = rbusMethod_InvokeAsync(rbusHandle, T2_ON_DEMAND_REPORT, NULL, t2EventHandler, 0);
-                if (RBUS_ERROR_SUCCESS != rc)
-                {
-                    std::stringstream str;
-                    str << "Failed to call " << T2_ON_DEMAND_REPORT << ": " << rc;
-                    LOGERR("%s", str.str().c_str());
-
-                    return Core::ERROR_RPC_CALL_FAILED;
-                }
-            }
-            else
-            {
-                std::stringstream str;
-                str << "rbus_open failed with error code " << rbusHandleStatus;
-                LOGERR("%s", str.str().c_str());
-                return Core::ERROR_OPENING_FAILED;
-            }
-#else
-            LOGERR("No RBus support");
-            return Core::ERROR_NOT_EXIST;
-#endif
-            return Core::ERROR_NONE;
-        }
-
-        uint32_t Telemetry::AbortReport()
-        {
-            LOGINFO("");
-#ifdef HAS_RBUS
-            if (RBUS_ERROR_SUCCESS != rbusHandleStatus)
-            {
-                rbusHandleStatus = rbus_open(&rbusHandle, RBUS_COMPONENT_NAME);
-            }
-
-            if (RBUS_ERROR_SUCCESS == rbusHandleStatus)
-            {
-                int rc = rbusMethod_InvokeAsync(rbusHandle, T2_ABORT_ON_DEMAND_REPORT, NULL, t2OnAbortEventHandler, 0);
-                if (RBUS_ERROR_SUCCESS != rc)
-                {
-                    std::stringstream str;
-                    str << "Failed to call " << T2_ABORT_ON_DEMAND_REPORT << ": " << rc;
-                    LOGERR("%s", str.str().c_str());
-
-                    return Core::ERROR_RPC_CALL_FAILED;
-                }
-            }
-            else
-            {
-                std::stringstream str;
-                str << "rbus_open failed with error code " << rbusHandleStatus;
-                LOGERR("%s", str.str().c_str());
-                return Core::ERROR_OPENING_FAILED;
-            }
-#else
-            LOGERR("No RBus support");
-            return Core::ERROR_NOT_EXIST;
-#endif
-            return Core::ERROR_NONE;
-        }
-
-        uint32_t Telemetry::uploadReport(const JsonObject& parameters, JsonObject& response)
-        {
-            LOGINFOMETHOD();
-            return UploadReport();
-        }
-
-        uint32_t Telemetry::abortReport(const JsonObject& parameters, JsonObject& response)
-        {
-            LOGINFOMETHOD();
-            return AbortReport();
-        }
-
-    } // namespace Plugin
+    }
+} // namespace Plugin
 } // namespace WPEFramework
-

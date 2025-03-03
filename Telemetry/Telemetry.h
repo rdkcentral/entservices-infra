@@ -20,149 +20,92 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/IPowerManager.h>
-#include "PowerManagerInterface.h"
+#include <interfaces/ITelemetry.h>
+#include <interfaces/json/JTelemetry.h>
+#include <interfaces/json/JsonData_Telemetry.h>
+#include <interfaces/IConfiguration.h>
+#include "UtilsLogging.h"
+#include "tracing/Logging.h"
 
-using namespace WPEFramework;
-using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
-using ThermalTemperature = WPEFramework::Exchange::IPowerManager::ThermalTemperature;
-
-namespace WPEFramework {
-
-    namespace Plugin {
-
-        // This is a server for a JSONRPC communication channel.
-        // For a plugin to be capable to handle JSONRPC, inherit from PluginHost::JSONRPC.
-        // By inheriting from this class, the plugin realizes the interface PluginHost::IDispatcher.
-        // This realization of this interface implements, by default, the following methods on this plugin
-        // - exists
-        // - register
-        // - unregister
-        // Any other methood to be handled by this plugin  can be added can be added by using the
-        // templated methods Register on the PluginHost::JSONRPC class.
-        // As the registration/unregistration of notifications is realized by the class PluginHost::JSONRPC,
-        // this class exposes a public method called, Notify(), using this methods, all subscribed clients
-        // will receive a JSONRPC message as a notification, in case this method is called.
-        class Telemetry : public PluginHost::IPlugin, public PluginHost::JSONRPC {
-        private:
-            class PowerManagerNotification : public Exchange::IPowerManager::INotification {
+namespace WPEFramework 
+{
+    namespace Plugin
+    {
+        class Telemetry : public PluginHost::IPlugin, public PluginHost::JSONRPC 
+        {
             private:
-                PowerManagerNotification(const PowerManagerNotification&) = delete;
-                PowerManagerNotification& operator=(const PowerManagerNotification&) = delete;
-            
-            public:
-                explicit PowerManagerNotification(Telemetry& parent)
-                    : _parent(parent)
+                class Notification : public RPC::IRemoteConnection::INotification, public Exchange::ITelemetry::INotification
                 {
-                }
-                ~PowerManagerNotification() override = default;
-            
-            public:
-                void OnPowerModeChanged(const PowerState &currentState, const PowerState &newState) override
-                {
-                    _parent.onPowerModeChanged(currentState, newState);
-                }
-                void OnPowerModePreChange(const PowerState &currentState, const PowerState &newState) override {}
-                void OnDeepSleepTimeout(const int &wakeupTimeout) override {}
-                void OnNetworkStandbyModeChanged(const bool &enabled) override {}
-                void OnThermalModeChanged(const ThermalTemperature &currentThermalLevel, const ThermalTemperature &newThermalLevel, const float &currentTemperature) override {}
-                void OnRebootBegin(const string &rebootReasonCustom, const string &rebootReasonOther, const string &rebootRequestor) override {}
+                    private:
+                        Notification() = delete;
+                        Notification(const Notification&) = delete;
+                        Notification& operator=(const Notification&) = delete;
 
-                BEGIN_INTERFACE_MAP(PowerManagerNotification)
-                INTERFACE_ENTRY(Exchange::IPowerManager::INotification)
-                END_INTERFACE_MAP
-            
-            private:
-                Telemetry& _parent;
-            };
+                    public:
+                    explicit Notification(Telemetry* parent) 
+                        : _parent(*parent)
+                        {
+                            ASSERT(parent != nullptr);
+                        }
 
-            // We do not allow this plugin to be copied !!
-            Telemetry(const Telemetry&) = delete;
-            Telemetry& operator=(const Telemetry&) = delete;
+                        virtual ~Notification()
+                        {
+                        }
 
-            //Begin methods
-            uint32_t setReportProfileStatus(const JsonObject& parameters, JsonObject& response);
-            uint32_t logApplicationEvent(const JsonObject& parameters, JsonObject& response);
-            uint32_t uploadReport(const JsonObject& parameters, JsonObject& response);
-            uint32_t abortReport(const JsonObject& parameters, JsonObject& response);
-            void InitializePowerManager();
-            //End methods
+                        BEGIN_INTERFACE_MAP(Notification)
+                        INTERFACE_ENTRY(Exchange::ITelemetry::INotification)
+                        INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+                        END_INTERFACE_MAP
 
-        public:
-            Telemetry();
-            virtual ~Telemetry();
-            virtual const string Initialize(PluginHost::IShell* service) override;
-            virtual void Deinitialize(PluginHost::IShell* service) override;
-            virtual string Information() const override { return {}; }
-            void onPowerModeChanged(const PowerState &currentState, const PowerState &newState);
-            void registerEventHandlers();
+                        void Activated(RPC::IRemoteConnection*) override
+                        {
+                            LOGINFO("Telemetry Notification Activated");
+                        }
 
-            uint32_t UploadReport();
-            uint32_t AbortReport();
+                        void Deactivated(RPC::IRemoteConnection *connection) override
+                        {
+                            LOGINFO("Telemetry Notification Deactivated");
+                            _parent.Deactivated(connection);
+                        }
 
-            BEGIN_INTERFACE_MAP(Telemetry)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IDispatcher)
-            END_INTERFACE_MAP
+                        void OnReportUpload(const string& telemetryUploadStatus ) override
+                        {
+                            LOGINFO("OnReportUpload: telemetryUploadStatus %s\n", telemetryUploadStatus.c_str());
+                            Exchange::JTelemetry::Event::OnReportUpload(_parent, telemetryUploadStatus);
+                        }
 
-#ifdef HAS_RBUS
-            void onReportUploadStatus(const char* status);
-            void notifyT2PrivacyMode(std::string privacyMode);
-#endif
-        public:
-            static Telemetry* _instance;
-            enum Event
-            {
-                TELEMETRY_EVENT_UPLOADREPORT,
-                TELEMETRY_EVENT_ABORTREPORT
-            };
+                    private:
+                        Telemetry& _parent;
+                };
 
-        class EXTERNAL Job : public Core::IDispatch {
-        protected:
-            Job(Telemetry* telemetry, Event event)
-                : _telemetry(telemetry)
-                , _event(event) {
-                if (_telemetry != nullptr) {
-                    _telemetry->AddRef();
-                }
-            }
+                public:
+                    Telemetry(const Telemetry&) = delete;
+                    Telemetry& operator=(const Telemetry&) = delete;
 
-       public:
-            Job() = delete;
-            Job(const Job&) = delete;
-            Job& operator=(const Job&) = delete;
-            ~Job() {
-                if (_telemetry != nullptr) {
-                    _telemetry->Release();
-                }
-            }
+                    Telemetry();
+                    virtual ~Telemetry();
 
-       public:
-            static Core::ProxyType<Core::IDispatch> Create(Telemetry* Instance, Event event ) {
-#ifndef USE_THUNDER_R4
-                return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(Instance, event)));
-#else
-                return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(Instance, event)));
-#endif
-            }
+                    BEGIN_INTERFACE_MAP(Telemetry)
+                    INTERFACE_ENTRY(PluginHost::IPlugin)
+                    INTERFACE_ENTRY(PluginHost::IDispatcher)
+                    INTERFACE_AGGREGATE(Exchange::ITelemetry, _telemetry)
+                    END_INTERFACE_MAP
 
-            virtual void Dispatch() {
-                _telemetry->Dispatch(_event);
-            }
-        private:
-            Telemetry *_telemetry;
-            const Event _event;
-        };
-        private:
+                    //  IPlugin methods
+                    // -------------------------------------------------------------------------------------------------------
+                    const string Initialize(PluginHost::IShell* service) override;
+                    void Deinitialize(PluginHost::IShell* service) override;
+                    string Information() const override;
 
-            void Dispatch(Event event);
-            friend class Job;
+                private:
+                    void Deactivated(RPC::IRemoteConnection* connection);
 
-            std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> m_systemServiceConnection;
-            PowerManagerInterfaceRef _powerManagerPlugin;
-            Core::Sink<PowerManagerNotification> _pwrMgrNotification;
-            bool _registeredEventHandlers;
-            PluginHost::IShell* m_service;
-        };
+                private:
+                    PluginHost::IShell* _service{};
+                    uint32_t _connectionId{};
+                    Exchange::ITelemetry* _telemetry{};
+                    Core::Sink<Notification> _telemetryNotification;
+		    Exchange::IConfiguration* configure;
+       };
     } // namespace Plugin
 } // namespace WPEFramework

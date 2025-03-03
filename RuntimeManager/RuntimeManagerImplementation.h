@@ -199,6 +199,7 @@ namespace WPEFramework
                 Core::hresult handleContainerRequest(const std::string& appInstanceId, OCIRequestType type, ContainerRequestData& containerReqData);
                 void updateContainerInfo(OCIRequestType type, const std::string& appInstanceId, const OCIContainerRequest& request, ContainerRequestData& containerReqData);
                 void printContainerInfo();
+                Exchange::IRuntimeManager::RuntimeState getRuntimeState(const string& appInstanceId);
 
             private: /* members */
                 mutable Core::CriticalSection mRuntimeManagerImplLock;
