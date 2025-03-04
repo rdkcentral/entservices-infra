@@ -92,14 +92,13 @@ namespace WPEFramework
         void RuntimeManagerImplementation::updateContainerInfo(OCIRequestType type, const std::string& appInstanceId, const OCIContainerRequest& request, ContainerRequestData& containerReqData)
         {
             Core::SafeSyncType<Core::CriticalSection> lock(mRuntimeManagerImplLock);
-            if(mRuntimeAppInfo.find(appInstanceId) != mRuntimeAppInfo.end())
+            if (mRuntimeAppInfo.find(appInstanceId) != mRuntimeAppInfo.end())
             {
                 printContainerInfo();
                 LOGINFO("RuntimeAppInfo appInstanceId[%s] updated", appInstanceId.c_str());
-                switch(type)
+                switch (type)
                 {
                     case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_TERMINATE:
-                        mRuntimeAppInfo[appInstanceId].containerState = Exchange::IRuntimeManager::RUNTIME_STATE_TERMINATING;
                     case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_KILL:
                         mRuntimeAppInfo[appInstanceId].containerState = Exchange::IRuntimeManager::RUNTIME_STATE_TERMINATING;
                         break;
@@ -115,16 +114,8 @@ namespace WPEFramework
                     case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_WAKE:
                         mRuntimeAppInfo[appInstanceId].containerState = Exchange::IRuntimeManager::RUNTIME_STATE_WAKING;
                         break;
-                    case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_SUSPEND:
-                    case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_RESUME:
-                    case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_ANNONATE:
-                    case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_MOUNT:
-                    case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_UNMOUNT:
                     default:
-                    {
-                        LOGWARN("Unknown Method type %d", static_cast<int>(type));
-                    }
-                    break;
+                        break;
                 }
 
                 printContainerInfo();
@@ -152,7 +143,7 @@ namespace WPEFramework
 
                 do
                 {
-                      ret = sem_wait(&request->mSemaphore);
+                    ret = sem_wait(&request->mSemaphore);
                 } while (ret == -1 && errno == EINTR);
 
                 if (ret == -1)
@@ -161,9 +152,10 @@ namespace WPEFramework
                 }
                 else
                 {
-                    if ((request->mSuccess == false) || ((request->mResult != Core::ERROR_NONE)))
+                    if ((request->mSuccess == false) || (request->mResult != Core::ERROR_NONE))
                     {
-                        LOGERR("descriptor: %d errorReason: %s", request->mDescriptor, request->mErrorReason.c_str());
+                        LOGERR("OCIRequestType: %d descriptor: %d status: %d errorReason: %s", 
+                                        static_cast<int>(type), request->mDescriptor, request->mSuccess, request->mErrorReason.c_str());
                     }
                     else
                     {
@@ -171,8 +163,8 @@ namespace WPEFramework
                         updateContainerInfo(type, appInstanceId, *request, containerReqData);
                     }
                 }
-           }
-           else
+            }
+            else
             {
                 LOGERR("appInstanceId param is missing");
             }
@@ -200,7 +192,9 @@ namespace WPEFramework
               mResult(Core::ERROR_GENERAL),
               mDescriptor(0),
               mSuccess(false),
-              mErrorReason("")
+              mErrorReason(""),
+              mAnnotateKey(containerReqData.key),
+              mAnnotateKeyValue(containerReqData.value)
         {
             if (0 != sem_init(&mSemaphore, 0, 0))
             {
@@ -345,6 +339,7 @@ namespace WPEFramework
                                 }
                             }
                             break;
+
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_HIBERNATE:
                             {
                                 LOGINFO("Runtime Hibernate Method");
@@ -360,6 +355,7 @@ namespace WPEFramework
                                 }
                             }
                             break;
+
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_WAKE:
                             {
                                 //Question: How should we pass the requested run state to the container?
@@ -375,6 +371,7 @@ namespace WPEFramework
                                 }
                             }
                             break;
+
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_SUSPEND:
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_RESUME:
                             {
@@ -383,6 +380,7 @@ namespace WPEFramework
                                 request->mErrorReason = "Unknown Method type";
                             }
                             break;
+
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_TERMINATE:
                             {
                                 request->mResult = ociContainerObject->StopContainer(request->mContainerId,
@@ -396,6 +394,7 @@ namespace WPEFramework
                                 }
                             }
                             break;
+
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_KILL:
                             {
                                 request->mResult = ociContainerObject->StopContainer( request->mContainerId,
@@ -409,6 +408,7 @@ namespace WPEFramework
                                 }
                             }
                             break;
+
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_GETINFO:
                             {
                                 LOGINFO("Runtime GetInfo Method");
@@ -423,7 +423,22 @@ namespace WPEFramework
                                 }
                             }
                             break;
+
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_ANNONATE:
+                            {
+                                request->mResult = ociContainerObject->Annotate( request->mContainerId,
+                                                                                 request->mAnnotateKey,
+                                                                                 request->mAnnotateKeyValue,
+                                                                                 request->mSuccess,
+                                                                                 request->mErrorReason);
+                                if (Core::ERROR_NONE != request->mResult)
+                                {
+                                    LOGERR("Failed to Annotate property key: %s value: %s", request->mAnnotateKey.c_str(), request->mAnnotateKeyValue.c_str());
+                                    request->mErrorReason = "Failed to Annotate property key";
+                                }
+                            }
+                            break;
+
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_MOUNT:
                             case OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_UNMOUNT:
                             default:
@@ -747,7 +762,7 @@ err_ret:
         {
             Core::hresult status = Core::ERROR_NONE;
 
-            LOGINFO("Entered Suspend Implementation");
+            LOGINFO("Suspend Implementation - Stub!");
 
             return status;
         }
@@ -756,7 +771,7 @@ err_ret:
         {
             Core::hresult status = Core::ERROR_NONE;
 
-            LOGINFO("Entered Resume Implementation");
+            LOGINFO("Resume Implementation - Stub!");
 
             return status;
         }
@@ -802,10 +817,21 @@ err_ret:
 
         Core::hresult RuntimeManagerImplementation::Annotate(const string& appInstanceId, const string& key, const string& value)
         {
-            Core::hresult status = Core::ERROR_NONE;
-
+            Core::hresult status = Core::ERROR_GENERAL;
+            ContainerRequestData containerReqData;
             LOGINFO("Entered Annotate Implementation");
 
+            if (key.empty())
+            {
+                LOGERR("Annotate: key is empty");
+            }
+            else
+            {
+                containerReqData.key = std::move(key);
+                containerReqData.value = std::move(value);
+
+                status = handleContainerRequest(appInstanceId, OCIRequestType::RUNTIME_OCI_REQUEST_METHOD_ANNONATE, containerReqData);
+            }
             return status;
         }
 
@@ -813,7 +839,7 @@ err_ret:
         {
             Core::hresult status = Core::ERROR_NONE;
 
-            LOGINFO("Entered Mount Implementation");
+            LOGINFO("Mount Implementation - Stub!");
 
             return status;
         }
@@ -822,7 +848,7 @@ err_ret:
         {
             Core::hresult status = Core::ERROR_NONE;
 
-            LOGINFO("Entered Unmount Implementation");
+            LOGINFO("Unmount Implementation - Stub!");
 
             return status;
         }

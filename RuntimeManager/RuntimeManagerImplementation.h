@@ -85,6 +85,8 @@ namespace WPEFramework
                     bool mSuccess;
                     std::string mErrorReason;
                     std::string mRequestId;
+                    std::string mAnnotateKey;
+                    std::string mAnnotateKeyValue;
                 };
 
                 typedef struct _RuntimeAppInfo
