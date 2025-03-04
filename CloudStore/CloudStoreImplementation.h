@@ -22,7 +22,6 @@
 #include "Module.h"
 #include <interfaces/IStore2.h>
 #include <interfaces/IConfiguration.h>
-#include <interfaces/IAuthService.h>
 
 namespace WPEFramework {
 namespace Plugin {
