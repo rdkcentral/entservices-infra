@@ -24,7 +24,7 @@
 #include <mutex>
 #include <memory>
 
-#include <interfaces_cpc/interfaces/IAuthService.h>
+#include <interfaces/IAuthService.h>
 
 namespace WPEFramework
 {

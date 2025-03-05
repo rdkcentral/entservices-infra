@@ -24,7 +24,7 @@
 #include <fstream>
 #include <grpcpp/create_channel.h>
 #include <interfaces/IStore2.h>
-#include <interfaces_cpc/interfaces/IAuthService.h>
+#include <interfaces/IAuthService.h>
 #ifdef WITH_SYSMGR
 #include <libIBus.h>
 #include <sysMgr.h>
