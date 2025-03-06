@@ -217,6 +217,7 @@ namespace Plugin {
     private:
         uint32_t SetUserSettingsValue(const string& key, const string& value);
         uint32_t GetUserSettingsValue(const string& key, string &value) const;
+        uint32_t GetDefaultValue(const std::string& key, std::string& value) const;
 
     private:
         mutable Core::CriticalSection _adminLock;

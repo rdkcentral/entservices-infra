@@ -22,6 +22,24 @@
 #include "UtilsJsonRpc.h"
 #include <mutex>
 #include "tracing/Logging.h"
+#include <fstream>
+#include <sstream>
+
+#include <glib.h>
+#include <glib/gstdio.h>
+#include <unordered_map>
+#include <unistd.h> 
+#include <errno.h>
+
+#define SETTINGS_FILE_NAME              "/opt/user_preferences.conf"
+#define SETTINGS_FILE_KEY               "ui_language"
+#define SETTINGS_FILE_GROUP              "General"
+
+static const std::unordered_map<std::string, std::string> languageMap = {
+    {"en-US", "US_en"}, {"es-US", "US_es"}, {"en-CA", "CA_en"}, {"fr-CA", "CA_fr"},
+    {"en-GB", "GB_en"}, {"it-IT", "IT_it"}, {"de-DE", "DE_de"}, {"en-AU", "AU_en"}
+};
+
 
 namespace WPEFramework {
 namespace Plugin {
@@ -451,28 +469,36 @@ uint32_t UserSettingsImplementation::SetUserSettingsValue(const string& key, con
     return status;
 }
 
+uint32_t UserSettingsImplementation::GetDefaultValue(const std::string& key, std::string& value) const
+{
+    LOGINFO("Key[%s] value[%s]", key.c_str(), value.c_str());
+    auto it = usersettingsDefaultMap.find(key);
+    if (it != usersettingsDefaultMap.end()) {
+        value = it->second;
+        LOGINFO("GetDefaultValue: Found default value '%s' for key '%s'", value.c_str(), key.c_str());
+        return Core::ERROR_NONE;
+    } else {
+        LOGERR("Default value is not found in usersettingsDefaultMap for '%s' Key", key.c_str());
+        return Core::ERROR_UNKNOWN_KEY;
+    }
+}
+
+
 uint32_t UserSettingsImplementation::GetUserSettingsValue(const string& key, string &value) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     uint32_t ttl = 0;
     _adminLock.Lock();
 
-    LOGINFO("Key[%s]", key.c_str());
+    LOGINFO("Key[%s] value[%s]", key.c_str(), value.c_str());
     if (nullptr != _remotStoreObject)
     {
         status = _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, key, value, ttl);
         LOGINFO("Key[%s] value[%s] status[%d]", key.c_str(), value.c_str(), status);
         if(Core::ERROR_UNKNOWN_KEY == status || Core::ERROR_NOT_EXIST == status)
         {
-            if(usersettingsDefaultMap.find(key)!=usersettingsDefaultMap.end())
-            {
-                value = usersettingsDefaultMap.find(key)->second;
-                status = Core::ERROR_NONE;
-            }
-            else
-            {
-                LOGERR("Default value is not found in usersettingsDefaultMap for '%s' Key", key.c_str());
-            }
+            LOGINFO("GetUserSettingsValue: Key[%s] not found, checking default value.", key.c_str());
+            status = GetDefaultValue(key, value);
         }
     }
     else
@@ -539,15 +565,87 @@ uint32_t UserSettingsImplementation::SetPresentationLanguage(const string& prese
 
     LOGINFO("presentationLanguage: %s", presentationLanguage.c_str());
     status = SetUserSettingsValue(USERSETTINGS_PRESENTATION_LANGUAGE_KEY, presentationLanguage);
+    
+    // if (status == Core::ERROR_NONE) {
+    //     _isPresentationLangInitialised = true;
+
+        // Convert presentation language to UILanguage
+        auto it = languageMap.find(presentationLanguage);
+        if (it == languageMap.end()) {
+            LOGERR("Unknown presentation language: %s", presentationLanguage.c_str());
+            return Core::ERROR_GENERAL;
+        }
+        std::string uiLanguage = it->second;
+
+        g_autoptr(GKeyFile) file = g_key_file_new();
+        g_key_file_set_string(file, SETTINGS_FILE_GROUP, SETTINGS_FILE_KEY, uiLanguage.c_str());
+
+        g_autoptr(GError) error = nullptr;
+        if (!g_key_file_save_to_file(file, SETTINGS_FILE_NAME, &error)) {
+            LOGERR("Error saving file '%s': %s", SETTINGS_FILE_NAME, error->message);
+            return Core::ERROR_GENERAL;
+        }
+
+        return Core::ERROR_NONE;
+    //}
     return status;
 }
 
 uint32_t UserSettingsImplementation::GetPresentationLanguage(string &presentationLanguage) const
 {
-    uint32_t status = Core::ERROR_GENERAL;
-    std::string value = "";
+    static int callCount = 0;  
+    callCount++;  
+    uint32_t status = Core::ERROR_GENERAL;   
 
+    // Remove the _isPresentationLangInitialised check to always retrieve the value
     status = GetUserSettingsValue(USERSETTINGS_PRESENTATION_LANGUAGE_KEY, presentationLanguage);
+    LOGINFO("Retrieved from UserSettings: %s, Status: %d", presentationLanguage.c_str(), status);
+
+    if (status != Core::ERROR_NONE || presentationLanguage.empty()) {
+        LOGWARN("Unexpected result from GetUserSettingsValue, attempting to read from file.");
+
+        g_autoptr(GKeyFile) file = g_key_file_new();
+        g_autoptr(GError) error = nullptr;
+
+        if (g_key_file_load_from_file(file, SETTINGS_FILE_NAME, G_KEY_FILE_NONE, &error)) {
+            g_autofree gchar* val = g_key_file_get_string(file, SETTINGS_FILE_GROUP, SETTINGS_FILE_KEY, &error);
+
+            if (val != nullptr && strlen(val) > 0) {
+                std::string uiLanguage(val);
+                LOGINFO("Read from settings file: %s", uiLanguage.c_str());
+
+                for (const auto& entry : languageMap) {
+                    if (entry.second == uiLanguage) {
+                        presentationLanguage = entry.first;
+                        status = Core::ERROR_NONE;
+                        LOGINFO("Mapped UI language '%s' to presentation language '%s'", uiLanguage.c_str(), presentationLanguage.c_str());
+                    }
+                }
+
+                if (status != Core::ERROR_NONE) {
+                    LOGWARN("Failed to map UI language '%s' to presentation language", uiLanguage.c_str());
+                }
+            } else {
+                LOGERR("Failed to retrieve value from settings file.");
+            }
+        } else {
+            LOGERR("Error loading settings file '%s': %s", SETTINGS_FILE_NAME, error->message);
+        }
+
+        if (status != Core::ERROR_NONE) {
+            LOGWARN("Both UserSettings and file read failed, retrieving default value.");
+            status = GetDefaultValue(USERSETTINGS_PRESENTATION_LANGUAGE_KEY, presentationLanguage);
+            LOGINFO("Retrieved default value: %s, Status: %d", presentationLanguage.c_str(), status);
+        }
+    }
+    if (callCount == 6) {
+        LOGINFO("6th call detected, deleting settings file: %s", SETTINGS_FILE_NAME);
+        if (unlink(SETTINGS_FILE_NAME) == 0) {
+            LOGINFO("Successfully deleted settings file: %s", SETTINGS_FILE_NAME);
+        } else {
+            LOGERR("Failed to delete settings file: %s, error: %s", SETTINGS_FILE_NAME, strerror(errno));
+        }
+    }
     return status;
 }
 
