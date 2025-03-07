@@ -115,6 +115,10 @@ if(PLUGIN_RUNTIME_MANAGER)
 	add_subdirectory(RuntimeManager)
 endif()
 
+if(PLUGIN_STORAGE_MANAGER)
+	add_subdirectory(StorageManager)
+endif()
+
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
