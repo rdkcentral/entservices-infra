@@ -309,13 +309,14 @@ namespace WPEFramework
 
         SiftConfig::SiftConfig(PluginHost::IShell *shell, SystemTimePtr systemTime) : mInitializationThread(),
                                                             mMonitorKeys(),
-                                                            mMutex(),
+                                                            mMonitorAuthService(),
+                                                            mMutex(),                                                            
                                                             mAttributes(),
                                                             mStoreConfig(),
                                                             mUploaderConfig(),
                                                             mShell(shell),
                                                             mSystemTime(systemTime),
-                                                            mAuthServiceLink(nullptr)
+                                                            mAuthservicePlugin(nullptr)
         {
             ASSERT(shell != nullptr);
             ParsePluginConfig();
@@ -339,9 +340,10 @@ namespace WPEFramework
                 LOGINFO("IStore status %d", result);
                 interface->Release();
             }
-            if (mAuthServiceLink != nullptr)
+            if (mAuthservicePlugin != nullptr)
             {
-                mAuthServiceLink->Unsubscribe(JSONRPC_THUNDER_TIMEOUT, _T("onActivationStatusChanged"));
+                mAuthservicePlugin->Unregister(&mMonitorAuthService);
+                mAuthservicePlugin->Release();
             }
         }
 
@@ -560,69 +562,50 @@ namespace WPEFramework
                 LOGINFO("No security agent\n");
             }
 
-            // Set to true if the event is to be SAT authenticated
-            mMutex.lock();
-            mAttributes.authenticated = false;
-            mMutex.unlock();
-
-            //Activate AuthService plugin if needed
-            if (IsPluginActivated(mShell, AUTHSERVICE_CALLSIGN) == false)
+            mAuthservicePlugin = mShell->QueryInterfaceByCallsign<Exchange::IAuthService>("org.rdk.AuthService");
+            if (mAuthservicePlugin)
             {
-                ActivatePlugin(mShell, AUTHSERVICE_CALLSIGN);
-            }
+                mAuthservicePlugin->AddRef();
+                LOGWARN("Got IAuthService");
 
-            // try to create AuthService jsonrpc link and register to onActivationStatusChanged event
-            mAuthServiceLink = GetThunderControllerClient(AUTHSERVICE_CALLSIGN);
-            if (mAuthServiceLink)
-            {
-                uint32_t result = mAuthServiceLink->Subscribe<JsonObject>(JSONRPC_THUNDER_TIMEOUT, _T("onActivationStatusChanged"), &SiftConfig::OnActivationStatusChanged, this);
-                if (result != Core::ERROR_NONE)
-                {
-                    LOGERR("Failed to subscribe to onActivationStatusChanged");
-                }
+                mMonitorAuthService.RegisterActivationStatusCallback([this](const string &newActivationStatus){ 
+                    OnActivationStatusChanged(newActivationStatus); }
+                );
 
-                JsonObject params;
-                JsonObject response;
+                uint32_t rc = mAuthservicePlugin->Register(&mMonitorAuthService);
+                LOGINFO("Register status for AuthService events: %d", rc);
 
-                // Get partnerId from AuthService.getDeviceId
-                result = mAuthServiceLink->Invoke<JsonObject, JsonObject>(JSONRPC_THUNDER_TIMEOUT, "getDeviceId", params, response);
-                if (result == Core::ERROR_NONE && response.HasLabel("partnerId"))
+                WPEFramework::Exchange::IAuthService::GetDeviceIdResult diRes;
+                rc = mAuthservicePlugin->GetDeviceId(diRes);
+                if (rc == Core::ERROR_NONE)
                 {
                     mMutex.lock();
-                    mAttributes.partnerId = response["partnerId"].String();
+                    mAttributes.partnerId = diRes.partnerId;
                     LOGINFO("Got partnerId %s", mAttributes.partnerId.c_str());
                     mMutex.unlock();
                 }
                 else
                 {
-                    LOGERR("Failed to get partnerId: %d", result);
+                    LOGINFO("Failed to get the device id through Authservice, error code %d", rc);
                 }
 
-                // Get current activation status from AuthService.getActivationStatus
-                result = mAuthServiceLink->Invoke<JsonObject, JsonObject>(JSONRPC_THUNDER_TIMEOUT, "getActivationStatus", params, response);
-                if (result == Core::ERROR_NONE && response.HasLabel("status"))
+                WPEFramework::Exchange::IAuthService::ActivationStatusResult asRes;
+                rc = mAuthservicePlugin->GetActivationStatus(asRes);
+                if (rc == Core::ERROR_NONE)
                 {
-                    bool activated = false;
-                    if (response["status"].String() == "activated")
-                    {
-                        activated = true;
-                    }
-
                     mMutex.lock();
-                    mAttributes.activated = activated;
+                    mAttributes.activated = asRes.status == "activated";
                     mMutex.unlock();
                 }
                 else
                 {
-                    LOGERR("Failed to get activation status");
+                    LOGINFO("Failed to get the activation status, error code %d", rc);
                 }
+
             }
             else
             {
-                LOGERR("Failed to get AuthService link");
-                mMutex.lock();
-                mAttributes.activated = false;
-                mMutex.unlock();
+                LOGERR("Failed to create IAuthService");
             }
 
             //Activate System plugin if needed
@@ -775,7 +758,7 @@ namespace WPEFramework
 
         void SiftConfig::UpdateXboValues()
         {
-            if (mAuthServiceLink == nullptr)
+            if (mAuthservicePlugin == nullptr)
             {
                 return;
             }
@@ -791,38 +774,40 @@ namespace WPEFramework
             {
                 JsonObject params;
                 JsonObject response;
+
                 // get xboAccountId from AuthService.getServiceAccountId
-                uint32_t result = mAuthServiceLink->Invoke<JsonObject, JsonObject>(JSONRPC_THUNDER_TIMEOUT, "getServiceAccountId", params, response);
-                if (result == Core::ERROR_NONE && response.HasLabel("serviceAccountId"))
+
+                WPEFramework::Exchange::IAuthService::GetServiceAccountIdResult saRes;
+                uint32_t rc = mAuthservicePlugin->GetServiceAccountId(saRes);
+                if (rc == Core::ERROR_NONE)
                 {
                     mMutex.lock();
-                    mAttributes.xboAccountId = response["serviceAccountId"].String();
+                    mAttributes.xboAccountId = saRes.serviceAccountId;
                     LOGINFO("Got xboAccountId %s", mAttributes.xboAccountId.c_str());
                     mMutex.unlock();
                 }
                 else
                 {
-                    LOGERR("Failed to get xboAccountId");
+                    LOGINFO("Failed to get xboAccountId, error code %d", rc);
                 }
             }
 
             if (activated && xboDeviceId.empty())
             {
-                JsonObject params;
-                JsonObject response;
-                // get xboDeviceId from AuthService.getXDeviceId
-                uint32_t result = mAuthServiceLink->Invoke<JsonObject, JsonObject>(JSONRPC_THUNDER_TIMEOUT, "getXDeviceId", params, response);
-                if (result == Core::ERROR_NONE && response.HasLabel("xDeviceId"))
+                WPEFramework::Exchange::IAuthService::GetXDeviceIdResult xdiRes;
+                uint32_t rc = mAuthservicePlugin->GetXDeviceId(xdiRes);
+                if (rc == Core::ERROR_NONE)
                 {
                     mMutex.lock();
-                    mAttributes.xboDeviceId = response["xDeviceId"].String();
+                    mAttributes.xboDeviceId = xdiRes.xDeviceId;
                     LOGINFO("Got xboDeviceId %s", mAttributes.xboDeviceId.c_str());
                     mMutex.unlock();
                 }
                 else
                 {
-                    LOGERR("Failed to get xboDeviceId");
+                    LOGINFO("Failed to get xboDeviceId, error code %d", rc);
                 }
+
             }
         }
 
@@ -847,19 +832,12 @@ namespace WPEFramework
             return false;
         }
 
-        void SiftConfig::OnActivationStatusChanged(const JsonObject& parameters)
+        void SiftConfig::OnActivationStatusChanged(const string &newServiceAccountId)
         {
-            std::string parametersString;
-            parameters.ToString(parametersString);
-            LOGINFO("OnActivationStatusChanged: %s", parametersString.c_str());
-            bool activated = false;
-            if (parameters.HasLabel("newActivationStatus") && parameters["newActivationStatus"].String() == "activated")
-            {
-                activated = true;
-            }
+            LOGINFO("ActivationStatusChanged: %s", newServiceAccountId.c_str());
 
             mMutex.lock();
-            mAttributes.activated = activated;
+            mAttributes.activated = newServiceAccountId == "activated";
             mAttributes.xboAccountId.clear();
             mAttributes.xboDeviceId.clear();
             mMutex.unlock();
@@ -950,5 +928,12 @@ namespace WPEFramework
         {
             mCallbacks[ns][key] = callback;
         }
+
+        void SiftConfig::MonitorAuthService::OnActivationStatusChanged(const string &oldActivationStatus, const string &newActivationStatus)
+        {
+            LOGINFO("OnActivationStatusChanged: %s -> %s", oldActivationStatus.c_str(), newActivationStatus.c_str());
+            mActivationStatusCallback(newActivationStatus);
+        }
+        
     }
 }

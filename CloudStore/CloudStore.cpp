@@ -22,6 +22,8 @@
 #include "rfcapi.h"
 #endif
 
+#include <interfaces/IConfiguration.h>
+
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 0
 #define API_VERSION_NUMBER_PATCH 1
@@ -102,6 +104,14 @@ namespace Plugin {
 
         _store2 = _service->Root<Exchange::IStore2>(_connectionId, RPC::CommunicationTimeOut, _T("CloudStoreImplementation"));
         if (_store2 != nullptr) {
+
+            auto configConnection = _store2->QueryInterface<Exchange::IConfiguration>();
+            if (configConnection != nullptr) {
+                configConnection->Configure(service);
+            } else {
+                result = _T("Failed to get IConfiguration");
+            }
+
             Exchange::JStore2::Register(*this, _store2);
             _store2->Register(&_store2Sink);
         } else {
