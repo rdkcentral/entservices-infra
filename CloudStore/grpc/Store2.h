@@ -24,6 +24,8 @@
 #include <fstream>
 #include <grpcpp/create_channel.h>
 #include <interfaces/IStore2.h>
+#include <interfaces/IConfiguration.h>
+#include <interfaces/IAuthService.h>
 #ifdef WITH_SYSMGR
 #include <libIBus.h>
 #include <sysMgr.h>
@@ -33,7 +35,7 @@ namespace WPEFramework {
 namespace Plugin {
     namespace Grpc {
 
-        class Store2 : public Exchange::IStore2 {
+        class Store2 : public Exchange::IStore2, public Exchange::IConfiguration {
         private:
             class Job : public Core::IDispatch {
             public:
@@ -76,11 +78,19 @@ namespace Plugin {
                 : IStore2()
                 , _uri(uri)
                 , _token(token)
+                , _service(nullptr)
                 , _authorization((_uri.find("localhost") == string::npos) && (_uri.find("0.0.0.0") == string::npos))
             {
                 Open();
             }
-            ~Store2() override = default;
+
+            ~Store2() override
+            {
+                if (_service != nullptr) {
+                    _service->Release();
+                    _service = nullptr;
+                }
+            }
 
         private:
             void Open()
@@ -120,26 +130,26 @@ namespace Plugin {
             }
             string GetToken() const
             {
-                // Get actual token, as it may change at any time...
-                string result;
-
-                Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:9998")));
-                auto link = Core::ProxyType<JSONRPC::LinkType<Core::JSON::IElement>>::Create(
-                    _T("org.rdk.AuthService"), _T(""), false, "token=" + _token);
-
-                JsonObject json;
-                auto status = link->Invoke<JsonObject, JsonObject>(
-                    JSON_RPC_TIMEOUT, // Timeout
-                    _T("getServiceAccessToken"),
-                    JsonObject(),
-                    json);
-                if (status == Core::ERROR_NONE) {
-                    result = json[_T("token")].String();
-                } else {
-                    TRACE(Trace::Error, (_T("sat status %d"), status));
+                if (_service == nullptr)
+                {
+                    TRACE(Trace::Error, (_T("No IShell")));
+                    return "";
                 }
 
-                return result;
+                // Get actual token, as it may change at any time...
+                Exchange::IAuthService *authservicePlugin = _service->QueryInterfaceByCallsign<Exchange::IAuthService>("org.rdk.AuthService");
+                if (authservicePlugin != nullptr) {
+                    WPEFramework::Exchange::IAuthService::GetServiceAccessTokenResult atRes;
+                    uint32_t res = authservicePlugin->GetServiceAccessToken(atRes);
+                    authservicePlugin->Release();
+
+                    if (res == Core::ERROR_NONE)
+                        return atRes.token;
+                }
+                else 
+                    TRACE(Trace::Error, (_T("Failed to get IAuthService")));
+
+                return "";
             }
             string GetPartnerId() const
             {
@@ -203,6 +213,7 @@ namespace Plugin {
                 if (_authorization) {
                     context.AddMetadata("authorization", "Bearer " + GetToken());
                 }
+
                 context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(GRPC_TIMEOUT)); // Timeout
                 ::distp::gateway::secure_storage::v1::UpdateValueRequest request;
                 request.set_partner_id(GetPartnerId());
@@ -375,8 +386,18 @@ namespace Plugin {
                 return result;
             }
 
+            virtual uint32_t Configure(PluginHost::IShell* service) override
+            {
+                ASSERT(service != nullptr);
+                _service = service;
+                _service->AddRef();
+
+                return Core::ERROR_NONE;
+            }
+
             BEGIN_INTERFACE_MAP(Store2)
             INTERFACE_ENTRY(IStore2)
+            INTERFACE_ENTRY(Exchange::IConfiguration)
             END_INTERFACE_MAP
 
         private:
@@ -401,6 +422,7 @@ namespace Plugin {
         private:
             const string _uri;
             const string _token;
+            PluginHost::IShell* _service;
             const bool _authorization;
             std::unique_ptr<::distp::gateway::secure_storage::v1::SecureStorageService::Stub> _stub;
             std::list<INotification*> _clients;

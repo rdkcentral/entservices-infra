@@ -28,7 +28,6 @@ namespace Plugin {
     CloudStoreImplementation::CloudStoreImplementation()
         : _accountStore2(Core::Service<Grpc::Store2>::Create<Exchange::IStore2>())
     {
-        ASSERT(_accountStore2 != nullptr);
     }
 
     CloudStoreImplementation::~CloudStoreImplementation()
@@ -37,6 +36,19 @@ namespace Plugin {
             _accountStore2->Release();
             _accountStore2 = nullptr;
         }
+    }
+
+    uint32_t CloudStoreImplementation::Configure(PluginHost::IShell* service)
+    {
+        ASSERT(_accountStore2 != nullptr);
+
+        auto configConnection = _accountStore2->QueryInterface<Exchange::IConfiguration>();
+        if (configConnection != nullptr) {
+            configConnection->Configure(service);
+            configConnection->Release();
+        }
+
+        return Core::ERROR_NONE;
     }
 
 } // namespace Plugin
