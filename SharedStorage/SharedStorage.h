@@ -23,41 +23,48 @@
 #include "UtilsLogging.h"
 #include <interfaces/IStore2.h>
 #include <interfaces/IStoreCache.h>
+#include <interfaces/json/JStore2.h>
 #include <interfaces/json/JsonData_PersistentStore.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class SharedStorage : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    class SharedStorage : public PluginHost::IPlugin, public PluginHost::JSONRPC
+    {
     private:
-        class Store2Notification : public Exchange::IStore2::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification,
+                             public Exchange::IStore2::INotification {
         private:
-            Store2Notification(const Store2Notification&) = delete;
-            Store2Notification& operator=(const Store2Notification&) = delete;
+            Notification() = delete;
+            Notification(const Notification&) = delete;
+            Notification& operator=(const Notification&) = delete;
 
         public:
-            explicit Store2Notification(SharedStorage& parent)
-                : _parent(parent)
+        explicit Notification(SharedStorage* parent)
+            : _parent(*parent)
             {
-            }
-            ~Store2Notification() override = default;
-
-        public:
-            void ValueChanged(const Exchange::IStore2::ScopeType scope, const string& ns, const string& key, const string& value) override
-            {
-                //TRACE(Trace::Information, (_T("ValueChanged event")));
-                JsonData::PersistentStore::SetValueParamsData params;
-                params.Scope = JsonData::PersistentStore::ScopeType(scope);
-                params.Namespace = ns;
-                params.Key = key;
-                params.Value = value;
-
-                _parent.event_onValueChanged(params);
+                ASSERT(parent != nullptr);
             }
 
-            BEGIN_INTERFACE_MAP(Store2Notification)
+            virtual ~Notification()
+            {
+            }
+
+            BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(Exchange::IStore2::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
+
+            void Activated(RPC::IRemoteConnection*) override
+            {
+                LOGINFO("SharedStorage Notification Activated");
+            }
+
+            void Deactivated(RPC::IRemoteConnection* connection) override
+            {
+                LOGINFO("SharedStorage Notification Deactivated");
+                _parent.Deactivated(connection);
+            }
 
         private:
             SharedStorage& _parent;
@@ -74,12 +81,22 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(SharedStorage)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_AGGREGATE(Exchange::IStore2, _psObject)
+        INTERFACE_AGGREGATE(Exchange::IStoreCache, _psCache)
+        INTERFACE_AGGREGATE(Exchange::IStoreInspector, _psInspector)
+        INTERFACE_AGGREGATE(Exchange::IStoreLimit, _psLimit)
+        INTERFACE_AGGREGATE(Exchange::IStore2, _csObject)
+        INTERFACE_AGGREGATE(PluginHost::IPlugin, m_PersistentStoreRef)
+        INTERFACE_AGGREGATE(PluginHost::IPlugin, m_CloudStoreRef)
         END_INTERFACE_MAP
 
     public:
         const string Initialize(PluginHost::IShell* service) override;
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
+
+    private:
+        void Deactivated(RPC::IRemoteConnection* connection);
 
     private:
         void RegisterAll();
@@ -101,10 +118,11 @@ namespace Plugin {
         {
             Notify(_T("onValueChanged"), params);
         }
-        Exchange::IStore2* getRemoteStoreObject(JsonData::PersistentStore::ScopeType eScope);
 
     private:
         PluginHost::IShell* _service{};
+        uint32_t _connectionId;
+        Exchange::IStore2* _store2;
         Exchange::IStore2* _psObject;
         Exchange::IStoreCache* _psCache;
         Exchange::IStoreInspector* _psInspector;
@@ -113,6 +131,7 @@ namespace Plugin {
         Core::Sink<Store2Notification> _storeNotification;
         PluginHost::IPlugin *m_PersistentStoreRef;
         PluginHost::IPlugin *m_CloudStoreRef;
+        Core::Sink<Notification> _sharedStorageNotification;
     };
 
 } // namespace Plugin

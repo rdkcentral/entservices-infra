@@ -62,33 +62,33 @@ namespace Plugin {
         UnregisterAll();
     }
 
-    Exchange::IStore2* SharedStorage::getRemoteStoreObject(ScopeType eScope)
-    {
-        if( (eScope == ScopeType::DEVICE) && _psObject)
-        {
-            return _psObject;
-        }
-        else if( (eScope == ScopeType::ACCOUNT) && _csObject)
-        {
-            return _csObject;
-        }
-        else
-        {
-            TRACE(Trace::Error, (_T("%s: Unknown scope: %d"), __FUNCTION__, static_cast<int>(eScope)));
-            return nullptr;
-        }
-    }
-
     const string SharedStorage::Initialize(PluginHost::IShell* service)
     {
         SYSLOG(Logging::Startup, (_T("SharedStorage::Initialize: PID=%u"), getpid()));
-        string message;
+        string message = "";
 
         ASSERT(service != nullptr);
         ASSERT(nullptr == _service);
+        ASSERT(nullptr == _store2);
+        ASSERT(nullptr == _connectionId);
 
         _service = service;
         _service->AddRef();
+        service->Register(&__sharedStorageNotification);
+        _store2 = _service->Root<Exchange::IStore2>(_connectionId, 5000, _T("SharedStorageImplementation"));
+
+        if(nullptr != _store2)
+        {
+            // Register for notifications
+            _store2->Register(&_sharedStorageNotification);
+            // Invoking Plugin API register to wpeframework
+            Exchange::JStore2::Register(*this, _store2);
+        }
+        else
+        {
+            SYSLOG(Logging::Startup, (_T("Telemetry::Initialize: Failed to initialise Telemetry plugin")));
+            message = _T("Telemetry plugin could not be initialised");
+        }
 
         m_PersistentStoreRef = service->QueryInterfaceByCallsign<PluginHost::IPlugin>("org.rdk.PersistentStore");
         if(nullptr != m_PersistentStoreRef)
@@ -201,5 +201,14 @@ namespace Plugin {
     {
         return (string());
     }
+
+    void UserSettings::Deactivated(RPC::IRemoteConnection* connection)
+    {
+        if (connection->Id() == _connectionId) {
+            ASSERT(nullptr != _service);
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+        }
+    }
+
 } // namespace Plugin
 } // namespace WPEFramework
