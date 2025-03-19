@@ -54,6 +54,23 @@ namespace Plugin {
         Unregister(_T("setNamespaceStorageLimit"));
     }
 
+    Exchange::IStore2* SharedStorage::getRemoteStoreObject(ScopeType eScope)
+    {
+        if( (eScope == ScopeType::DEVICE) && _psObject)
+        {
+            return _psObject;
+        }
+        else if( (eScope == ScopeType::ACCOUNT) && _csObject)
+        {
+            return _csObject;
+        }
+        else
+        {
+            TRACE(Trace::Error, (_T("%s: Unknown scope: %d"), __FUNCTION__, static_cast<int>(eScope)));
+            return nullptr;
+        }
+    }
+
     uint32_t SharedStorage::endpoint_setValue(const SetValueParamsData& params, DeleteKeyResultInfo& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
