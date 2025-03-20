@@ -368,6 +368,8 @@ namespace Plugin {
         LOGINFO("Connect the COM-RPC socket\n");
         _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
                             .withIShell(_service)
+                            .withRetryIntervalMS(200)
+                            .withRetryCount(25)
                             .createInterface();
 
         registerEventHandlers();
@@ -381,7 +383,7 @@ namespace Plugin {
         if(!_registeredEventHandlers && _powerManagerPlugin) 
         {
             _registeredEventHandlers = true;
-            _powerManagerPlugin->Register(&_pwrMgrNotification);
+            _powerManagerPlugin->Register(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>());
         }
     }
 
