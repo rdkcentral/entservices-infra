@@ -80,7 +80,7 @@ bool RippleHandler::sendIntent(std::string& appId, const std::string& intent, st
     std::cout << "Response from ripple is " << ret << ":" << response << std::endl;
     if (!ret)
     {
-        errorReason = response;	    
+        errorReason = std::move(response);
     }
     return ret;
 }

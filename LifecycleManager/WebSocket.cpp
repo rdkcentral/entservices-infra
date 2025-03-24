@@ -27,9 +27,9 @@ namespace Plugin {
 
     ConnectionMetaData::ConnectionMetaData(int id, websocketpp::connection_hdl connectionHandle, std::string uri)
       : mIdentifier(id)
-      , mHandle(connectionHandle)
+      , mHandle(std::move(connectionHandle))
       , mStatus("Connecting")
-      , mURI(uri)
+      , mURI(std::move(uri))
       , mServerResponse("N/A")
     {
         sem_init(&mEventSem, 0, 0);
@@ -44,7 +44,7 @@ namespace Plugin {
     {
         mStatus = "Open";
 
-        WebSocketAsioClient::connection_ptr clientConnection = webSocketClient->get_con_from_hdl(connectionHandle);
+        WebSocketAsioClient::connection_ptr clientConnection = webSocketClient->get_con_from_hdl(std::move(connectionHandle));
         mServerResponse = clientConnection->get_response_header("Server");
         sem_post(&mEventSem);
     }
@@ -53,7 +53,7 @@ namespace Plugin {
     {
         mStatus = "Failed";
 
-        WebSocketAsioClient::connection_ptr clientConnection = webSocketClient->get_con_from_hdl(connectionHandle);
+        WebSocketAsioClient::connection_ptr clientConnection = webSocketClient->get_con_from_hdl(std::move(connectionHandle));
         mServerResponse = clientConnection->get_response_header("Server");
         mErrorReason = clientConnection->get_ec().message();
         sem_post(&mEventSem);
@@ -62,7 +62,7 @@ namespace Plugin {
     void ConnectionMetaData::onClose(WebSocketAsioClient * webSocketClient, websocketpp::connection_hdl connectionHandle)
     {
         mStatus = "Closed";
-        WebSocketAsioClient::connection_ptr clientConnection = webSocketClient->get_con_from_hdl(connectionHandle);
+        WebSocketAsioClient::connection_ptr clientConnection = webSocketClient->get_con_from_hdl(std::move(connectionHandle));
         std::stringstream errorReason;
         errorReason << "close code: " << clientConnection->get_remote_close_code() << " (" 
           << websocketpp::close::status::get_string(clientConnection->get_remote_close_code()) 
@@ -206,7 +206,7 @@ namespace Plugin {
             websocketpp::lib::placeholders::_2
         ));
 
-        mEndPoint.connect(clientConnection);
+        mEndPoint.connect(std::move(clientConnection));
         if (wait)
 	{
             metaDataReference->waitForEvent();
