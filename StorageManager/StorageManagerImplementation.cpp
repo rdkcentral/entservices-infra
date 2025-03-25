@@ -90,7 +90,7 @@ namespace Plugin {
     /**
      * @brief : Adds file sizes to calculate total storage usage.
      */
-    int StorageManagerImplementation::GetSize(const char *path, const struct stat *statPtr, int currentFlag, struct FTW *internalFtwUsage )
+    int StorageManagerImplementation::getSize(const char *path, const struct stat *statPtr, int currentFlag, struct FTW *internalFtwUsage )
     {
         if (currentFlag == FTW_F && statPtr != nullptr)
         {
@@ -108,14 +108,14 @@ namespace Plugin {
     /**
      * @brief : Get the directory size traversing through the given directory path
      */
-    uint64_t StorageManagerImplementation::GetDirectorySizeInBytes(const std::string &path)
+    uint64_t StorageManagerImplementation::getDirectorySizeInBytes(const std::string &path)
     {
         const int flags = FTW_DEPTH | FTW_MOUNT | FTW_PHYS;
 
         std::unique_lock<std::mutex> storageSizelock(mStorageSizeLock);
         gStorageSize.usedBytes = 0;
         storageSizelock.unlock();
-        const int result = nftw(path.c_str(), GetSize, MAX_NUM_OF_FILE_DESCRIPTORS, flags);
+        const int result = nftw(path.c_str(), getSize, MAX_NUM_OF_FILE_DESCRIPTORS, flags);
 
         if (result == -1)
         {
@@ -128,7 +128,7 @@ namespace Plugin {
     /**
      * @brief : Create or Update App storageInfo map entry for the given appId
      */
-    bool StorageManagerImplementation::CreateAppStorageInfoByAppID(const std::string& appId, StorageAppInfo &storageInfo)
+    bool StorageManagerImplementation::createAppStorageInfoByAppID(const std::string& appId, StorageAppInfo &storageInfo)
     {
         bool result = false;
 
@@ -173,7 +173,7 @@ namespace Plugin {
      *
      * @return : True if App StorageInfo is available, false otherwise.
      */
-    bool StorageManagerImplementation::RetrieveAppStorageInfoByAppID(const string &appId, StorageAppInfo &storageInfo)
+    bool StorageManagerImplementation::retrieveAppStorageInfoByAppID(const string &appId, StorageAppInfo &storageInfo)
     {
         bool result = false;
 
@@ -181,18 +181,33 @@ namespace Plugin {
         auto it = mStorageAppInfo.find(appId);
         if (it != mStorageAppInfo.end())
         {
-            /* Updating the usedKB based on the directory size */
-            it->second.usedKB = static_cast<uint32_t>(GetDirectorySizeInBytes(it->second.path) / 1024);
-
-            storageInfo.path    = it->second.path;
-            storageInfo.uid     = it->second.uid;
-            storageInfo.gid     = it->second.gid;
-            storageInfo.quotaKB = it->second.quotaKB;
-            storageInfo.usedKB  = it->second.usedKB;
-            LOGINFO("App storage entry found for appId: %s " \
-                    "userId: %d groupId: %d quotaKB: %u usedKB: %u path: %s",
-                    appId.c_str(), storageInfo.uid, storageInfo.gid, storageInfo.quotaKB, storageInfo.usedKB, storageInfo.path.c_str());
-           result = true;
+            /* Check if the existing storage directory is accessible */
+            if (access(it->second.path.c_str(), F_OK) == 0)
+            {
+                /* Updating the usedKB based on the directory size */
+                it->second.usedKB = static_cast<uint32_t>(getDirectorySizeInBytes(it->second.path) / 1024);
+                storageInfo.path    = it->second.path;
+                storageInfo.uid     = it->second.uid;
+                storageInfo.gid     = it->second.gid;
+                storageInfo.quotaKB = it->second.quotaKB;
+                storageInfo.usedKB  = it->second.usedKB;
+                LOGINFO("App storage entry found for appId: %s " \
+                        "userId: %d groupId: %d quotaKB: %u usedKB: %u path: %s",
+                        appId.c_str(), storageInfo.uid, storageInfo.gid, storageInfo.quotaKB, storageInfo.usedKB, storageInfo.path.c_str());
+                result = true;
+            }
+            else
+            {
+                /* Not accessible, need to remove existing storage entry forcibly, recreate it */
+                if (removeAppStorageInfoByAppID(appId))
+                {
+                    LOGWARN("Storage path for appID[%s] not accessible - forcibly removed!", it->second.path.c_str());
+                }
+                else
+                {
+                    LOGERR("Failed to remove app storage entry forcibly: %s", it->second.path.c_str());
+                }
+            }
         }
         else
         {
@@ -206,7 +221,7 @@ namespace Plugin {
      *
      * @return : True if App StorageInfo map is available and erased, false otherwise.
      */
-    bool StorageManagerImplementation::RemoveAppStorageInfoByAppID(const string &appId)
+    bool StorageManagerImplementation::removeAppStorageInfoByAppID(const string &appId)
     {
         bool result = false;
 
@@ -232,7 +247,7 @@ namespace Plugin {
      *
      * @return : True if enough space is available, false otherwise.
      */
-    bool StorageManagerImplementation::HasEnoughStorageFreeSpace(const std::string& baseDir, uint32_t requiredSpaceKB)
+    bool StorageManagerImplementation::hasEnoughStorageFreeSpace(const std::string& baseDir, uint32_t requiredSpaceKB)
     {
         bool hasEnoughSpace = false;
         struct statvfs statFs;
@@ -267,7 +282,7 @@ namespace Plugin {
                 /* Compute total reserved space for existing applications */
                 for (auto& entry : mStorageAppInfo)
                 {
-                    entry.second.usedKB = static_cast<uint32_t>(GetDirectorySizeInBytes(entry.second.path) / 1024);
+                    entry.second.usedKB = static_cast<uint32_t>(getDirectorySizeInBytes(entry.second.path) / 1024);
 
                     /* Ensure applications do not exceed allocated space */
                     if (entry.second.usedKB > entry.second.quotaKB)
@@ -342,23 +357,8 @@ namespace Plugin {
             }
 
             /* Check if the appId storageInfo already exists or can be created */
-            if (RetrieveAppStorageInfoByAppID(appId, storageInfo))
+            if (retrieveAppStorageInfoByAppID(appId, storageInfo))
             {
-                /* Check if the existing storage directory is accessible */
-                if (access(storageInfo.path.c_str(), F_OK) == -1)
-                {
-                    /* Not accessible, need to remove existing storage entry forcibly, recreate it */
-                    if (RemoveAppStorageInfoByAppID(appId))
-                    {
-                        LOGWARN("Storage path for appID[%s] not accessible - forcibly removed!", appDir.c_str());
-                        goto create_storage;
-                    }
-
-                    errorReason = "Failed to remove app storage entry forcibly: " + appDir;
-                    LOGERR("Failed to remove app storage entry forcibly: %s", appDir.c_str());
-                    goto ret_fail;
-                }
-
                 errorReason = "";
                 if (storageInfo.uid == userId && storageInfo.gid == groupId && storageInfo.quotaKB == size)
                 {
@@ -381,7 +381,7 @@ namespace Plugin {
                     else
                     {
                         /* App storage quote size is different now, remove the existing map entry and new entry can be created */
-                        if (!RemoveAppStorageInfoByAppID(appId))
+                        if (!removeAppStorageInfoByAppID(appId))
                         {
                             LOGERR("Failed to remove storage appId: %s userId: %d groupId: %d",
                                     appId.c_str(), userId, groupId );
@@ -393,8 +393,7 @@ namespace Plugin {
                 }
             }
 
-create_storage:
-            if (!HasEnoughStorageFreeSpace(mBaseStoragePath, size))
+            if (!hasEnoughStorageFreeSpace(mBaseStoragePath, size))
             {
                 LOGERR("Insufficient storage space for app [%s]. Requested: %u KB", appId.c_str(), size);
                 errorReason = "Insufficient storage space";
@@ -431,7 +430,7 @@ update_storage:
                 storageInfo.gid     = groupId;
                 storageInfo.quotaKB = size;
                 storageInfo.usedKB  = 0; /* Initially, no space is used */
-                if (CreateAppStorageInfoByAppID(appId, storageInfo))
+                if (createAppStorageInfoByAppID(appId, storageInfo))
                 {
                     LOGINFO("Created storage at appDir: %s", appDir.c_str());
                     path = std::move(appDir);
@@ -462,7 +461,7 @@ update_storage:
 
         std::unique_lock<std::mutex> lock(mStorageManagerImplLock);
         LOGINFO("Entered GetStorage Implementation");
-        if(RetrieveAppStorageInfoByAppID(appId,storageInfo))
+        if(retrieveAppStorageInfoByAppID(appId,storageInfo))
         {
             path     = storageInfo.path;
             userId   = storageInfo.uid;
@@ -488,13 +487,48 @@ update_storage:
      */
     Core::hresult StorageManagerImplementation::DeleteStorage(const string& appId, string& errorReason)
     {
-        Core::hresult status = Core::ERROR_NONE;
-
+        Core::hresult status = Core::ERROR_GENERAL;
         LOGINFO("Entered DeleteStorage Implementation");
 
+        if (appId.empty())
+        {
+            errorReason = "AppId is empty";
+            LOGERR("AppId is empty");
+        }
+        else
+        {
+            /* Lock the map to ensure thread safety */
+            std::unique_lock<std::mutex> lock(mStorageManagerImplLock);
+            /* Check if the App Folder exists in the map */
+            auto it = mStorageAppInfo.find(appId);
+            if (it == mStorageAppInfo.end())
+            {
+                errorReason = "AppId not found in storage info";
+                LOGERR("AppId not found in storage info");
+            }
+            else
+            {
+                const std::string path = it->second.path;
+                LOGINFO("App Folder exists, attempting to delete: %s", path.c_str());
+                if (deleteDirectoryEntries(appId, errorReason) == Core::ERROR_NONE)
+                {
+                    if (0 == rmdir(path.c_str()))
+                    {
+                        LOGINFO("App Folder removed successfully");
+                        status = Core::ERROR_NONE;
+                        LOGINFO("Erasing the App Folder from the database");
+                        mStorageAppInfo.erase(it);
+                    }
+                    else
+                    {
+                        errorReason = "Error deleting the empty App Folder: " + std::string(strerror(errno));
+                        LOGERR("Error deleting the empty App Folder:  reason=%s, Path: %s", strerror(errno), path.c_str());
+                    }
+                }
+            }
+        }
         return status;
     }
-
 
     /**
      * @brief : Callback function used by nftw to delete files and directories

@@ -41,7 +41,6 @@ namespace WPEFramework
             if (nullptr != windowManagerHandler)
             {
                 ApplicationContext* context = getContext();
-                std::string errorReason;
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
                 result = windowManagerHandler->createDisplay(launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchArgs, launchParams.mDisplayName, errorReason);
             }
@@ -61,7 +60,6 @@ namespace WPEFramework
                 std::string generatedInstanceId =  boost::uuids::to_string(tag);
                 context->setAppInstanceId(generatedInstanceId);
 
-                std::string errorReason;
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
 
                 ret = runtimeManagerHandler->run(context->getAppId(), generatedInstanceId, launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, launchParams.mLaunchArgs, launchParams.mXdgRuntimeDir, launchParams.mDisplayName, errorReason);
@@ -100,7 +98,6 @@ namespace WPEFramework
 	    if (nullptr != runtimeManagerHandler)
 	    {
                 ApplicationContext* context = getContext();
-                std::string errorReason;
                 ret = runtimeManagerHandler->suspend(context->getAppInstanceId(), errorReason);
 	    }
             return ret;
@@ -118,7 +115,6 @@ namespace WPEFramework
 	    if (nullptr != runtimeManagerHandler)
 	    {
                 ApplicationContext* context = getContext();
-                std::string errorReason;
                 ret = runtimeManagerHandler->resume(context->getAppInstanceId(), errorReason);
 	    }
             return ret;
@@ -131,7 +127,6 @@ namespace WPEFramework
 	    if (nullptr != runtimeManagerHandler)
 	    {
                 ApplicationContext* context = getContext();
-                std::string errorReason;
                 ret = runtimeManagerHandler->hibernate(context->getAppInstanceId(), errorReason);
 	    }
             return ret;
@@ -149,7 +144,6 @@ namespace WPEFramework
             if (nullptr != runtimeManagerHandler)
             {
                 ApplicationContext* context = getContext();
-                std::string errorReason;
                 ret = runtimeManagerHandler->wake(context->getAppInstanceId(), context->getTargetLifecycleState(), errorReason);
             }
             return ret;
@@ -163,7 +157,6 @@ namespace WPEFramework
 	    {
                 ApplicationContext* context = getContext();
                 ApplicationKillParams& killParams = context->getApplicationKillParams();
-                std::string errorReason;
                 if (killParams.mForce)
                 {
                     success = runtimeManagerHandler->kill(context->getAppInstanceId(), errorReason);

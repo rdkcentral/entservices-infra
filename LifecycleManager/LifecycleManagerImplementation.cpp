@@ -46,7 +46,14 @@ namespace WPEFramework
 
         void LifecycleManagerImplementation::terminate()
         {
-            RequestHandler::getInstance()->terminate();
+            try
+            {
+                RequestHandler::getInstance()->terminate();
+            }
+            catch(const std::exception& e)
+            {
+                LOGERR("Exception in LifecycleManagerImplementation::terminate: %s", e.what());
+            }
             if (mService != nullptr)
             {
                mService->Release();

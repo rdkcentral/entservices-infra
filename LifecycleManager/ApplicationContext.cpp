@@ -28,7 +28,7 @@ namespace WPEFramework
         {
 	}
 
-        ApplicationContext::ApplicationContext (std::string appId): mAppInstanceId(""), mAppId(appId), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
+        ApplicationContext::ApplicationContext (std::string appId): mAppInstanceId(""), mAppId(std::move(appId)), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
         {
             mState = (void*) new LoadingState(this);
         }

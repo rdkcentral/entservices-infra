@@ -85,12 +85,12 @@ namespace Plugin {
         uint32_t Configure(PluginHost::IShell* service) override;
 
     private:
-        bool CreateAppStorageInfoByAppID(const std::string& appId, StorageAppInfo &storageInfo);
-        bool RetrieveAppStorageInfoByAppID(const string &appId, StorageAppInfo &storageInfo);
-        bool RemoveAppStorageInfoByAppID(const string &appId);
-        bool HasEnoughStorageFreeSpace(const std::string& baseDir, uint32_t requiredSpaceKB);
-        uint64_t GetDirectorySizeInBytes(const std::string &path);
-        static int GetSize(const char *path, const struct stat *statPtr, int currentFlag, struct FTW *internalFtwUsage);
+        bool createAppStorageInfoByAppID(const std::string& appId, StorageAppInfo &storageInfo);
+        bool retrieveAppStorageInfoByAppID(const string &appId, StorageAppInfo &storageInfo);
+        bool removeAppStorageInfoByAppID(const string &appId);
+        bool hasEnoughStorageFreeSpace(const std::string& baseDir, uint32_t requiredSpaceKB);
+        uint64_t getDirectorySizeInBytes(const std::string &path);
+        static int getSize(const char *path, const struct stat *statPtr, int currentFlag, struct FTW *internalFtwUsage);
         Core::hresult deleteDirectoryEntries(const string& appId, string& errorReason);
         bool lockAppStorageInfo(const std::string& appId, std::unique_lock<std::mutex>& appLock);
 
