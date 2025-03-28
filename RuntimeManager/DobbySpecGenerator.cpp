@@ -30,6 +30,7 @@ namespace Plugin
 namespace 
 {
     const std::string WESTEROS_SOCKET_MOUNT_POINT = "/tmp/westeros";
+    const std::string APPS_PATH_MOUNT_POINT = "/package";
     const std::string RUNTIME_PATH_MOUNT_POINT = "/runtime";
 
     const int DEFAULT_MEM_LIMIT = 41943040;
@@ -53,8 +54,8 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, string
     resultSpec = "";
 
     Json::Value spec;
-    spec["version"] = "1.0";
-    spec["cwd"] = "/";
+    spec["version"] = "1.1";
+    spec["cwd"] = APPS_PATH_MOUNT_POINT;
 
     {
         Json::Value args(Json::arrayValue);
@@ -89,10 +90,14 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, string
     spec["memLimit"] = getSysMemoryLimit(config);
     spec["env"] = createEnvVars(config);
     spec["mounts"] = createMounts(config);
+    spec["rdkPlugins"] = creteRdkPlugins(config);
 
-    // TODO: vpu, dbus, plugins, rdkplugins, seccomp
+    // TODO: verify if we need EthanLog plugin, it seems it works in conjunction with AI 1.0
+    // standard plugins are EthanLog and OCDM, OCDM is enabled if an app does not user rialto nad requires drm
+    // TODO: not for Q1 vpu, dbus, seccomp
 
-    // TODO proper network setup
+    // TODO: network field should not be needed, in dobby it just forces adding network plugin
+    // verify, if we can safely remove it, as we always add network plugin
     spec["network"] = "nat";
 
     Json::FastWriter writer;
@@ -123,17 +128,21 @@ Json::Value DobbySpecGenerator::createMounts(const ApplicationConfiguration& con
 {
     Json::Value mounts(Json::arrayValue);
 
-    // TODO add package mount
+    if (!config.mAppPath.empty())
+    {
+        mounts.append(createBindMount(config.mAppPath, APPS_PATH_MOUNT_POINT, MS_BIND | MS_RDONLY | MS_NOSUID | MS_NODEV));
+    }
 
     if (!config.mRuntimePath.empty())
     {
         mounts.append(createBindMount(config.mRuntimePath, RUNTIME_PATH_MOUNT_POINT, MS_BIND | MS_RDONLY | MS_NOSUID | MS_NODEV));
     }
 
-    if (!config.mWesterosSocketPath.empty())
-    {
-        mounts.append(createBindMount(config.mWesterosSocketPath, WESTEROS_SOCKET_MOUNT_POINT, MS_BIND | MS_NOSUID | MS_NODEV | MS_NOEXEC));
-    }
+    // this is not needed, Dobby adds this mount
+    // if (!config.mWesterosSocketPath.empty())
+    // {
+    //     mounts.append(createBindMount(config.mWesterosSocketPath, WESTEROS_SOCKET_MOUNT_POINT, MS_BIND | MS_NOSUID | MS_NODEV | MS_NOEXEC));
+    // }
 
     // TODO add extra mounts from config
 
@@ -203,6 +212,81 @@ ssize_t DobbySpecGenerator::getSysMemoryLimit(const ApplicationConfiguration& /*
 {
     // TODO mem limit should depend on application type
     return DEFAULT_MEM_LIMIT;
+}
+
+Json::Value DobbySpecGenerator::creteRdkPlugins(const ApplicationConfiguration& config) const
+{
+    Json::Value rdkPluginsObj(Json::objectValue);
+
+    if (!config.mPorts.empty())
+    {
+        rdkPluginsObj["appservicesrdk"] = createAppServiceSDKPlugin(config);
+    }
+
+    rdkPluginsObj["minidump"] = createMinidumpPlugin(config);
+
+    // TODO create ionplugin on xione
+
+    rdkPluginsObj["networking"] = createNetworkPlugin(config);
+
+    return rdkPluginsObj;
+}
+
+Json::Value DobbySpecGenerator::createMinidumpPlugin(const ApplicationConfiguration& config) const
+{
+    Json::Value pluginObj(Json::objectValue);
+
+    pluginObj["required"] = false;
+    pluginObj["data"]["destinationPath"] = "/opt/minidumps";
+
+    return pluginObj;
+}
+
+Json::Value DobbySpecGenerator::createAppServiceSDKPlugin(const ApplicationConfiguration& config) const
+{
+    Json::Value pluginObj(Json::objectValue);
+
+    pluginObj["required"] = false;
+
+    Json::Value dependencies(Json::arrayValue);
+    dependencies.append("networking");
+
+    pluginObj["dependsOn"] = std::move(dependencies);
+
+    Json::Value ports(Json::arrayValue);
+    for (auto port : config.mPorts)
+        ports.append(port);
+
+    pluginObj["data"]["additionalPorts"] = std::move(ports);
+
+    return pluginObj;
+}
+
+Json::Value DobbySpecGenerator::createNetworkPlugin(const ApplicationConfiguration& config) const
+{
+    Json::Value pluginObj(Json::objectValue);
+
+    pluginObj["required"] = true;
+
+    Json::Value dataObj(Json::objectValue);
+
+    if (config.mWanLanAccess)
+    {
+        dataObj["type"] = "nat";
+        dataObj["dnsmasq"] = true;
+    }
+    else
+    {
+        dataObj["type"] = "none";
+        dataObj["dnsmasq"] = false;
+    }
+
+    dataObj["ipv4"] = true;
+    dataObj["ipv6"] = false; // TODO need a switch for this
+
+    pluginObj["data"] = std::move(dataObj);
+
+    return pluginObj;
 }
 
 } // namespace Plugin

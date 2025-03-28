@@ -43,6 +43,10 @@ namespace Plugin
         private:
             Json::Value createEnvVars(const ApplicationConfiguration& config) const;
             Json::Value createMounts(const ApplicationConfiguration& config) const;
+            Json::Value creteRdkPlugins(const ApplicationConfiguration& config) const;
+            Json::Value createMinidumpPlugin(const ApplicationConfiguration& config) const;
+            Json::Value createAppServiceSDKPlugin(const ApplicationConfiguration& config) const;
+            Json::Value createNetworkPlugin(const ApplicationConfiguration& config) const;
             Json::Value createBindMount(const std::string &source,
                                         const std::string &destination,
                                         unsigned long options) const;
