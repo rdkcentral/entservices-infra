@@ -263,6 +263,14 @@ void UserSettingsImplementation::Dispatch(Event event, const JsonValue params)
              }
          break;
 
+         case PRIVACY_MODE_CHANGED:
+             while (index != _userSettingNotification.end())
+             {
+                 (*index)->OnPrivacyModeChanged(params.String());
+                 ++index;
+             }
+         break;
+
          case PIN_CONTROL_CHANGED:
               while (index != _userSettingNotification.end())
               {
@@ -385,6 +393,10 @@ void UserSettingsImplementation::ValueChanged(const Exchange::IStore2::ScopeType
     else if(0 == (ns.compare(USERSETTINGS_NAMESPACE)) && (0 == key.compare(USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY)))
     {
         dispatchEvent(PREFERRED_CLOSED_CAPTIONS_SERVICE_CHANGED, JsonValue((string)value));
+    }
+    else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_PRIVACY_MODE_KEY) == 0))
+    {
+        dispatchEvent(PRIVACY_MODE_CHANGED, JsonValue((string)value));
     }
     else if(0 == (ns.compare(USERSETTINGS_NAMESPACE)) && (0 == key.compare(USERSETTINGS_PIN_CONTROL_KEY)))
     {
@@ -617,6 +629,67 @@ uint32_t UserSettingsImplementation::GetPreferredClosedCaptionService(string &se
     std::string value = "";
 
     status = GetUserSettingsValue(USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY, service);
+    return status;
+}
+
+uint32_t UserSettingsImplementation::SetPrivacyMode(const string& privacyMode)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+
+    LOGINFO("privacyMode: %s", privacyMode.c_str());
+
+    if (privacyMode != "SHARE" && privacyMode != "DO_NOT_SHARE")
+    {
+        LOGERR("Wrong privacyMode value: '%s', returning default", privacyMode.c_str());
+        return status;
+    }
+
+    _adminLock.Lock();
+
+    ASSERT (nullptr != _remotStoreObject);
+
+    if (nullptr != _remotStoreObject)
+    {
+        uint32_t ttl = 0;
+        string oldPrivacyMode;
+        status = _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, USERSETTINGS_PRIVACY_MODE_KEY, oldPrivacyMode, ttl);
+        LOGINFO("oldPrivacyMode: %s", oldPrivacyMode.c_str());
+
+        if (privacyMode != oldPrivacyMode)
+        {
+            status = _remotStoreObject->SetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, USERSETTINGS_PRIVACY_MODE_KEY, privacyMode, 0);
+        }
+    }
+
+    _adminLock.Unlock();
+
+    return status;
+}
+
+uint32_t UserSettingsImplementation::GetPrivacyMode(string &privacyMode) const
+{
+    uint32_t status = Core::ERROR_NONE;
+    std::string value = "";
+    uint32_t ttl = 0;
+    privacyMode = "";
+
+    _adminLock.Lock();
+
+    ASSERT (nullptr != _remotStoreObject);
+
+    if (nullptr != _remotStoreObject)
+    {
+        _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, USERSETTINGS_PRIVACY_MODE_KEY, privacyMode, ttl);
+    }
+
+    _adminLock.Unlock();
+    
+    if (privacyMode != "SHARE" && privacyMode != "DO_NOT_SHARE") 
+    {
+        LOGWARN("Wrong privacyMode value: '%s', returning default", privacyMode.c_str());
+        privacyMode = "SHARE";
+    }
+
     return status;
 }
 

@@ -26,6 +26,10 @@
 #include <interfaces/IPowerManager.h>
 #include "PowerManagerInterface.h"
 
+#ifdef HAS_RBUS
+#include <interfaces/IUserSettings.h>
+#endif
+
 #include <com/com.h>
 #include <core/core.h>
 
@@ -70,6 +74,35 @@ namespace Plugin {
             private:
                 TelemetryImplementation& _parent;
             };
+
+#ifdef HAS_RBUS
+            class UserSettingsNotification : public Exchange::IUserSettings::INotification {
+            private:
+                UserSettingsNotification(const UserSettingsNotification&) = delete;
+                UserSettingsNotification& operator=(const UserSettingsNotification&) = delete;
+
+            public:
+                explicit UserSettingsNotification(TelemetryImplementation& parent)
+                    : _parent(parent)
+                {
+                }
+
+                ~UserSettingsNotification() override = default;
+
+                void OnPrivacyModeChanged(const string& privacyMode)
+                {
+                    _parent.notifyT2PrivacyMode(privacyMode);
+                }
+
+                BEGIN_INTERFACE_MAP(UserSettingsNotification)
+                INTERFACE_ENTRY(Exchange::IUserSettings::INotification)
+                END_INTERFACE_MAP
+
+            private:
+                TelemetryImplementation& _parent;
+            };
+#endif
+
     public:
         // We do not allow this plugin to be copied !!
         TelemetryImplementation();
@@ -147,7 +180,7 @@ namespace Plugin {
 
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
-        
+
 #ifdef HAS_RBUS
         void notifyT2PrivacyMode(std::string privacyMode);
         void onReportUploadStatus(const char* status);
@@ -162,6 +195,10 @@ namespace Plugin {
         std::list<Exchange::ITelemetry::INotification*> _telemetryNotification;
         PowerManagerInterfaceRef _powerManagerPlugin;
         Core::Sink<PowerManagerNotification> _pwrMgrNotification;
+#ifdef HAS_RBUS
+        Exchange::IUserSettings* _userSettingsPlugin;
+        Core::Sink<UserSettingsNotification> _userSettingsNotification;
+#endif
         bool _registeredEventHandlers;
         
         void dispatchEvent(Event, const JsonValue &params);

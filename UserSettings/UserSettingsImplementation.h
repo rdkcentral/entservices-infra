@@ -39,6 +39,7 @@
 #define USERSETTINGS_CAPTIONS_KEY                             "captions"
 #define USERSETTINGS_PREFERRED_CAPTIONS_LANGUAGES_KEY         "preferredCaptionsLanguages"
 #define USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY    "preferredClosedCaptionsService"
+#define USERSETTINGS_PRIVACY_MODE_KEY                         "privacyMode"
 #define USERSETTINGS_PIN_CONTROL_KEY                          "pinControl"
 #define USERSETTINGS_VIEWING_RESTRICTIONS_KEY                 "viewingRestrictions"
 #define USERSETTINGS_VIEWING_RESTRICTIONS_WINDOW_KEY          "viewingRestrictionsWindow"
@@ -116,6 +117,7 @@ namespace Plugin {
             CAPTIONS_CHANGED,
             PREFERRED_CAPTIONS_LANGUAGE_CHANGED,
             PREFERRED_CLOSED_CAPTIONS_SERVICE_CHANGED,
+            PRIVACY_MODE_CHANGED,
             PIN_CONTROL_CHANGED,
             VIEWING_RESTRICTIONS_CHANGED,
             VIEWING_RESTRICTIONS_WINDOW_CHANGED,
@@ -183,6 +185,8 @@ namespace Plugin {
         uint32_t GetPreferredCaptionsLanguages(string &preferredLanguages) const override;
         uint32_t SetPreferredClosedCaptionService(const string& service) override;
         uint32_t GetPreferredClosedCaptionService(string &service) const override;
+        uint32_t SetPrivacyMode(const string& privacyMode) override;
+        uint32_t GetPrivacyMode(string &privacyMode) const override;
         uint32_t SetPinControl(const bool pinControl) override;
         uint32_t GetPinControl(bool &pinControl) const override;
         uint32_t SetViewingRestrictions(const string& viewingRestrictions) override;

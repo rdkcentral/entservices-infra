@@ -44,6 +44,7 @@
 #define DEFAULT_PROFILES_FILE "/etc/t2profiles/default.json"
 
 #define SYSTEMSERVICES_CALLSIGN "org.rdk.System"
+#define USERSETTINGS_CALLSIGN "org.rdk.UserSettings"
 
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 2
@@ -68,6 +69,10 @@ namespace Plugin {
     : _adminLock()
     , _service(nullptr)
     , _pwrMgrNotification(*this)
+#ifdef HAS_RBUS
+    , _userSettingsPlugin(nullptr)
+    , _userSettingsNotification(*this)
+#endif
     , _registeredEventHandlers(false)
     {
         LOGINFO("Create TelemetryImplementation Instance");
@@ -91,8 +96,13 @@ namespace Plugin {
                 rbus_close(rbusHandle);
                 rbusHandleStatus = RBUS_ERROR_NOT_INITIALIZED;
             }
-#endif
 
+            if (_userSettingsPlugin) {
+                 _userSettingsPlugin->Unregister(&_userSettingsNotification);
+                 _userSettingsPlugin->Release();
+                 _userSettingsPlugin = nullptr;
+            }
+#endif
     }
 
     Core::hresult TelemetryImplementation::Register(Exchange::ITelemetry::INotification *notification)
@@ -195,6 +205,18 @@ namespace Plugin {
         else
         {
             LOGERR("%s plugin is not activated", SYSTEMSERVICES_CALLSIGN);
+        }
+        
+        
+        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
+            Utils::activatePlugin(_service, USERSETTINGS_CALLSIGN);
+            
+        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
+        {
+            ASSERT(_service != nullptr);
+
+            _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
+            _userSettingsPlugin->Register(&_userSettingsNotification);
         }
     }
     
@@ -404,7 +426,7 @@ namespace Plugin {
             Core::IWorkerPool::Instance().Submit(Job::Create( this,TELEMETRY_EVENT_ABORTREPORT, params));
         }
     }
-    
+
     void TelemetryImplementation::dispatchEvent(Event event, const JsonValue &params)
     {
         Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));
