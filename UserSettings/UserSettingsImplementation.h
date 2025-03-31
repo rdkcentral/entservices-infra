@@ -185,8 +185,8 @@ namespace Plugin {
         uint32_t GetPreferredCaptionsLanguages(string &preferredLanguages) const override;
         uint32_t SetPreferredClosedCaptionService(const string& service) override;
         uint32_t GetPreferredClosedCaptionService(string &service) const override;
-        uint32_t SetPrivacyMode(const string& privacyMode) override;
-        uint32_t GetPrivacyMode(string &privacyMode) const override;
+        uint32_t SetPrivacyMode(const string& privacyMode);
+        uint32_t GetPrivacyMode(string &privacyMode) const;
         uint32_t SetPinControl(const bool pinControl) override;
         uint32_t GetPinControl(bool &pinControl) const override;
         uint32_t SetViewingRestrictions(const string& viewingRestrictions) override;
