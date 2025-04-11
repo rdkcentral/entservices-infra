@@ -246,7 +246,10 @@ namespace Plugin {
         NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
 
         #ifdef USE_LIBPACKAGE
-        packageImpl->Install(packageId, version, fileLocator);
+        packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator);
+        if (pmResult != packagemanager::SUCCESS) {
+            result = Core::ERROR_GENERAL;
+        }
         #endif
 
         NotifyInstallStatus(packageId, version, state);
@@ -262,7 +265,10 @@ namespace Plugin {
         NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
 
         #ifdef USE_LIBPACKAGE
-        packageImpl->Uninstall(packageId);
+        packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
+        if (pmResult != packagemanager::SUCCESS) {
+            result = Core::ERROR_GENERAL;
+        }
         #endif
 
         NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
@@ -277,25 +283,29 @@ namespace Plugin {
         LOGTRACE();
         #ifdef USE_LIBPACKAGE
         string list;
-        packageImpl->GetList(list);
-        Json::Value jv;
-        Json::Reader reader;
+        packagemanager::Result pmResult = packageImpl->GetList(list);
+        if (pmResult == packagemanager::SUCCESS) {
+            Json::Value jv;
+            Json::Reader reader;
 
-        if (reader.parse(list.c_str(), jv) ) {
-            if (jv.isArray()) {
-                for (int i = 0; i < jv.size(); ++i) {
-                    Json::Value val = jv[i];
+            if (reader.parse(list.c_str(), jv) ) {
+                if (jv.isArray()) {
+                    for (int i = 0; i < jv.size(); ++i) {
+                        Json::Value val = jv[i];
 
-                    Exchange::IPackageInstaller::Package package;
-                    package.packageId = val["packageId"].asString().c_str();
-                    package.version = val["version"].asString().c_str();
-                    package.packageState = InstallState::INSTALLED;
-                    package.sizeKb = 0;         // XXX: getPackageSpaceInKBytes
-                    packageList.emplace_back(package);
+                        Exchange::IPackageInstaller::Package package;
+                        package.packageId = val["packageId"].asString().c_str();
+                        package.version = val["version"].asString().c_str();
+                        package.packageState = InstallState::INSTALLED;
+                        package.sizeKb = 0;         // XXX: getPackageSpaceInKBytes
+                        packageList.emplace_back(package);
+                    }
+                } else {
+                    LOGERR("Invalid json response");
                 }
-            } else {
-                LOGERR("Invalid json response");
             }
+        } else {
+            result = Core::ERROR_GENERAL;
         }
         #endif
 
@@ -370,12 +380,13 @@ namespace Plugin {
         if(isLocked(packageId, version))  {
             ++mLockCount;
         } else {
-            u_int32_t rc = packageImpl->Lock(packageId, version, unpackedPath);
-            if (rc == 0) {
+            packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath);
+            if (pmResult == packagemanager::SUCCESS) {
                 lockId = ++mLockCount;
                 LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
             } else {
                 LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
+                result = Core::ERROR_GENERAL;
             }
         }
         #endif
@@ -390,12 +401,14 @@ namespace Plugin {
 
         #ifdef USE_LIBPACKAGE
         if (mLockCount) {
-            packageImpl->Unlock(packageId, version);
+            packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
+            if (pmResult != packagemanager::SUCCESS) {
+                result = Core::ERROR_GENERAL;
+            }
             --mLockCount;
         } else {
             LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
         }
-
         #endif
 
         return result;
@@ -409,7 +422,10 @@ namespace Plugin {
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
 
         #ifdef USE_LIBPACKAGE
-        packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
+        packagemanager::Result pmResult = packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
+        if (pmResult != packagemanager::SUCCESS) {
+            result = Core::ERROR_GENERAL;
+        }
         #endif
 
         return result;
