@@ -18,6 +18,7 @@
 */
 
 #include "WindowManagerHandler.h"
+#include <fstream>
 #include <random>
 
 namespace WPEFramework {
@@ -118,6 +119,14 @@ std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
         name.first = "/tmp";
     }
 
+    std::ifstream f("/tmp/specchange");
+    if (f.good())
+    {
+        name.second.assign("testdisplay");
+        f.close();
+    }
+    else
+    {	    
     // generate  a new random name
     for (int attempt = 0; attempt < 5; attempt++)
     {
@@ -138,7 +147,7 @@ std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
             break;
         }
     }
-
+    }
     if (close(xdgRuntimeDirFd) < 0)
     {
         printf("failed to close XDG_RUNTIME_DIR \n");

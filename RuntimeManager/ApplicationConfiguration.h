@@ -72,6 +72,7 @@ namespace Plugin
         // application storage info - storage path, uid, gid
         AppStorageInfo mAppStorageInfo;
 
+        bool mWanLanAccess;
     };
 } /* namespace Plugin */
 } /* namespace WPEFramework */

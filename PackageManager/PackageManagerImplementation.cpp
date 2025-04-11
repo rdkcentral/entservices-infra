@@ -1,0 +1,510 @@
+/**
+* If not stated otherwise in this file or this component's LICENSE
+* file the following copyright and licenses apply:
+*
+* Copyright 2024 RDK Management
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+**/
+
+#include <chrono>
+
+#include "PackageManagerImplementation.h"
+
+namespace WPEFramework {
+namespace Plugin {
+
+    SERVICE_REGISTRATION(PackageManagerImplementation, 1, 0);
+
+    PackageManagerImplementation::PackageManagerImplementation()
+        : mNextDownloadId(1000)
+        , mDownloaderNotifications()
+        , mInstallNotifications()
+    {
+        LOGINFO("ctor PackageManagerImplementation: %p", this);
+        mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
+        mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
+
+        #ifdef USE_LIBPACKAGE
+        packageImpl = packagemanager::IPackageImpl::instance();
+        #endif
+    }
+
+    PackageManagerImplementation::~PackageManagerImplementation()
+    {
+        LOGINFO("dtor PackageManagerImplementation: %p", this);
+
+        std::list<Exchange::IPackageInstaller::INotification*>::iterator index(mInstallNotifications.begin());
+        {
+            while (index != mInstallNotifications.end())
+            {
+                (*index)->Release();
+                index++;
+            }
+        }
+        mInstallNotifications.clear();
+
+        std::list<Exchange::IPackageDownloader::INotification*>::iterator itDownloader(mDownloaderNotifications.begin());
+        {
+            while (itDownloader != mDownloaderNotifications.end())
+            {
+                (*itDownloader)->Release();
+                itDownloader++;
+            }
+        }
+        mDownloaderNotifications.clear();
+    }
+
+    Core::hresult PackageManagerImplementation::Register(Exchange::IPackageDownloader::INotification* notification)
+    {
+        LOGINFO();
+        ASSERT(notification != nullptr);
+
+        mAdminLock.Lock();
+        ASSERT(std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification) == mDownloaderNotifications.end());
+        if(std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification) == mDownloaderNotifications.end()){
+            mDownloaderNotifications.push_back(notification);
+            notification->AddRef();
+        }
+
+        mAdminLock.Unlock();
+
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult PackageManagerImplementation::Unregister(Exchange::IPackageDownloader::INotification* notification)
+    {
+        LOGINFO();
+        ASSERT(notification != nullptr);
+        Core::hresult result = Core::ERROR_NONE;
+
+        done = true;
+        cv.notify_one();
+        mDownloadThreadPtr->join();
+
+        mAdminLock.Lock();
+        auto item = std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification);
+        if(item != mDownloaderNotifications.end()){
+            notification->Release();
+            mDownloaderNotifications.erase(item);
+        }
+        else {
+            result = Core::ERROR_GENERAL;
+        }
+        mAdminLock.Unlock();
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Initialize(PluginHost::IShell* service) {
+        Core::hresult result = Core::ERROR_NONE;
+        LOGINFO();
+
+        LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
+        PackageManagerImplementation::Configuration config;
+        config.FromString(service->ConfigLine());
+        downloadDir = config.downloadDir;
+        LOGINFO("downloadDir=%s", downloadDir.c_str());
+
+        return result;
+    }
+
+    void PackageManagerImplementation::Deinitialize(PluginHost::IShell* service) {
+        LOGINFO();
+
+    }
+
+
+
+    // IPackageDownloader methods
+    Core::hresult PackageManagerImplementation::Download(const string& url, const bool priority, const uint32_t retries, const uint64_t rateLimit, string &downloadId)
+    {
+        Core::hresult result = Core::ERROR_NONE;
+
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        // XXX: Check Network here ???
+        // Utils::isPluginActivated(NETWORK_PLUGIN_CALLSIGN)
+
+        DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), retries, rateLimit));
+        std::string filename = downloadDir + "package" + di->GetId() + ".wgt";
+        di->SetFileLocator(filename);
+        if (priority) {
+            mDownloadQueue.push_front(di);
+        } else {
+            mDownloadQueue.push_back(di);
+        }
+        cv.notify_one();
+
+        downloadId = di->GetId();
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Pause(const string &downloadId)
+    {
+        Core::hresult result = Core::ERROR_NONE;
+
+        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
+            mHttpClient->pause();
+            LOGDBG("%s paused", downloadId.c_str());
+        } else {
+            result = Core::ERROR_GENERAL;
+        }
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Resume(const string &downloadId)
+    {
+        Core::hresult result = Core::ERROR_NONE;
+
+        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
+            mHttpClient->resume();
+            LOGDBG("%s resumed", downloadId.c_str());
+        } else {
+            result = Core::ERROR_GENERAL;
+        }
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Cancel(const string &downloadId)
+    {
+        Core::hresult result = Core::ERROR_NONE;
+
+        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
+            mHttpClient->pause();
+            LOGDBG("%s cancelled", downloadId.c_str());
+        } else {
+            result = Core::ERROR_GENERAL;
+        }
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Delete(const string &fileLocator)
+    {
+        Core::hresult result = Core::ERROR_NONE;
+
+        if ((mInprogressDowload.get() != nullptr) && (fileLocator.compare(mInprogressDowload->GetFileLocator()) == 0)) {
+            LOGWARN("%s in in progress", fileLocator.c_str());
+            result = Core::ERROR_GENERAL;
+        } else {
+            if (remove(fileLocator.c_str()) == 0) {
+                LOGDBG("Deleted %s", fileLocator.c_str());
+            } else {
+                LOGERR("'%s' delete failed", fileLocator.c_str());
+                result = Core::ERROR_GENERAL;
+            }
+        }
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, uint8_t &percent)
+    {
+        Core::hresult result = Core::ERROR_NONE;
+
+        if (mInprogressDowload.get() != nullptr) {
+            percent = mHttpClient->getProgress();
+        } else {
+            result = Core::ERROR_GENERAL;
+        }
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB)
+    {
+        Core::hresult result = Core::ERROR_NONE;
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::RateLimit(const string &downloadId, uint64_t &limit)
+    {
+        Core::hresult result = Core::ERROR_NONE;
+        return result;
+    }
+
+    // IPackageInstaller methods
+    Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) {
+        Core::hresult result = Core::ERROR_NONE;
+        InstallState state = InstallState::INSTALLING;
+
+        LOGTRACE("Installing %s", packageId.c_str());
+        NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
+
+        #ifdef USE_LIBPACKAGE
+        packageImpl->Install(packageId, version, fileLocator);
+        #endif
+
+        NotifyInstallStatus(packageId, version, state);
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Uninstall(const string &packageId, string &errorReason ) {
+        Core::hresult result = Core::ERROR_NONE;
+
+        LOGTRACE("Uninstalling %s", packageId.c_str());
+        string version;
+        NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
+
+        #ifdef USE_LIBPACKAGE
+        packageImpl->Uninstall(packageId);
+        #endif
+
+        NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages) {
+        Core::hresult result = Core::ERROR_NONE;
+        std::list<Exchange::IPackageInstaller::Package> packageList;
+
+        LOGTRACE();
+        #ifdef USE_LIBPACKAGE
+        string list;
+        packageImpl->GetList(list);
+        Json::Value jv;
+        Json::Reader reader;
+
+        if (reader.parse(list.c_str(), jv) ) {
+            if (jv.isArray()) {
+                for (int i = 0; i < jv.size(); ++i) {
+                    Json::Value val = jv[i];
+
+                    Exchange::IPackageInstaller::Package package;
+                    package.packageId = val["packageId"].asString().c_str();
+                    package.version = val["version"].asString().c_str();
+                    package.packageState = InstallState::INSTALLED;
+                    package.sizeKb = 0;         // XXX: getPackageSpaceInKBytes
+                    packageList.emplace_back(package);
+                }
+            } else {
+                LOGERR("Invalid json response");
+            }
+        }
+        #endif
+
+        packages = (Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList));
+        LOGTRACE();
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, string &config) {
+        Core::hresult result = Core::ERROR_NONE;
+
+        LOGTRACE();
+        config = "foo";
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::PackageLifecycleState &state) {
+        Core::hresult result = Core::ERROR_NONE;
+
+        LOGTRACE();
+        state = INSTALLATION_BLOCKED;
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Register(Exchange::IPackageInstaller::INotification *notification) {
+        Core::hresult result = Core::ERROR_NONE;
+
+        LOGINFO();
+        ASSERT(notification != nullptr);
+        mAdminLock.Lock();
+        ASSERT(std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end());
+        if(std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end()){
+            mInstallNotifications.push_back(notification);
+            notification->AddRef();
+        }
+        mAdminLock.Unlock();
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Unregister(Exchange::IPackageInstaller::INotification *notification) {
+        Core::hresult result = Core::ERROR_NONE;
+
+        LOGINFO();
+        mAdminLock.Lock();
+        auto item = std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification);
+        if(item != mInstallNotifications.end()){
+            notification->Release();
+            mInstallNotifications.erase(item);
+        }
+        else {
+            result = Core::ERROR_GENERAL;
+        }
+        mAdminLock.Unlock();
+
+        return result;
+    }
+
+    // IPackageHandler methods
+    Core::hresult PackageManagerImplementation::Lock(const string &packageId, const string &version, const Exchange::IPackageHandler::LockReason &lockReason,
+        uint32_t &lockId, string &unpackedPath, string& configMetadata, string& appMetadata
+        )
+    {
+        Core::hresult result = Core::ERROR_NONE;
+
+        LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
+
+        #ifdef USE_LIBPACKAGE
+        if(isLocked(packageId, version))  {
+            ++mLockCount;
+        } else {
+            u_int32_t rc = packageImpl->Lock(packageId, version, unpackedPath);
+            if (rc == 0) {
+                lockId = ++mLockCount;
+                LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
+            } else {
+                LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
+            }
+        }
+        #endif
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version) {
+        Core::hresult result = Core::ERROR_NONE;
+
+        LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
+
+        #ifdef USE_LIBPACKAGE
+        if (mLockCount) {
+            packageImpl->Unlock(packageId, version);
+            --mLockCount;
+        } else {
+            LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
+        }
+
+        #endif
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
+        string &unpackedPath, string& configMetadata, string& gatewayMetadataPath, bool &locked) {
+
+        Core::hresult result = Core::ERROR_NONE;
+
+        LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
+
+        #ifdef USE_LIBPACKAGE
+        packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
+        #endif
+
+        return result;
+    }
+
+    void PackageManagerImplementation::downloader(int n) {
+        LOGTRACE();
+        while(!done) {
+            auto di = getNext();
+            if (di == nullptr) {
+                LOGTRACE("Waiting ... ");
+                std::unique_lock<std::mutex> lock(mMutex);
+                cv.wait(lock);
+            } else {
+                HttpClient::Status status = HttpClient::Status::Success;
+                int waitTime = 1;
+                for (int i = 0; i < di->GetRetries(); i++) {
+                    if (i) {
+                        waitTime = nextRetryDuration(waitTime);
+                        LOGTRACE("waitTime=%d retry %d/%d", waitTime, i, di->GetRetries());
+                        std::this_thread::sleep_for(std::chrono::seconds(waitTime));
+                    }
+                    LOGTRACE("Downloading id=%s url=%s file=%s ", di->GetId().c_str(), di->GetUrl().c_str(), di->GetFileLocator().c_str());
+                    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+                    status = mHttpClient->downloadFile(di->GetUrl(), di->GetFileLocator(), di->GetRateLimit());
+                    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+                    LOGTRACE("Download status=%d code=%ld time=%ld ms", status,
+                        mHttpClient->getStatusCode(),
+                        std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
+                    if ( status == HttpClient::Status::Success || mHttpClient->getStatusCode() == 404) {  // XXX: other status codes
+                        break;
+                    }
+                }
+
+                if (mHttpClient->getStatusCode() == 404) {
+                    status = HttpClient::Status::HttpError;
+                }
+                DownloadReason reason = DownloadReason::NONE;
+                switch (status) {
+                    case HttpClient::Status::DiskError: reason = DownloadReason::DISK_PERSISTENCE_FAILURE; break;
+                    case HttpClient::Status::HttpError: reason = DownloadReason::DOWNLOAD_FAILURE; break;
+                }
+                NotifyDownloadStatus(di->GetId(), di->GetFileLocator(), reason);
+                mInprogressDowload.reset();
+            }
+        }
+    }
+
+    void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason) {
+        JsonArray list = JsonArray();
+        JsonObject obj;
+        obj["downloadId"] = id;
+        obj["fileLocator"] = locator;
+        obj["reason"] = getDownloadReason(reason);
+        list.Add(obj);
+        std::string jsonstr;
+        bool ret = list.ToString(jsonstr);
+        LOGTRACE("JsonArray ret=%d liststr=%s", ret, jsonstr.c_str());
+
+        mAdminLock.Lock();
+        for (auto notification: mDownloaderNotifications) {
+            notification->OnAppDownloadStatus(jsonstr);
+            LOGTRACE();
+        }
+        mAdminLock.Unlock();
+    }
+
+    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const InstallState state) {
+        JsonArray list = JsonArray();
+        JsonObject obj;
+        obj["packageId"] = id;
+        obj["version"] = version;
+        obj["reason"] = getInstallReason(state);
+        list.Add(obj);
+        std::string jsonstr;
+        bool ret = list.ToString(jsonstr);
+        LOGTRACE("JsonArray ret=%d liststr=%s", ret, jsonstr.c_str());
+
+        mAdminLock.Lock();
+        for (auto notification: mInstallNotifications) {
+            notification->OnAppInstallationStatus(jsonstr);
+            LOGTRACE();
+        }
+        mAdminLock.Unlock();
+    }
+
+    PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext() {
+        std::lock_guard<std::mutex> lock(mMutex);
+        LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
+        if (!mDownloadQueue.empty() && mInprogressDowload == nullptr) {
+            mInprogressDowload = mDownloadQueue.front();
+            mDownloadQueue.pop_front();
+        }
+        return mInprogressDowload;
+    }
+
+} // namespace Plugin
+} // namespace WPEFramework

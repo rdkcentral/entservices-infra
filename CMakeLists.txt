@@ -119,6 +119,10 @@ if(PLUGIN_STORAGE_MANAGER)
 	add_subdirectory(StorageManager)
 endif()
 
+if(PLUGIN_PACKAGE_MANAGER)
+    add_subdirectory(PackageManager)
+endif()
+
 if(PLUGIN_NATIVEJS)
 	add_subdirectory(NativeJS)
 endif()

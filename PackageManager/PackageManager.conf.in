@@ -1,0 +1,10 @@
+autostart = "@PLUGIN_PACKAGEMANAGER_AUTOSTART@"
+precondition = ["Platform"]
+callsign = "org.rdk.@PLUGIN_NAME@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_PACKAGEMANAGER_MODE@")
+configuration.add("root", root)
+configuration.add("downloadDir", "/opt/CDL/")
