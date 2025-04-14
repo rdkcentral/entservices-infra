@@ -383,7 +383,7 @@ namespace Plugin {
         }
     }
 
-    void TelemetryImplementation::onPowerModeChanged(const PowerState &currentState, const PowerState &newState)
+    void TelemetryImplementation::onPowerModeChanged(const PowerState currentState, const PowerState newState)
     {
         JsonObject params;
 

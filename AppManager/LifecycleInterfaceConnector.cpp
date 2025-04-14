@@ -133,7 +133,6 @@ namespace WPEFramework
         Core::hresult LifecycleInterfaceConnector::launch(const string& appId, const string& intent, const string& launchArgs)
         {
             Core::hresult status = Core::ERROR_GENERAL;
-            AppManagerImplementation::AppInfo loadedAppInfo;
             AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
 
             string appPath = "";
@@ -186,17 +185,14 @@ namespace WPEFramework
                     if (status == Core::ERROR_NONE)
                     {
                         LOGINFO("Update App Info");
-                        loadedAppInfo.appInstanceId = std::move(appInstanceId);
-                        loadedAppInfo.type = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
-                        loadedAppInfo.appIntent = intent;
-                        loadedAppInfo.currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
-                        loadedAppInfo.currentAppLifecycleState = Exchange::ILifecycleManager::LOADING;
-                        loadedAppInfo.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
-
-                        /*Insert/update loaded app info*/
                         if (nullptr != appManagerImplInstance)
                         {
-                            appManagerImplInstance->mAppInfo[appId] = std::move(loadedAppInfo);
+                            appManagerImplInstance->mAppInfo[appId].appInstanceId   = std::move(appInstanceId);
+                            appManagerImplInstance->mAppInfo[appId].type            = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
+                            appManagerImplInstance->mAppInfo[appId].appIntent       = intent;
+                            appManagerImplInstance->mAppInfo[appId].currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+                            appManagerImplInstance->mAppInfo[appId].currentAppLifecycleState = Exchange::ILifecycleManager::LOADING;
+                            appManagerImplInstance->mAppInfo[appId].targetAppState  = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
                         }
                     }
                     else
@@ -213,7 +209,6 @@ namespace WPEFramework
         Core::hresult LifecycleInterfaceConnector::preLoadApp(const string& appId, const string& launchArgs, string& error)
         {
             Core::hresult status = Core::ERROR_GENERAL;
-            AppManagerImplementation::AppInfo loadedAppInfo;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
 
             string appPath = "";
@@ -264,16 +259,15 @@ namespace WPEFramework
                     if (status == Core::ERROR_NONE)
                     {
                         LOGINFO("Update App Info");
-                        loadedAppInfo.appInstanceId = std::move(appInstanceId);
-                        loadedAppInfo.type = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
-                        loadedAppInfo.currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
-                        loadedAppInfo.currentAppLifecycleState = Exchange::ILifecycleManager::LOADING;
-                        loadedAppInfo.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_RUNNING;
 
                         /*Insert/update loaded app info*/
                         if (nullptr != appManagerImplInstance)
                         {
-                            appManagerImplInstance->mAppInfo[appId] = std::move(loadedAppInfo);
+                            appManagerImplInstance->mAppInfo[appId].appInstanceId   = std::move(appInstanceId);
+                            appManagerImplInstance->mAppInfo[appId].type            = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
+                            appManagerImplInstance->mAppInfo[appId].currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+                            appManagerImplInstance->mAppInfo[appId].currentAppLifecycleState = Exchange::ILifecycleManager::LOADING;
+                            appManagerImplInstance->mAppInfo[appId].targetAppState  = Exchange::IAppManager::AppLifecycleState::APP_STATE_RUNNING;
                         }
                     }
                     else

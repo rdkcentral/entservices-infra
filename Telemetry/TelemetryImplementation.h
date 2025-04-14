@@ -51,7 +51,7 @@ namespace Plugin {
                 ~PowerManagerNotification() override = default;
 
             public:
-                void OnPowerModeChanged(const PowerState &currentState, const PowerState &newState) override
+                void OnPowerModeChanged(const PowerState currentState, const PowerState newState) override
                 {
                     _parent.onPowerModeChanged(currentState, newState);
                 }
@@ -142,7 +142,7 @@ namespace Plugin {
         Core::hresult AbortReport() override;
 
         void InitializePowerManager();
-        void onPowerModeChanged(const PowerState &currentState, const PowerState &newState);
+        void onPowerModeChanged(const PowerState currentState, const PowerState newState);
         void registerEventHandlers();
 
         // IConfiguration interface
