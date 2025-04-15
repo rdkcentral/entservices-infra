@@ -25,10 +25,6 @@
 
 #include "rfcapi.h"
 
-#if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
-#include "UtilsIarm.h"
-#endif /* USE_IARMBUS || USE_IARM_BUS */
-
 #ifdef HAS_RBUS
 #include "rbus.h"
 
@@ -409,7 +405,7 @@ namespace Plugin {
         }
     }
 
-    void TelemetryImplementation::onPowerModeChanged(const PowerState &currentState, const PowerState &newState)
+    void TelemetryImplementation::onPowerModeChanged(const PowerState currentState, const PowerState newState)
     {
         JsonObject params;
 
