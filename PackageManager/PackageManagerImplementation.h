@@ -169,6 +169,7 @@ namespace Plugin {
             string unpackedPath, configMetadata, gatewayMetadataPath;
 
             uint32_t rc = GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked);
+            LOGINFO("GetLockedInfo rc : %d", rc);
 
             return locked;
         }

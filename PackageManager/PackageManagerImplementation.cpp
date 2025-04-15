@@ -27,9 +27,9 @@ namespace Plugin {
     SERVICE_REGISTRATION(PackageManagerImplementation, 1, 0);
 
     PackageManagerImplementation::PackageManagerImplementation()
-        : mNextDownloadId(1000)
-        , mDownloaderNotifications()
+        : mDownloaderNotifications()
         , mInstallNotifications()
+        , mNextDownloadId(1000)
     {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
         mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
@@ -288,10 +288,10 @@ namespace Plugin {
             Json::Value jv;
             Json::Reader reader;
 
-            if (reader.parse(list.c_str(), jv) ) {
-                if (jv.isArray()) {
-                    for (int i = 0; i < jv.size(); ++i) {
-                        Json::Value val = jv[i];
+        if (reader.parse(list.c_str(), jv) ) {
+            if (jv.isArray()) {
+                for (unsigned int i = 0; i < jv.size(); ++i) {
+                    Json::Value val = jv[i];
 
                         Exchange::IPackageInstaller::Package package;
                         package.packageId = val["packageId"].asString().c_str();
@@ -452,7 +452,7 @@ namespace Plugin {
                     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                     status = mHttpClient->downloadFile(di->GetUrl(), di->GetFileLocator(), di->GetRateLimit());
                     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-                    LOGTRACE("Download status=%d code=%ld time=%ld ms", status,
+                    LOGTRACE("Download status=%d code=%ld time=%lld ms", status,
                         mHttpClient->getStatusCode(),
                         std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
                     if ( status == HttpClient::Status::Success || mHttpClient->getStatusCode() == 404) {  // XXX: other status codes
@@ -467,6 +467,7 @@ namespace Plugin {
                 switch (status) {
                     case HttpClient::Status::DiskError: reason = DownloadReason::DISK_PERSISTENCE_FAILURE; break;
                     case HttpClient::Status::HttpError: reason = DownloadReason::DOWNLOAD_FAILURE; break;
+                    default: break; /* Do nothing */
                 }
                 NotifyDownloadStatus(di->GetId(), di->GetFileLocator(), reason);
                 mInprogressDowload.reset();
@@ -514,7 +515,7 @@ namespace Plugin {
 
     PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext() {
         std::lock_guard<std::mutex> lock(mMutex);
-        LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
+        LOGTRACE("mDownloadQueue.size = %d\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDowload == nullptr) {
             mInprogressDowload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
