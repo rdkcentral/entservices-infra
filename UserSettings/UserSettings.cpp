@@ -51,6 +51,9 @@ namespace WPEFramework
     UserSettings::UserSettings() : _service(nullptr), _connectionId(0), _userSetting(nullptr), _userSettingsInspector(nullptr), _usersettingsNotification(this)
     {
         SYSLOG(Logging::Startup, (_T("UserSettings Constructor")));
+        SYSLOG(Logging::Shutdown, (string(_T("UserSettings Destructor"))));
+        SYSLOG(Logging::Shutdown, (string(_T("UserSettings Destructor"))));
+        SYSLOG(Logging::Shutdown, (string(_T("UserSettings Destructor"))));
     }
 
     UserSettings::~UserSettings()

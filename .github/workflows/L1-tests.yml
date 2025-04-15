@@ -2,9 +2,9 @@ name: L1-tests
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+    branches: [ main,  'sprint/**', 'release/**' ]
   pull_request:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+    branches: [ main,  'sprint/**', 'release/**' ]
 
 env:
   BUILD_TYPE: Debug
