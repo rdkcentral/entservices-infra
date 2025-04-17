@@ -315,11 +315,11 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, string &config) {
+    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGTRACE();
-        config = "foo";
+        // XXX: will return configMetadata after metaDAta caching is done
 
         return result;
     }
@@ -369,7 +369,7 @@ namespace Plugin {
 
     // IPackageHandler methods
     Core::hresult PackageManagerImplementation::Lock(const string &packageId, const string &version, const Exchange::IPackageHandler::LockReason &lockReason,
-        uint32_t &lockId, string &unpackedPath, string& configMetadata, string& appMetadata
+        uint32_t &lockId, string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& appMetadata
         )
     {
         Core::hresult result = Core::ERROR_NONE;
@@ -377,19 +377,35 @@ namespace Plugin {
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
 
         #ifdef USE_LIBPACKAGE
-        if(isLocked(packageId, version))  {
-            ++mLockCount;
+        bool locked = false;
+        string gatewayMetadataPath;
+        uint32_t rc = GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked);
+
+        if (locked)  {
+            lockId = ++mLockCount[packageId];
         } else {
-            packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath);
+            packagemanager::ConfigMetaData config;
+            packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, config);
             if (pmResult == packagemanager::SUCCESS) {
-                lockId = ++mLockCount;
+                lockId = ++mLockCount[packageId];
                 LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
+                configMetadata.dial = config.dial;
+                configMetadata.wanLanAccess = config.wanLanAccess;
+                configMetadata.thunder = config.thunder;
+                configMetadata.systemMemoryLimit = config.systemMemoryLimit;
+                configMetadata.gpuMemoryLimit = config.gpuMemoryLimit;
+
+                configMetadata.userId = config.userId;
+                configMetadata.groupId = config.groupId;
+                configMetadata.dataImageSize = config.dataImageSize;
+
             } else {
                 LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
                 result = Core::ERROR_GENERAL;
             }
         }
         #endif
+        LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), mLockCount[packageId]);
 
         return result;
     }
@@ -400,26 +416,28 @@ namespace Plugin {
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
 
         #ifdef USE_LIBPACKAGE
-        if (mLockCount) {
+        if (mLockCount[packageId]) {
             packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
             if (pmResult != packagemanager::SUCCESS) {
                 result = Core::ERROR_GENERAL;
             }
-            --mLockCount;
+            --mLockCount[packageId];
         } else {
             LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
         }
         #endif
+        LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), mLockCount[packageId]);
 
         return result;
     }
 
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
-        string &unpackedPath, string& configMetadata, string& gatewayMetadataPath, bool &locked) {
+        string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& gatewayMetadataPath, bool &locked) {
 
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
+        // XXX: will return configMetadata after metaDAta caching is done
 
         #ifdef USE_LIBPACKAGE
         packagemanager::Result pmResult = packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
