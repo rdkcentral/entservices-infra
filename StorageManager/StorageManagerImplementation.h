@@ -75,8 +75,8 @@ namespace Plugin {
         INTERFACE_ENTRY(Exchange::IConfiguration)
         END_INTERFACE_MAP
 
-        Core::hresult CreateStorage(const string& appId, const int32_t& userId, const int32_t& groupId, const uint32_t& size, string& path, string& errorReason) override;
-        Core::hresult GetStorage(const string& appId, string& path, int32_t& userId, int32_t& groupId, uint32_t& size, uint32_t& used) override;
+        Core::hresult CreateStorage(const string& appId, const uint32_t& size, string& path, string& errorReason) override;
+        Core::hresult GetStorage(const string& appId, const int32_t& userId, const int32_t& groupId, string& path, uint32_t& size, uint32_t& used) override;
         Core::hresult DeleteStorage(const string& appId, string& errorReason) override;
         Core::hresult Clear(const string& appId, string& errorReason) override;
         Core::hresult ClearAll(const string& exemptionAppIds, string& errorReason) override;

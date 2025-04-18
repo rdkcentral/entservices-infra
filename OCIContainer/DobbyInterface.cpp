@@ -646,6 +646,10 @@ void DobbyInterface::onContainerStarted(int32_t descriptor, const std::string& n
     JsonObject params;
     params["descriptor"] = std::to_string(descriptor);
     params["name"] = name;
+
+    string containerId = GetContainerIdFromDescriptor(descriptor);
+    params["containerId"] = (containerId.empty()) ? name : containerId;
+
     if (mEventHandler)
     {
         mEventHandler->onContainerStarted(params);
@@ -673,9 +677,58 @@ void DobbyInterface::onContainerStopped(int32_t descriptor, const std::string& n
     JsonObject params;
     params["descriptor"] = std::to_string(descriptor);
     params["name"] = name;
+    string containerId = GetContainerIdFromDescriptor(descriptor);
+    params["containerId"] = (containerId.empty()) ? name : containerId;
+
     if (mEventHandler)
     {
         mEventHandler->onContainerStopped(params);
+    }
+}
+
+void DobbyInterface::onContainerStateChanged(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState dobbyContainerState)
+{
+    Exchange::IOCIContainer::ContainerState state ;
+    switch (dobbyContainerState)
+    {
+    case IDobbyProxyEvents::ContainerState::Starting:
+        state = Exchange::IOCIContainer::ContainerState::Starting;
+        break;
+    case IDobbyProxyEvents::ContainerState::Running:
+        state = Exchange::IOCIContainer::ContainerState::Running;
+        break;
+    case IDobbyProxyEvents::ContainerState::Stopping:
+        state = Exchange::IOCIContainer::ContainerState::Stopping;
+        break;
+    case IDobbyProxyEvents::ContainerState::Paused:
+        state = Exchange::IOCIContainer::ContainerState::Paused;
+        break;
+    case IDobbyProxyEvents::ContainerState::Stopped:
+        state = Exchange::IOCIContainer::ContainerState::Stopped;
+        break;
+    case IDobbyProxyEvents::ContainerState::Hibernating:
+        state = Exchange::IOCIContainer::ContainerState::Hibernating;
+        break;
+    case IDobbyProxyEvents::ContainerState::Hibernated:
+        state = Exchange::IOCIContainer::ContainerState::Hibernated;
+        break;
+    case IDobbyProxyEvents::ContainerState::Awakening:
+        state = Exchange::IOCIContainer::ContainerState::Awakening;
+        break;
+    default:
+        state = Exchange::IOCIContainer::ContainerState::Invalid;
+        break;
+    }
+    JsonObject params;
+    params["state"] = static_cast<int>(state);
+    string containerId = GetContainerIdFromDescriptor(descriptor);
+    params["containerId"] = (containerId.empty()) ? name : containerId;
+
+    LOGINFO("OnContainerStateChanged event state %u",static_cast<int>(state));
+
+    if (mEventHandler)
+    {
+        mEventHandler->onContainerStateChange(params);
     }
 }
 
@@ -711,6 +764,37 @@ const int DobbyInterface::GetContainerDescriptorFromId(const std::string& contai
 }
 
 /**
+ * @brief Converts the dobbyDescriptor into the OCI Container ID
+ *
+ * Will only return a value if Dobby knows about the running container
+ * (e.g. the container was started by Dobby, not manually using the OCI runtime).
+ *
+ * @param Descriptor value
+ *
+ * @return  containerId The container ID used by the OCI runtime
+ */
+const std::string DobbyInterface::GetContainerIdFromDescriptor(const int descriptor)
+{
+    /* Retrieve the list of containers */
+    const std::list<std::pair<int32_t, std::string>> containers = mDobbyProxy->listContainers();
+
+    /* Iterate over the containers to find the one with the matching descriptor */
+    for (const std::pair<int32_t, std::string>& container : containers)
+    {
+        if (container.first == descriptor)
+        {
+            /* If the descriptor matches, return the container's ID */
+            return container.second;
+        }
+    }
+
+    /* If no container is found with the given descriptor, log an error */
+    LOGERR("Failed to find container with descriptor %d", descriptor);
+    return "";  /* Return an empty string to indicate failure */
+}
+
+
+/**
  * @brief Callback listener for state change events.
  *
  * @param descriptor Container descriptor
@@ -720,12 +804,10 @@ const int DobbyInterface::GetContainerDescriptorFromId(const std::string& contai
  */
 const void DobbyInterface::stateListener(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState state, const void* _this)
 {
-    JsonObject params;
-    params["descriptor"] = std::to_string(descriptor);
-    params["name"] = name;
-
     // Cast const void* back to DobbyInterface* type to get 'this'
     DobbyInterface* __this = const_cast<DobbyInterface*>(reinterpret_cast<const DobbyInterface*>(_this));
+
+    __this->onContainerStateChanged(descriptor, name, state);
 
     if (state == IDobbyProxyEvents::ContainerState::Running)
     {
@@ -782,6 +864,8 @@ void DobbyInterface::onVerityFailed(const std::string& name)
     JsonObject params;
     params["descriptor"] = cd;
     params["name"] = name;
+    string containerId = GetContainerIdFromDescriptor(cd);
+    params["containerId"] = (containerId.empty()) ? name : containerId;
     // Set error type to Verity Error (1)
     params["errorCode"] = 1;
     if (mEventHandler)
