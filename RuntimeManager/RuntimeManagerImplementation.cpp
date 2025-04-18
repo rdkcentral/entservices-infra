@@ -161,7 +161,7 @@ namespace WPEFramework
                 {
                     if ((request->mSuccess == false) || (request->mResult != Core::ERROR_NONE))
                     {
-                        LOGERR("OCIRequestType: %d descriptor: %d status: %d errorReason: %s", 
+                        LOGERR("OCIRequestType: %d descriptor: %d status: %d errorReason: %s",
                                         static_cast<int>(type), request->mDescriptor, request->mSuccess, request->mErrorReason.c_str());
                     }
                     else
@@ -633,8 +633,8 @@ err_ret:
 
                 if (nullptr != mStorageManagerObject)
                 {
-                    if (Core::ERROR_NONE == (status = mStorageManagerObject->GetStorage(appId, appStorageInfo.path,
-                        appStorageInfo.userId, appStorageInfo.groupId, appStorageInfo.size, appStorageInfo.used)))
+                    if (Core::ERROR_NONE == (status = mStorageManagerObject->GetStorage(appId, appStorageInfo.userId, appStorageInfo.groupId,
+                        appStorageInfo.path, appStorageInfo.size, appStorageInfo.used)))
                     {
                         LOGINFO("Received Storage Manager info for %s [path %s, userId %d, groupId %d, size %d, used %d]",
                             appId.c_str(), appStorageInfo.path.c_str(), appStorageInfo.userId,
@@ -657,7 +657,7 @@ err_ret:
             testConfig.mAppPath = "/tmp";
             testConfig.mUserId = 1000;
             testConfig.mGroupId = 1000;
-        
+
             DobbySpecGenerator generator;
             generator.generate(testConfig, dobbySpec);
 
@@ -772,11 +772,13 @@ err_ret:
 
             if (!appId.empty())
             {
+                appStorageInfo.userId = userId;
+                appStorageInfo.groupId = groupId;
                 if (Core::ERROR_NONE == getAppStorageInfo(appId, appStorageInfo))
                 {
                     config.mAppStorageInfo.path = std::move(appStorageInfo.path);
-                    config.mAppStorageInfo.userId = std::move(appStorageInfo.userId);
-                    config.mAppStorageInfo.groupId = std::move(appStorageInfo.groupId);
+                    config.mAppStorageInfo.userId = userId;
+                    config.mAppStorageInfo.groupId = groupId;
                     config.mAppStorageInfo.size = std::move(appStorageInfo.size);
                     config.mAppStorageInfo.used = std::move(appStorageInfo.used);
                 }
