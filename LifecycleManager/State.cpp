@@ -18,7 +18,6 @@
 **/
 
 #include "StateHandler.h"
-#include <interfaces/IRDKWindowManager.h>
 #include "RuntimeManagerHandler.h"
 #include "RequestHandler.h"
 #include <boost/uuid/uuid.hpp>
@@ -36,16 +35,7 @@ namespace WPEFramework
 
         bool InitializingState::handle(string& errorReason)
         {
-            WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
-            bool result = false;
-            if (nullptr != windowManagerHandler)
-            {
-                ApplicationContext* context = getContext();
-                ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
-                result = windowManagerHandler->createDisplay(launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchArgs, launchParams.mDisplayName, errorReason);
-            }
-
-            return result;
+            return true;        //createDisplay moved to Run(...) of RuntimeManager
         }
 
         bool RunRequestedState::handle(string& errorReason)

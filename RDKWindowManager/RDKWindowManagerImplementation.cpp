@@ -534,8 +534,8 @@ Core::hresult RDKWindowManagerImplementation::CreateDisplay(const string &displa
 }
 
 /***
- * @brief Create the display window.
- * Creates a display for the specified client using the configuration parameters.
+ * @brief  Get the list of active Clients
+ * Get the list of Clients which are available
  *
  * @clients[out]      : get the array of clients as a JSON string format
  *                      Ex: [\"org.rdk.youttube\",\"org.rdk.netflix\"]

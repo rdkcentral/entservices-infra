@@ -21,14 +21,13 @@
 #include <interfaces/IRDKWindowManager.h>
 #include <map>
 #include <plugins/plugins.h>
-#include "IEventHandler.h"
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <utility>
 
 namespace WPEFramework {
 namespace Plugin {
-    class WindowManagerHandler
+    class WindowManagerConnector
     {
         class WindowManagerNotification : public Exchange::IRDKWindowManager::INotification
         {
@@ -37,7 +36,7 @@ namespace Plugin {
                 WindowManagerNotification& operator=(const WindowManagerNotification&) = delete;
 
             public:
-                explicit WindowManagerNotification(WindowManagerHandler& parent)
+                explicit WindowManagerNotification(WindowManagerConnector& parent)
                     : _parent(parent)
                 {
                 }
@@ -50,25 +49,26 @@ namespace Plugin {
                 virtual void OnUserInactivity(const double minutes) override;
 
             private:
-                WindowManagerHandler& _parent;
+                WindowManagerConnector& _parent;
         };
         public:
-            WindowManagerHandler();
-            ~WindowManagerHandler();
+            WindowManagerConnector();
+            ~WindowManagerConnector();
 
             // We do not allow this plugin to be copied !!
-            WindowManagerHandler(const WindowManagerHandler&) = delete;
-            WindowManagerHandler& operator=(const WindowManagerHandler&) = delete;
+            WindowManagerConnector(const WindowManagerConnector&) = delete;
+            WindowManagerConnector& operator=(const WindowManagerConnector&) = delete;
 
         public:
-            bool initialize(PluginHost::IShell* service, IEventHandler* eventHandler);
-	        void terminate();
-            // bool createDisplay(const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchArgs, const string& displayName, string& errorReason);
+            bool initializePlugin(PluginHost::IShell* service); //, IEventHandler* eventHandler
+            void releasePlugin();
+            bool createDisplay(const string& appInstanceId);
+            bool isPluginInitialized();
             std::pair<std::string, std::string> generateDisplayName();
         private:
             Exchange::IRDKWindowManager* mWindowManager;
-	    Core::Sink<WindowManagerNotification> mWindowManagerNotification;
-            IEventHandler* mEventHandler;
+            Core::Sink<WindowManagerNotification> mWindowManagerNotification;
+            bool mPluginInitialized = false;
     };
 } // namespace Plugin
 } // namespace WPEFramework

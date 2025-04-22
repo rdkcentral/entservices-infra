@@ -68,21 +68,6 @@ void WindowManagerHandler::terminate()
     mWindowManager = nullptr;
 }
 
-bool WindowManagerHandler::createDisplay(const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchArgs, const string& displayName, string& errorReason)
-{
-    JsonObject displayParams;
-    displayParams["client"] = runtimeAppId;
-    displayParams["displayName"] = displayName;
-    string displayParamsString;
-    displayParams.ToString(displayParamsString);
-    Core::hresult createDisplayResult = mWindowManager->CreateDisplay(displayParamsString);
-    if (Core::ERROR_NONE != createDisplayResult)
-    {
-        errorReason = "unable to create display for application";
-        return false;
-    }
-    return true;
-}
 
 std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
 {
