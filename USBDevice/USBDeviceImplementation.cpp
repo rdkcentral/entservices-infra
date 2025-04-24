@@ -487,7 +487,7 @@ uint32_t USBDeviceImplementation::getUSBDescriptorValue(libusb_device_handle *ha
                 stringDescriptor = string(reinterpret_cast<char*>(descBuf));
                 status = Core::ERROR_NONE;
             }
-            LOGERR("languageID: %u, libusb_get_string_descriptor failed: %s", languageID, libusb_strerror((enum libusb_error)retValue));
+            LOGERR("languageID: %u, libusb_get_string_descriptor failed: %s", libusb_strerror((enum libusb_error)retValue));
         }
         else if (descBuf[1] != LIBUSB_DT_STRING)
         {
