@@ -38,6 +38,11 @@ string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 # for writing pc and config files
 include(CmakeHelperFunctions)
 
+option(DISABLE_SECURITY_TOKEN "Disable security token" OFF)
+
+if(DISABLE_SECURITY_TOKEN)
+    add_definitions(-DDISABLE_SECURITY_TOKEN)
+endif()
 
 if(PLUGIN_USERSETTINGS)
     add_subdirectory(UserSettings)

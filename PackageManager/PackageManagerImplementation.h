@@ -34,6 +34,7 @@
 #include "Module.h"
 #include "UtilsLogging.h"
 #include <interfaces/IAppPackageManager.h>
+#include <interfaces/IStorageManager.h>
 
 #include "HttpClient.h"
 
@@ -174,6 +175,8 @@ namespace Plugin {
             default: return "Unknown";
         }
     }
+    Core::hresult createStorageManagerObject();
+    void releaseStorageManagerObject();
 
     private:
         mutable Core::CriticalSection mAdminLock;
@@ -195,6 +198,8 @@ namespace Plugin {
         #ifdef USE_LIBPACKAGE
         std::shared_ptr<packagemanager::IPackageImpl> packageImpl;
         #endif
+        PluginHost::IShell* mCurrentservice;
+        Exchange::IStorageManager* mStorageManagerObject;
     };
 } // namespace Plugin
 } // namespace WPEFramework
