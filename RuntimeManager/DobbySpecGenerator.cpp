@@ -54,10 +54,10 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, string
     LOGINFO("DobbySpecGenerator::generate()");
     resultSpec = "";
 
-    std::ifstream inFile("/tmp/specchange");
+    std::ifstream inFile("/usr/bin/demo/testspec");
     if (inFile.good())
     {
-        inFile.open("/tmp/specchange"); //open the input file
+        inFile.open("/usr/bin/demo/testspec"); //open the input file
         std::stringstream strStream;
         strStream << inFile.rdbuf(); //read the file
         resultSpec = strStream.str(); //str holds the content of the file

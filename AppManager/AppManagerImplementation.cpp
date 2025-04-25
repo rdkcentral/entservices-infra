@@ -452,18 +452,19 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
 Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const string& intent , const string& launchArgs)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
+    //PackageInfo packageData;
+    //Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
     LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
     if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = packageLock(appId, packageData, lockReason);
-        if (status == Core::ERROR_NONE)
-        {
+        //NOTE HERE
+        //status = packageLock(appId, packageData, lockReason);
+        //if (status == Core::ERROR_NONE)
+        //{
             status = mLifecycleInterfaceConnector->launch(appId, intent, launchArgs);
-        }
+        //}
     }
     mAdminLock.Unlock();
 
@@ -555,10 +556,13 @@ Core::hresult AppManagerImplementation::KillApp(const string& appId)
     if (nullptr != mLifecycleInterfaceConnector)
     {
         status = mLifecycleInterfaceConnector->killApp(appId);
+        //NOTE HERE
+        /*
         if(status == Core::ERROR_NONE)
         {
             status = packageUnLock(appId);
         }
+	*/
     }
     mAdminLock.Unlock();
 
@@ -611,18 +615,19 @@ Core::hresult AppManagerImplementation::SendIntent(const string& appId , const s
 Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const string& launchArgs ,string& error)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
+    //PackageInfo packageData;
+    //Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
     LOGINFO(" PreloadApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
     if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = packageLock(appId, packageData, lockReason);
-        if (status == Core::ERROR_NONE)
-        {
+        //NOTE HERE
+        //status = packageLock(appId, packageData, lockReason);
+        //if (status == Core::ERROR_NONE)
+        //{
             status = mLifecycleInterfaceConnector->preLoadApp(appId, launchArgs, error);
-        }
+        //}
     }
     mAdminLock.Unlock();
 
