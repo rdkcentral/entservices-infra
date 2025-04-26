@@ -66,8 +66,8 @@ namespace Plugin {
                 auto configLine = mCurrentservice->ConfigLine();
 
                 _config.FromString(configLine);
-                mBaseStoragePath = _config.Path.Value(); 
-                if (mBaseStoragePath.empty()) 
+                mBaseStoragePath = _config.Path.Value();
+                if (mBaseStoragePath.empty())
                 {
                     LOGWARN("Base storage path is empty. Setting default path: %s", DEFAULT_APP_STORAGE_PATH);
                     mBaseStoragePath = DEFAULT_APP_STORAGE_PATH;  // Fallback path
@@ -234,7 +234,7 @@ namespace Plugin {
                     appId.c_str(), it->second.uid, it->second.gid, it->second.quotaKB, it->second.usedKB, it->second.path.c_str());
             mStorageAppInfo.erase(appId);
             result = true;
-        } 
+        }
         else
         {
             LOGWARN("AppId[%s] StorageInfo not found", appId.c_str());
@@ -328,13 +328,13 @@ namespace Plugin {
     /**
      * @brief : Creates storage for a given app id and returns the storage path
      */
-    Core::hresult StorageManagerImplementation::CreateStorage(const std::string& appId, const int32_t& userId, const int32_t& groupId, const uint32_t& size, std::string& path, std::string& errorReason)
+    Core::hresult StorageManagerImplementation::CreateStorage(const std::string& appId, const uint32_t& size, std::string& path, std::string& errorReason)
     {
         Core::hresult status = Core::ERROR_GENERAL;
         std::string appDir = "";
         StorageAppInfo storageInfo;
 
-        LOGINFO("Entered CreateStorage Implementation appId: %s userId: %d groupId: %d", appId.c_str(), userId, groupId);
+        LOGINFO("Entered CreateStorage Implementation appId: %s", appId.c_str());
         if (appId.empty())
         {
             LOGERR("Invalid App ID");
@@ -360,35 +360,22 @@ namespace Plugin {
             if (retrieveAppStorageInfoByAppID(appId, storageInfo))
             {
                 errorReason = "";
-                if (storageInfo.uid == userId && storageInfo.gid == groupId && storageInfo.quotaKB == size)
+                if (storageInfo.quotaKB == size)
                 {
                     /* App storage already exist, no need of map entry update */
                     path = storageInfo.path;
                     status = Core::ERROR_NONE;
                     goto ret_success;
                 }
-                else 
+                else
                 {
-                    /* Check if the given storage quota size matches the existing one, but if either the UID or GID does not match */
-                    if ((storageInfo.quotaKB == size) && \
-                        (storageInfo.uid != userId || storageInfo.gid != groupId))
+                    /* App storage quote size is different now, remove the existing map entry and new entry can be created */
+                    if (!removeAppStorageInfoByAppID(appId))
                     {
-                        /* In this case, only the map entry for UID and GID needs to be updated */
-                        LOGINFO("App storageInfo appId: %s Update{userId: %d groupId: %d}",
-                               appId.c_str(), userId, groupId );
-                        goto update_storage;
-                    }
-                    else
-                    {
-                        /* App storage quote size is different now, remove the existing map entry and new entry can be created */
-                        if (!removeAppStorageInfoByAppID(appId))
-                        {
-                            LOGERR("Failed to remove storage appId: %s userId: %d groupId: %d",
-                                    appId.c_str(), userId, groupId );
-                            errorReason = "Failed to remove storage for appId: " + appId;
-                            path = "";
-                            goto ret_fail;
-                        }
+                        LOGERR("Failed to remove storage appId: %s", appId.c_str());
+                        errorReason = "Failed to remove storage for appId: " + appId;
+                        path = "";
+                        goto ret_fail;
                     }
                 }
             }
@@ -401,7 +388,6 @@ namespace Plugin {
             }
             else
             {
-update_storage:
                 /* Check if the app storage directory exists or can be created */
                 appDir = mBaseStoragePath + "/" + appId;
 
@@ -416,18 +402,10 @@ update_storage:
                     }
                 }
 
-                if (chown(appDir.c_str(), userId, groupId) != 0)
-                {
-                    LOGERR("Failed to set ownership: %s", strerror(errno));
-                    errorReason = "Failed to set ownership: " + appDir;
-                    status = Core::ERROR_GENERAL;
-                    goto ret_fail;
-                }
-
                 /* Create app storage info and add it to the map */
                 storageInfo.path    = appDir;
-                storageInfo.uid     = userId;
-                storageInfo.gid     = groupId;
+                storageInfo.uid     = -1; /* Will be updated by GetStorage API */
+                storageInfo.gid     = -1; /* Will be updated by GetStorage API */
                 storageInfo.quotaKB = size;
                 storageInfo.usedKB  = 0; /* Initially, no space is used */
                 if (createAppStorageInfoByAppID(appId, storageInfo))
@@ -454,30 +432,49 @@ update_storage:
     /**
      * @brief : Returns the storage information and location for a given app id
      */
-    Core::hresult StorageManagerImplementation::GetStorage(const string& appId, string& path, int32_t& userId, int32_t& groupId, uint32_t& size, uint32_t& used)
+    Core::hresult StorageManagerImplementation::GetStorage(const string& appId, const int32_t& userId, const int32_t& groupId, string& path, uint32_t& size, uint32_t& used)
     {
         Core::hresult status = Core::ERROR_GENERAL;
         StorageAppInfo storageInfo;
 
         std::unique_lock<std::mutex> lock(mStorageManagerImplLock);
         LOGINFO("Entered GetStorage Implementation");
-        if(retrieveAppStorageInfoByAppID(appId,storageInfo))
+        if(retrieveAppStorageInfoByAppID(appId, storageInfo))
         {
             path     = storageInfo.path;
-            userId   = storageInfo.uid;
-            groupId  = storageInfo.gid;
             size     = storageInfo.quotaKB;
             used     = storageInfo.usedKB;
             if (storageInfo.usedKB > storageInfo.quotaKB)
             {
                 LOGWARN("Application storage usage exceeded allocation: %s (Allocated: %u KB, Used: %u KB)",storageInfo.path.c_str(), storageInfo.quotaKB, storageInfo.usedKB);
             }
-            LOGINFO("GetStorage Information path = %s, userId = %d, groupId = %d, size = %u, used = %u ",path.c_str(),userId,groupId,size,used);
+            LOGINFO("GetStorage Information path = %s, userId = %d, groupId = %d, size = %u, used = %u ",path.c_str(), userId, groupId, size, used);
+
             status = Core::ERROR_NONE;
+            if(storageInfo.uid != userId || storageInfo.gid != groupId)
+            {
+                LOGINFO("Stored uid = %d gid = %d are different from param",storageInfo.uid, storageInfo.gid);
+                if (chown(path.c_str(), userId, groupId) != 0)
+                {
+                    LOGERR("Failed to set ownership: %s", strerror(errno));
+                    status = Core::ERROR_GENERAL;
+                }
+                else
+                {
+                    storageInfo.uid = userId;
+                    storageInfo.gid = groupId;
+                    /* update uid and gid */
+                    if (!createAppStorageInfoByAppID(appId, storageInfo))
+                    {
+                        LOGERR("Failed to update uid and gid of App storageInfo");
+                        status = Core::ERROR_GENERAL;
+                    }
+                }
+            }
         }
         else
         {
-            LOGERR("Failed to get the Information of the appId");
+            LOGERR("Failed to get the Information of the appId: %s", appId.c_str());
         }
         return status;
     }

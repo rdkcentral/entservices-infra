@@ -95,16 +95,32 @@ namespace WPEFramework
         {
              //TODO: Convert params to proper values and pass
              mAdminLock.Lock();
-        
+             string containerId("");
+             string name("");
+             int state = 0;
+             uint32_t error = 0;
              std::list<Exchange::IOCIContainer::INotification*>::const_iterator index(mOCIContainerNotification.begin());
-        
+             if(params.HasLabel("containerId"))
+             {
+                 containerId = params["containerId"].String();
+             }
+             if(params.HasLabel("name"))
+             {
+                 name = params["name"].String();
+             }
+             if(params.HasLabel("state"))
+             {
+                 state = params["state"].Number();
+             }
+             if(params.HasLabel("errorCode"))
+             {
+                 error = params["errorCode"].Number();
+             }
              switch(event)
              {
                  case OCICONTAINER_EVENT_CONTAINER_STARTED:
                     while (index != mOCIContainerNotification.end())
                     {
-                        string containerId("");
-                        string name("");
                          (*index)->OnContainerStarted(containerId, name);
                          ++index;
                     }
@@ -112,8 +128,6 @@ namespace WPEFramework
                  case OCICONTAINER_EVENT_CONTAINER_STOPPED:
                     while (index != mOCIContainerNotification.end())
                     {
-                        string containerId("");
-                        string name("");
                          (*index)->OnContainerStopped(containerId, name);
                          ++index;
                     }
@@ -121,9 +135,6 @@ namespace WPEFramework
                  case OCICONTAINER_EVENT_CONTAINER_FAILED:
                     while (index != mOCIContainerNotification.end())
                     {
-                        string containerId("");
-                        string name("");
-                         uint32_t error = 0;
                          (*index)->OnContainerFailed(containerId, name, error);
                          ++index;
                     }
@@ -131,9 +142,8 @@ namespace WPEFramework
                  case OCICONTAINER_EVENT_STATE_CHANGED:
                     while (index != mOCIContainerNotification.end())
                     {
-                        string containerId("");
-                        ContainerState state(Invalid);
-                        (*index)->OnContainerStateChanged(containerId, state);
+                        ContainerState containerState = static_cast<ContainerState>(state);
+                        (*index)->OnContainerStateChanged(containerId, containerState);
                         ++index;
                     }
                     break;

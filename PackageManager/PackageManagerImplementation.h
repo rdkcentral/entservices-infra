@@ -34,6 +34,7 @@
 #include "Module.h"
 #include "UtilsLogging.h"
 #include <interfaces/IAppPackageManager.h>
+#include <interfaces/IStorageManager.h>
 
 #include "HttpClient.h"
 
@@ -164,15 +165,6 @@ namespace Plugin {
             }
         }
 
-        inline bool isLocked(const string &packageId, const string &version) {
-            bool locked = false;
-            string unpackedPath, configMetadata, gatewayMetadataPath;
-
-            uint32_t rc = GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked);
-
-            return locked;
-        }
-
     std::string getInstallReason(InstallState state) {
         switch (state) {
             case InstallState::INSTALLING : return "INSTALLING";
@@ -183,6 +175,8 @@ namespace Plugin {
             default: return "Unknown";
         }
     }
+    Core::hresult createStorageManagerObject();
+    void releaseStorageManagerObject();
 
     private:
         mutable Core::CriticalSection mAdminLock;
@@ -198,12 +192,14 @@ namespace Plugin {
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
-        uint32_t mLockCount = 0;
+        std::map<std::string, int>  mLockCount;
         std::string downloadDir = "/opt/CDL/";
 
         #ifdef USE_LIBPACKAGE
         std::shared_ptr<packagemanager::IPackageImpl> packageImpl;
         #endif
+        PluginHost::IShell* mCurrentservice;
+        Exchange::IStorageManager* mStorageManagerObject;
     };
 } // namespace Plugin
 } // namespace WPEFramework

@@ -21,15 +21,20 @@
 
 #include "PackageManagerImplementation.h"
 
+/* Until we don't get it from Package configuration, use size as 1MB */
+#define STORAGE_MAX_SIZE 1024
+
 namespace WPEFramework {
 namespace Plugin {
 
     SERVICE_REGISTRATION(PackageManagerImplementation, 1, 0);
 
     PackageManagerImplementation::PackageManagerImplementation()
-        : mNextDownloadId(1000)
-        , mDownloaderNotifications()
+        : mDownloaderNotifications()
         , mInstallNotifications()
+        , mNextDownloadId(1000)
+        , mCurrentservice(nullptr)
+        , mStorageManagerObject(nullptr)
     {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
         mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
@@ -53,6 +58,8 @@ namespace Plugin {
             }
         }
         mInstallNotifications.clear();
+
+        releaseStorageManagerObject();
 
         std::list<Exchange::IPackageDownloader::INotification*>::iterator itDownloader(mDownloaderNotifications.begin());
         {
@@ -107,16 +114,64 @@ namespace Plugin {
     }
 
     Core::hresult PackageManagerImplementation::Initialize(PluginHost::IShell* service) {
-        Core::hresult result = Core::ERROR_NONE;
+        Core::hresult result = Core::ERROR_GENERAL;
         LOGINFO();
 
-        LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
-        PackageManagerImplementation::Configuration config;
-        config.FromString(service->ConfigLine());
-        downloadDir = config.downloadDir;
-        LOGINFO("downloadDir=%s", downloadDir.c_str());
+        if (service != nullptr)
+        {
+            mCurrentservice = service;
+            mCurrentservice->AddRef();
+            if (Core::ERROR_NONE != createStorageManagerObject())
+            {
+                LOGERR("Failed to create createStorageManagerObject");
+            }
+            else
+            {
+                LOGINFO("created createStorageManagerObject");
+                result = Core::ERROR_NONE;
+            }
+
+            LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
+            PackageManagerImplementation::Configuration config;
+            config.FromString(service->ConfigLine());
+            downloadDir = config.downloadDir;
+            LOGINFO("downloadDir=%s", downloadDir.c_str());
+        }
+        else
+        {
+            LOGERR("service is null \n");
+        }
 
         return result;
+    }
+    Core::hresult PackageManagerImplementation::createStorageManagerObject()
+    {
+        Core::hresult status = Core::ERROR_GENERAL;
+
+        if (nullptr == mCurrentservice)
+        {
+            LOGERR("mCurrentservice is null \n");
+        }
+        else if (nullptr == (mStorageManagerObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::IStorageManager>("org.rdk.StorageManager")))
+        {
+            LOGERR("mStorageManagerObject is null \n");
+        }
+        else
+        {
+            LOGINFO("created StorageManager Object\n");
+            status = Core::ERROR_NONE;
+        }
+        return status;
+    }
+
+    void PackageManagerImplementation::releaseStorageManagerObject()
+    {
+        ASSERT(nullptr != mStorageManagerObject);
+        if(mStorageManagerObject)
+        {
+            mStorageManagerObject->Release();
+            mStorageManagerObject = nullptr;
+        }
     }
 
     void PackageManagerImplementation::Deinitialize(PluginHost::IShell* service) {
@@ -239,33 +294,83 @@ namespace Plugin {
 
     // IPackageInstaller methods
     Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) {
-        Core::hresult result = Core::ERROR_NONE;
-        InstallState state = InstallState::INSTALLING;
+        Core::hresult result = Core::ERROR_GENERAL;
 
         LOGTRACE("Installing %s", packageId.c_str());
-        NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
 
-        #ifdef USE_LIBPACKAGE
-        packageImpl->Install(packageId, version, fileLocator);
-        #endif
+        mAdminLock.Lock();
+        if (nullptr == mStorageManagerObject)
+        {
+            if (Core::ERROR_NONE != createStorageManagerObject())
+            {
+                LOGERR("Failed to create StorageManager");
+            }
+        }
+        ASSERT (nullptr != mStorageManagerObject);
+        if (nullptr != mStorageManagerObject)
+        {
+            string path = "";
+            string errorReason = "";
+            if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE)
+            {
+                LOGINFO("CreateStorage path [%s]", path.c_str());
+                NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
+#ifdef USE_LIBPACKAGE
+                packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator);
+                if (pmResult == packagemanager::SUCCESS) {
+                    result = Core::ERROR_NONE;
+                }
+#endif
+                NotifyInstallStatus(packageId, version, InstallState::INSTALLED);
+            }
+            else
+            {
+                LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+            }
+        }
 
-        NotifyInstallStatus(packageId, version, state);
-
+        mAdminLock.Unlock();
         return result;
     }
 
     Core::hresult PackageManagerImplementation::Uninstall(const string &packageId, string &errorReason ) {
-        Core::hresult result = Core::ERROR_NONE;
+        Core::hresult result = Core::ERROR_GENERAL;
+        string version = "";
 
         LOGTRACE("Uninstalling %s", packageId.c_str());
-        string version;
-        NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
 
-        #ifdef USE_LIBPACKAGE
-        packageImpl->Uninstall(packageId);
-        #endif
+        mAdminLock.Lock();
+        if (nullptr == mStorageManagerObject)
+        {
+            LOGINFO("Create StorageManager object");
+            if (Core::ERROR_NONE != createStorageManagerObject())
+            {
+                LOGERR("Failed to create StorageManager");
+            }
+        }
+        ASSERT (nullptr != mStorageManagerObject);
+        if (nullptr != mStorageManagerObject)
+        {
+            if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE)
+            {
+                LOGINFO("DeleteStorage done");
+                NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
+#ifdef USE_LIBPACKAGE
+                packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
+                if (pmResult == packagemanager::SUCCESS) {
+                    result = Core::ERROR_NONE;
+                }
+#endif
+                NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
+            }
+            else
+            {
+                LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+            }
 
-        NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
+        }
+
+        mAdminLock.Unlock();
 
         return result;
     }
@@ -277,25 +382,29 @@ namespace Plugin {
         LOGTRACE();
         #ifdef USE_LIBPACKAGE
         string list;
-        packageImpl->GetList(list);
-        Json::Value jv;
-        Json::Reader reader;
+        packagemanager::Result pmResult = packageImpl->GetList(list);
+        if (pmResult == packagemanager::SUCCESS) {
+            Json::Value jv;
+            Json::Reader reader;
 
         if (reader.parse(list.c_str(), jv) ) {
             if (jv.isArray()) {
-                for (int i = 0; i < jv.size(); ++i) {
+                for (unsigned int i = 0; i < jv.size(); ++i) {
                     Json::Value val = jv[i];
 
-                    Exchange::IPackageInstaller::Package package;
-                    package.packageId = val["packageId"].asString().c_str();
-                    package.version = val["version"].asString().c_str();
-                    package.packageState = InstallState::INSTALLED;
-                    package.sizeKb = 0;         // XXX: getPackageSpaceInKBytes
-                    packageList.emplace_back(package);
+                        Exchange::IPackageInstaller::Package package;
+                        package.packageId = val["packageId"].asString().c_str();
+                        package.version = val["version"].asString().c_str();
+                        package.packageState = InstallState::INSTALLED;
+                        package.sizeKb = 0;         // XXX: getPackageSpaceInKBytes
+                        packageList.emplace_back(package);
+                    }
+                } else {
+                    LOGERR("Invalid json response");
                 }
-            } else {
-                LOGERR("Invalid json response");
             }
+        } else {
+            result = Core::ERROR_GENERAL;
         }
         #endif
 
@@ -367,18 +476,26 @@ namespace Plugin {
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
 
         #ifdef USE_LIBPACKAGE
-        if(isLocked(packageId, version))  {
-            ++mLockCount;
+        bool locked = false;
+        string gatewayMetadataPath;
+        uint32_t rc = GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked);
+#ifndef __DEBUG__
+        (void)rc;
+#endif /* __DEBUG__ */
+        if (locked)  {
+            lockId = ++mLockCount[packageId];
         } else {
-            u_int32_t rc = packageImpl->Lock(packageId, version, unpackedPath);
-            if (rc == 0) {
-                lockId = ++mLockCount;
+            packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath);
+            if (pmResult == packagemanager::SUCCESS) {
+                lockId = ++mLockCount[packageId];
                 LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
             } else {
                 LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
+                result = Core::ERROR_GENERAL;
             }
         }
         #endif
+        LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), mLockCount[packageId]);
 
         return result;
     }
@@ -389,14 +506,17 @@ namespace Plugin {
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
 
         #ifdef USE_LIBPACKAGE
-        if (mLockCount) {
-            packageImpl->Unlock(packageId, version);
-            --mLockCount;
+        if (mLockCount[packageId]) {
+            packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
+            if (pmResult != packagemanager::SUCCESS) {
+                result = Core::ERROR_GENERAL;
+            }
+            --mLockCount[packageId];
         } else {
             LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
         }
-
         #endif
+        LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), mLockCount[packageId]);
 
         return result;
     }
@@ -409,7 +529,10 @@ namespace Plugin {
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
 
         #ifdef USE_LIBPACKAGE
-        packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
+        packagemanager::Result pmResult = packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
+        if (pmResult != packagemanager::SUCCESS) {
+            result = Core::ERROR_GENERAL;
+        }
         #endif
 
         return result;
@@ -436,9 +559,13 @@ namespace Plugin {
                     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                     status = mHttpClient->downloadFile(di->GetUrl(), di->GetFileLocator(), di->GetRateLimit());
                     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-                    LOGTRACE("Download status=%d code=%ld time=%ld ms", status,
+                    LOGTRACE("Download status=%d code=%ld time=%lld ms", status,
                         mHttpClient->getStatusCode(),
                         std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
+#ifndef __DEBUG__
+                    (void)begin;
+                    (void)end;
+#endif /* __DEBUG__ */
                     if ( status == HttpClient::Status::Success || mHttpClient->getStatusCode() == 404) {  // XXX: other status codes
                         break;
                     }
@@ -451,6 +578,7 @@ namespace Plugin {
                 switch (status) {
                     case HttpClient::Status::DiskError: reason = DownloadReason::DISK_PERSISTENCE_FAILURE; break;
                     case HttpClient::Status::HttpError: reason = DownloadReason::DOWNLOAD_FAILURE; break;
+                    default: break; /* Do nothing */
                 }
                 NotifyDownloadStatus(di->GetId(), di->GetFileLocator(), reason);
                 mInprogressDowload.reset();
@@ -468,6 +596,9 @@ namespace Plugin {
         std::string jsonstr;
         bool ret = list.ToString(jsonstr);
         LOGTRACE("JsonArray ret=%d liststr=%s", ret, jsonstr.c_str());
+#ifndef __DEBUG__
+        (void)ret;
+#endif /* __DEBUG__ */
 
         mAdminLock.Lock();
         for (auto notification: mDownloaderNotifications) {
@@ -487,6 +618,9 @@ namespace Plugin {
         std::string jsonstr;
         bool ret = list.ToString(jsonstr);
         LOGTRACE("JsonArray ret=%d liststr=%s", ret, jsonstr.c_str());
+#ifndef __DEBUG__
+        (void)ret;
+#endif /* __DEBUG__ */
 
         mAdminLock.Lock();
         for (auto notification: mInstallNotifications) {
@@ -498,7 +632,7 @@ namespace Plugin {
 
     PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext() {
         std::lock_guard<std::mutex> lock(mMutex);
-        LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
+        LOGTRACE("mDownloadQueue.size = %d\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDowload == nullptr) {
             mInprogressDowload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
