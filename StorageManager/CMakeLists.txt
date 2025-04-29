@@ -69,7 +69,7 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD_REQUIRED YES)
 
 if (RDK_SERVICES_L1_TEST)
-    target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,mkdir -Wl,--wrap,access)
+    target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,nftw)
 endif (RDK_SERVICES_L1_TEST)
 
 set(STORAGE_MANAGER_INCLUDES $ENV{STORAGE_MANAGER_INCLUDES})
