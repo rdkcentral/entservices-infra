@@ -53,13 +53,11 @@ namespace WPEFramework
         mStorageManagerImpl(nullptr),
         mConfigure(nullptr)
     {
-        std::cout<<"Veeksha constructor"<<std::endl;
         SYSLOG(Logging::Startup, (_T("StorageManager Constructor")));
     }
 
     StorageManager::~StorageManager()
     {
-        std::cout<<"Veeksha destructor"<<std::endl;
         SYSLOG(Logging::Shutdown, (string(_T("StorageManager Destructor"))));
     }
 
@@ -71,22 +69,18 @@ namespace WPEFramework
         ASSERT(nullptr == mCurrentService);
         ASSERT(nullptr == mStorageManagerImpl);
         ASSERT(0 == mConnectionId);
-        std::cout<<"Veeksha entered Initialize"std::endl;
         SYSLOG(Logging::Startup, (_T("StorageManager::Initialize: PID=%u"), getpid()));
         mCurrentService = service;
         if (nullptr != mCurrentService)
         {
-            std::cout<<"Veeksha going to  Addref"<<std::endl;
             mCurrentService->AddRef();
             if (nullptr == (mStorageManagerImpl = mCurrentService->Root<Exchange::IStorageManager>(mConnectionId, 5000, _T("StorageManagerImplementation"))))
             {
-                 std::cout<<"Veeksha going to  Initialize: object creation failed"<<std::endl;
                 SYSLOG(Logging::Startup, (_T("StorageManager::Initialize: object creation failed")));
                 message = _T("StorageManager plugin could not be initialised");
             }
             else
             {
-                std::cout<<"Veeksha going to  QueryInterface"<<std::endl;
                 mConfigure = mStorageManagerImpl->QueryInterface<Exchange::IConfiguration>();
                 if (mConfigure != nullptr)
                 {
@@ -101,7 +95,6 @@ namespace WPEFramework
                     message = _T("mStorageManagerImpl implementation did not provide a configuration interface");
                 }
                 // Invoking Plugin API register to wpeframework
-                    std::cout<<"Veeksha going to  Register"<<std::endl;
                 Exchange::JStorageManager::Register(*this, mStorageManagerImpl);
             }
         }
