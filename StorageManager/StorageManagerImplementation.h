@@ -22,6 +22,7 @@
 #include "Module.h"
 #include <interfaces/IStorageManager.h>
 #include <interfaces/IConfiguration.h>
+#include <interfaces/IStore2.h>
 #include <ftw.h>
 #include <mutex>
 
@@ -64,6 +65,14 @@ namespace Plugin {
             uint64_t usedBytes = 0;
         } StorageSize;
 
+        enum StorageActionType
+        {
+            UNKNOWN = 0,
+            SET,
+            GET,
+            DELETE
+        };
+
         StorageManagerImplementation();
         ~StorageManagerImplementation() override;
 
@@ -85,6 +94,13 @@ namespace Plugin {
         uint32_t Configure(PluginHost::IShell* service) override;
 
     private:
+
+        bool isValidAppStorageDirectory(const std::string& dirName);
+        Core::hresult createPersistentStoreRemoteStoreObject();
+        void releasePersistentStoreRemoteStoreObject();
+        Core::hresult appQuotaSizeProperty(StorageActionType actionType, const std::string& appId, uint32_t* quotaValue);
+        Core::hresult populateAppInfoCacheFromStoragePath();
+
         bool createAppStorageInfoByAppID(const std::string& appId, StorageAppInfo &storageInfo);
         bool retrieveAppStorageInfoByAppID(const string &appId, StorageAppInfo &storageInfo);
         bool removeAppStorageInfoByAppID(const string &appId);
@@ -100,6 +116,7 @@ namespace Plugin {
         std::map<std::string, StorageAppInfo> mStorageAppInfo;  /* Map storing app storage info for each appId */
         Config _config;
         PluginHost::IShell* mCurrentservice;
+        Exchange::IStore2* mPersistentStoreRemoteStoreObject;
         std::string mBaseStoragePath;                           /* Base path for the app storage */
     };
 } /* namespace Plugin */

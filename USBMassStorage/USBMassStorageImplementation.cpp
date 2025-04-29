@@ -108,7 +108,7 @@ namespace Plugin {
         }
     }
 
-    uint32_t USBMassStorageImplementation::Register(Exchange::IUSBMassStorage::INotification *notification)
+    Core::hresult USBMassStorageImplementation::Register(Exchange::IUSBMassStorage::INotification *notification)
     {
         _adminLock.Lock();
         if (nullptr != notification)
@@ -129,7 +129,7 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    uint32_t USBMassStorageImplementation::Unregister(Exchange::IUSBMassStorage::INotification *notification )
+    Core::hresult USBMassStorageImplementation::Unregister(Exchange::IUSBMassStorage::INotification *notification )
     {
         uint32_t status = Core::ERROR_GENERAL;
 
@@ -423,7 +423,7 @@ namespace Plugin {
         }
     }
 
-    uint32_t USBMassStorageImplementation::GetDeviceList(Exchange::IUSBMassStorage::IUSBStorageDeviceInfoIterator*& deviceInfo) const
+    Core::hresult USBMassStorageImplementation::GetDeviceList(Exchange::IUSBMassStorage::IUSBStorageDeviceInfoIterator*& deviceInfo) const
     {
         uint32_t errorCode = Core::ERROR_GENERAL;
         bool emptyList = false;
@@ -493,7 +493,7 @@ namespace Plugin {
         return errorCode;
     }
 
-    uint32_t USBMassStorageImplementation::GetMountPoints(const string &deviceName, Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator*& mountPoints) const
+    Core::hresult USBMassStorageImplementation::GetMountPoints(const string &deviceName, Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator*& mountPoints) const
     {
         uint32_t errorCode = Core::ERROR_GENERAL;
         if (deviceName.empty())
@@ -549,7 +549,7 @@ namespace Plugin {
         return errorCode;
     }
 
-    uint32_t USBMassStorageImplementation::GetPartitionInfo(const string &mountPath , Exchange::IUSBMassStorage::USBStoragePartitionInfo& partitionInfo ) const
+    Core::hresult USBMassStorageImplementation::GetPartitionInfo(const string &mountPath , Exchange::IUSBMassStorage::USBStoragePartitionInfo& partitionInfo ) const
     {
         string devicePath = "";
         uint32_t errorCode = Core::ERROR_GENERAL;

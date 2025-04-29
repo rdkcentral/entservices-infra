@@ -862,7 +862,7 @@ uint32_t USBDeviceImplementation::getUSBDeviceStructFromDeviceDescriptor(libusb_
 /**
  * Register a notification callback
  */
-uint32_t USBDeviceImplementation::Register(Exchange::IUSBDevice::INotification *notification)
+Core::hresult USBDeviceImplementation::Register(Exchange::IUSBDevice::INotification *notification)
 {
     ASSERT (nullptr != notification);
 
@@ -884,7 +884,7 @@ uint32_t USBDeviceImplementation::Register(Exchange::IUSBDevice::INotification *
 /**
  * Unregister a notification callback
  */
-uint32_t USBDeviceImplementation::Unregister(Exchange::IUSBDevice::INotification *notification )
+Core::hresult USBDeviceImplementation::Unregister(Exchange::IUSBDevice::INotification *notification )
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -932,7 +932,7 @@ void USBDeviceImplementation::Dispatch(Event event, const Exchange::IUSBDevice::
                  (*index)->OnDevicePluggedIn(usbDevice);
                  ++index;
              }
-		break;
+        break;
 
          case USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT:
             LOGINFO("USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT Received");
@@ -942,22 +942,22 @@ void USBDeviceImplementation::Dispatch(Event event, const Exchange::IUSBDevice::
                  (*index)->OnDevicePluggedOut(usbDevice);
                  ++index;
              }
-		break;
+        break;
 
-         default:
+        default:
              break;
      }
 
      _adminLock.Unlock();
 }
 
-uint32_t USBDeviceImplementation::GetDeviceList(IUSBDeviceIterator*& devices) const
+Core::hresult USBDeviceImplementation::GetDeviceList(IUSBDeviceIterator*& devices) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::list<Exchange::IUSBDevice::USBDevice> usbDeviceList;
     libusb_device **devs = nullptr;
     ssize_t devCount = 0;
-	
+
     _adminLock.Lock();
 
     LOGINFO("GetDeviceList");
@@ -977,21 +977,20 @@ uint32_t USBDeviceImplementation::GetDeviceList(IUSBDeviceIterator*& devices) co
             if (Core::ERROR_NONE == status)
             {
                 LOGINFO ("usbDevice.deviceClass: %u usbDevice.deviceSubclass:%u usbDevice.deviceName:%s devicePath:%s", 
-  			  	                       usbDevice.deviceClass,
-  			  	                       usbDevice.deviceSubclass,
-  			  	                       usbDevice.deviceName.c_str(),
-  			  	                       usbDevice.devicePath.c_str());
+                                       usbDevice.deviceClass,
+                                       usbDevice.deviceSubclass,
+                                       usbDevice.deviceName.c_str(),
+                                       usbDevice.devicePath.c_str());
 
                 usbDeviceList.emplace_back(usbDevice);
             }
-	      else
-	      	{
+          else
+            {
                 LOGWARN ("getUSBDeviceStructFromDeviceDescriptor Failed");
-	      	}
+            }
         }
-    
-        libusb_free_device_list(devs, 1);
 
+        libusb_free_device_list(devs, 1);
         if (Core::ERROR_NONE == status)
         {
             devices = (Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList));
@@ -1007,10 +1006,9 @@ uint32_t USBDeviceImplementation::GetDeviceList(IUSBDeviceIterator*& devices) co
     return status;
 }
 
-uint32_t USBDeviceImplementation::GetDeviceInfo(const string &deviceName, IUSBDeviceInfoIterator*& deviceInfo) const
+Core::hresult USBDeviceImplementation::GetDeviceInfo(const string &deviceName, USBDeviceInfo& deviceInfo) const
 {
     uint32_t status = Core::ERROR_GENERAL;
-    std::list<Exchange::IUSBDevice::USBDeviceInfo> usbDeviceInfoList;
     libusb_device **devs = nullptr;
     ssize_t devCount = 0;
 
@@ -1036,31 +1034,28 @@ uint32_t USBDeviceImplementation::GetDeviceInfo(const string &deviceName, IUSBDe
             }
             else
             {
-                Exchange::IUSBDevice::USBDeviceInfo usbDeviceInfo = {0};
                 uint8_t portPath[8]; // Maximum 8 levels (depends on USB architecture)
 
-                status = USBDeviceImplementation::instance()->getUSBDeviceInfoStructFromDeviceDescriptor(devs[index], &usbDeviceInfo);
-                usbDeviceInfo.deviceLevel = libusb_get_port_numbers(devs[index], portPath, sizeof(portPath));
-                if ( 1 < usbDeviceInfo.deviceLevel )
+                status = USBDeviceImplementation::instance()->getUSBDeviceInfoStructFromDeviceDescriptor(devs[index], &deviceInfo);
+                if (Core::ERROR_NONE != status)
                 {
-                    for (ssize_t j = 0; j < devCount; j++)
+                    deviceInfo.deviceLevel = libusb_get_port_numbers(devs[index], portPath, sizeof(portPath));
+                    if ( 1 < deviceInfo.deviceLevel )
                     {
-                        libusb_device *device = devs[j];
-                        uint8_t portNo = libusb_get_port_number(device);
-                        if (portPath[usbDeviceInfo.deviceLevel - 2] == portNo)
+                        for (ssize_t j = 0; j < devCount; j++)
                         {
-                            usbDeviceInfo.parentId = j;
+                            libusb_device *device = devs[j];
+                            uint8_t portNo = libusb_get_port_number(device);
+                            if (portPath[deviceInfo.deviceLevel - 2] == portNo)
+                            {
+                                deviceInfo.parentId = j;
+                            }
                         }
                     }
-                }
-                else
-                {
-                    usbDeviceInfo.parentId = 0;
-                }
-
-                if (Core::ERROR_NONE == status)
-                {
-                    usbDeviceInfoList.emplace_back(usbDeviceInfo);
+                    else
+                    {
+                        deviceInfo.parentId = 0;
+                    }
                 }
                 else
                 {
@@ -1068,13 +1063,7 @@ uint32_t USBDeviceImplementation::GetDeviceInfo(const string &deviceName, IUSBDe
                 }
             }
         }
-
         libusb_free_device_list(devs, 1);
-
-        if (Core::ERROR_NONE == status)
-        {
-            deviceInfo = (Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceInfoIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceInfoIterator>(usbDeviceInfoList));
-        }
     }
     else
     {
@@ -1085,7 +1074,7 @@ uint32_t USBDeviceImplementation::GetDeviceInfo(const string &deviceName, IUSBDe
     return status;
 }
 
-uint32_t USBDeviceImplementation::BindDriver(const string &deviceName) const
+Core::hresult USBDeviceImplementation::BindDriver(const string &deviceName) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     libusb_device **devs = nullptr;
@@ -1170,7 +1159,7 @@ uint32_t USBDeviceImplementation::BindDriver(const string &deviceName) const
     return status;
 }
 
-uint32_t USBDeviceImplementation::UnbindDriver(const string &deviceName) const
+Core::hresult USBDeviceImplementation::UnbindDriver(const string &deviceName) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     libusb_device **devs = nullptr;
