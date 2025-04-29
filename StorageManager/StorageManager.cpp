@@ -19,7 +19,6 @@
 
 
 #include "StorageManager.h"
-#include <iostream>
 const string WPEFramework::Plugin::StorageManager::SERVICE_NAME = "org.rdk.StorageManager";
 
 namespace WPEFramework
