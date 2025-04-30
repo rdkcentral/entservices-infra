@@ -131,11 +131,18 @@ namespace Plugin {
                 result = Core::ERROR_NONE;
             }
 
+            string configStr = service->ConfigLine().c_str();
             LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
             PackageManagerImplementation::Configuration config;
             config.FromString(service->ConfigLine());
             downloadDir = config.downloadDir;
             LOGINFO("downloadDir=%s", downloadDir.c_str());
+
+            #ifdef USE_LIBPACKAGE
+            packagemanager::ConfigMetadataArray aConfigMetadata;
+            packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+            #endif
+
         }
         else
         {
