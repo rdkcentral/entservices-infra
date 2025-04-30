@@ -39,7 +39,6 @@
 #define T2_PERSISTENT_FOLDER "/opt/.t2reportprofiles/"
 #define DEFAULT_PROFILES_FILE "/etc/t2profiles/default.json"
 
-#define SYSTEMSERVICES_CALLSIGN "org.rdk.System"
 #define USERSETTINGS_CALLSIGN "org.rdk.UserSettings"
 
 #define API_VERSION_NUMBER_MAJOR 1
@@ -150,46 +149,25 @@ namespace Plugin {
     }
 
 #ifdef HAS_RBUS
-    void TelemetryImplementation::activateSystemPluginandGetPrivacyMode()
+    void TelemetryImplementation::activateUserSettingsandGetPrivacyMode()
     {
         PluginHost::IShell::state state;
-        if ((Utils::getServiceState(_service, SYSTEMSERVICES_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
-            Utils::activatePlugin(_service, SYSTEMSERVICES_CALLSIGN);
 
-        if ((Utils::getServiceState(_service, SYSTEMSERVICES_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
+        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
+            Utils::activatePlugin(_service, USERSETTINGS_CALLSIGN);
+            
+        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
         {
-            m_systemServiceConnection = Utils::getThunderControllerClient(SYSTEMSERVICES_CALLSIGN);
+            ASSERT(_service != nullptr);
 
-            if (!m_systemServiceConnection)
+            _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
+            if (_userSettingsPlugin)
             {
-                LOGERR("%s plugin initialisation failed", SYSTEMSERVICES_CALLSIGN);
-            }
-            else
-            {
-                uint32_t err = m_systemServiceConnection->Subscribe<JsonObject>(2000, "onPrivacyModeChanged", [this](const JsonObject& parameters) {
+                _userSettingsPlugin->Register(&_userSettingsNotification);
                 
-                if (parameters.HasLabel("privacyMode"))
+                std::string privacyMode;
+                if (_userSettingsPlugin->GetPrivacyMode(privacyMode) == Core::ERROR_NONE)
                 {
-                    std::string privacyMode = parameters["privacyMode"].String();
-                    notifyT2PrivacyMode(privacyMode);
-                }
-                else
-                {
-                    LOGERR("No 'privacyMode' parameter");
-                }
-                });
-
-                if (err != Core::ERROR_NONE)
-                {
-                    LOGERR("Failed to subscribe to onPrivacyModeChanged: %d", err);
-                }
-
-                JsonObject params;
-                JsonObject res;
-                m_systemServiceConnection->Invoke<JsonObject, JsonObject>(2000, "getPrivacyMode", params, res);
-                if (res["success"].Boolean())
-                {
-                    std::string privacyMode = res["privacyMode"].String();
                     notifyT2PrivacyMode(privacyMode);
                 }
                 else
@@ -200,19 +178,7 @@ namespace Plugin {
         }
         else
         {
-            LOGERR("%s plugin is not activated", SYSTEMSERVICES_CALLSIGN);
-        }
-        
-        
-        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
-            Utils::activatePlugin(_service, USERSETTINGS_CALLSIGN);
-            
-        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
-        {
-            ASSERT(_service != nullptr);
-
-            _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
-            _userSettingsPlugin->Register(&_userSettingsNotification);
+            LOGERR("Failed to activate %s", USERSETTINGS_CALLSIGN);
         }
     }
     
@@ -374,7 +340,7 @@ namespace Plugin {
         InitializePowerManager();
 
 #ifdef HAS_RBUS        
-        activateSystemPluginandGetPrivacyMode();
+        activateUserSettingsandGetPrivacyMode();
 #endif        
         setRFCReportProfiles();
         

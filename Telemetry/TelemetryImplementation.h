@@ -184,12 +184,11 @@ namespace Plugin {
 #ifdef HAS_RBUS
         void notifyT2PrivacyMode(std::string privacyMode);
         void onReportUploadStatus(const char* status);
-        void activateSystemPluginandGetPrivacyMode();
+        void activateUserSettingsandGetPrivacyMode();
         void setRFCReportProfiles();
 #endif
 
     private:
-        std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> m_systemServiceConnection;
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         std::list<Exchange::ITelemetry::INotification*> _telemetryNotification;
