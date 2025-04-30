@@ -154,7 +154,7 @@ void UserSettingsImplementation::registerEventHandlers()
 /**
  * Register a notification callback
  */
-uint32_t UserSettingsImplementation::Register(Exchange::IUserSettings::INotification *notification)
+Core::hresult UserSettingsImplementation::Register(Exchange::IUserSettings::INotification *notification)
 {
     _adminLock.Lock();
 
@@ -178,7 +178,7 @@ uint32_t UserSettingsImplementation::Register(Exchange::IUserSettings::INotifica
 /**
  * Unregister a notification callback
  */
-uint32_t UserSettingsImplementation::Unregister(Exchange::IUserSettings::INotification *notification )
+Core::hresult UserSettingsImplementation::Unregister(Exchange::IUserSettings::INotification *notification )
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -500,7 +500,7 @@ uint32_t UserSettingsImplementation::GetUserSettingsValue(const string& key, str
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetAudioDescription(const bool enabled)
+Core::hresult UserSettingsImplementation::SetAudioDescription(const bool enabled)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -509,7 +509,7 @@ uint32_t UserSettingsImplementation::SetAudioDescription(const bool enabled)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetAudioDescription(bool &enabled) const
+Core::hresult UserSettingsImplementation::GetAudioDescription(bool &enabled) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -530,7 +530,7 @@ uint32_t UserSettingsImplementation::GetAudioDescription(bool &enabled) const
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetPreferredAudioLanguages(const string& preferredLanguages)
+Core::hresult UserSettingsImplementation::SetPreferredAudioLanguages(const string& preferredLanguages)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -539,7 +539,7 @@ uint32_t UserSettingsImplementation::SetPreferredAudioLanguages(const string& pr
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetPreferredAudioLanguages(string &preferredLanguages) const
+Core::hresult UserSettingsImplementation::GetPreferredAudioLanguages(string &preferredLanguages) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -548,7 +548,7 @@ uint32_t UserSettingsImplementation::GetPreferredAudioLanguages(string &preferre
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetPresentationLanguage(const string& presentationLanguage)
+Core::hresult UserSettingsImplementation::SetPresentationLanguage(const string& presentationLanguage)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -557,7 +557,7 @@ uint32_t UserSettingsImplementation::SetPresentationLanguage(const string& prese
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetPresentationLanguage(string &presentationLanguage) const
+Core::hresult UserSettingsImplementation::GetPresentationLanguage(string &presentationLanguage) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -566,7 +566,7 @@ uint32_t UserSettingsImplementation::GetPresentationLanguage(string &presentatio
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetCaptions(const bool enabled)
+Core::hresult UserSettingsImplementation::SetCaptions(const bool enabled)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -575,7 +575,7 @@ uint32_t UserSettingsImplementation::SetCaptions(const bool enabled)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetCaptions(bool &enabled) const
+Core::hresult UserSettingsImplementation::GetCaptions(bool &enabled) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -596,7 +596,7 @@ uint32_t UserSettingsImplementation::GetCaptions(bool &enabled) const
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetPreferredCaptionsLanguages(const string& preferredLanguages)
+Core::hresult UserSettingsImplementation::SetPreferredCaptionsLanguages(const string& preferredLanguages)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -605,7 +605,7 @@ uint32_t UserSettingsImplementation::SetPreferredCaptionsLanguages(const string&
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetPreferredCaptionsLanguages(string &preferredLanguages) const
+Core::hresult UserSettingsImplementation::GetPreferredCaptionsLanguages(string &preferredLanguages) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -614,7 +614,7 @@ uint32_t UserSettingsImplementation::GetPreferredCaptionsLanguages(string &prefe
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetPreferredClosedCaptionService(const string& service)
+Core::hresult UserSettingsImplementation::SetPreferredClosedCaptionService(const string& service)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -623,7 +623,7 @@ uint32_t UserSettingsImplementation::SetPreferredClosedCaptionService(const stri
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetPreferredClosedCaptionService(string &service) const
+Core::hresult UserSettingsImplementation::GetPreferredClosedCaptionService(string &service) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -632,7 +632,7 @@ uint32_t UserSettingsImplementation::GetPreferredClosedCaptionService(string &se
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetPrivacyMode(const string& privacyMode)
+Core::hresult UserSettingsImplementation::SetPrivacyMode(const string& privacyMode)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -666,7 +666,7 @@ uint32_t UserSettingsImplementation::SetPrivacyMode(const string& privacyMode)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetPrivacyMode(string &privacyMode) const
+Core::hresult UserSettingsImplementation::GetPrivacyMode(string &privacyMode) const
 {
     uint32_t status = Core::ERROR_NONE;
     std::string value = "";
@@ -693,7 +693,7 @@ uint32_t UserSettingsImplementation::GetPrivacyMode(string &privacyMode) const
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetPinControl(const bool pinControl)
+Core::hresult UserSettingsImplementation::SetPinControl(const bool pinControl)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -702,7 +702,7 @@ uint32_t UserSettingsImplementation::SetPinControl(const bool pinControl)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetPinControl(bool &pinControl) const
+Core::hresult UserSettingsImplementation::GetPinControl(bool &pinControl) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -724,7 +724,7 @@ uint32_t UserSettingsImplementation::GetPinControl(bool &pinControl) const
 
 }
 
-uint32_t UserSettingsImplementation::SetViewingRestrictions(const string& viewingRestrictions)
+Core::hresult UserSettingsImplementation::SetViewingRestrictions(const string& viewingRestrictions)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -734,7 +734,7 @@ uint32_t UserSettingsImplementation::SetViewingRestrictions(const string& viewin
 
 }
 
-uint32_t UserSettingsImplementation::GetViewingRestrictions(string &viewingRestrictions) const
+Core::hresult UserSettingsImplementation::GetViewingRestrictions(string &viewingRestrictions) const
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -743,7 +743,7 @@ uint32_t UserSettingsImplementation::GetViewingRestrictions(string &viewingRestr
 
 }
 
-uint32_t UserSettingsImplementation::SetViewingRestrictionsWindow(const string& viewingRestrictionsWindow)
+Core::hresult UserSettingsImplementation::SetViewingRestrictionsWindow(const string& viewingRestrictionsWindow)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -753,7 +753,7 @@ uint32_t UserSettingsImplementation::SetViewingRestrictionsWindow(const string& 
 
 }
 
-uint32_t UserSettingsImplementation::GetViewingRestrictionsWindow(string &viewingRestrictionsWindow) const
+Core::hresult UserSettingsImplementation::GetViewingRestrictionsWindow(string &viewingRestrictionsWindow) const
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -761,7 +761,7 @@ uint32_t UserSettingsImplementation::GetViewingRestrictionsWindow(string &viewin
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetLiveWatershed(const bool liveWatershed)
+Core::hresult UserSettingsImplementation::SetLiveWatershed(const bool liveWatershed)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -771,7 +771,7 @@ uint32_t UserSettingsImplementation::SetLiveWatershed(const bool liveWatershed)
 
 }
 
-uint32_t UserSettingsImplementation::GetLiveWatershed(bool &liveWatershed) const
+Core::hresult UserSettingsImplementation::GetLiveWatershed(bool &liveWatershed) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -792,7 +792,7 @@ uint32_t UserSettingsImplementation::GetLiveWatershed(bool &liveWatershed) const
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetPlaybackWatershed(const bool playbackWatershed)
+Core::hresult UserSettingsImplementation::SetPlaybackWatershed(const bool playbackWatershed)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -801,7 +801,7 @@ uint32_t UserSettingsImplementation::SetPlaybackWatershed(const bool playbackWat
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetPlaybackWatershed(bool &playbackWatershed) const
+Core::hresult UserSettingsImplementation::GetPlaybackWatershed(bool &playbackWatershed) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -822,7 +822,7 @@ uint32_t UserSettingsImplementation::GetPlaybackWatershed(bool &playbackWatershe
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetBlockNotRatedContent(const bool blockNotRatedContent)
+Core::hresult UserSettingsImplementation::SetBlockNotRatedContent(const bool blockNotRatedContent)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -831,7 +831,7 @@ uint32_t UserSettingsImplementation::SetBlockNotRatedContent(const bool blockNot
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetBlockNotRatedContent(bool &blockNotRatedContent) const
+Core::hresult UserSettingsImplementation::GetBlockNotRatedContent(bool &blockNotRatedContent) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -852,7 +852,7 @@ uint32_t UserSettingsImplementation::GetBlockNotRatedContent(bool &blockNotRated
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetPinOnPurchase(const bool pinOnPurchase)
+Core::hresult UserSettingsImplementation::SetPinOnPurchase(const bool pinOnPurchase)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -861,7 +861,7 @@ uint32_t UserSettingsImplementation::SetPinOnPurchase(const bool pinOnPurchase)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetPinOnPurchase(bool &pinOnPurchase) const
+Core::hresult UserSettingsImplementation::GetPinOnPurchase(bool &pinOnPurchase) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -883,7 +883,7 @@ uint32_t UserSettingsImplementation::GetPinOnPurchase(bool &pinOnPurchase) const
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetHighContrast(const bool enabled)
+Core::hresult UserSettingsImplementation::SetHighContrast(const bool enabled)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -892,7 +892,7 @@ uint32_t UserSettingsImplementation::SetHighContrast(const bool enabled)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetHighContrast(bool &enabled) const
+Core::hresult UserSettingsImplementation::GetHighContrast(bool &enabled) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -913,7 +913,7 @@ uint32_t UserSettingsImplementation::GetHighContrast(bool &enabled) const
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetVoiceGuidance(const bool enabled)
+Core::hresult UserSettingsImplementation::SetVoiceGuidance(const bool enabled)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -922,7 +922,7 @@ uint32_t UserSettingsImplementation::SetVoiceGuidance(const bool enabled)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetVoiceGuidance(bool &enabled) const
+Core::hresult UserSettingsImplementation::GetVoiceGuidance(bool &enabled) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -943,7 +943,7 @@ uint32_t UserSettingsImplementation::GetVoiceGuidance(bool &enabled) const
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetVoiceGuidanceRate(const double rate)
+Core::hresult UserSettingsImplementation::SetVoiceGuidanceRate(const double rate)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -959,7 +959,7 @@ uint32_t UserSettingsImplementation::SetVoiceGuidanceRate(const double rate)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetVoiceGuidanceRate(double &rate) const
+Core::hresult UserSettingsImplementation::GetVoiceGuidanceRate(double &rate) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";
@@ -972,7 +972,7 @@ uint32_t UserSettingsImplementation::GetVoiceGuidanceRate(double &rate) const
     return status;
 }
 
-uint32_t UserSettingsImplementation::SetVoiceGuidanceHints(const bool hints)
+Core::hresult UserSettingsImplementation::SetVoiceGuidanceHints(const bool hints)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -981,7 +981,7 @@ uint32_t UserSettingsImplementation::SetVoiceGuidanceHints(const bool hints)
     return status;
 }
 
-uint32_t UserSettingsImplementation::GetVoiceGuidanceHints(bool &hints) const
+Core::hresult UserSettingsImplementation::GetVoiceGuidanceHints(bool &hints) const
 {
     uint32_t status = Core::ERROR_GENERAL;
     std::string value = "";

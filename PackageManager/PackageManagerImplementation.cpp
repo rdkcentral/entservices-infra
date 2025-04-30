@@ -478,20 +478,19 @@ namespace Plugin {
         #ifdef USE_LIBPACKAGE
         bool locked = false;
         string gatewayMetadataPath;
-        uint32_t rc = GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked);
-#ifndef __DEBUG__
-        (void)rc;
-#endif /* __DEBUG__ */
-        if (locked)  {
-            lockId = ++mLockCount[packageId];
-        } else {
-            packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath);
-            if (pmResult == packagemanager::SUCCESS) {
+        if (GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked) == Core::ERROR_NONE) {
+            if (locked)  {
                 lockId = ++mLockCount[packageId];
-                LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
             } else {
-                LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
-                result = Core::ERROR_GENERAL;
+                packagemanager::ConfigMetaData configMetadata;
+                packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, configMetadata);
+                if (pmResult == packagemanager::SUCCESS) {
+                    lockId = ++mLockCount[packageId];
+                    LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
+                } else {
+                    LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
+                    result = Core::ERROR_GENERAL;
+                }
             }
         }
         #endif
@@ -559,13 +558,12 @@ namespace Plugin {
                     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                     status = mHttpClient->downloadFile(di->GetUrl(), di->GetFileLocator(), di->GetRateLimit());
                     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-                    LOGTRACE("Download status=%d code=%ld time=%lld ms", status,
-                        mHttpClient->getStatusCode(),
-                        std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
-#ifndef __DEBUG__
-                    (void)begin;
-                    (void)end;
-#endif /* __DEBUG__ */
+                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+                    if (elapsed) {
+                        LOGTRACE("Download status=%d code=%ld time=%ld ms", status,
+                            mHttpClient->getStatusCode(),
+                            elapsed);
+                    }
                     if ( status == HttpClient::Status::Success || mHttpClient->getStatusCode() == 404) {  // XXX: other status codes
                         break;
                     }
@@ -594,11 +592,9 @@ namespace Plugin {
         obj["reason"] = getDownloadReason(reason);
         list.Add(obj);
         std::string jsonstr;
-        bool ret = list.ToString(jsonstr);
-        LOGTRACE("JsonArray ret=%d liststr=%s", ret, jsonstr.c_str());
-#ifndef __DEBUG__
-        (void)ret;
-#endif /* __DEBUG__ */
+        if (!list.ToString(jsonstr)) {
+            LOGERR("Failed to  stringify JsonArray");
+        }
 
         mAdminLock.Lock();
         for (auto notification: mDownloaderNotifications) {
@@ -616,11 +612,9 @@ namespace Plugin {
         obj["reason"] = getInstallReason(state);
         list.Add(obj);
         std::string jsonstr;
-        bool ret = list.ToString(jsonstr);
-        LOGTRACE("JsonArray ret=%d liststr=%s", ret, jsonstr.c_str());
-#ifndef __DEBUG__
-        (void)ret;
-#endif /* __DEBUG__ */
+        if (!list.ToString(jsonstr)) {
+            LOGERR("Failed to  stringify JsonArray");
+        }
 
         mAdminLock.Lock();
         for (auto notification: mInstallNotifications) {
@@ -632,7 +626,7 @@ namespace Plugin {
 
     PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext() {
         std::lock_guard<std::mutex> lock(mMutex);
-        LOGTRACE("mDownloadQueue.size = %d\n", mDownloadQueue.size());
+        LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDowload == nullptr) {
             mInprogressDowload = mDownloadQueue.front();
             mDownloadQueue.pop_front();

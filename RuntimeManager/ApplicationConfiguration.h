@@ -43,15 +43,8 @@ namespace Plugin
         std::string mAppInstanceId;
         
         // command to run inside the container, mArgs[0] is application name
-        // TODO should the app name be prefixed with mAppPath or mRuntimePath?
         std::vector<std::string> mArgs;
         
-        // path to extracted package
-        std::string mAppPath;
-        
-        // path to extracted runtime package
-        std::string mRuntimePath;
-
         // userId used by the container
         uint32_t mUserId;
         
@@ -60,9 +53,6 @@ namespace Plugin
         
         std::vector<uint32_t> mPorts;
         
-        // additional env variables set inside the container
-        std::vector<std::string> mEnvVars;
-
         // westeros socket path that the containerized app should use to communicate with compositor
         std::string mWesterosSocketPath;
 
@@ -71,8 +61,29 @@ namespace Plugin
 
         // application storage info - storage path, uid, gid
         AppStorageInfo mAppStorageInfo;
-
-        bool mWanLanAccess;
     };
+
+    enum ApplicationType
+    {
+        INTERACTIVE = 0,
+	SYSTEM = 1 
+    };
+
+    struct RuntimeConfig
+    {
+        RuntimeConfig(): systemMemoryLimit(0), gpuMemoryLimit(0), command(""), appType(INTERACTIVE), appPath(""), runtimePath(""), wanLanAccess(true), thunder(true), dial(true), resourceManagerClientEnabled(true), dialId(""), envVariables() {}
+        ssize_t systemMemoryLimit;
+        ssize_t gpuMemoryLimit;
+        string command;
+        ApplicationType appType;
+        string appPath;
+        string runtimePath;
+        bool wanLanAccess;
+        bool thunder;
+        bool dial;
+        bool resourceManagerClientEnabled;
+        string dialId;
+        std::vector<std::string> envVariables;
+    };    
 } /* namespace Plugin */
 } /* namespace WPEFramework */

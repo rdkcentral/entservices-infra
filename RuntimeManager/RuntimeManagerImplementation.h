@@ -30,7 +30,6 @@
 #include <condition_variable>
 #include "ApplicationConfiguration.h"
 
-
 namespace WPEFramework
 {
     namespace Plugin
@@ -183,10 +182,9 @@ namespace WPEFramework
                 void releaseStorageManagerPluginObject();
                 void setRunningState(bool state);
                 bool getRunningState();
-                static bool generate(const ApplicationConfiguration& config, std::string& dobbySpec);
+                static bool generate(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig, std::string& dobbySpec);
                 Core::hresult handleContainerRequest(OCIContainerRequest& request);
                 void updateContainerInfo(std::shared_ptr<OCIContainerRequest>&  requestData);
-
                 void printContainerInfo();
                 Exchange::IRuntimeManager::RuntimeState getRuntimeState(const string& appInstanceId);
                 Core::hresult getAppStorageInfo(const string& appId, AppStorageInfo& appStorageInfo);
@@ -206,6 +204,7 @@ namespace WPEFramework
                 void dispatchEvent(RuntimeEventType, const JsonValue &params);
                 void Dispatch(RuntimeEventType event, const JsonValue params);
                 void OCIContainerWorkerThread(void);
+                void generateUserId(uint32_t& userId, uint32_t& groupId);
 
                 friend class Job;
 

@@ -146,12 +146,12 @@ namespace Plugin {
             USBStorageDeviceInfo  _params;
         };
     public:
-        virtual uint32_t Register(Exchange::IUSBMassStorage::INotification *notification ) override ;
-        virtual uint32_t Unregister(Exchange::IUSBMassStorage::INotification *notification ) override;
+        virtual Core::hresult Register(Exchange::IUSBMassStorage::INotification *notification ) override ;
+        virtual Core::hresult Unregister(Exchange::IUSBMassStorage::INotification *notification ) override;
 
-        uint32_t GetDeviceList(Exchange::IUSBMassStorage::IUSBStorageDeviceInfoIterator*& deviceInfo) const override;
-        uint32_t GetMountPoints(const string &deviceName, Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator*& mountPoints) const override;
-        uint32_t GetPartitionInfo(const string &mountPath , Exchange::IUSBMassStorage::USBStoragePartitionInfo& partitionInfo ) const override;
+        Core::hresult GetDeviceList(Exchange::IUSBMassStorage::IUSBStorageDeviceInfoIterator*& deviceInfo) const override;
+        Core::hresult GetMountPoints(const string &deviceName, Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator*& mountPoints) const override;
+        Core::hresult GetPartitionInfo(const string &mountPath , Exchange::IUSBMassStorage::USBStoragePartitionInfo& partitionInfo ) const override;
 
         // IConfiguration methods
         uint32_t Configure(PluginHost::IShell* service) override;
