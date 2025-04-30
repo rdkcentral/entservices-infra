@@ -37,6 +37,7 @@ namespace Plugin {
     StorageManagerImplementation::StorageManagerImplementation()
     : mStorageManagerImplLock()
     , mCurrentservice(nullptr)
+    , mPersistentStoreRemoteStoreObject(nullptr)
     {
         LOGINFO("Create StorageManagerImplementation Instance");
     }
@@ -44,6 +45,7 @@ namespace Plugin {
     StorageManagerImplementation::~StorageManagerImplementation()
     {
         LOGINFO("Delete StorageManagerImplementation Instance");
+        releasePersistentStoreRemoteStoreObject();
 
         if (nullptr != mCurrentservice)
         {
@@ -55,6 +57,7 @@ namespace Plugin {
     uint32_t StorageManagerImplementation::Configure(PluginHost::IShell* service)
     {
         uint32_t result = Core::ERROR_NONE;
+        Core::hresult status = Core::ERROR_GENERAL;
 
         if (service != nullptr)
         {
@@ -73,10 +76,28 @@ namespace Plugin {
                     mBaseStoragePath = DEFAULT_APP_STORAGE_PATH;  // Fallback path
                 }
 
+                if (Core::ERROR_NONE != createPersistentStoreRemoteStoreObject())
+                {
+                    LOGERR("Failed to create createPersistentStoreRemoteStoreObject");
+                }
+                else
+                {
+                    LOGINFO("created createPersistentStoreRemoteStoreObject");
+                }
+
                 Core::SystemInfo::SetEnvironment(PATH_ENV, mBaseStoragePath.c_str());
                 LOGINFO("Base Storage Path Set: %s", mBaseStoragePath.c_str());
-            }
 
+                status = populateAppInfoCacheFromStoragePath();
+                if (Core::ERROR_NONE != status)
+                {
+                    LOGERR("populateAppInfoCacheFromStoragePath Failed!!!");
+                }
+                else
+                {
+                    LOGINFO("populateAppInfoCacheFromStoragePath Success!!");
+                }
+            }
         }
         else
         {
@@ -87,6 +108,259 @@ namespace Plugin {
         return result;
     }
 
+    /***
+     * @brief populates the StorageAppInfo map with installed App details
+     *
+     * Iterate thru the mBaseStoragePath for each directory
+     * confirm is it the validate appId (the directory name)
+     * extract the Appid, uid, gid, path, quota size, used size of each app
+     * update it to StorageAppInfo and populate it to the Map - mStorageAppInfo
+     *
+     * @param[in] mBaseStoragePath     : Base directory path
+     *
+     * @return              : Core::<StatusCode>
+     */
+
+    Core::hresult StorageManagerImplementation::populateAppInfoCacheFromStoragePath()
+    {
+        Core::hresult status = Core::ERROR_GENERAL;
+        std::string errorReason;
+
+        DIR* dir = opendir(mBaseStoragePath.c_str());
+        if (!dir)
+        {
+            LOGERR("Failed to open storage directory: %s. Error: %s", mBaseStoragePath.c_str(), strerror(errno));
+
+        }
+        else
+        {
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != nullptr)
+            {
+                LOGINFO("entry->d_name: %s", entry->d_name);
+                if (entry->d_type != DT_DIR || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || !isValidAppStorageDirectory(entry->d_name))
+                {
+                    LOGERR("entry->d_name: %s d_type : %d - not a directory, it is [.] or [..], or invalid appId - SKIPPED\n", entry->d_name, entry->d_type);
+                    continue;
+                }
+
+                std::string appId = entry->d_name;
+
+                //capture the path
+                std::string appFilePath = mBaseStoragePath + '/' + appId;
+
+                //get the uid, gid by stat
+                struct stat dirStat;
+                if (stat(appFilePath.c_str(), &dirStat) == -1)
+                {
+                    LOGERR("unable to get the status of app directory. appFilePath: %s", appFilePath.c_str());
+                    continue;
+                }
+
+                //update the StorageAppInfo object and populate the Map
+                StorageAppInfo storageInfo;
+                storageInfo.path    = std::move(appFilePath);
+                storageInfo.uid     = static_cast<uint32_t>(dirStat.st_uid);
+                storageInfo.gid     = static_cast<uint32_t>(dirStat.st_gid);
+
+                //get the quotaKB
+                status = appQuotaSizeProperty(GET, appId, &storageInfo.quotaKB);
+                if (Core::ERROR_NONE != status)
+                {
+                    LOGERR("appQuotaSizeProperty Failed for App Quota size retrivel, appId:%s!!!", appId.c_str());
+                    storageInfo.quotaKB = 0;
+                }
+
+                storageInfo.usedKB  = static_cast<uint32_t>(getDirectorySizeInBytes(storageInfo.path) / 1024); //get the used size
+
+                LOGINFO("Retrieved storageInfo for appId: %s " \
+                            "userId: %d groupId: %d quotaKB: %u usedKB: %u path: %s",
+                            appId.c_str(), storageInfo.uid, storageInfo.gid, storageInfo.quotaKB, storageInfo.usedKB, storageInfo.path.c_str());
+
+                if(!createAppStorageInfoByAppID(appId,storageInfo))
+                {
+                    LOGERR("Failed to create storage at mStorageAppInfo\n");
+                    status = Core::ERROR_GENERAL;
+                }
+            }
+            closedir(dir);
+        }
+        return status;
+    }
+
+    Core::hresult StorageManagerImplementation::createPersistentStoreRemoteStoreObject()
+    {
+        Core::hresult status = Core::ERROR_GENERAL;
+
+        if (nullptr == mCurrentservice)
+        {
+            LOGERR("mCurrentservice is null \n");
+        }
+        else if (nullptr == (mPersistentStoreRemoteStoreObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::IStore2>("org.rdk.PersistentStore")))
+        {
+            LOGERR("mPersistentStoreRemoteStoreObject is null \n");
+        }
+        else
+        {
+            LOGINFO("created PersistentStore Object\n");
+            status = Core::ERROR_NONE;
+        }
+        return status;
+    }
+
+    void StorageManagerImplementation::releasePersistentStoreRemoteStoreObject()
+    {
+        ASSERT(nullptr != mPersistentStoreRemoteStoreObject);
+        if(mPersistentStoreRemoteStoreObject)
+        {
+            mPersistentStoreRemoteStoreObject->Release();
+            mPersistentStoreRemoteStoreObject = nullptr;
+        }
+    }
+
+
+    /***
+     * @brief: Validate the given directory name is a proper AppID.
+     *
+     * The rules are that only dots (.), dashes (-), underscore (_) and
+     * alphanumeric characters are allow, with the following additional restrictions:
+     *      - the first and last characters must be alphanumeric
+     *      - double dots (..) are not allowed
+     *
+     * @param[in] dirName                   : App identifier for the application
+     *
+     * @return                              : bool
+     ***/
+    bool StorageManagerImplementation::isValidAppStorageDirectory(const std::string& dirName)
+    {
+        if (dirName.empty())
+            return false;
+
+        auto it = dirName.begin();
+        char ch = *it++;
+        if (!isalnum(ch))
+        {
+            return false;
+        }
+
+        for (; it != dirName.end(); ++it)
+        {
+            char prev = ch;
+            ch = *it;
+
+            // check for double dots
+            if (ch == '.')
+            {
+                if (prev == '.')
+                    return false;
+            }
+            else if (!isalnum(ch) && (ch != '-') && (ch != '_'))
+            {
+                return false;
+            }
+        }
+
+        // check the last character is alphanumeric
+        return isalnum(ch);
+    }
+
+
+    /***
+     * @brief Get / Set / Delete the QuotaSize property for the given app.
+     * Handles persistent property for a given app based on the appId and key.
+     *
+     * @param[in] appId                   : App identifier for the application
+     * @param[in] StorageActionType       : SET/ GET / DELETE Action to be performed on the property
+     * @param[in/out] value               : value of the QuataSize, based on the ActionType value set or retrieved.
+     *
+     * @return                            : Core::<StatusCode>
+     */
+
+    Core::hresult StorageManagerImplementation::appQuotaSizeProperty(StorageManagerImplementation::StorageActionType actionType, const std::string& appId, uint32_t* quotaValue)
+    {
+        Core::hresult status = Core::ERROR_GENERAL;
+        const std::string key = "quotaSize";
+        uint32_t ttl = 0;
+
+        /* Check if appId is empty */
+        if (appId.empty())
+        {
+            LOGERR("App ID is empty");
+        }
+        else
+        {
+            /* Ensure the persistent store object is created if necessary */
+            if (mPersistentStoreRemoteStoreObject == nullptr && Core::ERROR_NONE != createPersistentStoreRemoteStoreObject()) 
+            {
+                LOGERR("Failed to create PersistentStoreRemoteStoreObject");
+                status = Core::ERROR_GENERAL;  // Set status to indicate failure
+            }
+            else
+            {
+                ASSERT(mPersistentStoreRemoteStoreObject != nullptr);
+
+                /* Perform action based on the StorageActionType */
+                if (mPersistentStoreRemoteStoreObject != nullptr)
+                {
+                    switch (actionType)
+                    {
+                        case SET:
+                        {
+                            status = mPersistentStoreRemoteStoreObject->SetValue(Exchange::IStore2::ScopeType::DEVICE, appId, key, std::to_string(*quotaValue), 0);
+                            if (Core::ERROR_NONE != status)
+                            {
+                                LOGERR("SetValue Failed: appId[%s] Key[%s] status[%d]", appId.c_str(), key.c_str(), status);
+                            }
+                            else
+                            {
+                                LOGINFO("SetValue: appId[%s] Key[%s] value[%d]", appId.c_str(), key.c_str(), *quotaValue);
+                            }
+                        }
+                        break;
+
+                       case GET:
+                        {
+                            std::string quotaSize;
+                            status = mPersistentStoreRemoteStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, appId, key, quotaSize, ttl);
+                            if (Core::ERROR_NONE != status)
+                            {
+                                LOGERR("GetValue Failed: appId[%s] Key[%s] status[%d]", appId.c_str(), key.c_str(), status);
+                            }
+                            else
+                            {
+                                LOGINFO("appId[%s] Key[%s] value retrived[%s]", appId.c_str(), key.c_str(), quotaSize.c_str());
+                                *quotaValue = static_cast<uint32_t>(std::stoul(quotaSize,nullptr,0));
+                            }
+                        }
+                        break;
+
+                        case DELETE:
+                        {
+                            status = mPersistentStoreRemoteStoreObject->DeleteKey(Exchange::IStore2::ScopeType::DEVICE, appId, key);
+                            if (Core::ERROR_NONE != status)
+                            {
+                                LOGERR("DeleteKey Failed: appId[%s] Key[%s] status[%d]", appId.c_str(), key.c_str(), status);
+                            }
+                            else
+                            {
+                                LOGINFO("appId[%s] Deleted Key[%s] ", appId.c_str(), key.c_str());
+                            }
+                        }
+                        break;
+
+                        default:
+                        {
+                            LOGERR("Invalid storage type : %d", actionType);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+    return status;
+    }
+
     /**
      * @brief : Adds file sizes to calculate total storage usage.
      */
@@ -95,11 +369,19 @@ namespace Plugin {
         if (currentFlag == FTW_F && statPtr != nullptr)
         {
             std::lock_guard<std::mutex> storageSizelock(mStorageSizeLock);
+            if (!gStorageSize.blockSize)
+            {
+                /* Check and Store the current storage dev block size */
+                gStorageSize.blockSize = (0 != statPtr->st_blksize) ? statPtr->st_blksize : DEFAULT_STORAGE_DEV_BLOCK_SIZE;
+                LOGINFO("path: %s dev blksize:%lu blockSize is set to %llu", path, statPtr->st_blksize, gStorageSize.blockSize);
+            }
+
+            // Calculate used bytes
             uint64_t usedBytesForFile = ((uint64_t)statPtr->st_size > ((uint64_t)statPtr->st_blocks * (uint64_t)gStorageSize.blockSize)) ?
                                         ((uint64_t)statPtr->st_blocks *(uint64_t)gStorageSize.blockSize) :
                                         (uint64_t)statPtr->st_size;
             gStorageSize.usedBytes += usedBytesForFile;
-            LOGINFO("path: %s usedBytes: %llu", path, gStorageSize.usedBytes);
+            LOGINFO("path: %s usedBytes: %llu blockSize: %llu", path, gStorageSize.usedBytes, gStorageSize.blockSize);
         }
         (void)internalFtwUsage;
         return 0;
@@ -233,6 +515,7 @@ namespace Plugin {
                     "userId: %d groupId: %d quotaKB: %u usedKB: %u path: %s",
                     appId.c_str(), it->second.uid, it->second.gid, it->second.quotaKB, it->second.usedKB, it->second.path.c_str());
             mStorageAppInfo.erase(appId);
+            appQuotaSizeProperty(DELETE, appId, nullptr); //Remove the persistent store entry
             result = true;
         }
         else
@@ -266,14 +549,9 @@ namespace Plugin {
                 /* Store the current storage dev block size */
                 {
                     std::lock_guard<std::mutex> storageSizelock(mStorageSizeLock);
-                    if (0 != statFs.f_frsize)
-                    {
-                        gStorageSize.blockSize = statFs.f_frsize;
-                    }
-                    else
-                    {
-                        gStorageSize.blockSize = DEFAULT_STORAGE_DEV_BLOCK_SIZE; /* Fallback to default block size */
-                    }
+
+                    gStorageSize.blockSize = (statFs.f_bsize != 0) ? statFs.f_bsize : DEFAULT_STORAGE_DEV_BLOCK_SIZE; /* Fallback to default block size */
+                    LOGINFO("path: %s f_bsize:%lu f_frsize:%lu, blockSize is set to %llu", baseDir.c_str(), statFs.f_bsize, statFs.f_frsize, gStorageSize.blockSize);
                 }
 
                 /* Calculate the current available storage in KB */
@@ -421,6 +699,18 @@ namespace Plugin {
                     errorReason = "Failed to create storage for appId: " + appId;
                     path = "";
                 }
+
+                //set Quota size in to the persistent store
+                status = appQuotaSizeProperty(SET, appId, &storageInfo.quotaKB);
+                if (Core::ERROR_NONE != status)
+                {
+                    LOGERR("appQuotaSizeProperty Failed to SET for appId[%s]!!!", appId.c_str());
+                }
+                else
+                {
+                    LOGINFO("appQuotaSizeProperty: SET success for appId[%s]\n", appId.c_str());
+                }
+
             }
         }
 
@@ -515,6 +805,7 @@ namespace Plugin {
                         status = Core::ERROR_NONE;
                         LOGINFO("Erasing the App Folder from the database");
                         mStorageAppInfo.erase(it);
+                        appQuotaSizeProperty(DELETE, appId, nullptr); //Remove the persistent store entry.
                     }
                     else
                     {
