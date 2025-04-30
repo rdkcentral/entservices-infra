@@ -572,7 +572,7 @@ namespace Plugin {
                         LOGTRACE("waitTime=%d retry %d/%d", waitTime, i, di->GetRetries());
                         std::this_thread::sleep_for(std::chrono::seconds(waitTime));
                     }
-                    LOGTRACE("Downloading id=%s url=%s file=%s rateLimit=%d",
+                    LOGTRACE("Downloading id=%s url=%s file=%s rateLimit=%ld",
                         di->GetId().c_str(), di->GetUrl().c_str(), di->GetFileLocator().c_str(), di->GetRateLimit());
                     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                     status = mHttpClient->downloadFile(di->GetUrl(), di->GetFileLocator(), di->GetRateLimit());
