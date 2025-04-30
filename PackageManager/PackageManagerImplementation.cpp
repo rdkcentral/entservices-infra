@@ -79,7 +79,7 @@ namespace Plugin {
 
         mAdminLock.Lock();
         ASSERT(std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification) == mDownloaderNotifications.end());
-        if(std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification) == mDownloaderNotifications.end()){
+        if (std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification) == mDownloaderNotifications.end()) {
             mDownloaderNotifications.push_back(notification);
             notification->AddRef();
         }
@@ -101,7 +101,7 @@ namespace Plugin {
 
         mAdminLock.Lock();
         auto item = std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification);
-        if(item != mDownloaderNotifications.end()){
+        if (item != mDownloaderNotifications.end()) {
             notification->Release();
             mDownloaderNotifications.erase(item);
         }
@@ -151,6 +151,13 @@ namespace Plugin {
 
         return result;
     }
+
+    Core::hresult PackageManagerImplementation::Deinitialize(PluginHost::IShell* service) {
+        Core::hresult result = Core::ERROR_NONE;
+        LOGINFO();
+        return result;
+    }
+
     Core::hresult PackageManagerImplementation::createStorageManagerObject()
     {
         Core::hresult status = Core::ERROR_GENERAL;
@@ -180,13 +187,6 @@ namespace Plugin {
             mStorageManagerObject = nullptr;
         }
     }
-
-    void PackageManagerImplementation::Deinitialize(PluginHost::IShell* service) {
-        LOGINFO();
-
-    }
-
-
 
     // IPackageDownloader methods
     Core::hresult PackageManagerImplementation::Download(const string& url, const bool priority, const uint32_t retries, const uint64_t rateLimit, string &downloadId)

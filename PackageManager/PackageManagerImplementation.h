@@ -118,7 +118,7 @@ namespace Plugin {
         Core::hresult Unregister(Exchange::IPackageDownloader::INotification* notification) override;
 
         Core::hresult Initialize(PluginHost::IShell* service) override;
-        void Deinitialize(PluginHost::IShell* service) override;
+        Core::hresult Deinitialize(PluginHost::IShell* service) override;
 
         // IPackageInstaller methods
         Core::hresult Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) override;
