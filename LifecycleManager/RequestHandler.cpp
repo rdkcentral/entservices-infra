@@ -80,7 +80,7 @@ namespace WPEFramework
 	}
 
         void RequestHandler::terminate()
-	{
+        {
             mRippleHandler->terminate();
             if (mWindowManagerHandler)
             {
@@ -93,9 +93,9 @@ namespace WPEFramework
             {
                 mRuntimeManagerHandler->deinitialize();
                 delete mRuntimeManagerHandler;
-		mRuntimeManagerHandler = nullptr;
+                mRuntimeManagerHandler = nullptr;
             }
-	}
+        }
 
         bool RequestHandler::launch(ApplicationContext* context, const string& launchIntent, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState, string& errorReason)
 	{

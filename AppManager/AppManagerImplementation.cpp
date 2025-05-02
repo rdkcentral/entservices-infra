@@ -452,21 +452,21 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
 Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const string& intent , const string& launchArgs)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
+    // PackageInfo packageData;
+    // Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
     LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
     if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = packageLock(appId, packageData, lockReason);
-        if (status == Core::ERROR_NONE)
-        {
+        // status = packageLock(appId, packageData, lockReason); todo remove, for testing
+        // if (status == Core::ERROR_NONE)
+        // {
             status = mLifecycleInterfaceConnector->launch(appId, intent, launchArgs);
-        }
+        // }
     }
     mAdminLock.Unlock();
-
+    LOGERR("mLifecycleInterfaceConnector is %s",((nullptr != mLifecycleInterfaceConnector) ? "valid": "null"));
     LOGINFO(" LaunchApp returns with status %d", status);
     return status;
 }
@@ -555,10 +555,10 @@ Core::hresult AppManagerImplementation::KillApp(const string& appId)
     if (nullptr != mLifecycleInterfaceConnector)
     {
         status = mLifecycleInterfaceConnector->killApp(appId);
-        if(status == Core::ERROR_NONE)
-        {
-            status = packageUnLock(appId);
-        }
+        // if(status == Core::ERROR_NONE)
+        // {
+        //     status = packageUnLock(appId);
+        // }
     }
     mAdminLock.Unlock();
 

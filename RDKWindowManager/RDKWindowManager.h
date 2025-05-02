@@ -72,6 +72,12 @@ namespace WPEFramework {
                         Exchange::JRDKWindowManager::Event::OnUserInactivity(_parent, minutes);
                     }
 
+                    // void OnDisconnected(const std::string& client) override
+                    // {
+                    //     LOGINFO("OnDisconnected");
+                    //     Exchange::JRDKWindowManager::Event::OnDisconnected(_parent, client);
+                    // }
+
                 private:
                     RDKWindowManager& _parent;
             };

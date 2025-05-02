@@ -179,6 +179,7 @@ namespace WPEFramework
 
                 if (nullptr != mLifecycleManagerRemoteObject)
                 {
+                    LOGINFO(" Shreyas appmanager appInstanceId %s", appInstanceId.c_str());
                     status = mLifecycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
                                                                   enableDebugger, Exchange::ILifecycleManager::LifecycleState::ACTIVE, launchArgs, appInstanceId, errorReason, success);
 

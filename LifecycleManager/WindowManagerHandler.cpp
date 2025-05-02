@@ -68,29 +68,8 @@ void WindowManagerHandler::terminate()
     mWindowManager = nullptr;
 }
 
-bool WindowManagerHandler::createDisplay(const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchArgs, const string& displayName, string& errorReason)
-{
-    JsonObject displayParams;
-    displayParams["client"] = runtimeAppId;
-    displayParams["displayName"] = displayName;
 
-    uint32_t userId=0, groupId=0;
-    generateUserId(userId, groupId);
-
-    displayParams["ownerId"] = userId;
-    displayParams["groupId"] = groupId;
-    string displayParamsString;
-    displayParams.ToString(displayParamsString);
-    Core::hresult createDisplayResult = mWindowManager->CreateDisplay(displayParamsString);
-    if (Core::ERROR_NONE != createDisplayResult)
-    {
-        errorReason = "unable to create display for application";
-        return false;
-    }
-    return true;
-}
-
-std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
+std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName() //todo wst-appid
 {
     std::pair<std::string, std::string> name;
 
@@ -128,7 +107,7 @@ std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
     std::ifstream f("/tmp/specchange");
     if (f.good())
     {
-        name.second.assign("testdisplay");
+        name.second.assign("testdisplay365");
         f.close();
     }
     else
@@ -147,7 +126,7 @@ std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
             buf[9 + i] = 'a' + dis(gen);
 
         // sanity check we don't already have a socket with the same name
-        if (faccessat(xdgRuntimeDirFd, buf, F_OK, 0) != 0)
+        if (faccessat(xdgRuntimeDirFd, buf, F_OK, 0) != 0) //todo required for wst-appinstanceid?
         {
             name.second.assign(buf);
             break;
@@ -159,7 +138,7 @@ std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
         printf("failed to close XDG_RUNTIME_DIR \n");
         fflush(stdout);
     }
-
+    LOGINFO("Shreyas Generated display name [%s] for display [%s] \n", name.second.c_str(), name.first.c_str());
     return name;
 }
 
@@ -167,24 +146,11 @@ void WindowManagerHandler::WindowManagerNotification::OnUserInactivity(const dou
 {
 }
 
-void WindowManagerHandler::generateUserId(uint32_t& userId, uint32_t& groupId)
+void WindowManagerHandler::WindowManagerNotification::OnDisconnected(const std::string& client)
 {
-    //TODO Generate userid and groupid in random way
-    userId = 30490;
-    FILE* fp = fopen("/tmp/appuid", "r");
-    if (fp != NULL)
-    {
-        char* line = NULL;
-        size_t len = 0;
-        while ((getline(&line, &len, fp)) != -1)
-        {
-            userId = atoi(line);
-            break;
-        }
-        fclose(fp);
-    }
-    groupId = 30000;
+    LOGINFO("Shreyas LCM WindowManagerNotification::OnDisconnected client: %s", client.c_str());    
 }
+
 
 } // namespace Plugin
 } // namespace WPEFramework

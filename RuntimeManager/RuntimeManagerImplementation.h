@@ -27,6 +27,7 @@
 #include <mutex>
 #include <interfaces/IOCIContainer.h>
 #include <interfaces/IStorageManager.h>
+#include "WindowManagerConnector.h"
 #include <condition_variable>
 #include "ApplicationConfiguration.h"
 
@@ -199,6 +200,7 @@ namespace WPEFramework
                 std::vector<std::shared_ptr<WPEFramework::Plugin::RuntimeManagerImplementation::OCIContainerRequest>> mContainerRequest;
                 std::condition_variable mContainerQueueCV;
                 Exchange::IStorageManager *mStorageManagerObject;
+                WindowManagerConnector* mWindowManagerConnector;
 
             private: /* internal methods */
                 void dispatchEvent(RuntimeEventType, const JsonValue &params);

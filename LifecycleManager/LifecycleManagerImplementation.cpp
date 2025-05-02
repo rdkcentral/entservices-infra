@@ -29,7 +29,7 @@ namespace WPEFramework
 
         LifecycleManagerImplementation::LifecycleManagerImplementation(): mLifecycleManagerNotification(), mLifecycleManagerStateNotification(), mLoadedApplications(), mService(nullptr)
         {
-            LOGINFO("Create LifecycleManagerImplementation Instance");
+            LOGINFO(" Shreyas Create LifecycleManagerImplementation Instance");
         }
 
         LifecycleManagerImplementation::~LifecycleManagerImplementation()
@@ -41,6 +41,7 @@ namespace WPEFramework
         bool LifecycleManagerImplementation::initialize(PluginHost::IShell* service)
         {
             bool ret = RequestHandler::getInstance()->initialize(service, this);
+            LOGINFO(" Shreyas Init LCM " );
 	    return ret;
         }
 
@@ -227,12 +228,15 @@ namespace WPEFramework
             ApplicationContext* context = getContext(appId, "");
             if (nullptr == context)
 	    {
+            LOGINFO("Shreyas lcm  appinstance id %s ", appInstanceId.c_str());
                 context = new ApplicationContext(appId);
                 WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
                 std::pair<std::string, std::string> displayDetails;
                 if (nullptr != windowManagerHandler)
                 {
+                    LOGINFO("Shreyas lcm 2 appinstance id %s ", appInstanceId.c_str());
                     displayDetails = windowManagerHandler->generateDisplayName();
+                    LOGINFO(" Shreyas displayDetails.first %s displayDetails.second %s", displayDetails.first.c_str(), displayDetails.second.c_str());
 		    if (displayDetails.first.empty() || displayDetails.second.empty())
 		    {
                         if (nullptr != context)
@@ -245,6 +249,7 @@ namespace WPEFramework
                         return status;
 		    }
                 }
+                LOGINFO("Shreyas lcm 3 appinstance id %s ", appInstanceId.c_str());
                 context->setApplicationLaunchParams(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, launchIntent, environmentVars, enableDebugger, launchArgs, displayDetails.first, displayDetails.second);
 		mLoadedApplications.push_back(context);
 	    }
@@ -259,6 +264,7 @@ namespace WPEFramework
 	    {
                 appInstanceId = context->getAppInstanceId();
             }
+            LOGINFO("Shreyas lcm 4 appinstance id %s ", context->getAppInstanceId().c_str());
             return status;
         }
         

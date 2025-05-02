@@ -18,8 +18,8 @@
 **/
 
 #include "StateHandler.h"
-#include <interfaces/IRDKWindowManager.h>
 #include "RuntimeManagerHandler.h"
+#include "WindowManagerHandler.h"
 #include "RequestHandler.h"
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -36,16 +36,7 @@ namespace WPEFramework
 
         bool InitializingState::handle(string& errorReason)
         {
-            WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
-            bool result = false;
-            if (nullptr != windowManagerHandler)
-            {
-                ApplicationContext* context = getContext();
-                ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
-                result = windowManagerHandler->createDisplay(launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchArgs, launchParams.mDisplayName, errorReason);
-            }
-
-            return result;
+            return true;
         }
 
         bool RunRequestedState::handle(string& errorReason)
@@ -58,9 +49,13 @@ namespace WPEFramework
 
                 boost::uuids::uuid tag = boost::uuids::random_generator()();
                 std::string generatedInstanceId =  boost::uuids::to_string(tag);
+                LOGINFO("Shreyas Generated appinstanceid in LCM State.cpp %s", generatedInstanceId.c_str());
                 context->setAppInstanceId(generatedInstanceId);
 
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
+                launchParams.mDisplayName="wst-"+generatedInstanceId;
+                launchParams.mDisplayName="testdisplay";
+                LOGINFO("SHreyas displayname passed is %s", launchParams.mDisplayName.c_str());
 
                 ret = runtimeManagerHandler->run(context->getAppId(), generatedInstanceId, launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, launchParams.mLaunchArgs, launchParams.mXdgRuntimeDir, launchParams.mDisplayName, errorReason);
 	    }

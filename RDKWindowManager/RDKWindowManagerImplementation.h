@@ -71,7 +71,8 @@ namespace Plugin {
     public:
         enum Event {
                 RDK_WINDOW_MANAGER_EVENT_UNKNOWN,
-                RDK_WINDOW_MANAGER_EVENT_ON_USER_INACTIVITY
+                RDK_WINDOW_MANAGER_EVENT_ON_USER_INACTIVITY//,
+                // RDK_WINDOW_MANAGER_EVENT_APPLICATION_DISCONNECTED
             };
 
         class EXTERNAL Job : public Core::IDispatch {
@@ -169,6 +170,7 @@ namespace Plugin {
 
             /* Events listeners */
             virtual void onUserInactive(const double minutes);
+            virtual void onApplicationDisconnected(const std::string& client);
 
           private:
               RDKWindowManagerImplementation *mRDKWindowManagerImpl;

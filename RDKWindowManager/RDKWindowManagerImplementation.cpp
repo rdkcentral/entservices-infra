@@ -418,6 +418,17 @@ void RDKWindowManagerImplementation::Dispatch(Event event, const JsonValue param
              }
          break;
 
+
+        //  case RDK_WINDOW_MANAGER_EVENT_APPLICATION_DISCONNECTED:
+        //      while (index != mRDKWindowManagerNotification.end())
+        //      {
+        //          LOGINFO("RDKWindowManager Dispatch OnDisconnected client: %s", params.String().c_str());
+ 
+        //          (*index)->OnDisconnected(params.String());
+        //          ++index;
+        //      }
+        //      break;
+
          default:
              LOGWARN("Event[%u] not handled", event);
              break;
