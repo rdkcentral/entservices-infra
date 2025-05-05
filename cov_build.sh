@@ -1,5 +1,6 @@
 #!/bin/bash
 set -x
+set -e
 ##############################
 GITHUB_WORKSPACE="${PWD}"
 ls -la ${GITHUB_WORKSPACE}
@@ -30,6 +31,7 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/rdk/iarmmgrs-hal \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/ccec/drivers \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/network \
+-I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/libusb \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/devicesettings.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Iarm.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Rfc.h \
@@ -39,7 +41,6 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/pkg.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/maintenanceMGR.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/secure_wrappermock.h \
--include ${GITHUB_WORKSPACED}/entservices-testframework/Tests/mocks/libusb.h \
 --coverage -Wall -Werror -Wno-error=format \
 -Wl,-wrap,system -Wl,-wrap,popen -Wl,-wrap,syslog \
 -DENABLE_TELEMETRY_LOGGING -DUSE_IARMBUS \
@@ -51,4 +52,3 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 
 cmake --build build/entservices-infra --target install
 echo "======================================================================================"
-exit 0
