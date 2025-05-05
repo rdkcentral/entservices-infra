@@ -72,6 +72,11 @@ void WindowManagerHandler::WindowManagerNotification::OnUserInactivity(const dou
 {
 }
 
+void WindowManagerHandler::WindowManagerNotification::OnDisconnected(const std::string& client)
+{
+    LOGINFO("Shreyas LCM WindowManagerNotification::OnDisconnected client: %s", client.c_str());
+}
+
 //TODO
 /*
 void WindowManagerHandler::WindowManagerNotification::OnReady(std::string appId)

@@ -38,6 +38,7 @@ namespace WPEFramework
         , mCurrentservice(nullptr)
         , mContainerWorkerThread()
         ,mStorageManagerObject(nullptr)
+        , mWindowManagerConnector(nullptr)
         {
             LOGINFO("Create RuntimeManagerImplementation Instance");
             if (nullptr == RuntimeManagerImplementation::_instance)
@@ -81,6 +82,13 @@ namespace WPEFramework
             if (nullptr != mStorageManagerObject)
             {
                 releaseStorageManagerPluginObject();
+            }
+
+            if (nullptr != mWindowManagerConnector)
+            {
+                mWindowManagerConnector->releasePlugin();
+                delete mWindowManagerConnector;
+                mWindowManagerConnector = nullptr;
             }
         }
 
@@ -484,6 +492,13 @@ namespace WPEFramework
                     LOGERR("Failed to create Storage Manager Object");
                 }
 
+                /* Create Window Manager Plugin Object */
+                mWindowManagerConnector = new WindowManagerConnector();
+                if (false == mWindowManagerConnector->initializePlugin(service))
+                {
+                    LOGERR("Failed to create Window Manager Connector Object");
+                }
+
                 /* Create the worker thread */
                 try
                 {
@@ -744,6 +759,30 @@ err_ret:
                     config.mAppStorageInfo.used = std::move(appStorageInfo.used);
                 }
             }
+
+            /* Creating Display */
+            if(nullptr != mWindowManagerConnector)
+            {
+
+                mWindowManagerConnector->getDisplayInfo(appInstanceId, xdgRuntimeDir, waylandDisplay);
+                bool displayResult = mWindowManagerConnector->createDisplay(appInstanceId, waylandDisplay, userId, groupId);
+                if(false == displayResult)
+                {
+                    LOGERR("Failed to create display");
+                    status = Core::ERROR_GENERAL;
+                }
+                else
+                {
+                    LOGINFO("Display [%s] created successfully", waylandDisplay.c_str());
+                }
+
+            }
+            else
+            {
+                LOGERR("WindowManagerConnector is null");
+                status = Core::ERROR_GENERAL;
+            }
+
 
             if (xdgRuntimeDir.empty() || waylandDisplay.empty())
             {
