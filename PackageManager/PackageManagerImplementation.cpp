@@ -51,8 +51,7 @@ namespace Plugin {
 
         std::list<Exchange::IPackageInstaller::INotification*>::iterator index(mInstallNotifications.begin());
         {
-            while (index != mInstallNotifications.end())
-            {
+            while (index != mInstallNotifications.end()) {
                 (*index)->Release();
                 index++;
             }
@@ -63,8 +62,7 @@ namespace Plugin {
 
         std::list<Exchange::IPackageDownloader::INotification*>::iterator itDownloader(mDownloaderNotifications.begin());
         {
-            while (itDownloader != mDownloaderNotifications.end())
-            {
+            while (itDownloader != mDownloaderNotifications.end()) {
                 (*itDownloader)->Release();
                 itDownloader++;
             }
@@ -79,7 +77,7 @@ namespace Plugin {
 
         mAdminLock.Lock();
         ASSERT(std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification) == mDownloaderNotifications.end());
-        if(std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification) == mDownloaderNotifications.end()){
+        if (std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification) == mDownloaderNotifications.end()) {
             mDownloaderNotifications.push_back(notification);
             notification->AddRef();
         }
@@ -101,11 +99,10 @@ namespace Plugin {
 
         mAdminLock.Lock();
         auto item = std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification);
-        if(item != mDownloaderNotifications.end()){
+        if (item != mDownloaderNotifications.end()) {
             notification->Release();
             mDownloaderNotifications.erase(item);
-        }
-        else {
+        } else {
             result = Core::ERROR_GENERAL;
         }
         mAdminLock.Unlock();
@@ -117,47 +114,50 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_GENERAL;
         LOGINFO();
 
-        if (service != nullptr)
-        {
+        if (service != nullptr) {
             mCurrentservice = service;
             mCurrentservice->AddRef();
-            if (Core::ERROR_NONE != createStorageManagerObject())
-            {
+            if (Core::ERROR_NONE != createStorageManagerObject()) {
                 LOGERR("Failed to create createStorageManagerObject");
-            }
-            else
-            {
+            } else {
                 LOGINFO("created createStorageManagerObject");
                 result = Core::ERROR_NONE;
             }
 
+            string configStr = service->ConfigLine().c_str();
             LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
             PackageManagerImplementation::Configuration config;
             config.FromString(service->ConfigLine());
             downloadDir = config.downloadDir;
             LOGINFO("downloadDir=%s", downloadDir.c_str());
-        }
-        else
-        {
+
+            #ifdef USE_LIBPACKAGE
+            packagemanager::ConfigMetadataArray aConfigMetadata;
+            packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+            #endif
+
+        } else {
             LOGERR("service is null \n");
         }
 
         return result;
     }
+
+    Core::hresult PackageManagerImplementation::Deinitialize(PluginHost::IShell* service) {
+        Core::hresult result = Core::ERROR_NONE;
+        LOGINFO();
+        return result;
+    }
+
     Core::hresult PackageManagerImplementation::createStorageManagerObject()
     {
         Core::hresult status = Core::ERROR_GENERAL;
 
-        if (nullptr == mCurrentservice)
-        {
+        if (nullptr == mCurrentservice) {
             LOGERR("mCurrentservice is null \n");
-        }
-        else if (nullptr == (mStorageManagerObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::IStorageManager>("org.rdk.StorageManager")))
-        {
+        } else if (nullptr == (mStorageManagerObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::IStorageManager>("org.rdk.StorageManager"))) {
             LOGERR("mStorageManagerObject is null \n");
-        }
-        else
-        {
+        } else {
             LOGINFO("created StorageManager Object\n");
             status = Core::ERROR_NONE;
         }
@@ -167,19 +167,11 @@ namespace Plugin {
     void PackageManagerImplementation::releaseStorageManagerObject()
     {
         ASSERT(nullptr != mStorageManagerObject);
-        if(mStorageManagerObject)
-        {
+        if(mStorageManagerObject) {
             mStorageManagerObject->Release();
             mStorageManagerObject = nullptr;
         }
     }
-
-    void PackageManagerImplementation::Deinitialize(PluginHost::IShell* service) {
-        LOGINFO();
-
-    }
-
-
 
     // IPackageDownloader methods
     Core::hresult PackageManagerImplementation::Download(const string& url, const bool priority, const uint32_t retries, const uint64_t rateLimit, string &downloadId)
@@ -299,32 +291,27 @@ namespace Plugin {
         LOGTRACE("Installing %s", packageId.c_str());
 
         mAdminLock.Lock();
-        if (nullptr == mStorageManagerObject)
-        {
-            if (Core::ERROR_NONE != createStorageManagerObject())
-            {
+        if (nullptr == mStorageManagerObject) {
+            if (Core::ERROR_NONE != createStorageManagerObject()) {
                 LOGERR("Failed to create StorageManager");
             }
         }
         ASSERT (nullptr != mStorageManagerObject);
-        if (nullptr != mStorageManagerObject)
-        {
+        if (nullptr != mStorageManagerObject) {
             string path = "";
             string errorReason = "";
-            if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE)
-            {
+            if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
                 LOGINFO("CreateStorage path [%s]", path.c_str());
                 NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
 #ifdef USE_LIBPACKAGE
-                packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator);
+                packagemanager::ConfigMetaData config;
+                packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator, config);
                 if (pmResult == packagemanager::SUCCESS) {
                     result = Core::ERROR_NONE;
                 }
 #endif
                 NotifyInstallStatus(packageId, version, InstallState::INSTALLED);
-            }
-            else
-            {
+            } else {
                 LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
             }
         }
@@ -340,34 +327,28 @@ namespace Plugin {
         LOGTRACE("Uninstalling %s", packageId.c_str());
 
         mAdminLock.Lock();
-        if (nullptr == mStorageManagerObject)
-        {
+        if (nullptr == mStorageManagerObject) {
             LOGINFO("Create StorageManager object");
-            if (Core::ERROR_NONE != createStorageManagerObject())
-            {
+            if (Core::ERROR_NONE != createStorageManagerObject()) {
                 LOGERR("Failed to create StorageManager");
             }
         }
         ASSERT (nullptr != mStorageManagerObject);
-        if (nullptr != mStorageManagerObject)
-        {
-            if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE)
-            {
+        if (nullptr != mStorageManagerObject) {
+            if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
                 LOGINFO("DeleteStorage done");
                 NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
 #ifdef USE_LIBPACKAGE
+                // XXX: what if DeleteStorage(), who Uninstall the package
                 packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
                 if (pmResult == packagemanager::SUCCESS) {
                     result = Core::ERROR_NONE;
                 }
 #endif
                 NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
-            }
-            else
-            {
+            } else {
                 LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
             }
-
         }
 
         mAdminLock.Unlock();
@@ -414,11 +395,11 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, string &config) {
+    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGTRACE();
-        config = "foo";
+        // XXX: will return configMetadata after metaDAta caching is done
 
         return result;
     }
@@ -439,7 +420,7 @@ namespace Plugin {
         ASSERT(notification != nullptr);
         mAdminLock.Lock();
         ASSERT(std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end());
-        if(std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end()){
+        if (std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end()) {
             mInstallNotifications.push_back(notification);
             notification->AddRef();
         }
@@ -454,7 +435,7 @@ namespace Plugin {
         LOGINFO();
         mAdminLock.Lock();
         auto item = std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification);
-        if(item != mInstallNotifications.end()){
+        if (item != mInstallNotifications.end()) {
             notification->Release();
             mInstallNotifications.erase(item);
         }
@@ -468,7 +449,7 @@ namespace Plugin {
 
     // IPackageHandler methods
     Core::hresult PackageManagerImplementation::Lock(const string &packageId, const string &version, const Exchange::IPackageHandler::LockReason &lockReason,
-        uint32_t &lockId, string &unpackedPath, string& configMetadata, string& appMetadata
+        uint32_t &lockId, string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& appMetadata
         )
     {
         Core::hresult result = Core::ERROR_NONE;
@@ -482,11 +463,20 @@ namespace Plugin {
             if (locked)  {
                 lockId = ++mLockCount[packageId];
             } else {
-                packagemanager::ConfigMetaData configMetadata;
-                packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, configMetadata);
+                packagemanager::ConfigMetaData config;
+                packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, config);
                 if (pmResult == packagemanager::SUCCESS) {
                     lockId = ++mLockCount[packageId];
                     LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
+                    configMetadata.dial = config.dial;
+                    configMetadata.wanLanAccess = config.wanLanAccess;
+                    configMetadata.thunder = config.thunder;
+                    configMetadata.systemMemoryLimit = config.systemMemoryLimit;
+                    configMetadata.gpuMemoryLimit = config.gpuMemoryLimit;
+
+                    configMetadata.userId = config.userId;
+                    configMetadata.groupId = config.groupId;
+                    configMetadata.dataImageSize = config.dataImageSize;
                 } else {
                     LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
                     result = Core::ERROR_GENERAL;
@@ -521,11 +511,12 @@ namespace Plugin {
     }
 
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
-        string &unpackedPath, string& configMetadata, string& gatewayMetadataPath, bool &locked) {
+        string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& gatewayMetadataPath, bool &locked) {
 
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
+        // XXX: will return configMetadata after metaDAta caching is done
 
         #ifdef USE_LIBPACKAGE
         packagemanager::Result pmResult = packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
@@ -554,7 +545,8 @@ namespace Plugin {
                         LOGTRACE("waitTime=%d retry %d/%d", waitTime, i, di->GetRetries());
                         std::this_thread::sleep_for(std::chrono::seconds(waitTime));
                     }
-                    LOGTRACE("Downloading id=%s url=%s file=%s ", di->GetId().c_str(), di->GetUrl().c_str(), di->GetFileLocator().c_str());
+                    LOGTRACE("Downloading id=%s url=%s file=%s rateLimit=%ld",
+                        di->GetId().c_str(), di->GetUrl().c_str(), di->GetFileLocator().c_str(), di->GetRateLimit());
                     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                     status = mHttpClient->downloadFile(di->GetUrl(), di->GetFileLocator(), di->GetRateLimit());
                     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

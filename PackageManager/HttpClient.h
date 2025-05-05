@@ -21,6 +21,8 @@
 #include <string>
 #include <curl/curl.h>
 
+#include "UtilsLogging.h"
+
 class HttpClient {
     public:
         enum Status {
@@ -38,9 +40,8 @@ class HttpClient {
         void resume() { curl_easy_pause(curl, CURLPAUSE_CONT); }
         void cancel() { bCancel = true; }
         void setRateLimit(uint32_t rateLimit) {
-            if (rateLimit > 0) {
-                (void) curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, (curl_off_t)rateLimit);
-            }
+            LOGDBG("curl rateLimit set to %d", rateLimit);
+            (void) curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, (curl_off_t)rateLimit);
         }
         int getProgress() { return progress; }
 
