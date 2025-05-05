@@ -97,7 +97,7 @@ namespace Plugin {
     private:
         mutable std::mutex mStorageManagerImplLock;
         static std::mutex mStorageSizeLock;
-        static std::map<std::string, StorageAppInfo> mStorageAppInfo;  /* Map storing app storage info for each appId */
+        std::map<std::string, StorageAppInfo> mStorageAppInfo;  /* Map storing app storage info for each appId */
         Config _config;
         PluginHost::IShell* mCurrentservice;
         std::string mBaseStoragePath;                           /* Base path for the app storage */
