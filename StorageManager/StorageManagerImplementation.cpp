@@ -588,7 +588,6 @@ namespace Plugin {
         else
         {
         auto it = mStorageAppInfo.find(appId);
-        for(auto itr:mStorageAppInfo.end()) LOGINFO("VEEKSHA mStorageAppInfo.path();
         if(it != mStorageAppInfo.end())
         {
             const std::string path = it->second.path;
@@ -626,13 +625,13 @@ namespace Plugin {
 
         auto it = mStorageAppInfo.find(appId);
         if (mStorageAppInfo.empty()) {
-    LOGINFO("No app IDs currently in storage info");
-} else {
-    LOGINFO("Current app IDs in storage info:");
-    for (const auto& pair : mStorageAppInfo) {
-        LOGINFO("  - %s", pair.first.c_str());
-    }
-}
+        LOGINFO("No app IDs currently in storage info");
+        } else {
+            LOGINFO("Current app IDs in storage info:");
+            for (const auto& pair : mStorageAppInfo) {
+                LOGINFO("  - %s", pair.first.c_str());
+            }
+        }
 
         if (it == mStorageAppInfo.end())
         {
