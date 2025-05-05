@@ -625,6 +625,15 @@ namespace Plugin {
         LOGINFO("lockAppStorageInfo");
 
         auto it = mStorageAppInfo.find(appId);
+        if (mStorageAppInfo.empty()) {
+    LOGINFO("No app IDs currently in storage info");
+} else {
+    LOGINFO("Current app IDs in storage info:");
+    for (const auto& pair : mStorageAppInfo) {
+        LOGINFO("  - %s", pair.first.c_str());
+    }
+}
+
         if (it == mStorageAppInfo.end())
         {
             LOGERR("App ID %s not found in storage info", appId.c_str());
