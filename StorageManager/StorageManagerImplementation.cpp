@@ -622,6 +622,7 @@ namespace Plugin {
         bool status = false;
 
         LOGINFO("lockAppStorageInfo");
+        LOGINFO("VEEKSHA lockAppStorageInfo appId is :%s",appId);
 
         auto it = mStorageAppInfo.find(appId);
         if (mStorageAppInfo.empty()) {
