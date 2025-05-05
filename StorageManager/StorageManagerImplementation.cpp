@@ -411,6 +411,8 @@ namespace Plugin {
                 if (createAppStorageInfoByAppID(appId, storageInfo))
                 {
                     LOGINFO("Created storage at appDir: %s", appDir.c_str());
+                    LOGINFO("VEEKSHA storageInfo.path: %s", storageInfo.path);
+                    LOGINFO("VEEKSHA storageInfo.quotaKB: %d", storageInfo.quotaKB);
                     path = std::move(appDir);
                     status = Core::ERROR_NONE;
                     errorReason = "";
@@ -586,6 +588,7 @@ namespace Plugin {
         else
         {
         auto it = mStorageAppInfo.find(appId);
+        for(auto itr:mStorageAppInfo.end()) LOGINFO("VEEKSHA mStorageAppInfo.path();
         if(it != mStorageAppInfo.end())
         {
             const std::string path = it->second.path;
