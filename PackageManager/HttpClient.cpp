@@ -21,7 +21,6 @@
 #include <math.h>
 
 #include "Module.h"
-#include "UtilsLogging.h"
 
 #include "HttpClient.h"
 
