@@ -370,7 +370,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
                     }
                     if ((nullptr != mPackageManagerHandlerObject) && (!packageData.version.empty()))
                     {
-                        status = mPackageManagerHandlerObject->Lock(appId, packageData.version, lockReason, packageData.lockId, packageData.unpackedPath, packageData.configMetadata, packageData.appMetadata );
+                        //status = mPackageManagerHandlerObject->Lock(appId, packageData.version, lockReason, packageData.lockId, packageData.unpackedPath, packageData.configMetadata, packageData.appMetadata );
                         if(status == Core::ERROR_NONE)
                         {
                             LOGINFO("Fetching package entry updated for appId: %s " \
@@ -452,18 +452,18 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
 Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const string& intent , const string& launchArgs)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
+    // PackageInfo packageData;
+    // Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
     LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
     if (nullptr != mLifecycleInterfaceConnector)
     {
-        status = packageLock(appId, packageData, lockReason);
-        if (status == Core::ERROR_NONE)
-        {
+        // status = packageLock(appId, packageData, lockReason);
+        // if (status == Core::ERROR_NONE)
+        // {
             status = mLifecycleInterfaceConnector->launch(appId, intent, launchArgs);
-        }
+        // }
     }
     mAdminLock.Unlock();
 
@@ -555,10 +555,10 @@ Core::hresult AppManagerImplementation::KillApp(const string& appId)
     if (nullptr != mLifecycleInterfaceConnector)
     {
         status = mLifecycleInterfaceConnector->killApp(appId);
-        if(status == Core::ERROR_NONE)
-        {
-            status = packageUnLock(appId);
-        }
+        // if(status == Core::ERROR_NONE)
+        // {
+        //     status = packageUnLock(appId);
+        // }
     }
     mAdminLock.Unlock();
 
