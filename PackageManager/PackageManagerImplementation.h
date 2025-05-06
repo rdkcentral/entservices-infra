@@ -48,6 +48,16 @@ namespace Plugin {
     , public Exchange::IPackageInstaller
     , public Exchange::IPackageHandler
     {
+        private:
+        class State {
+            public:
+            State(const packagemanager::ConfigMetaData &config) {
+                PackageManagerImplementation::getRuntimeConfig(config, runtimeConfig);
+            }
+            Exchange::RuntimeConfig runtimeConfig;
+            uint32_t mLockCount = 0;
+        };
+        typedef std::pair<std::string, std::string> StateKey;
 
         class Configuration : public Core::JSON::Container {
             public:
@@ -66,7 +76,7 @@ namespace Plugin {
 
             public:
                 Core::JSON::String downloadDir;
-            };
+        };
 
         class DownloadInfo {
             const unsigned MIN_RETRIES = 2;
@@ -139,6 +149,8 @@ namespace Plugin {
         Core::hresult GetLockedInfo(const string &packageId, const string &version, string &unpackedPath, Exchange::RuntimeConfig& configMetadata,
             string& gatewayMetadataPath, bool &locked) override;
 
+        static void getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig);
+        static void getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig);
 
         BEGIN_INTERFACE_MAP(PackageManagerImplementation)
             INTERFACE_ENTRY(Exchange::IPackageDownloader)
@@ -192,7 +204,8 @@ namespace Plugin {
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
-        std::map<std::string, int>  mLockCount;
+        std::map<StateKey, State>  mState;
+
         std::string downloadDir = "/opt/CDL/";
 
         #ifdef USE_LIBPACKAGE

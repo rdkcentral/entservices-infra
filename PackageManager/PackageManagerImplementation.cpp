@@ -134,6 +134,14 @@ namespace Plugin {
             #ifdef USE_LIBPACKAGE
             packagemanager::ConfigMetadataArray aConfigMetadata;
             packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+            LOGDBG("aConfigMetadata.count:%d", aConfigMetadata.size());
+            for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
+                //StateKey key {};
+                State state(it->second);
+                mState.insert( { it->first, state } );
+                LOGDBG("packageId: %s runtimeConfig.userId:%d", it->first.first.c_str(), state.runtimeConfig.userId);
+
+            }
             #endif
 
         } else {
@@ -303,13 +311,13 @@ namespace Plugin {
             if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
                 LOGINFO("CreateStorage path [%s]", path.c_str());
                 NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
-#ifdef USE_LIBPACKAGE
+                #ifdef USE_LIBPACKAGE
                 packagemanager::ConfigMetaData config;
                 packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator, config);
                 if (pmResult == packagemanager::SUCCESS) {
                     result = Core::ERROR_NONE;
                 }
-#endif
+                #endif
                 NotifyInstallStatus(packageId, version, InstallState::INSTALLED);
             } else {
                 LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
@@ -338,13 +346,13 @@ namespace Plugin {
             if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
                 LOGINFO("DeleteStorage done");
                 NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
-#ifdef USE_LIBPACKAGE
+                #ifdef USE_LIBPACKAGE
                 // XXX: what if DeleteStorage(), who Uninstall the package
                 packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
                 if (pmResult == packagemanager::SUCCESS) {
                     result = Core::ERROR_NONE;
                 }
-#endif
+                #endif
                 NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
             } else {
                 LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
@@ -395,20 +403,30 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) {
+    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig) {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGTRACE();
-        // XXX: will return configMetadata after metaDAta caching is done
-
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            getRuntimeConfig(state.runtimeConfig, runtimeConfig);
+        }
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::PackageLifecycleState &state) {
+    Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version,
+        Exchange::IPackageInstaller::PackageLifecycleState &lifecycleState) {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGTRACE();
-        state = INSTALLATION_BLOCKED;
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            lifecycleState = INSTALLED;
+            // XXX: ??? in-progress
+        } else {
+            lifecycleState = INSTALLATION_BLOCKED;
+        }
 
         return result;
     }
@@ -449,44 +467,72 @@ namespace Plugin {
 
     // IPackageHandler methods
     Core::hresult PackageManagerImplementation::Lock(const string &packageId, const string &version, const Exchange::IPackageHandler::LockReason &lockReason,
-        uint32_t &lockId, string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& appMetadata
+        uint32_t &lockId, string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& appMetadata
         )
     {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
 
-        #ifdef USE_LIBPACKAGE
-        bool locked = false;
-        string gatewayMetadataPath;
-        if (GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked) == Core::ERROR_NONE) {
-            if (locked)  {
-                lockId = ++mLockCount[packageId];
-            } else {
-                packagemanager::ConfigMetaData config;
-                packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, config);
-                if (pmResult == packagemanager::SUCCESS) {
-                    lockId = ++mLockCount[packageId];
-                    LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
-                    configMetadata.dial = config.dial;
-                    configMetadata.wanLanAccess = config.wanLanAccess;
-                    configMetadata.thunder = config.thunder;
-                    configMetadata.systemMemoryLimit = config.systemMemoryLimit;
-                    configMetadata.gpuMemoryLimit = config.gpuMemoryLimit;
-
-                    configMetadata.userId = config.userId;
-                    configMetadata.groupId = config.groupId;
-                    configMetadata.dataImageSize = config.dataImageSize;
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            #ifdef USE_LIBPACKAGE
+            bool locked = false;
+            string gatewayMetadataPath;
+            if (GetLockedInfo(packageId, version, unpackedPath, runtimeConfig, gatewayMetadataPath, locked) == Core::ERROR_NONE) {
+                getRuntimeConfig(state.runtimeConfig, runtimeConfig);
+                if (locked)  {
+                    lockId = ++state.mLockCount;
                 } else {
-                    LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
-                    result = Core::ERROR_GENERAL;
+                    packagemanager::ConfigMetaData config;
+                    packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, config);
+                    if (pmResult == packagemanager::SUCCESS) {
+                        lockId = ++state.mLockCount;
+                        LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
+                        //getRuntimeConfig(config, runtimeConfig);
+                    } else {
+                        LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
+                        result = Core::ERROR_GENERAL;
+                    }
                 }
             }
+            #endif
+
+            LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
+        } else {
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            result = Core::ERROR_BAD_REQUEST;
         }
-        #endif
-        LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), mLockCount[packageId]);
 
         return result;
+    }
+
+    // XXX: right way to do this is via copy ctor
+    void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig) {
+        runtimeConfig.dial = config.dial;
+        runtimeConfig.wanLanAccess = config.wanLanAccess;
+        runtimeConfig.thunder = config.thunder;
+        runtimeConfig.systemMemoryLimit = config.systemMemoryLimit;
+        runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
+
+        runtimeConfig.userId = config.userId;
+        runtimeConfig.groupId = config.groupId;
+        runtimeConfig.dataImageSize = config.dataImageSize;
+        LOGDBG("runtimeConfig.userId:%d", runtimeConfig.userId);
+    }
+
+    void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig) {
+        runtimeConfig.dial = config.dial;
+        runtimeConfig.wanLanAccess = config.wanLanAccess;
+        runtimeConfig.thunder = config.thunder;
+        runtimeConfig.systemMemoryLimit = config.systemMemoryLimit;
+        runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
+
+        runtimeConfig.userId = config.userId;
+        runtimeConfig.groupId = config.groupId;
+        runtimeConfig.dataImageSize = config.dataImageSize;
+        LOGDBG("runtimeConfig.userId:%d", runtimeConfig.userId);
     }
 
     Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version) {
@@ -494,37 +540,50 @@ namespace Plugin {
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
 
-        #ifdef USE_LIBPACKAGE
-        if (mLockCount[packageId]) {
-            packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
-            if (pmResult != packagemanager::SUCCESS) {
-                result = Core::ERROR_GENERAL;
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            #ifdef USE_LIBPACKAGE
+            if (state.mLockCount) {
+                packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
+                if (pmResult != packagemanager::SUCCESS) {
+                    result = Core::ERROR_GENERAL;
+                }
+                --state.mLockCount;
+            } else {
+                LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
             }
-            --mLockCount[packageId];
+            #endif
+            LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
-            LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            result = Core::ERROR_BAD_REQUEST;
         }
-        #endif
-        LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), mLockCount[packageId]);
 
         return result;
     }
 
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
-        string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& gatewayMetadataPath, bool &locked) {
+        string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked) {
 
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
-        // XXX: will return configMetadata after metaDAta caching is done
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            getRuntimeConfig(state.runtimeConfig, runtimeConfig);
 
-        #ifdef USE_LIBPACKAGE
-        packagemanager::Result pmResult = packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
-        if (pmResult != packagemanager::SUCCESS) {
-            result = Core::ERROR_GENERAL;
+            #ifdef USE_LIBPACKAGE
+            packagemanager::Result pmResult = packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
+            if (pmResult != packagemanager::SUCCESS) {
+                result = Core::ERROR_GENERAL;
+            }
+            #endif
+        } else {
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            result = Core::ERROR_BAD_REQUEST;
         }
-        #endif
-
         return result;
     }
 
