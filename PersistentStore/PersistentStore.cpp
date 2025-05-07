@@ -136,9 +136,13 @@ namespace Plugin {
             }
 
             auto connection = _service->RemoteConnection(_connectionId);
-            VARIABLE_IS_NOT_USED auto result = _store->Release();
+            //VARIABLE_IS_NOT_USED auto result = _store->Release();
+            if (_store->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                SYSLOG(Logging::Shutdown, (_T("PersistentStore Plugin is not properly destructed.")));
+            }
             _store = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            //ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
             if (connection != nullptr) {
                 connection->Terminate();
                 connection->Release();
