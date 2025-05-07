@@ -90,7 +90,6 @@ bool WindowManagerConnector::createDisplay(const string& appInstanceId , const s
     JsonObject displayParams;
     displayParams["client"] = appInstanceId;
     displayParams["displayName"] = displayName;
-    displayParams["focus"] = true; //remove
 
     displayParams["ownerId"] = userId;
     displayParams["groupId"] = groupId;
