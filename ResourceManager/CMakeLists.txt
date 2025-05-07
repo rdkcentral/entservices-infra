@@ -40,11 +40,15 @@ set_source_files_properties(ResourceManager.cpp PROPERTIES COMPILE_FLAGS "-fexce
 set(RESOURCE_MANAGER_INCLUDES $ENV{RESOURCE_MANAGER_INCLUDES})
 separate_arguments(RESOURCE_MANAGER_INCLUDES)
 include_directories(BEFORE ${RESOURCE_MANAGER_INCLUDES})
+include_directories(${CMAKE_SOURCE_DIR}/Tests/L1Tests)
+
 if (NOT RDK_SERVICES_L1_TEST)
         target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins -lessosrmgr ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
 else(RDK_SERVICES_L1_TEST)
         target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
 endif(RDK_SERVICES_L1_TEST)
+
+add_definitions(-DENABLE_L1TEST)
 
 install(TARGETS ${MODULE_NAME}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
