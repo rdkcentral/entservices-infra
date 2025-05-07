@@ -29,18 +29,21 @@
 #include <interfaces/IStorageManager.h>
 #include <condition_variable>
 #include "ApplicationConfiguration.h"
+#include "IEventHandler.h"
+#include "DobbyEventListener.h"
 
 namespace WPEFramework
 {
     namespace Plugin
     {
-        class RuntimeManagerImplementation : public Exchange::IRuntimeManager, public Exchange::IConfiguration
+        class RuntimeManagerImplementation : public Exchange::IRuntimeManager, public Exchange::IConfiguration, public IEventHandler
         {
             public:
                 enum RuntimeEventType
                 {
                     RUNTIME_MANAGER_EVENT_UNKNOWN = 0,
-                    RUNTIME_MANAGER_EVENT_STATECHANGED
+                    RUNTIME_MANAGER_EVENT_STATECHANGED,
+                    RUNTIME_MANAGER_EVENT_OCICONTAINER
                 };
                 enum class OCIRequestType
                 {
@@ -175,6 +178,9 @@ namespace WPEFramework
                 // IConfiguration methods
                 uint32_t Configure(PluginHost::IShell* service) override;
 
+                // IEventHandler methods
+                virtual void onOCIContainerEvent(std::string name, JsonObject& data) override;
+
             private: /* private methods */
                 Core::hresult createOCIContainerPluginObject(Exchange::IOCIContainer*& ociContainerRemoteObject);
                 void releaseOCIContainerPluginObject(Exchange::IOCIContainer*& ociContainerRemoteObject);
@@ -199,12 +205,14 @@ namespace WPEFramework
                 std::vector<std::shared_ptr<WPEFramework::Plugin::RuntimeManagerImplementation::OCIContainerRequest>> mContainerRequest;
                 std::condition_variable mContainerQueueCV;
                 Exchange::IStorageManager *mStorageManagerObject;
+                DobbyEventListener *mDobbyEventListener;
 
             private: /* internal methods */
                 void dispatchEvent(RuntimeEventType, const JsonValue &params);
                 void Dispatch(RuntimeEventType event, const JsonValue params);
                 void OCIContainerWorkerThread(void);
                 void generateUserId(uint32_t& userId, uint32_t& groupId);
+                void handleOCIContainerEvent(const std::string name, const JsonObject& data);
 
                 friend class Job;
 

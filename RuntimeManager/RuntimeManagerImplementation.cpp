@@ -264,6 +264,9 @@ namespace WPEFramework
 
             std::list<Exchange::IRuntimeManager::INotification*>::const_iterator index(mRuntimeManagerNotification.begin());
 
+            JsonObject obj;
+            string eventName;
+
             switch (event)
             {
                 case RUNTIME_MANAGER_EVENT_STATECHANGED:
@@ -275,7 +278,11 @@ namespace WPEFramework
                     ++index;
                 }
                 break;
-
+                case RUNTIME_MANAGER_EVENT_OCICONTAINER:
+                    obj = params.Object();
+                    eventName = obj["eventName"];
+                    handleOCIContainerEvent(eventName,obj);
+                    break;
                 default:
                     LOGWARN("Event[%u] not handled", event);
                 break;
@@ -530,6 +537,12 @@ namespace WPEFramework
                 {
                     LOGINFO("Successfully created OCI Container Object");
                     status = Core::ERROR_NONE;
+                    /* Initialize OCIContatiner Connector to listen to Dobby Events */
+                    mDobbyEventListener = new DobbyEventListener();
+                    if (Core::ERROR_NONE != mDobbyEventListener->initialize(mCurrentservice, this, ociContainerObject))
+                    {
+                        LOGERR("Failed to initialize DobbyEVentListener");
+                    }
                     break;
                 }
             } while (retryCount < MAX_OCI_OBJECT_CREATION_RETRIES);
@@ -548,6 +561,13 @@ err_ret:
             if(ociContainerObject)
             {
                 LOGINFO("releaseOCIContainerPluginObject\n");
+                /* Deinitialize DobbyEventListener */
+                if (nullptr != mDobbyEventListener)
+                {
+                    mDobbyEventListener->deinitialize();
+                    delete mDobbyEventListener;
+                    mDobbyEventListener = nullptr;
+                }
                 ociContainerObject->Release();
                 ociContainerObject = nullptr;
             }
@@ -979,6 +999,38 @@ err_ret:
         	fclose(fp);
             }
             groupId = 30000;
+        }
+
+        void RuntimeManagerImplementation::onOCIContainerEvent(std::string name, JsonObject& data)
+        {
+            dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_OCICONTAINER, data);
+        }
+
+        void RuntimeManagerImplementation::handleOCIContainerEvent(const std::string eventName, const JsonObject& data)
+        {
+            LOGINFO("Runtime Manager received OCIContainer Event: %s", eventName.c_str());
+            if (eventName == "onContainerStarted")
+            {
+                LOGINFO("Received OCIContainer Event: %s", eventName.c_str());
+            }
+            else if (eventName == "onContainerStopped")
+            {
+                LOGINFO("Received OCIContainer Event: %s", eventName.c_str());
+            }
+            else if (eventName == "onContainerFailed")
+            {
+                string errorReason = data["errorCode"];
+                LOGINFO("Received OCIContainer Event: %s errorReason: %s", eventName.c_str(), errorReason.c_str());
+            }
+            else if (eventName == "onContainerStateChanged")
+            {
+                string containerState = data["state"];
+                LOGINFO("Received OCIContainer Event: %s containerState: %s", eventName.c_str(), containerState.c_str());
+            }
+            else
+            {
+                LOGERR("Unknown OCIContainer Event: %s", eventName.c_str());
+            }
         }
     } /* namespace Plugin */
 } /* namespace WPEFramework */
