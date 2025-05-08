@@ -73,6 +73,12 @@ bool WindowManagerHandler::createDisplay(const string& appPath, const string& ap
     JsonObject displayParams;
     displayParams["client"] = runtimeAppId;
     displayParams["displayName"] = displayName;
+
+    uint32_t userId=0, groupId=0;
+    generateUserId(userId, groupId);
+
+    displayParams["ownerId"] = userId;
+    displayParams["groupId"] = groupId;
     string displayParamsString;
     displayParams.ToString(displayParamsString);
     Core::hresult createDisplayResult = mWindowManager->CreateDisplay(displayParamsString);
@@ -159,6 +165,25 @@ std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
 
 void WindowManagerHandler::WindowManagerNotification::OnUserInactivity(const double minutes)
 {
+}
+
+void WindowManagerHandler::generateUserId(uint32_t& userId, uint32_t& groupId)
+{
+    //TODO Generate userid and groupid in random way
+    userId = 30490;
+    FILE* fp = fopen("/tmp/appuid", "r");
+    if (fp != NULL)
+    {
+        char* line = NULL;
+        size_t len = 0;
+        while ((getline(&line, &len, fp)) != -1)
+        {
+            userId = atoi(line);
+            break;
+        }
+        fclose(fp);
+    }
+    groupId = 30000;
 }
 
 } // namespace Plugin

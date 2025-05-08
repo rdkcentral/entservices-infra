@@ -129,12 +129,12 @@ namespace Plugin {
         };
 
     public:
-        virtual uint32_t Register(Exchange::IUSBDevice::INotification *notification ) override ;
-        virtual uint32_t Unregister(Exchange::IUSBDevice::INotification *notification ) override ;
-        uint32_t GetDeviceList(IUSBDeviceIterator*& devices) const override;
-        uint32_t GetDeviceInfo(const string &deviceName, IUSBDeviceInfoIterator*& deviceInfo) const override;
-        uint32_t BindDriver(const string &deviceName) const override;
-        uint32_t UnbindDriver(const string &deviceName) const override;
+        virtual Core::hresult Register(Exchange::IUSBDevice::INotification *notification ) override ;
+        virtual Core::hresult Unregister(Exchange::IUSBDevice::INotification *notification ) override ;
+        Core::hresult GetDeviceList(IUSBDeviceIterator*& devices) const override;
+        Core::hresult GetDeviceInfo(const string &deviceName, USBDeviceInfo& deviceInfo) const override;
+        Core::hresult BindDriver(const string &deviceName) const override;
+        Core::hresult UnbindDriver(const string &deviceName) const override;
   
     private:
         void dispatchEvent(Event, const Exchange::IUSBDevice::USBDevice usbDevice);
