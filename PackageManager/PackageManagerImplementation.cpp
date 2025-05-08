@@ -288,7 +288,14 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) {
         Core::hresult result = Core::ERROR_GENERAL;
 
-        LOGTRACE("Installing %s", packageId.c_str());
+        LOGTRACE("Installing '%s' ver:'%s'", packageId.c_str(), version.c_str());
+
+        packagemanager::NameValues keyValues;
+        struct IPackageInstaller::KeyValue kv;
+        while (additionalMetadata->Next(kv) == true) {
+            LOGTRACE("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
+            keyValues.push_back(std::make_pair(kv.name, kv.value));
+        }
 
         mAdminLock.Lock();
         if (nullptr == mStorageManagerObject) {
@@ -305,7 +312,7 @@ namespace Plugin {
                 NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
 #ifdef USE_LIBPACKAGE
                 packagemanager::ConfigMetaData config;
-                packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator, config);
+                packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                 if (pmResult == packagemanager::SUCCESS) {
                     result = Core::ERROR_NONE;
                 }
