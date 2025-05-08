@@ -133,7 +133,7 @@ namespace Plugin {
 
             #ifdef USE_LIBPACKAGE
             packagemanager::ConfigMetadataArray aConfigMetadata;
-            packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+            packageImpl->Initialize(configStr, aConfigMetadata);
             #endif
 
         } else {
