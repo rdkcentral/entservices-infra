@@ -41,7 +41,7 @@
 namespace WPEFramework {
 namespace Plugin {
     typedef Exchange::IPackageDownloader::Reason DownloadReason;
-    typedef Exchange::IPackageInstaller::PackageLifecycleState InstallState;
+    typedef Exchange::IPackageInstaller::PackageLifecycleState LifecycleState;
 
     class PackageManagerImplementation
     : public Exchange::IPackageDownloader
@@ -51,12 +51,18 @@ namespace Plugin {
         private:
         class State {
             public:
+            State() {}
             State(const packagemanager::ConfigMetaData &config) {
                 PackageManagerImplementation::getRuntimeConfig(config, runtimeConfig);
             }
-            Exchange::RuntimeConfig runtimeConfig;
+            LifecycleState lifecycleState = LifecycleState::UNINSTALLED;
+            bool preInsalled = false;
             uint32_t mLockCount = 0;
+            Exchange::RuntimeConfig runtimeConfig;
+            string gatewayMetadataPath;
+            string unpackedPath;
         };
+
         typedef std::pair<std::string, std::string> StateKey;
 
         class Configuration : public Core::JSON::Container {
@@ -161,7 +167,7 @@ namespace Plugin {
     private:
         void downloader(int n);
         void NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason status);
-        void NotifyInstallStatus(const string& id, const string& version, const InstallState state);
+        void NotifyInstallStatus(const string& id, const string& version, const LifecycleState state);
 
         DownloadInfoPtr getNext();
         int nextRetryDuration(int n) {
@@ -169,7 +175,7 @@ namespace Plugin {
             return round(nxt);
         }
 
-        std::string getDownloadReason(DownloadReason reason) {
+        string getDownloadReason(DownloadReason reason) {
             switch (reason) {
                 case DownloadReason::DOWNLOAD_FAILURE: return "DOWNLOAD_FAILURE";
                 case DownloadReason::DISK_PERSISTENCE_FAILURE: return "DISK_PERSISTENCE_FAILURE";
@@ -177,16 +183,17 @@ namespace Plugin {
             }
         }
 
-    std::string getInstallReason(InstallState state) {
-        switch (state) {
-            case InstallState::INSTALLING : return "INSTALLING";
-            case InstallState::INSTALLATION_BLOCKED : return "INSTALLATION_BLOCKED";
-            case InstallState::INSTALLED : return "INSTALLED";
-            case InstallState::UNINSTALLING : return "UNINSTALLING";
-            case InstallState::UNINSTALLED : return "UNINSTALLED";
-            default: return "Unknown";
+        string getInstallReason(LifecycleState state) {
+            switch (state) {
+                case LifecycleState::INSTALLING : return "INSTALLING";
+                case LifecycleState::INSTALLATION_BLOCKED : return "INSTALLATION_BLOCKED";
+                case LifecycleState::INSTALLED : return "INSTALLED";
+                case LifecycleState::UNINSTALLING : return "UNINSTALLING";
+                case LifecycleState::UNINSTALLED : return "UNINSTALLED";
+                default: return "Unknown";
+            }
         }
-    }
+
     Core::hresult createStorageManagerObject();
     void releaseStorageManagerObject();
 

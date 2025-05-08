@@ -136,9 +136,11 @@ namespace Plugin {
             packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
             LOGDBG("aConfigMetadata.count:%d", aConfigMetadata.size());
             for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
-                //StateKey key {};
+                // XXX: No version in Uninstall, till we add version to Uninstall Key is just packageId
+                //StateKey key = it->first;
+                StateKey key( { it->first.first, "" });
                 State state(it->second);
-                mState.insert( { it->first, state } );
+                mState.insert( { key, state } );
                 LOGDBG("packageId: %s runtimeConfig.userId:%d", it->first.first.c_str(), state.runtimeConfig.userId);
 
             }
@@ -299,29 +301,45 @@ namespace Plugin {
         LOGTRACE("Installing %s", packageId.c_str());
 
         mAdminLock.Lock();
-        if (nullptr == mStorageManagerObject) {
-            if (Core::ERROR_NONE != createStorageManagerObject()) {
-                LOGERR("Failed to create StorageManager");
-            }
+        StateKey key { packageId, version };
+        auto it = mState.find( key );
+        if (it == mState.end()) {
+            State state;
+            mState.insert( { key, state } );
         }
-        ASSERT (nullptr != mStorageManagerObject);
-        if (nullptr != mStorageManagerObject) {
-            string path = "";
-            string errorReason = "";
-            if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
-                LOGINFO("CreateStorage path [%s]", path.c_str());
-                NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
-                #ifdef USE_LIBPACKAGE
-                packagemanager::ConfigMetaData config;
-                packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator, config);
-                if (pmResult == packagemanager::SUCCESS) {
-                    result = Core::ERROR_NONE;
+
+        it = mState.find( key );
+        if (it != mState.end()) {
+            State &state = it->second;
+
+            if (nullptr == mStorageManagerObject) {
+                if (Core::ERROR_NONE != createStorageManagerObject()) {
+                    LOGERR("Failed to create StorageManager");
                 }
-                #endif
-                NotifyInstallStatus(packageId, version, InstallState::INSTALLED);
-            } else {
-                LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
             }
+            ASSERT (nullptr != mStorageManagerObject);
+            if (nullptr != mStorageManagerObject) {
+                string path = "";
+                string errorReason = "";
+                if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
+                    LOGINFO("CreateStorage path [%s]", path.c_str());
+                    state.lifecycleState = LifecycleState::INSTALLING;
+                    NotifyInstallStatus(packageId, version, LifecycleState::INSTALLING);
+                    #ifdef USE_LIBPACKAGE
+                    packagemanager::ConfigMetaData config;
+                    packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator, config);
+                    if (pmResult == packagemanager::SUCCESS) {
+                        result = Core::ERROR_NONE;
+                    }
+                    #endif
+                    state.lifecycleState = LifecycleState::INSTALLED;
+                    NotifyInstallStatus(packageId, version, LifecycleState::INSTALLED);
+                } else {
+                    LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+                }
+            }
+        } else {
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
         }
 
         mAdminLock.Unlock();
@@ -335,28 +353,38 @@ namespace Plugin {
         LOGTRACE("Uninstalling %s", packageId.c_str());
 
         mAdminLock.Lock();
-        if (nullptr == mStorageManagerObject) {
-            LOGINFO("Create StorageManager object");
-            if (Core::ERROR_NONE != createStorageManagerObject()) {
-                LOGERR("Failed to create StorageManager");
-            }
-        }
-        ASSERT (nullptr != mStorageManagerObject);
-        if (nullptr != mStorageManagerObject) {
-            if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
-                LOGINFO("DeleteStorage done");
-                NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
-                #ifdef USE_LIBPACKAGE
-                // XXX: what if DeleteStorage(), who Uninstall the package
-                packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
-                if (pmResult == packagemanager::SUCCESS) {
-                    result = Core::ERROR_NONE;
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+
+            if (nullptr == mStorageManagerObject) {
+                LOGINFO("Create StorageManager object");
+                if (Core::ERROR_NONE != createStorageManagerObject()) {
+                    LOGERR("Failed to create StorageManager");
                 }
-                #endif
-                NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
-            } else {
-                LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
             }
+            ASSERT (nullptr != mStorageManagerObject);
+            if (nullptr != mStorageManagerObject) {
+                if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
+                    LOGINFO("DeleteStorage done");
+                    state.lifecycleState = LifecycleState::UNINSTALLING;
+                    NotifyInstallStatus(packageId, version, LifecycleState::UNINSTALLING);
+                    #ifdef USE_LIBPACKAGE
+                    // XXX: what if DeleteStorage() fails, who Uninstall the package
+                    packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
+                    if (pmResult == packagemanager::SUCCESS) {
+                        result = Core::ERROR_NONE;
+                    }
+                    #endif
+                    state.lifecycleState = LifecycleState::UNINSTALLED;
+                    NotifyInstallStatus(packageId, version, LifecycleState::UNINSTALLED);
+                    // XXX: remove from state/cache
+                } else {
+                    LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+                }
+            }
+        } else {
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
         }
 
         mAdminLock.Unlock();
@@ -384,7 +412,7 @@ namespace Plugin {
                         Exchange::IPackageInstaller::Package package;
                         package.packageId = val["packageId"].asString().c_str();
                         package.version = val["version"].asString().c_str();
-                        package.packageState = InstallState::INSTALLED;
+                        package.packageState = LifecycleState::INSTALLED;
                         package.sizeKb = 0;         // XXX: getPackageSpaceInKBytes
                         packageList.emplace_back(package);
                     }
@@ -422,10 +450,10 @@ namespace Plugin {
         LOGTRACE();
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
-            lifecycleState = INSTALLED;
-            // XXX: ??? in-progress
+            auto &state = it->second;
+            lifecycleState = state.lifecycleState;
         } else {
-            lifecycleState = INSTALLATION_BLOCKED;
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
         }
 
         return result;
@@ -490,7 +518,6 @@ namespace Plugin {
                     if (pmResult == packagemanager::SUCCESS) {
                         lockId = ++state.mLockCount;
                         LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
-                        //getRuntimeConfig(config, runtimeConfig);
                     } else {
                         LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
                         result = Core::ERROR_GENERAL;
@@ -655,7 +682,7 @@ namespace Plugin {
         mAdminLock.Unlock();
     }
 
-    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const InstallState state) {
+    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const LifecycleState state) {
         JsonArray list = JsonArray();
         JsonObject obj;
         obj["packageId"] = id;
