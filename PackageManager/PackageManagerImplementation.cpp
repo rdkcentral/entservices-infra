@@ -134,7 +134,7 @@ namespace Plugin {
             #ifdef USE_LIBPACKAGE
             packagemanager::ConfigMetadataArray aConfigMetadata;
             packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
-            LOGDBG("aConfigMetadata.count:%d", aConfigMetadata.size());
+            LOGDBG("aConfigMetadata.count:%d pmResult=%d", aConfigMetadata.size(), pmResult);
             for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
                 // XXX: No version in Uninstall, till we add version to Uninstall Key is just packageId
                 //StateKey key = it->first;
@@ -536,7 +536,8 @@ namespace Plugin {
     }
 
     // XXX: right way to do this is via copy ctor
-    void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig) {
+    void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig)
+    {
         runtimeConfig.dial = config.dial;
         runtimeConfig.wanLanAccess = config.wanLanAccess;
         runtimeConfig.thunder = config.thunder;
@@ -549,7 +550,8 @@ namespace Plugin {
         LOGDBG("runtimeConfig.userId:%d", runtimeConfig.userId);
     }
 
-    void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig) {
+    void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig)
+    {
         runtimeConfig.dial = config.dial;
         runtimeConfig.wanLanAccess = config.wanLanAccess;
         runtimeConfig.thunder = config.thunder;
@@ -562,7 +564,8 @@ namespace Plugin {
         LOGDBG("runtimeConfig.userId:%d", runtimeConfig.userId);
     }
 
-    Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version) {
+    Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version)
+    {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
