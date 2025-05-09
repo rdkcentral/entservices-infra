@@ -76,7 +76,7 @@ include_directories(BEFORE ${STORAGE_MANAGER_INCLUDES})
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
     CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_STORAGE_MANAGER_EXTRA_LIBRARIES})
 if (RDK_SERVICES_L1_TEST)
-    target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,open -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,nftw -wl,--wrap,statvfs -Wl,--wrap,rmdir -Wl,--wrap,chmod)
+    target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,open -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,nftw -Wl,--wrap,statvfs -Wl,--wrap,rmdir -Wl,--wrap,chmod)
 endif (RDK_SERVICES_L1_TEST)
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
