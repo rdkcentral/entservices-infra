@@ -194,7 +194,7 @@ namespace Plugin {
         // Utils::isPluginActivated(NETWORK_PLUGIN_CALLSIGN)
 
         DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), retries, rateLimit));
-        std::string filename = downloadDir + "package" + di->GetId() + ".wgt";
+        std::string filename = downloadDir + "package" + di->GetId();
         di->SetFileLocator(filename);
         if (priority) {
             mDownloadQueue.push_front(di);
