@@ -295,10 +295,18 @@ namespace Plugin {
     }
 
     // IPackageInstaller methods
-    Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) {
+    Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason)
+    {
         Core::hresult result = Core::ERROR_GENERAL;
 
-        LOGTRACE("Installing %s", packageId.c_str());
+        LOGTRACE("Installing '%s' ver:'%s'", packageId.c_str(), version.c_str());
+
+        packagemanager::NameValues keyValues;
+        struct IPackageInstaller::KeyValue kv;
+        while (additionalMetadata->Next(kv) == true) {
+            LOGTRACE("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
+            keyValues.push_back(std::make_pair(kv.name, kv.value));
+        }
 
         mAdminLock.Lock();
         StateKey key { packageId, version };
@@ -327,7 +335,7 @@ namespace Plugin {
                     NotifyInstallStatus(packageId, version, LifecycleState::INSTALLING);
                     #ifdef USE_LIBPACKAGE
                     packagemanager::ConfigMetaData config;
-                    packagemanager::Result pmResult = packageImpl->Install(packageId, version, fileLocator, config);
+                    packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                     if (pmResult == packagemanager::SUCCESS) {
                         result = Core::ERROR_NONE;
                     }
@@ -392,7 +400,8 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages) {
+    Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages)
+    {
         Core::hresult result = Core::ERROR_NONE;
         std::list<Exchange::IPackageInstaller::Package> packageList;
 
@@ -431,7 +440,8 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig) {
+    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig)
+    {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGTRACE();
@@ -444,7 +454,8 @@ namespace Plugin {
     }
 
     Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version,
-        Exchange::IPackageInstaller::PackageLifecycleState &lifecycleState) {
+        Exchange::IPackageInstaller::PackageLifecycleState &lifecycleState)
+    {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGTRACE();
@@ -459,7 +470,8 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Register(Exchange::IPackageInstaller::INotification *notification) {
+    Core::hresult PackageManagerImplementation::Register(Exchange::IPackageInstaller::INotification *notification)
+    {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGINFO();
@@ -594,7 +606,8 @@ namespace Plugin {
     }
 
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
-        string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked) {
+        string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked)
+    {
 
         Core::hresult result = Core::ERROR_NONE;
 

@@ -1,6 +1,6 @@
-
 #!/bin/bash
 set -x
+set -e
 ##############################
 GITHUB_WORKSPACE="${PWD}"
 ls -la ${GITHUB_WORKSPACE}
@@ -111,6 +111,7 @@ mkdir -p headers/rdk/halif/deepsleep-manager
 mkdir -p headers/ccec/drivers
 mkdir -p headers/network
 mkdir -p headers/proc
+mkdir -p headers/libusb
 echo "dir created successfully"
 echo "======================================================================================"
 
@@ -148,7 +149,7 @@ touch rdk/iarmmgrs-hal/sysMgr.h
 touch network/wifiSrvMgrIarmIf.h
 touch network/netsrvmgrIarm.h
 touch libudev.h
-touch libusb.h
+touch libusb/libusb.h
 touch rfcapi.h
 touch rbus.h
 touch telemetry_busmessage_sender.h
