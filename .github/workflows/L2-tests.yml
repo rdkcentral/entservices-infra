@@ -88,7 +88,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: feature/RDK-L2-migration_TF
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Apply patches ThunderTools
