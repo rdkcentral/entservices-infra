@@ -134,7 +134,7 @@ namespace Plugin {
             #ifdef USE_LIBPACKAGE
             packagemanager::ConfigMetadataArray aConfigMetadata;
             packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
-            LOGDBG("aConfigMetadata.count:%d pmResult=%d", aConfigMetadata.size(), pmResult);
+            LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);
             for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
                 // XXX: No version in Uninstall, till we add version to Uninstall Key is just packageId
                 //StateKey key = it->first;
