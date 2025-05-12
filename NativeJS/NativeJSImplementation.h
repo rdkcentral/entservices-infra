@@ -42,10 +42,13 @@ namespace WPEFramework
             virtual ~NativeJSImplementation();
             virtual Core::hresult Initialize(const string waylandDisplay) override;
             virtual Core::hresult Deinitialize() override;
-            virtual Core::hresult LaunchApplication(const std::string url, const std::string options) override;
-            virtual Core::hresult DestroyApplication(const std::string url) override;
-
-            BEGIN_INTERFACE_MAP(NativeJSImplementation)
+	    virtual Core::hresult CreateApplication(const std::string options, uint32_t& id) override;
+	    virtual Core::hresult GetApplications() override;
+	    virtual Core::hresult RunApplication(uint32_t id, const std::string url) override;
+	    virtual Core::hresult RunJavaScript(uint32_t id, const std::string code) override;
+	    virtual Core::hresult TerminateApplication(uint32_t id) override;
+            
+	    BEGIN_INTERFACE_MAP(NativeJSImplementation)
             INTERFACE_ENTRY(Exchange::INativeJS)
             END_INTERFACE_MAP
 
