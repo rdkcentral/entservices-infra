@@ -46,101 +46,65 @@ namespace Plugin {
     SharedStorage::SharedStorage()
         : PluginHost::JSONRPC()
         , _service(nullptr)
-        , _psObject(nullptr)
-        , _psCache(nullptr)
-        , _psInspector(nullptr)
-        , _psLimit(nullptr)
-        , _csObject(nullptr)
-        , _storeNotification(*this)
-        , m_PersistentStoreRef(nullptr)
-        , m_CloudStoreRef(nullptr)
+        , _connectionId(0)
+        , _sharedStorage(nullptr)
+        , _sharedStorageNotification(this)
     {
         RegisterAll();
+        SYSLOG(Logging::Startup, (_T("SharedStorage Constructor")));
     }
     SharedStorage::~SharedStorage()
     {
         UnregisterAll();
-    }
-
-    Exchange::IStore2* SharedStorage::getRemoteStoreObject(ScopeType eScope)
-    {
-        if( (eScope == ScopeType::DEVICE) && _psObject)
-        {
-            return _psObject;
-        }
-        else if( (eScope == ScopeType::ACCOUNT) && _csObject)
-        {
-            return _csObject;
-        }
-        else
-        {
-            TRACE(Trace::Error, (_T("%s: Unknown scope: %d"), __FUNCTION__, static_cast<int>(eScope)));
-            return nullptr;
-        }
+        SYSLOG(Logging::Shutdown, (string(_T("SharedStorage Destructor"))));
     }
 
     const string SharedStorage::Initialize(PluginHost::IShell* service)
     {
         SYSLOG(Logging::Startup, (_T("SharedStorage::Initialize: PID=%u"), getpid()));
-        string message;
+        string message = "";
 
         ASSERT(service != nullptr);
         ASSERT(nullptr == _service);
+        ASSERT(nullptr == _sharedStorage);
+        ASSERT(0 == _connectionId);
 
         _service = service;
         _service->AddRef();
+        _service->Register(&_sharedStorageNotification);
+        _sharedStorage = _service->Root<Exchange::IStore2>(_connectionId, 5000, _T("SharedStorageImplementation"));
 
-        m_PersistentStoreRef = service->QueryInterfaceByCallsign<PluginHost::IPlugin>("org.rdk.PersistentStore");
-        if(nullptr != m_PersistentStoreRef)
+        if (nullptr != _sharedStorage)
         {
-            // Get interface for IStore2
-            _psObject = m_PersistentStoreRef->QueryInterface<Exchange::IStore2>();
-            // Get interface for IStoreInspector
-            _psInspector = m_PersistentStoreRef->QueryInterface<Exchange::IStoreInspector>();
-            // Get interface for IStoreLimit
-            _psLimit = m_PersistentStoreRef->QueryInterface<Exchange::IStoreLimit>();
-            // Get interface for IStoreCache
-            _psCache = m_PersistentStoreRef->QueryInterface<Exchange::IStoreCache>();
-            if ( (nullptr == _psObject) || (nullptr == _psInspector) || (nullptr == _psLimit) || (nullptr == _psCache) )
+            configure = _sharedStorage->QueryInterface<Exchange::IConfiguration>();
+            if (configure != nullptr)
             {
-                message = _T("SharedStorage plugin could not be initialized.");
-                TRACE(Trace::Error, (_T("%s: Can't get PersistentStore interface"), __FUNCTION__));
-                m_PersistentStoreRef->Release();
-                m_PersistentStoreRef = nullptr;
+                uint32_t result = configure->Configure(_service);
+                if (result != Core::ERROR_NONE)
+                {
+                    message = _T("SharedStorage could not be configured");
+                }
             }
             else
             {
-                _psObject->Register(&_storeNotification);
+                message = _T("SharedStorage implementation did not provide a configuration interface");
             }
-        }
-        else
-        {
-            message = _T("SharedStorage plugin could not be initialized.");
-            TRACE(Trace::Error, (_T("%s: Can't get PersistentStore interface"), __FUNCTION__));
-        }
 
-        // Establish communication with CloudStore
-        m_CloudStoreRef = service->QueryInterfaceByCallsign<PluginHost::IPlugin>("org.rdk.CloudStore");
-        if(nullptr != m_CloudStoreRef)
-        {
-            // Get interface for IStore2
-            _csObject = m_CloudStoreRef->QueryInterface<Exchange::IStore2>();
-            if (nullptr == _csObject)
-            {
-                //message = _T("SharedStorage plugin could not be initialized.");
-                TRACE(Trace::Error, (_T("%s: Can't get CloudStore interface"), __FUNCTION__));
-                m_CloudStoreRef->Release();
-                m_CloudStoreRef = nullptr;
-            }
-            else
-            {
-                _csObject->Register(&_storeNotification);
-            }
+            _sharedCache = _sharedStorage->QueryInterface<Exchange::IStoreCache>();
+            _sharedInspector = _sharedStorage->QueryInterface<Exchange::IStoreInspector>();
+            _sharedLimit = _sharedStorage->QueryInterface<Exchange::IStoreLimit>();
+
+            ASSERT(_sharedCache != nullptr);
+            ASSERT(_sharedInspector != nullptr);
+            ASSERT(_sharedLimit != nullptr);
+
+            // Register for notifications
+            _sharedStorage->Register(&_sharedStorageNotification);
         }
         else
         {
-            //message = _T("SharedStorage plugin could not be initialized.");
-            TRACE(Trace::Error, (_T("%s: Can't get CloudStore interface"), __FUNCTION__));
+            SYSLOG(Logging::Startup, (_T("SharedStorage::Initialize: Failed to initialise SharedStorage plugin")));
+            message = _T("SharedStorage plugin could not be initialised");
         }
 
         SYSLOG(Logging::Startup, (string(_T("SharedStorage Initialize complete"))));
@@ -152,46 +116,52 @@ namespace Plugin {
         ASSERT(_service == service);
         SYSLOG(Logging::Shutdown, (string(_T("SharedStorage::Deinitialize"))));
 
-        if (nullptr != m_PersistentStoreRef)
+        _service->Unregister(&_sharedStorageNotification);
+
+        if (nullptr != _sharedStorage)
         {
-            m_PersistentStoreRef->Release();
-            m_PersistentStoreRef = nullptr;
-        }
-        // Disconnect from the interface
-        if(_psObject)
-        {
-            _psObject->Unregister(&_storeNotification);
-            _psObject->Release();
-            _psObject = nullptr;
-        }
-        if(_psInspector)
-        {
-            _psInspector->Release();
-            _psInspector = nullptr;
-        }
-        if(_psLimit)
-        {
-            _psLimit->Release();
-            _psLimit = nullptr;
-        }
-        // Disconnect from the COM-RPC socket
-        if (nullptr != m_CloudStoreRef)
-        {
-            m_CloudStoreRef->Release();
-            m_CloudStoreRef = nullptr;
-        }
-        if(_psCache)
-        {
-            _psCache->Release();
-            _psCache = nullptr;
-        }
-        if(_csObject)
-        {
-            _csObject->Unregister(&_storeNotification);
-            _csObject->Release();
-            _csObject = nullptr;
+            _sharedStorage->Unregister(&_sharedStorageNotification);
+
+            if(_sharedCache)
+            {
+                _sharedCache->Release();
+                _sharedCache = nullptr;
+            }
+
+            if(_sharedInspector)
+            {
+                _sharedInspector->Release();
+                _sharedInspector = nullptr;
+            }
+
+            if(_sharedLimit)
+            {
+                _sharedLimit->Release();
+                _sharedLimit = nullptr;
+            }
+
+            if(nullptr != configure)
+            {
+                configure->Release();
+                configure = nullptr;
+            }
+
+            // Stop processing:
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+            VARIABLE_IS_NOT_USED uint32_t result = _sharedStorage->Release();
+
+            _sharedStorage = nullptr;
+
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+            if (nullptr != connection)
+            {
+                connection->Terminate();
+                connection->Release();
+            }
         }
 
+        _connectionId = 0;
         _service->Release();
         _service = nullptr;
         SYSLOG(Logging::Shutdown, (string(_T("SharedStorage Deinitialize complete"))));
@@ -201,5 +171,16 @@ namespace Plugin {
     {
         return (string());
     }
+
+    void SharedStorage::Deactivated(RPC::IRemoteConnection* connection)
+    {
+        if (connection->Id() == _connectionId)
+        {
+            ASSERT(nullptr != _service);
+            LOGINFO("SharedStorage Notification Deactivated");
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+        }
+    }
+
 } // namespace Plugin
 } // namespace WPEFramework
