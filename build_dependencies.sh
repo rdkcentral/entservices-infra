@@ -112,6 +112,9 @@ mkdir -p headers/ccec/drivers
 mkdir -p headers/network
 mkdir -p headers/proc
 mkdir -p headers/libusb
+mkdir -p headers/Dobby
+mkdir -p headers/Dobby/Public/Dobby
+mkdir -p headers/Dobby/IpcService
 echo "dir created successfully"
 echo "======================================================================================"
 
@@ -164,6 +167,10 @@ touch audioOutputPortType.hpp
 touch audioOutputPortConfig.hpp
 touch tr181api.h
 touch dsRpc.h
+touch Dobby/DobbyProtocol.h
+touch Dobby/DobbyProxy.h
+touch Dobby/Public/Dobby/IDobbyProxy.h
+touch Dobby/IpcService/IpcFactory.h
 echo "files created successfully"
 echo "======================================================================================"
 
