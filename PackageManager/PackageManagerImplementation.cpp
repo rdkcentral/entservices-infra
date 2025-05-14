@@ -131,6 +131,16 @@ namespace Plugin {
             downloadDir = config.downloadDir;
             LOGINFO("downloadDir=%s", downloadDir.c_str());
 
+            //std::filesystem::create_directories(path);        // XXX: need C++17
+            int rc = mkdir(downloadDir.c_str(), 0777);
+            if (rc) {
+                if (errno != EEXIST) {
+                    LOGERR("Failed to create dir '%s' rc: %d errno=%d", downloadDir.c_str(), rc, errno);
+                }
+            } else {
+                LOGDBG("created dir '%s'", downloadDir.c_str());
+            }
+
             #ifdef USE_LIBPACKAGE
             packagemanager::ConfigMetadataArray aConfigMetadata;
             packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
