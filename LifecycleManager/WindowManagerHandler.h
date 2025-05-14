@@ -48,6 +48,7 @@ namespace Plugin {
                 END_INTERFACE_MAP
 
                 virtual void OnUserInactivity(const double minutes) override;
+                virtual void OnDisconnected(const std::string& client) override;
                 //virtual void OnReady(std::string appId) override;
 
             private:
@@ -63,10 +64,11 @@ namespace Plugin {
 
         public:
             bool initialize(PluginHost::IShell* service, IEventHandler* eventHandler);
-	    void terminate();
+            void terminate();
+            void onEvent(JsonObject& data);
         private:
             Exchange::IRDKWindowManager* mWindowManager;
-	    Core::Sink<WindowManagerNotification> mWindowManagerNotification;
+            Core::Sink<WindowManagerNotification> mWindowManagerNotification;
             IEventHandler* mEventHandler;
     };
 } // namespace Plugin

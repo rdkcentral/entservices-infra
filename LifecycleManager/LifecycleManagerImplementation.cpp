@@ -150,6 +150,9 @@ namespace WPEFramework
                  case LIFECYCLE_MANAGER_EVENT_RUNTIME:
                      handleRuntimeManagerEvent(obj);
                      break;
+                 case LIFECYCLE_MANAGER_EVENT_WINDOW:
+                      handleWindowManagerEvent(obj);
+                      break;
                  default:
                      LOGWARN("Event[%u] not handled", event);
                      break;
@@ -487,9 +490,9 @@ namespace WPEFramework
             dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_RUNTIME, data);
 	}
 
-        void LifecycleManagerImplementation::onWindowManagerEvent(string name, JsonObject& data)
+        void LifecycleManagerImplementation::onWindowManagerEvent(JsonObject& data)
 	{
-            //mLifecycleManager->dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, JsonValue(minutes));
+            dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_WINDOW, data);
 	}
 
         void LifecycleManagerImplementation::onRippleEvent(string name, JsonObject& data)
@@ -561,7 +564,7 @@ namespace WPEFramework
 	}
 
 	void LifecycleManagerImplementation::handleStateChangeEvent(const JsonObject &data)
-        {
+    {
             string appInstanceId = data["appInstanceId"];
 	    uint32_t stateInput = data["newLifecycleState"].Number();
             Exchange::ILifecycleManager::LifecycleState state = (Exchange::ILifecycleManager::LifecycleState) stateInput;
@@ -588,7 +591,22 @@ namespace WPEFramework
                 delete context;
                 mLoadedApplications.erase(iter);
 	    }
+    }
+
+    void LifecycleManagerImplementation::handleWindowManagerEvent(const JsonObject &data)
+    {
+        string eventName = data["name"];
+        if (eventName.compare("onUserInactivity") == 0)
+        {
+            printf("Received onUserInactivity event from window manager \n");
+            fflush(stdout);
         }
+        else if (eventName.compare("onDisconnect") == 0)
+        {
+            printf("Received onDisconnect event from window manager \n");
+            fflush(stdout);
+        }
+    }
 
     } /* namespace Plugin */
 } /* namespace WPEFramework */

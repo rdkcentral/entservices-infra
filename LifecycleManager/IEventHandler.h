@@ -30,7 +30,7 @@ namespace WPEFramework
 	{
             public:
 	        virtual void onRuntimeManagerEvent(JsonObject& data) = 0;
-	        virtual void onWindowManagerEvent(std::string name, JsonObject& data) = 0;
+	        virtual void onWindowManagerEvent(JsonObject& data) = 0;
 	        virtual void onRippleEvent(std::string name, JsonObject& data) = 0;
 	        virtual void onStateChangeEvent(JsonObject& data) = 0;
         };

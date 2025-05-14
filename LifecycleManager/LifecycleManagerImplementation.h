@@ -42,7 +42,8 @@ namespace WPEFramework
                 enum EventNames
                 {
                     LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED,
-                    LIFECYCLE_MANAGER_EVENT_RUNTIME
+                    LIFECYCLE_MANAGER_EVENT_RUNTIME,
+                    LIFECYCLE_MANAGER_EVENT_WINDOW
                 };
 
                 class EXTERNAL Job : public Core::IDispatch
@@ -127,7 +128,7 @@ namespace WPEFramework
 
                 /* IEventHandler methods  */
                 virtual void onRuntimeManagerEvent(JsonObject& data) override;
-                virtual void onWindowManagerEvent(string name, JsonObject& data) override;
+                virtual void onWindowManagerEvent(JsonObject& data) override;
                 virtual void onRippleEvent(string name, JsonObject& data) override;
                 virtual void onStateChangeEvent(JsonObject& data) override;
 
@@ -144,6 +145,7 @@ namespace WPEFramework
                 void Dispatch(EventNames event, const JsonValue params);
                 void handleRuntimeManagerEvent(const JsonObject &data);
                 void handleStateChangeEvent(const JsonObject &data);
+                void handleWindowManagerEvent(const JsonObject &data);
                 ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
 
                 friend class Job;

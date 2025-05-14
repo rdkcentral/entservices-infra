@@ -70,14 +70,41 @@ void WindowManagerHandler::terminate()
 
 void WindowManagerHandler::WindowManagerNotification::OnUserInactivity(const double minutes)
 {
+    printf(" Received onUserInactivity event for %f minutes \n", minutes);
+    fflush(stdout);
+    JsonObject eventData;
+    eventData["minutes"] = minutes;
+    eventData["name"] = "onUserInactivity";
+    _parent.onEvent(eventData);
 }
 
+void WindowManagerHandler::WindowManagerNotification::OnDisconnected(const std::string& client)
+{
+    printf(" Received onDisconnect event for client[%s] \n", client.c_str());
+    fflush(stdout);
+    JsonObject eventData;
+    eventData["client"] = client;
+    eventData["name"] = "onDisconnect";
+    _parent.onEvent(eventData);
+}
+
+void WindowManagerHandler::onEvent(JsonObject& data)
+{
+    if (mEventHandler)
+    {
+        mEventHandler->onWindowManagerEvent(data);
+    }
+}
 //TODO
 /*
 void WindowManagerHandler::WindowManagerNotification::OnReady(std::string appId)
 {
     printf("MADANA Received onReady event for app[%s] \n", appId.c_str());
     fflush(stdout);
+    JsonObject eventData;
+    eventData["appId"] = appId;
+    eventData["name"] = "onReady";
+    _parent.onEvent(eventData);
 }
 */
 } // namespace Plugin
