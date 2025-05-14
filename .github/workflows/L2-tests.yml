@@ -88,8 +88,8 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: feature/RDK-L2-migration_TF
-          token: ${{ secrets.RDKCM_RDKE }}
+          ref: feature/RDK-L2-migration-TF-2
+          #token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Apply patches ThunderTools
         run: |  
@@ -333,9 +333,9 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DPLUGIN_TELEMETRY=OFF
           -DPLUGIN_USERSETTINGS=ON
-          -DPLUGIN_PERSISTENTSTORE=ON
-          -DPLUGIN_USBDEVICE=ON
-          -DPLUGIN_USB_MASS_STORAGE=ON
+          -DPLUGIN_PERSISTENTSTORE=OFF
+          -DPLUGIN_USBDEVICE=OFF
+          -DPLUGIN_USB_MASS_STORAGE=OFF
           -DPLUGIN_LIFECYCLEMANAGER=OFF
           -DPLUGIN_APPMANAGER=OFF
           -DPLUGIN_ANALYTICS=OFF
@@ -415,9 +415,9 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DPLUGIN_TELEMETRY=OFF
           -DPLUGIN_USERSETTINGS=ON
-          -DPLUGIN_PERSISTENTSTORE=ON
-          -DPLUGIN_USBDEVICE=ON
-          -DPLUGIN_USB_MASS_STORAGE=ON
+          -DPLUGIN_PERSISTENTSTORE=OFF
+          -DPLUGIN_USBDEVICE=OFF
+          -DPLUGIN_USB_MASS_STORAGE=OFF
           -DPLUGIN_ANALYTICS=OFF
           -DPLUGIN_LIFECYCLEMANAGER=OFF
           -DPLUGIN_APPMANAGER=OFF
