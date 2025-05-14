@@ -60,6 +60,7 @@ install(TARGETS ${MODULE_NAME}
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
     StorageManagerImplementation.cpp
+	RequestHandler.cpp
     Module.cpp)
 
 include_directories(../helpers)
@@ -72,6 +73,9 @@ set(STORAGE_MANAGER_INCLUDES $ENV{STORAGE_MANAGER_INCLUDES})
 separate_arguments(STORAGE_MANAGER_INCLUDES)
 include_directories(BEFORE ${STORAGE_MANAGER_INCLUDES})
 
+if (RDK_SERVICES_L1_TEST)
+	target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,open -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,nftw -Wl,--wrap,statvfs -Wl,--wrap,rmdir -Wl,--wrap,chown -Wl,--wrap,opendir -Wl,--wrap,readdir)
+endif (RDK_SERVICES_L1_TEST)
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
     CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_STORAGE_MANAGER_EXTRA_LIBRARIES})
 
