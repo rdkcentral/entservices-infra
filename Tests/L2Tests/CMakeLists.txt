@@ -15,10 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(BUILD_SHARED_LIBS ON)
+
 set(PLUGIN_NAME L2TestsIN)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(THUNDER_PORT 9998)
+set(BUILD_SHARED_LIBS ON)
 #set(CMAKE_CXX_STANDARD 11)
 find_package(${NAMESPACE}Plugins REQUIRED)
 
