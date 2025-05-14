@@ -370,7 +370,8 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
                     }
                     if ((nullptr != mPackageManagerHandlerObject) && (!packageData.version.empty()))
                     {
-                        status = mPackageManagerHandlerObject->Lock(appId, packageData.version, lockReason, packageData.lockId, packageData.unpackedPath, packageData.configMetadata, packageData.appMetadata );
+                        Exchange::RuntimeConfig runtimeConfig;
+                        status = mPackageManagerHandlerObject->Lock(appId, packageData.version, lockReason, packageData.lockId, packageData.unpackedPath, runtimeConfig, packageData.appMetadata );
                         if(status == Core::ERROR_NONE)
                         {
                             LOGINFO("Fetching package entry updated for appId: %s " \
