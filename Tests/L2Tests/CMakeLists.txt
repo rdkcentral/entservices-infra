@@ -98,8 +98,7 @@ target_include_directories(
     ${CMAKE_INSTALL_PREFIX}/include
     )
 
-#install(TARGETS ${MODULE_NAME} DESTINATION lib)
-install(TARGETS ${MODULE_NAME} DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+install(TARGETS ${MODULE_NAME} DESTINATION lib)
 
 write_config(${PLUGIN_NAME})
 
