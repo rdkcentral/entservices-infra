@@ -20,9 +20,10 @@
 #pragma once
 
 #include "Module.h"
-#ifdef ENABLE_ERM
+
+#if defined(ENABLE_ERM) || defined(ENABLE_L1TEST)
 #include <map>
-#include <essos-resmgr.h>
+#include "essos-resmgr.h"
 #endif
 #include <string>
 #include <iostream>
@@ -64,15 +65,19 @@ namespace WPEFramework {
             uint32_t getBlockedAVApplicationsWrapper(const JsonObject& parameters, JsonObject& response);
             uint32_t reserveTTSResourceWrapper(const JsonObject& parameters, JsonObject& response);
 
-        private/*internal methods*/:
+        // private/*internal methods*/: changing private to protected for testing purpose
+        protected:
             ResourceManager(const ResourceManager&) = delete;
             ResourceManager& operator=(const ResourceManager&) = delete;
 
             bool setAVBlocked(const string& client, const bool blocked);
             bool getBlockedAVApplications(std::vector<std::string> &appsList);
             bool reserveTTSResource(const string& client);
-
+ 
+        #if defined(ENABLE_ERM) || defined(ENABLE_L1TEST) 
             EssRMgr* mEssRMgr;
+        #endif
+        
             bool mDisableBlacklist;
             bool mDisableReserveTTS;
             PluginHost::IShell* mCurrentService;

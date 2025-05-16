@@ -1,6 +1,6 @@
-
 #!/bin/bash
 set -x
+set -e
 ##############################
 GITHUB_WORKSPACE="${PWD}"
 ls -la ${GITHUB_WORKSPACE}
@@ -111,6 +111,10 @@ mkdir -p headers/rdk/halif/deepsleep-manager
 mkdir -p headers/ccec/drivers
 mkdir -p headers/network
 mkdir -p headers/proc
+mkdir -p headers/libusb
+mkdir -p headers/Dobby
+mkdir -p headers/Dobby/Public/Dobby
+mkdir -p headers/Dobby/IpcService
 echo "dir created successfully"
 echo "======================================================================================"
 
@@ -148,7 +152,7 @@ touch rdk/iarmmgrs-hal/sysMgr.h
 touch network/wifiSrvMgrIarmIf.h
 touch network/netsrvmgrIarm.h
 touch libudev.h
-touch libusb.h
+touch libusb/libusb.h
 touch rfcapi.h
 touch rbus.h
 touch telemetry_busmessage_sender.h
@@ -163,6 +167,10 @@ touch audioOutputPortType.hpp
 touch audioOutputPortConfig.hpp
 touch tr181api.h
 touch dsRpc.h
+touch Dobby/DobbyProtocol.h
+touch Dobby/DobbyProxy.h
+touch Dobby/Public/Dobby/IDobbyProxy.h
+touch Dobby/IpcService/IpcFactory.h
 echo "files created successfully"
 echo "======================================================================================"
 

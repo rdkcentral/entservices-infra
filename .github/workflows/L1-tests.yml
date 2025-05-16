@@ -180,6 +180,11 @@ jobs:
           #token : ${{ secrets.RDKCM_RDKE }}
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
 
+      - name: Apply patches entservices-apis
+        run: |
+          cd $GITHUB_WORKSPACE/entservices-apis
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/patches/RDKEMW-1007.patch
+          cd -
 
       - name: Build entservices-apis
         run: >
@@ -211,6 +216,9 @@ jobs:
           headers/network
           headers/proc
           headers/libusb
+          headers/Dobby
+          headers/Dobby/Public/Dobby
+          headers/Dobby/IpcService
           &&
           cd headers
           &&
@@ -261,6 +269,10 @@ jobs:
           systemaudioplatform.h
           gdialservice.h
           gdialservicecommon.h
+          Dobby/DobbyProtocol.h
+          Dobby/DobbyProxy.h
+          Dobby/Public/Dobby/IDobbyProxy.h
+          Dobby/IpcService/IpcFactory.h
           &&
           cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h .
 
@@ -297,6 +309,9 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/network
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/libusb
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/Public/Dobby
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/IpcService
           -I $GITHUB_WORKSPACE/Thunder/Source
           -I $GITHUB_WORKSPACE/Thunder/Source/core
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
@@ -312,6 +327,11 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/wpa_ctrl_mock.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/readprocMockInterface.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/gdialservice.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Dobby.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/DobbyProtocol.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/DobbyProxy.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/Public/Dobby/IDobbyProxy.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/IpcService/IpcFactory.h
           --coverage
           -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format=
           -Wl,-wrap,system -Wl,-wrap,popen -Wl,-wrap,syslog -Wl,-wrap,v_secure_system -Wl,-wrap,v_secure_popen -Wl,-wrap,v_secure_pclose -Wl,-wrap,unlink
@@ -321,6 +341,7 @@ jobs:
           -DENABLE_DEEP_SLEEP
           -DENABLE_SET_WAKEUP_SRC_CONFIG
           -DENABLE_THERMAL_PROTECTION
+          -DDISABLE_SECURITY_TOKEN
           -DUSE_DRM_SCREENCAPTURE
           -DHAS_API_SYSTEM
           -DHAS_API_POWERSTATE
@@ -338,8 +359,10 @@ jobs:
           -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
+          -DPLUGIN_TELEMETRY=ON
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
+          -DPLUGIN_OCICONTAINER=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -406,11 +429,13 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DCMAKE_BUILD_TYPE=Debug
           -DDS_FOUND=ON
+          -DPLUGIN_TELEMETRY=ON
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
           -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
+          -DPLUGIN_OCICONTAINER=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&

@@ -70,10 +70,10 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
 
 set(RUNTIME_MANAGER_INCLUDES $ENV{RUNTIME_MANAGER_INCLUDES})
 separate_arguments(RUNTIME_MANAGER_INCLUDES)
-include_directories(BEFORE ${RUNTIME_MANAGER_INCLUDES})
+include_directories(BEFORE ${RUNTIME_MANAGER_INCLUDES} /usr/include/jsoncpp)
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
-    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES})
+    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES} jsoncpp)
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
