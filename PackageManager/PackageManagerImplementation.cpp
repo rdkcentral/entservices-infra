@@ -147,8 +147,8 @@ namespace Plugin {
             LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);
             for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
                 // XXX: No version in Uninstall, till we add version to Uninstall Key is just packageId
-                //StateKey key = it->first;
-                StateKey key( { it->first.first, "" });
+                StateKey key = it->first;
+                //StateKey key( { it->first.first, "" });
                 State state(it->second);
                 mState.insert( { key, state } );
                 LOGDBG("packageId: %s runtimeConfig.userId:%d", it->first.first.c_str(), state.runtimeConfig.userId);
@@ -222,10 +222,16 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
-            mHttpClient->pause();
-            LOGDBG("%s paused", downloadId.c_str());
+        LOGTRACE("Pausing '%s'", downloadId.c_str());
+        if (mInprogressDowload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+                mHttpClient->pause();
+                LOGDBG("%s paused", downloadId.c_str());
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
         } else {
+            LOGERR("Pause Failed, mInprogressDowload=%p", mInprogressDowload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -236,10 +242,16 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
-            mHttpClient->resume();
-            LOGDBG("%s resumed", downloadId.c_str());
+        LOGTRACE("Resuming '%s'", downloadId.c_str());
+        if (mInprogressDowload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+                mHttpClient->resume();
+                LOGDBG("%s resumed", downloadId.c_str());
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
         } else {
+            LOGERR("Resume Failed, mInprogressDowload=%p", mInprogressDowload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -250,10 +262,17 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
-            mHttpClient->pause();
-            LOGDBG("%s cancelled", downloadId.c_str());
+        LOGTRACE("Cancelling '%s'", downloadId.c_str());
+        if (mInprogressDowload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+                mInprogressDowload->Cancel();
+                mHttpClient->cancel();
+                LOGDBG("%s cancelled", downloadId.c_str());
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
         } else {
+            LOGERR("Cancel Failed, mInprogressDowload=%p", mInprogressDowload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -366,7 +385,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::Uninstall(const string &packageId, string &errorReason ) {
         Core::hresult result = Core::ERROR_GENERAL;
-        string version = "";
+        string version = "";    // XXX: get it from mState
 
         LOGTRACE("Uninstalling %s", packageId.c_str());
 
@@ -459,6 +478,9 @@ namespace Plugin {
         if (it != mState.end()) {
             auto &state = it->second;
             getRuntimeConfig(state.runtimeConfig, runtimeConfig);
+        } else {
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
+            result = Core::ERROR_GENERAL;
         }
         return result;
     }
@@ -570,6 +592,10 @@ namespace Plugin {
         runtimeConfig.groupId = config.groupId;
         runtimeConfig.dataImageSize = config.dataImageSize;
         LOGDBG("runtimeConfig.userId:%d", runtimeConfig.userId);
+
+        runtimeConfig.fkpsFiles = config.fkpsFiles;
+        LOGTRACE("fkpsFiles: %s %s", config.fkpsFiles.c_str(), runtimeConfig.fkpsFiles.c_str());
+
     }
 
     void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig)
@@ -583,6 +609,22 @@ namespace Plugin {
         runtimeConfig.userId = config.userId;
         runtimeConfig.groupId = config.groupId;
         runtimeConfig.dataImageSize = config.dataImageSize;
+
+        JsonArray list = JsonArray();
+        for (const std::string &fkpsFile : config.fkpsFiles) {
+            //JsonObject obj = fkpsFile;
+            //list.Add(obj);
+            list.Add(fkpsFile);
+        }
+
+        std::string jsonstr;
+        if (list.ToString(jsonstr)) {
+            runtimeConfig.fkpsFiles = jsonstr;
+            LOGTRACE("fkpsFile json %s", runtimeConfig.fkpsFiles.c_str());
+        } else {
+            LOGERR("Failed to  stringify fkpsFiles to JsonArray");
+        }
+
         LOGDBG("runtimeConfig.userId:%d", runtimeConfig.userId);
     }
 
@@ -656,6 +698,10 @@ namespace Plugin {
                         waitTime = nextRetryDuration(waitTime);
                         LOGDBG("waitTime=%d retry %d/%d", waitTime, i, di->GetRetries());
                         std::this_thread::sleep_for(std::chrono::seconds(waitTime));
+                        // XXX: retrying because of server error, Cancel ?!
+                        if (di->Cancelled()) {
+                            break;
+                        }
                     }
                     LOGTRACE("Downloading id=%s url=%s file=%s rateLimit=%ld",
                         di->GetId().c_str(), di->GetUrl().c_str(), di->GetFileLocator().c_str(), di->GetRateLimit());

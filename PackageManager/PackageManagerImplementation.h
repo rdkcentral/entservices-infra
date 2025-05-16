@@ -93,6 +93,7 @@ namespace Plugin {
                 , priority(false)
                 , retries(retries ? retries : MIN_RETRIES)
                 , rateLimit(limit)
+                , cancel(false)
                 {
                 }
 
@@ -103,6 +104,8 @@ namespace Plugin {
                 long GetRateLimit() { return rateLimit; }
                 string GetFileLocator() { return fileLocator; }
                 void SetFileLocator(string &locator) { fileLocator = locator; }
+                void Cancel() { cancel = true ;}
+                bool Cancelled() { return cancel; }
 
             private:
                 string id;
@@ -111,6 +114,7 @@ namespace Plugin {
                 uint8_t retries;
                 long rateLimit;
                 string fileLocator;
+                bool cancel;
         };
 
         typedef std::shared_ptr<DownloadInfo> DownloadInfoPtr;
