@@ -194,7 +194,7 @@ namespace Plugin {
     }
 
     // IPackageDownloader methods
-    Core::hresult PackageManagerImplementation::Download(const string& url, const bool priority, const uint32_t retries, const uint64_t rateLimit, string &downloadId)
+    Core::hresult PackageManagerImplementation::Download(const string& url, const Exchange::IPackageDownloader::Options &options, string &downloadId)
     {
         Core::hresult result = Core::ERROR_NONE;
 
@@ -203,10 +203,10 @@ namespace Plugin {
         // XXX: Check Network here ???
         // Utils::isPluginActivated(NETWORK_PLUGIN_CALLSIGN)
 
-        DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), retries, rateLimit));
+        DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
         std::string filename = downloadDir + "package" + di->GetId();
         di->SetFileLocator(filename);
-        if (priority) {
+        if (options.priority) {
             mDownloadQueue.push_front(di);
         } else {
             mDownloadQueue.push_back(di);
@@ -654,7 +654,7 @@ namespace Plugin {
                 for (int i = 0; i < di->GetRetries(); i++) {
                     if (i) {
                         waitTime = nextRetryDuration(waitTime);
-                        LOGTRACE("waitTime=%d retry %d/%d", waitTime, i, di->GetRetries());
+                        LOGDBG("waitTime=%d retry %d/%d", waitTime, i, di->GetRetries());
                         std::this_thread::sleep_for(std::chrono::seconds(waitTime));
                     }
                     LOGTRACE("Downloading id=%s url=%s file=%s rateLimit=%ld",

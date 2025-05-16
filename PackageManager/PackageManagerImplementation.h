@@ -121,7 +121,7 @@ namespace Plugin {
         virtual ~PackageManagerImplementation();
 
         // IPackageDownloader methods
-        Core::hresult Download(const string& url, const bool priority, const uint32_t retries, const uint64_t rateLimit, string &downloadId) override;
+        Core::hresult Download(const string& url, const Exchange::IPackageDownloader::Options &options, string &downloadId) override;
         Core::hresult Pause(const string &downloadId) override;
         Core::hresult Resume(const string &downloadId) override;
         Core::hresult Cancel(const string &downloadId) override;
