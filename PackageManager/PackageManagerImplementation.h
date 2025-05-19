@@ -169,6 +169,7 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        void InitializeState();
         void downloader(int n);
         void NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason status);
         void NotifyInstallStatus(const string& id, const string& version, const LifecycleState state);
@@ -218,6 +219,7 @@ namespace Plugin {
         std::map<StateKey, State>  mState;
 
         std::string downloadDir = "/opt/CDL/";
+        string configStr;
 
         #ifdef USE_LIBPACKAGE
         std::shared_ptr<packagemanager::IPackageImpl> packageImpl;

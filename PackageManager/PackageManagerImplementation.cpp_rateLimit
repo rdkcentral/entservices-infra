@@ -38,6 +38,11 @@ namespace Plugin {
     {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
         mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
+        mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
+
+        #ifdef USE_LIBPACKAGE
+        packageImpl = packagemanager::IPackageImpl::instance();
+        #endif
     }
 
     PackageManagerImplementation::~PackageManagerImplementation()
@@ -119,7 +124,7 @@ namespace Plugin {
                 result = Core::ERROR_NONE;
             }
 
-            configStr = service->ConfigLine().c_str();
+            string configStr = service->ConfigLine().c_str();
             LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
             PackageManagerImplementation::Configuration config;
             config.FromString(service->ConfigLine());
@@ -137,10 +142,19 @@ namespace Plugin {
             }
 
             #ifdef USE_LIBPACKAGE
-            //packageImpl = packagemanager::IPackageImpl::instance();
-            #endif
+            packagemanager::ConfigMetadataArray aConfigMetadata;
+            packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+            LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);
+            for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
+                // XXX: No version in Uninstall, till we add version to Uninstall Key is just packageId
+                //StateKey key = it->first;
+                StateKey key( { it->first.first, "" });
+                State state(it->second);
+                mState.insert( { key, state } );
+                LOGDBG("packageId: %s runtimeConfig.userId:%d", it->first.first.c_str(), state.runtimeConfig.userId);
 
-            mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
+            }
+            #endif
 
         } else {
             LOGERR("service is null \n");
@@ -306,6 +320,17 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::RateLimit(const string &downloadId, uint64_t &limit)
     {
         Core::hresult result = Core::ERROR_NONE;
+        LOGTRACE("'%s' limit=%ld", downloadId.c_str(), limit);
+        if (mInprogressDowload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+                mHttpClient->setRateLimit(limit);
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
+        } else {
+            LOGERR("set RateLimit Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            result = Core::ERROR_GENERAL;
+        }
         return result;
     }
 
@@ -371,7 +396,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::Uninstall(const string &packageId, string &errorReason ) {
         Core::hresult result = Core::ERROR_GENERAL;
-        string version = "";    // XXX: get it from mState
+        string version = "";
 
         LOGTRACE("Uninstalling %s", packageId.c_str());
 
@@ -464,9 +489,6 @@ namespace Plugin {
         if (it != mState.end()) {
             auto &state = it->second;
             getRuntimeConfig(state.runtimeConfig, runtimeConfig);
-        } else {
-            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
-            result = Core::ERROR_GENERAL;
         }
         return result;
     }
@@ -539,7 +561,6 @@ namespace Plugin {
             bool locked = false;
             string gatewayMetadataPath;
             if (GetLockedInfo(packageId, version, unpackedPath, runtimeConfig, gatewayMetadataPath, locked) == Core::ERROR_NONE) {
-                LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
                 getRuntimeConfig(state.runtimeConfig, runtimeConfig);
                 if (locked)  {
                     lockId = ++state.mLockCount;
@@ -578,13 +599,7 @@ namespace Plugin {
         runtimeConfig.userId = config.userId;
         runtimeConfig.groupId = config.groupId;
         runtimeConfig.dataImageSize = config.dataImageSize;
-
-        runtimeConfig.fkpsFiles = config.fkpsFiles;
-        runtimeConfig.appType = config.appType;
-        runtimeConfig.appPath = config.appPath;
-        runtimeConfig.command= config.command;
-        runtimeConfig.runtimePath = config.runtimePath;
-
+        LOGDBG("runtimeConfig.userId:%d", runtimeConfig.userId);
     }
 
     void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig)
@@ -598,20 +613,7 @@ namespace Plugin {
         runtimeConfig.userId = config.userId;
         runtimeConfig.groupId = config.groupId;
         runtimeConfig.dataImageSize = config.dataImageSize;
-
-        JsonArray list = JsonArray();
-        for (const std::string &fkpsFile : config.fkpsFiles) {
-            list.Add(fkpsFile);
-        }
-
-        if (!list.ToString(runtimeConfig.fkpsFiles)) {
-            LOGERR("Failed to  stringify fkpsFiles to JsonArray");
-        }
-        //LOGDBG("runtimeConfig.fkpsFiles=%s", runtimeConfig.fkpsFiles.c_str());
-        runtimeConfig.appType = config.appType == packagemanager::ApplicationType::SYSTEM ? "SYSTEM" : "INTERACTIVE";
-        runtimeConfig.appPath = config.appPath;
-        runtimeConfig.command= config.command;
-        runtimeConfig.runtimePath = config.runtimePath;
+        LOGDBG("runtimeConfig.userId:%d", runtimeConfig.userId);
     }
 
     Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version)
@@ -668,30 +670,8 @@ namespace Plugin {
         return result;
     }
 
-    void PackageManagerImplementation::InitializeState()
-    {
+    void PackageManagerImplementation::downloader(int n) {
         LOGTRACE();
-        #ifdef USE_LIBPACKAGE
-        packageImpl = packagemanager::IPackageImpl::instance();
-
-        packagemanager::ConfigMetadataArray aConfigMetadata;
-        packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
-        LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);
-        for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
-            // XXX: No version in Uninstall, till we add version to Uninstall Key is just packageId
-            //StateKey key( { it->first.first, "" });
-            StateKey key = it->first;
-            State state(it->second);
-            mState.insert( { key, state } );
-        }
-        #endif
-        LOGTRACE();
-    }
-
-    void PackageManagerImplementation::downloader(int n)
-    {
-        InitializeState();
-
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
@@ -742,8 +722,7 @@ namespace Plugin {
         }
     }
 
-    void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason)
-    {
+    void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason) {
         JsonArray list = JsonArray();
         JsonObject obj;
         obj["downloadId"] = id;
@@ -763,8 +742,7 @@ namespace Plugin {
         mAdminLock.Unlock();
     }
 
-    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const LifecycleState state)
-    {
+    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const LifecycleState state) {
         JsonArray list = JsonArray();
         JsonObject obj;
         obj["packageId"] = id;
@@ -784,8 +762,7 @@ namespace Plugin {
         mAdminLock.Unlock();
     }
 
-    PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext()
-    {
+    PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext() {
         std::lock_guard<std::mutex> lock(mMutex);
         LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDowload == nullptr) {
