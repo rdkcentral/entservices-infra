@@ -664,7 +664,7 @@ Json::Value DobbySpecGenerator::createPrivateDataMount(const WPEFramework::Excha
     static const Json::StaticString noexec("noexec");
 
     Json::Value mount(Json::objectValue);
-    std::string sourcePath(runtimeConfig.unpackedPath);
+    std::string sourcePath;	// Suresh (runtimeConfig.unpackedPath);
 
     if (sourcePath.empty())
     {

@@ -370,7 +370,8 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
                     }
                     if ((nullptr != mPackageManagerHandlerObject) && (!packageData.version.empty()))
                     {
-                        status = mPackageManagerHandlerObject->Lock(appId, packageData.version, lockReason, packageData.lockId, packageData.unpackedPath, packageData.configMetadata, packageData.appMetadata );
+                        Exchange::RuntimeConfig runtimeConfig;
+                        status = mPackageManagerHandlerObject->Lock(appId, packageData.version, lockReason, packageData.lockId, packageData.unpackedPath, runtimeConfig, packageData.appMetadata );
                         if(status == Core::ERROR_NONE)
                         {
                             LOGINFO("Fetching package entry updated for appId: %s " \
@@ -461,7 +462,7 @@ Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const st
     {
         status = packageLock(appId, packageData, lockReason);
         WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
-        runtimeConfig.unpackedPath = packageData.unpackedPath;
+        // Suresh`runtimeConfig.unpackedPath = packageData.unpackedPath;
         getCustomValues(runtimeConfig);
         if (status == Core::ERROR_NONE)
         {
@@ -624,7 +625,7 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
     {
         status = packageLock(appId, packageData, lockReason);
         WPEFramework::Exchange::RuntimeConfig& runtimeConfig = packageData.configMetadata;
-        runtimeConfig.unpackedPath = packageData.unpackedPath;
+        // Suresh runtimeConfig.unpackedPath = packageData.unpackedPath;
         getCustomValues(runtimeConfig);
 
         if (status == Core::ERROR_NONE)
