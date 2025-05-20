@@ -346,18 +346,18 @@ namespace Plugin {
                 string errorReason = "";
                 if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
                     LOGINFO("CreateStorage path [%s]", path.c_str());
-                    state.lifecycleState = LifecycleState::INSTALLING;
-                    NotifyInstallStatus(packageId, version, LifecycleState::INSTALLING);
+                    state.installState = InstallState::INSTALLING;
+                    NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
                     #ifdef USE_LIBPACKAGE
                     packagemanager::ConfigMetaData config;
                     packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                     if (pmResult == packagemanager::SUCCESS) {
                         result = Core::ERROR_NONE;
-                        state.lifecycleState = LifecycleState::INSTALLED;
-                        NotifyInstallStatus(packageId, version, LifecycleState::INSTALLED);
+                        state.installState = InstallState::INSTALLED;
                     } else {
-                        // XXX: NotifyInstallStatus(INSTALL_FAILED)
+                        state.installState = InstallState::INSTALL_FAILURE;
                     }
+                    NotifyInstallStatus(packageId, version, state.installState);
                     #endif
                 } else {
                     LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
@@ -392,8 +392,8 @@ namespace Plugin {
             if (nullptr != mStorageManagerObject) {
                 if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
                     LOGINFO("DeleteStorage done");
-                    state.lifecycleState = LifecycleState::UNINSTALLING;
-                    NotifyInstallStatus(packageId, version, LifecycleState::UNINSTALLING);
+                    state.installState = InstallState::UNINSTALLING;
+                    NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
                     #ifdef USE_LIBPACKAGE
                     // XXX: what if DeleteStorage() fails, who Uninstall the package
                     packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
@@ -401,8 +401,8 @@ namespace Plugin {
                         result = Core::ERROR_NONE;
                     }
                     #endif
-                    state.lifecycleState = LifecycleState::UNINSTALLED;
-                    NotifyInstallStatus(packageId, version, LifecycleState::UNINSTALLED);
+                    state.installState = InstallState::UNINSTALLED;
+                    NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
                     // XXX: remove from state/cache
                 } else {
                     LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
@@ -438,7 +438,7 @@ namespace Plugin {
                         Exchange::IPackageInstaller::Package package;
                         package.packageId = val["packageId"].asString().c_str();
                         package.version = val["version"].asString().c_str();
-                        package.packageState = LifecycleState::INSTALLED;
+                        package.state = InstallState::INSTALLED;
                         package.sizeKb = 0;         // XXX: getPackageSpaceInKBytes
                         packageList.emplace_back(package);
                     }
@@ -474,7 +474,7 @@ namespace Plugin {
     }
 
     Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version,
-        Exchange::IPackageInstaller::PackageLifecycleState &lifecycleState)
+        Exchange::IPackageInstaller::InstallState &installState)
     {
         Core::hresult result = Core::ERROR_NONE;
 
@@ -482,7 +482,7 @@ namespace Plugin {
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-            lifecycleState = state.lifecycleState;
+            installState = state.installState;
         } else {
             LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
         }
@@ -759,7 +759,7 @@ namespace Plugin {
         mAdminLock.Unlock();
     }
 
-    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const LifecycleState state)
+    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const InstallState state)
     {
         JsonArray list = JsonArray();
         JsonObject obj;

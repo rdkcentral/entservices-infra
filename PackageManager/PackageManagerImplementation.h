@@ -41,7 +41,7 @@
 namespace WPEFramework {
 namespace Plugin {
     typedef Exchange::IPackageDownloader::Reason DownloadReason;
-    typedef Exchange::IPackageInstaller::PackageLifecycleState LifecycleState;
+    typedef Exchange::IPackageInstaller::InstallState InstallState;
 
     class PackageManagerImplementation
     : public Exchange::IPackageDownloader
@@ -55,7 +55,7 @@ namespace Plugin {
             State(const packagemanager::ConfigMetaData &config) {
                 PackageManagerImplementation::getRuntimeConfig(config, runtimeConfig);
             }
-            LifecycleState lifecycleState = LifecycleState::UNINSTALLED;
+            InstallState installState = InstallState::UNINSTALLED;
             bool preInsalled = false;
             uint32_t mLockCount = 0;
             Exchange::RuntimeConfig runtimeConfig;
@@ -145,7 +145,7 @@ namespace Plugin {
         Core::hresult Uninstall(const string &packageId, string &errorReason ) override;
         Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
-        Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::PackageLifecycleState &state) override;
+        Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::InstallState &state) override;
 
         Core::hresult Register(Exchange::IPackageInstaller::INotification *sink) override;
         Core::hresult Unregister(Exchange::IPackageInstaller::INotification *sink) override;
@@ -172,7 +172,7 @@ namespace Plugin {
         void InitializeState();
         void downloader(int n);
         void NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason status);
-        void NotifyInstallStatus(const string& id, const string& version, const LifecycleState state);
+        void NotifyInstallStatus(const string& id, const string& version, const InstallState state);
 
         DownloadInfoPtr getNext();
         int nextRetryDuration(int n) {
@@ -188,13 +188,15 @@ namespace Plugin {
             }
         }
 
-        string getInstallReason(LifecycleState state) {
+        string getInstallReason(InstallState state) {
             switch (state) {
-                case LifecycleState::INSTALLING : return "INSTALLING";
-                case LifecycleState::INSTALLATION_BLOCKED : return "INSTALLATION_BLOCKED";
-                case LifecycleState::INSTALLED : return "INSTALLED";
-                case LifecycleState::UNINSTALLING : return "UNINSTALLING";
-                case LifecycleState::UNINSTALLED : return "UNINSTALLED";
+                case InstallState::INSTALLING : return "INSTALLING";
+                case InstallState::INSTALLATION_BLOCKED : return "INSTALLATION_BLOCKED";
+                case InstallState::INSTALL_FAILURE : return "INSTALL_FAILURE";
+                case InstallState::INSTALLED : return "INSTALLED";
+                case InstallState::UNINSTALLING : return "UNINSTALLING";
+                case InstallState::UNINSTALL_FAILURE : return "UNINSTALL_FAILURE";
+                case InstallState::UNINSTALLED : return "UNINSTALLED";
                 default: return "Unknown";
             }
         }
