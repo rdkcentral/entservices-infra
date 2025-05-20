@@ -137,7 +137,7 @@ namespace Plugin {
             }
 
             #ifdef USE_LIBPACKAGE
-            //packageImpl = packagemanager::IPackageImpl::instance();
+            packageImpl = packagemanager::IPackageImpl::instance();
             #endif
 
             mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
@@ -353,10 +353,12 @@ namespace Plugin {
                     packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                     if (pmResult == packagemanager::SUCCESS) {
                         result = Core::ERROR_NONE;
+                        state.lifecycleState = LifecycleState::INSTALLED;
+                        NotifyInstallStatus(packageId, version, LifecycleState::INSTALLED);
+                    } else {
+                        // XXX: NotifyInstallStatus(INSTALL_FAILED)
                     }
                     #endif
-                    state.lifecycleState = LifecycleState::INSTALLED;
-                    NotifyInstallStatus(packageId, version, LifecycleState::INSTALLED);
                 } else {
                     LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
                 }
@@ -566,7 +568,7 @@ namespace Plugin {
         return result;
     }
 
-    // XXX: right way to do this is via copy ctor
+    // XXX: right way to do this is via copy ctor, when we move Thunder 5.2 and have commone struct RuntimeConfig
     void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig)
     {
         runtimeConfig.dial = config.dial;
@@ -584,7 +586,6 @@ namespace Plugin {
         runtimeConfig.appPath = config.appPath;
         runtimeConfig.command= config.command;
         runtimeConfig.runtimePath = config.runtimePath;
-
     }
 
     void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig)
@@ -607,7 +608,6 @@ namespace Plugin {
         if (!list.ToString(runtimeConfig.fkpsFiles)) {
             LOGERR("Failed to  stringify fkpsFiles to JsonArray");
         }
-        //LOGDBG("runtimeConfig.fkpsFiles=%s", runtimeConfig.fkpsFiles.c_str());
         runtimeConfig.appType = config.appType == packagemanager::ApplicationType::SYSTEM ? "SYSTEM" : "INTERACTIVE";
         runtimeConfig.appPath = config.appPath;
         runtimeConfig.command= config.command;
@@ -672,14 +672,10 @@ namespace Plugin {
     {
         LOGTRACE();
         #ifdef USE_LIBPACKAGE
-        packageImpl = packagemanager::IPackageImpl::instance();
-
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
         LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);
         for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
-            // XXX: No version in Uninstall, till we add version to Uninstall Key is just packageId
-            //StateKey key( { it->first.first, "" });
             StateKey key = it->first;
             State state(it->second);
             mState.insert( { key, state } );
