@@ -227,8 +227,9 @@ namespace Plugin {
             Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo = {};
             int index = 1;
 
-            if((num_partitions > 1) && (i == 0)) /* Skipping the mount path creation for partitions[0], as this is always device path(/dev/sdx).
-            If there is only one partition then we are creating the mount path on the device path (partitions[0]). */
+            /* Skipping the mount path creation for partitions[0], as this is always device path(/dev/sdx). If there
+            is only one partition then we are creating the mount path on the device path (partitions[0]). */
+            if((num_partitions > 1) && (i == 0))
             continue;
 
             while (directoryExists(MOUNT_PATH + std::to_string(index)))
