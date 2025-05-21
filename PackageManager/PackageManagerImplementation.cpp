@@ -105,7 +105,8 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Initialize(PluginHost::IShell* service) {
+    Core::hresult PackageManagerImplementation::Initialize(PluginHost::IShell* service)
+    {
         Core::hresult result = Core::ERROR_GENERAL;
         LOGINFO();
 
@@ -149,7 +150,8 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Deinitialize(PluginHost::IShell* service) {
+    Core::hresult PackageManagerImplementation::Deinitialize(PluginHost::IShell* service)
+    {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
         return result;
@@ -633,13 +635,15 @@ namespace Plugin {
             auto &state = it->second;
             #ifdef USE_LIBPACKAGE
             if (state.mLockCount) {
-                packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
-                if (pmResult != packagemanager::SUCCESS) {
-                    result = Core::ERROR_GENERAL;
+                if (--state.mLockCount == 0) {
+                    packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
+                    if (pmResult != packagemanager::SUCCESS) {
+                        result = Core::ERROR_GENERAL;
+                    }
                 }
-                --state.mLockCount;
             } else {
                 LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
+                result = Core::ERROR_GENERAL;
             }
             #endif
             LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
@@ -654,7 +658,6 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
         string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked)
     {
-
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -662,13 +665,8 @@ namespace Plugin {
         if (it != mState.end()) {
             auto &state = it->second;
             getRuntimeConfig(state.runtimeConfig, runtimeConfig);
-
-            #ifdef USE_LIBPACKAGE
-            packagemanager::Result pmResult = packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
-            if (pmResult != packagemanager::SUCCESS) {
-                result = Core::ERROR_GENERAL;
-            }
-            #endif
+            unpackedPath = runtimeConfig.appPath;
+            locked = (state.mLockCount > 0);
         } else {
             LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
