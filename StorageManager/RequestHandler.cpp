@@ -122,7 +122,8 @@ namespace WPEFramework
     Core::hresult RequestHandler::createPersistentStoreRemoteStoreObject()
     {
         Core::hresult status = Core::ERROR_GENERAL;
-
+	LOGINFO("Entered createPersistentStoreRemoteStoreObject");
+        LOGINFO("mService: %p", mService);
         if (nullptr == mService)
         {
             LOGERR("mService is null \n");
