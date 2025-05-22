@@ -15,18 +15,20 @@ namespace WPEFramework
 {
     namespace Plugin
     {
+	std::mutex mInstanceMutex;
         RequestHandler* RequestHandler::mInstance = nullptr;
         static RequestHandler::StorageSize gStorageSize;
         std::mutex RequestHandler::mStorageSizeLock;
 
         RequestHandler* RequestHandler::getInstance()
-	    {
+	{
+	     std::lock_guard<std::mutex> lock(mInstanceMutex);
             if (nullptr == mInstance)
             {
                 mInstance = new RequestHandler();
             }
             return mInstance;
-	    }
+	}
         
         RequestHandler::RequestHandler(): mStorageManagerImplLock()
         , mPersistentStoreRemoteStoreObject(nullptr)
