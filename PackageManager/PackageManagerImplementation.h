@@ -171,6 +171,14 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        string GetVersion(const string &id) {
+            for (auto const& [key, val] : mState) {
+                if (id.compare(key.first) == 0) {
+                    return key.second;
+                }
+            }
+            return "";
+        }
         void InitializeState();
         void downloader(int n);
         void NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason status);
