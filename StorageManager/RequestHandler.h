@@ -11,8 +11,10 @@ namespace WPEFramework
         class RequestHandler
         {
             public:
-            RequestHandler(const RequestHandler& obj) = delete;
+            //RequestHandler(const RequestHandler& obj) = delete;
             static RequestHandler* getInstance();
+            RequestHandler(const RequestHandler&) = delete;
+            RequestHandler& operator=(const RequestHandler&) = delete;
             ~RequestHandler();
             void SetBaseStoragePath(const std::string& path);
             typedef struct _StorageAppInfo
