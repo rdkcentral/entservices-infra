@@ -527,27 +527,28 @@ namespace Plugin {
         if (it != mState.end()) {
             auto &state = it->second;
             #ifdef USE_LIBPACKAGE
-            bool locked = false;
+            //bool locked = false;
             string gatewayMetadataPath;
-            if (GetLockedInfo(packageId, version, unpackedPath, runtimeConfig, gatewayMetadataPath, locked) == Core::ERROR_NONE) {
-                LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
-                if (locked)  {
+            bool locked = (state.mLockCount > 0);
+            LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
+            if (locked)  {
+                lockId = ++state.mLockCount;
+            } else {
+                packagemanager::ConfigMetaData config;
+                packagemanager::Result pmResult = packageImpl->Lock(packageId, version, state.unpackedPath, config);
+                LOGDBG("unpackedPath=%s", unpackedPath.c_str());
+                // save the new config in state
+                getRuntimeConfig(config, state.runtimeConfig);   // XXX: is config unnecessary in Lock ?!
+                if (pmResult == packagemanager::SUCCESS) {
                     lockId = ++state.mLockCount;
+                    LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
                 } else {
-                    packagemanager::ConfigMetaData config;
-                    packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, config);
-                    // save the new config in state
-                    getRuntimeConfig(config, state.runtimeConfig);   // XXX: config is unnecessary in Lock
-                    if (pmResult == packagemanager::SUCCESS) {
-                        lockId = ++state.mLockCount;
-                        LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
-                    } else {
-                        LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
-                        result = Core::ERROR_GENERAL;
-                    }
+                    LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
+                    result = Core::ERROR_GENERAL;
                 }
-                getRuntimeConfig(state.runtimeConfig, runtimeConfig);
             }
+            getRuntimeConfig(state.runtimeConfig, runtimeConfig);
+            unpackedPath = state.unpackedPath;
             #endif
 
             LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
@@ -618,6 +619,7 @@ namespace Plugin {
             if (state.mLockCount) {
                 if (--state.mLockCount == 0) {
                     packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
+                    state.unpackedPath = "";
                     if (pmResult != packagemanager::SUCCESS) {
                         result = Core::ERROR_GENERAL;
                     }
@@ -646,8 +648,9 @@ namespace Plugin {
         if (it != mState.end()) {
             auto &state = it->second;
             getRuntimeConfig(state.runtimeConfig, runtimeConfig);
-            unpackedPath = runtimeConfig.appPath;
+            unpackedPath = state.unpackedPath;
             locked = (state.mLockCount > 0);
+            LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
             LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
