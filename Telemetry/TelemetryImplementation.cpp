@@ -78,6 +78,8 @@ namespace Plugin {
     TelemetryImplementation::~TelemetryImplementation()
     {
          if (_powerManagerPlugin) {
+		 // Unregister from PowerManagerPlugin Notification
+		_powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>());
                 _powerManagerPlugin.Reset();
             }
 
