@@ -17,7 +17,10 @@
 * limitations under the License.
 */
 
+#include <iomanip>      /* for std::setw, std::setfill */
 #include "AppManagerImplementation.h"
+
+#define TIME_DATA_SIZE           200
 
 namespace WPEFramework {
 namespace Plugin {
@@ -124,11 +127,9 @@ void AppManagerImplementation::dispatchEvent(EventNames event, const JsonObject 
 
 void AppManagerImplementation::Dispatch(EventNames event, const JsonObject params)
 {
-    LOGINFO("Dispatch Entered");
-
     switch(event)
     {
-        case APP_LIFECYCLE_STATE_CHANGED:
+        case APP_EVENT_LIFECYCLE_STATE_CHANGED:
         {
             string appId = "";
             string appInstanceId = "";
@@ -170,11 +171,48 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
             }
             break;
         }
-
-        default:
-            LOGERR("Unknown event: %d", static_cast<int>(event));
+        case APP_EVENT_INSTALLATION_STATUS:
+        {
+            string appId = "";
+            string version = "";
+            string installStatus = "";
+            /* Check if 'packageId' exists and is not empty */
+            appId = params.HasLabel("packageId") ? params["packageId"].String() : "";
+            if (appId.empty())
+            {
+                LOGERR("appId is missing or empty");
+            }
+            else
+            {
+                installStatus = params.HasLabel("reason") ? params["reason"].String() : "";
+                mAdminLock.Lock();
+                for (auto& notification : mAppManagerNotification)
+                {
+                    if (installStatus == "INSTALLED")
+                    {
+                        version = params.HasLabel("version") ? params["version"].String() : "";
+                        if (version.empty())
+                        {
+                            LOGERR("version is empty for installed app");
+                        }
+                        LOGINFO("OnAppInstalled appId %s version %s", appId.c_str(), version.c_str());
+                        notification->OnAppInstalled(appId, version);
+                    }
+                    else if (installStatus == "UNINSTALLED")
+                    {
+                        LOGINFO("OnAppUninstalled appId %s", appId.c_str());
+                        notification->OnAppUninstalled(appId);
+                    }
+                }
+                mAdminLock.Unlock();
+            }
             break;
+        }
+        default:
+        LOGERR("Unknown event: %d", static_cast<int>(event));
+        break;
     }
+
 }
 
 /*
@@ -197,7 +235,7 @@ void AppManagerImplementation::handleOnAppLifecycleStateChanged(const string& ap
     LOGINFO("Notify App Lifecycle state change for appId %s: oldState=%d, newState=%d",
         appId.c_str(), static_cast<int>(oldState), static_cast<int>(newState));
 
-    dispatchEvent(APP_LIFECYCLE_STATE_CHANGED, eventDetails);
+    dispatchEvent(APP_EVENT_LIFECYCLE_STATE_CHANGED, eventDetails);
 }
 
 uint32_t AppManagerImplementation::Configure(PluginHost::IShell* service)
@@ -410,87 +448,94 @@ bool AppManagerImplementation::removeAppInfoByAppId(const string &appId)
     }
     return result;
 }
-
-void AppManagerImplementation::OnAppInstallationStatus(const string& jsonresponse)
-{
-    LOGINFO("Enter AppManagerImplementation::OnAppInstallationStatus");
-    LOGINFO("Received JSON response: %s", jsonresponse.c_str());
-    /* TODO: Handled as part of RDKEMW-3885 */
-}
-
 Core::hresult AppManagerImplementation::packageLock(const string& appId, PackageInfo &packageData, Exchange::IPackageHandler::LockReason lockReason)
 {
-        Core::hresult status = Core::ERROR_GENERAL;
-        bool result = false;
-        Exchange::IPackageInstaller::IPackageIterator* packages;
-        bool loaded = true;
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool result = false;
+    bool installed = false;
+    bool loaded = false;
+    std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
 
-        if (nullptr != mLifecycleInterfaceConnector)
+    if (nullptr != mLifecycleInterfaceConnector)
+    {
+        status = mLifecycleInterfaceConnector->isAppLoaded(appId, loaded);
+    }
+
+    /* Check if appId exists in the mAppInfo map */
+    auto it = mAppInfo.find(appId);
+
+    if ((status == Core::ERROR_NONE) &&
+        (!loaded ||
+         it == mAppInfo.end() ||
+         it->second.appNewState != Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED || it->second.appNewState != Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED || it->second.appNewState != Exchange::IAppManager::AppLifecycleState::APP_STATE_HIBERNATED))
+    {
+         /* Fetch list of installed packages */
+        status = fetchInstalledPackages(packageList);
+
+        if (status == Core::ERROR_NONE)
         {
-            status = mLifecycleInterfaceConnector->isAppLoaded(appId, loaded);
-        }
-        if(!loaded && status == Core::ERROR_NONE)
-        {
-            if (nullptr != mPackageManagerInstallerObject)
+            /* Check if appId is installed */
+            checkIsInstalled(appId, installed, packageList);
+
+            if (installed)
             {
-                status = mPackageManagerInstallerObject->ListPackages(packages);
-                if (status == Core::ERROR_NONE)
+                /* Check if the packageId matches the provided appId */
+                for (const auto& package : packageList)
                 {
-                    while (packages != nullptr )
+                    if (!package.packageId.empty() && package.packageId == appId)
                     {
-                        WPEFramework::Exchange::IPackageInstaller::Package package;
-                        if (!packages->Next(package))
-                        {
-                            LOGERR("Failed to get next package");
-                            break;
-                        }
-
-                        /* Check if the packageId matches the provided appId */
-                        if (!package.packageId.empty() && package.packageId == appId)
-                        {
-                            /* If it matches, store the version */
-                            packageData.version = std::string(package.version);
-                            break;  /* Exit the loop after finding the matching package */
-                        }
+                        packageData.version = std::string(package.version);
+                        break;
                     }
-                    if ((nullptr != mPackageManagerHandlerObject) && (!packageData.version.empty()))
+                }
+                LOGINFO("packageData call lock  %s", packageData.version.c_str());
+                /* Ensure package version is valid before proceeding with the Lock */
+                if ((nullptr != mPackageManagerHandlerObject) && !packageData.version.empty())
+                {
+                    status = mPackageManagerHandlerObject->Lock(appId, packageData.version, lockReason, packageData.lockId, packageData.unpackedPath, packageData.configMetadata, packageData.appMetadata);
+                    if (status == Core::ERROR_NONE)
                     {
-                        status = mPackageManagerHandlerObject->Lock(appId, packageData.version, lockReason, packageData.lockId, packageData.unpackedPath, packageData.configMetadata, packageData.appMetadata );
-                        if(status == Core::ERROR_NONE)
+                        LOGINFO("Fetching package entry updated for appId: %s version: %s lockId: %d unpackedPath: %s appMetadata: %s",
+                                 appId.c_str(), packageData.version.c_str(), packageData.lockId, packageData.unpackedPath.c_str(), packageData.appMetadata.c_str());
+                        result = createOrUpdatePackageInfoByAppId(appId, packageData);
+
+                        /* If package info update failed, set error status */
+                        if (!result)
                         {
-                            LOGINFO("Fetching package entry updated for appId: %s " \
-                            "version: %s lockId: %d unpackedPath: %s appMetadata: %s",
-                            appId.c_str(), packageData.version.c_str(), packageData.lockId, packageData.unpackedPath.c_str(), packageData.appMetadata.c_str());
-                            result = createOrUpdatePackageInfoByAppId(appId, packageData);
-                            if (false == result)
-                            {
-                                LOGERR("Failed to createOrUpdate the PackageInfo");
-                                status = Core::ERROR_GENERAL;
-                            }
-                        }
-                        else
-                        {
-                            LOGERR("Failed to PackageManager Lock");
+                            LOGERR("Failed to createOrUpdate the PackageInfo");
+                            status = Core::ERROR_GENERAL;
                         }
                     }
                     else
                     {
-                        LOGERR("PackageManager handler is %s", (nullptr != mPackageManagerHandlerObject) ? "valid, but package version is empty" : "null");
-                        status = Core::ERROR_GENERAL;
+                        LOGERR("Failed to PackageManager Lock %s", appId.c_str());
+                        packageData.version.clear();  /* Clear version on failure */
                     }
                 }
                 else
                 {
-                    LOGERR("Failed to get the ListPackages");
+                    LOGERR("PackageManager handler is %s", (nullptr != mPackageManagerHandlerObject) ? "valid, but package version is empty" : "null");
+                    status = Core::ERROR_GENERAL;
                 }
             }
             else
             {
-                LOGERR("PackageManager Installer is %s", ((nullptr != mPackageManagerInstallerObject) ? "valid": "null"));
+                LOGERR("isInstalled Failed for appId: %s", appId.c_str());
                 status = Core::ERROR_GENERAL;
             }
         }
-        return status;
+        else
+        {
+            LOGERR("Failed to Get the list of Packages");
+            status = Core::ERROR_GENERAL;
+        }
+    }
+    else
+    {
+        LOGERR("Skipping packageLock for appId %s: ", appId.c_str());
+    }
+
+    return status;
 }
 
 Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
@@ -830,21 +875,146 @@ Core::hresult AppManagerImplementation::SetAppProperty(const string& appId, cons
     return status;
 }
 
-Core::hresult AppManagerImplementation::GetInstalledApps(string& apps)
+Core::hresult AppManagerImplementation::fetchInstalledPackages(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList)
 {
-    Core::hresult status = Core::ERROR_NONE;
+    Core::hresult status = Core::ERROR_GENERAL;
+    packageList.clear();
+    if (nullptr == mPackageManagerInstallerObject)
+    {
+        LOGINFO("Create PackageManager Remote store object");
+        if (Core::ERROR_NONE != createPackageManagerObject())
+        {
+            LOGERR("Failed to create PackageManagerObject");
+        }
+    }
+    ASSERT (nullptr != mPackageManagerInstallerObject);
+    if (mPackageManagerInstallerObject != nullptr)
+    {
+        Exchange::IPackageInstaller::IPackageIterator* packages = nullptr;
 
-    LOGINFO("GetInstalledApps Entered");
+        if (mPackageManagerInstallerObject->ListPackages(packages) != Core::ERROR_NONE || packages == nullptr)
+        {
+            LOGERR("ListPackage is returning Error or Packages is nullptr");
+            goto End;
+        }
+
+        WPEFramework::Exchange::IPackageInstaller::Package package;
+        while (packages->Next(package)) {
+            packageList.push_back(package);
+        }
+        status = Core::ERROR_NONE;
+        packages->Release();
+    }
+    else
+    {
+        LOGERR("mPackageManagerInstallerObject is null ");
+    }
+End:
+    return status;
+}
+
+std::string AppManagerImplementation::getInstallAppType(ApplicationType type)
+{
+    switch (type)
+    {
+        case ApplicationType::APPLICATION_TYPE_INTERACTIVE : return "APPLICATION_TYPE_INTERACTIVE";
+        case ApplicationType::APPLICATION_TYPE_SYSTEM : return "APPLICATION_TYPE_SYSTEM";
+        default: return "APPLICATION_TYPE_UNKNOWN";
+    }
+}
+
+Core::hresult AppManagerImplementation::GetInstalledApps(std::string& apps)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    apps.clear();
+    std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
+    JsonArray installedAppsArray;
+    char timeData[TIME_DATA_SIZE];
+
+    mAdminLock.Lock();
+
+    status = fetchInstalledPackages(packageList);
+    if (status == Core::ERROR_NONE)
+    {
+        for (const auto& pkg : packageList)
+        {
+            JsonObject package;
+            package["appId"] = pkg.packageId;
+            package["versionString"] = pkg.version;
+            package["type"] =getInstallAppType(APPLICATION_TYPE_INTERACTIVE) ;
+            auto it = mAppInfo.find(pkg.packageId);
+            if (it != mAppInfo.end())
+            {
+                const auto& timestamp = it->second.lastActiveStateChangeTime;
+
+                if (strftime(timeData, sizeof(timeData), "%D %T", gmtime(&timestamp.tv_sec)))
+                {
+                    std::ostringstream lastActiveTime;
+                    lastActiveTime << timeData << "." << std::setw(9) << std::setfill('0') << timestamp.tv_nsec;
+                    package["lastActiveTime"] = lastActiveTime.str();
+                }
+                else
+                {
+                    package["lastActiveTime"] = "";
+                }
+                package["lastActiveIndex"]=it->second.lastActiveIndex;
+            }
+            else
+            {
+                package["lastActiveTime"] ="";
+                package["lastActiveIndex"]="";
+            }
+            installedAppsArray.Add(package);
+        }
+        installedAppsArray.ToString(apps);
+        LOGINFO("getInstalledApps: %s", apps.c_str());
+    }
+
+    mAdminLock.Unlock();
 
     return status;
 }
 
-Core::hresult AppManagerImplementation::IsInstalled(const string& appId, bool& installed)
+/* Method to check if the app is installed */
+void AppManagerImplementation::checkIsInstalled(const std::string& appId, bool& installed, const std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList)
 {
-    Core::hresult status = Core::ERROR_NONE;
+    installed = false;
 
-    LOGINFO("IsInstalled Entered");
+    for (const auto& package : packageList)
+    {
+        if (!package.packageId.empty() && package.packageId == appId)
+        {
+            LOGINFO("%s is installed ",appId.c_str());
+            installed = true;
+            break;
+        }
+    }
+    return;
+}
 
+Core::hresult AppManagerImplementation::IsInstalled(const std::string& appId, bool& installed)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    installed = false;
+
+    mAdminLock.Lock();
+
+    std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
+    status = fetchInstalledPackages(packageList);
+    if (status == Core::ERROR_NONE)
+    {
+        checkIsInstalled(appId, installed, packageList);
+        if(installed)
+        {
+            LOGINFO("%s is installed ",appId.c_str());
+        }
+        else
+        {
+            LOGINFO("%s is not installed ",appId.c_str());
+        }
+    }
+
+    mAdminLock.Unlock();
     return status;
 }
 
@@ -929,6 +1099,32 @@ Core::hresult AppManagerImplementation::GetMaxInactiveRamUsage(int32_t& maxInact
     return Core::ERROR_NONE;
 }
 
+void AppManagerImplementation::OnAppInstallationStatus(const string& jsonresponse)
+{
+    LOGINFO("Received JSON response: %s", jsonresponse.c_str());
+
+    if (!jsonresponse.empty())
+    {
+        JsonArray list;
+        if (list.FromString(jsonresponse))
+        {
+            for (size_t i = 0; i < list.Length(); ++i)
+            {
+                JsonObject params = list[i].Object();
+                dispatchEvent(APP_EVENT_INSTALLATION_STATUS, params);
+            }
+        }
+        else
+        {
+            LOGERR("Failed to parse JSON string\n");
+        }
+    }
+    else
+    {
+        LOGERR("jsonresponse string is empty");
+    }
+}
+
 void AppManagerImplementation::getCustomValues(WPEFramework::Exchange::RuntimeConfig& runtimeConfig)
 {
         FILE* fp = fopen("/tmp/aipath", "r");
@@ -973,5 +1169,6 @@ void AppManagerImplementation::getCustomValues(WPEFramework::Exchange::RuntimeCo
             runtimeConfig.resourceManagerClientEnabled = true;
         }
 }
+
 } /* namespace Plugin */
 } /* namespace WPEFramework */

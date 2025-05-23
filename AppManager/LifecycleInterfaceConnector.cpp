@@ -34,6 +34,7 @@
 #include "UtilsString.h"
 #include "AppManagerImplementation.h"
 
+#define SUSPEND_POLICY_FILE        "/tmp/AI2.0Suspendable"
 using namespace std;
 using namespace Utils;
 
@@ -42,6 +43,7 @@ namespace WPEFramework
     namespace Plugin
     {
         LifecycleInterfaceConnector* LifecycleInterfaceConnector::_instance = nullptr;
+        static uint32_t gAppsActiveCounter = 0;
 
         LifecycleInterfaceConnector::LifecycleInterfaceConnector(PluginHost::IShell* service)
         : mLifecycleManagerRemoteObject(nullptr),
@@ -150,7 +152,7 @@ namespace WPEFramework
         {
             Core::hresult status = Core::ERROR_GENERAL;
             AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
-
+            bool loaded = false;
             string appPath = "";
             string appConfig = "";
             string runtimeAppId = "";
@@ -161,7 +163,7 @@ namespace WPEFramework
             string appInstanceId = "";
             string errorReason = "";
             bool success = true;
-
+            Exchange::ILifecycleManager::LifecycleState state = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
             if (appId.empty())
             {
                 LOGERR("appId is empty");
@@ -174,7 +176,6 @@ namespace WPEFramework
                     AppManagerImplementation::PackageInfo packageData;
                     if(appManagerImplInstance->fetchPackageInfoByAppId(appId, packageData))
                     {
-                        //NEEDS CHANGE
                         appPath = packageData.unpackedPath;
                         LOGINFO("Got PackageAppInfo appPath :[%s]", appPath.c_str());
                     }
@@ -196,26 +197,62 @@ namespace WPEFramework
 
                 if (nullptr != mLifecycleManagerRemoteObject)
                 {
-                    appManagerImplInstance->mCurrentAction = AppManagerImplementation::APP_ACTION_LAUNCH;
-                    status = mLifecycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
-                                                                  enableDebugger, Exchange::ILifecycleManager::LifecycleState::ACTIVE, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success);
-
-                    if (status == Core::ERROR_NONE)
+                    status = isAppLoaded(appId, loaded);
+                    if (appManagerImplInstance != nullptr)
                     {
-                        LOGINFO("Update App Info");
-                        if (nullptr != appManagerImplInstance)
+                        auto it = appManagerImplInstance->mAppInfo.find(appId);
+                        if ((loaded == true) &&
+                            (Core::ERROR_NONE == status) &&
+                            (it != appManagerImplInstance->mAppInfo.end()) &&
+                            (it->second.appNewState == Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED))
                         {
-                            appManagerImplInstance->mAppInfo[appId].appInstanceId   = std::move(appInstanceId);
-                            appManagerImplInstance->mAppInfo[appId].type            = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
-                            appManagerImplInstance->mAppInfo[appId].appIntent       = intent;
-                            appManagerImplInstance->mAppInfo[appId].appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
-                            appManagerImplInstance->mAppInfo[appId].appLifecycleState = Exchange::ILifecycleManager::LOADING;
-                            appManagerImplInstance->mAppInfo[appId].targetAppState  = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+                            appManagerImplInstance->mCurrentAction = AppManagerImplementation::APP_ACTION_RESUME;
+                            state = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+                            LOGINFO("launchApp appInstanceId %s", it->second.appInstanceId.c_str());
+                            status = mLifecycleManagerRemoteObject->SetTargetAppState(it->second.appInstanceId, state, intent);
+
+                            if (status == Core::ERROR_NONE)
+                            {
+                                LOGINFO("Update App Info");
+                                it->second.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+                                it->second.appIntent = intent;
+                            }
+                            else
+                            {
+                                LOGERR("SetTargetAppState Failed");
+                            }
                         }
-                    }
-                    else
-                    {
-                        LOGERR("App launch failed");
+                        else
+                        {
+                            if (fileExists(SUSPEND_POLICY_FILE) == true)
+                            {
+                                appManagerImplInstance->mCurrentAction = AppManagerImplementation::APP_ACTION_SUSPEND;
+                                state = Exchange::ILifecycleManager::LifecycleState::SUSPENDED;
+                            }
+                            else
+                            {
+                                appManagerImplInstance->mCurrentAction = AppManagerImplementation::APP_ACTION_LAUNCH;
+                                state = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+                            }
+                            LOGINFO("spawnApp called ,state %u",state);
+                            status = mLifecycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
+                                                                          enableDebugger, state, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success);
+
+                            if (status == Core::ERROR_NONE)
+                            {
+                                LOGINFO("Update App Info");
+                                it->second.appInstanceId   = std::move(appInstanceId);
+                                it->second.appIntent       = intent;
+                                it->second.packageInfo.type = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
+                                it->second.targetAppState  =    (state == Exchange::ILifecycleManager::LifecycleState::SUSPENDED)
+                                                                                                                                           ? Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED
+                                                                                                                                           : Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+                            }
+                            else
+                            {
+                                LOGERR("spawnApp failed");
+                            }
+                        }
                     }
                 }
                 mAdminLock.Unlock();
@@ -239,7 +276,7 @@ namespace WPEFramework
             bool enableDebugger = false;
             string appInstanceId = "";
             bool success = true;
-
+            Exchange::ILifecycleManager::LifecycleState state = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
             if (appId.empty())
             {
                 LOGERR("appId is empty");
@@ -272,9 +309,18 @@ namespace WPEFramework
                 ASSERT (nullptr != mLifecycleManagerRemoteObject);
                 if (nullptr != mLifecycleManagerRemoteObject)
                 {
-                    appManagerImplInstance->mCurrentAction = AppManagerImplementation::APP_ACTION_PRELOAD;
+                    if (fileExists(SUSPEND_POLICY_FILE) == true)
+                    {
+                        appManagerImplInstance->mCurrentAction = AppManagerImplementation::APP_ACTION_SUSPEND;
+                        state = Exchange::ILifecycleManager::LifecycleState::SUSPENDED;
+                    }
+                    else
+                    {
+                        appManagerImplInstance->mCurrentAction = AppManagerImplementation::APP_ACTION_PRELOAD;
+                        state = Exchange::ILifecycleManager::LifecycleState::PAUSED;
+                    }
                     status = mLifecycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
-                          enableDebugger, Exchange::ILifecycleManager::LifecycleState::PAUSED, runtimeConfigObject, launchArgs, appInstanceId, error, success);
+                          enableDebugger, state, runtimeConfigObject, launchArgs, appInstanceId, error, success);
                     if (status == Core::ERROR_NONE)
                     {
                         LOGINFO("Update App Info");
@@ -283,10 +329,10 @@ namespace WPEFramework
                         if (nullptr != appManagerImplInstance)
                         {
                             appManagerImplInstance->mAppInfo[appId].appInstanceId   = std::move(appInstanceId);
-                            appManagerImplInstance->mAppInfo[appId].type            = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
-                            appManagerImplInstance->mAppInfo[appId].appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
-                            appManagerImplInstance->mAppInfo[appId].appLifecycleState = Exchange::ILifecycleManager::LOADING;
-                            appManagerImplInstance->mAppInfo[appId].targetAppState  = Exchange::IAppManager::AppLifecycleState::APP_STATE_RUNNING;
+                            appManagerImplInstance->mAppInfo[appId].packageInfo.type = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
+                            appManagerImplInstance->mAppInfo[appId].targetAppState  =    (state == Exchange::ILifecycleManager::LifecycleState::SUSPENDED)
+                                                                                                                                       ? Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED
+                                                                                                                                       : Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
                         }
                     }
                     else
@@ -383,12 +429,12 @@ namespace WPEFramework
                         targetLifecycleState = appIterator->second.appNewState;
 
                         /* Check targetLifecycleState is in RUNNING state */
-                        if(targetLifecycleState == Exchange::IAppManager::AppLifecycleState::APP_STATE_RUNNING)
+                        if(targetLifecycleState == Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED)
                         {
                             if (nullptr != mLifecycleManagerRemoteObject)
                             {
                                 appManagerImplInstance->mCurrentAction = AppManagerImplementation::APP_ACTION_TERMINATE;
-                                 status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
+                                status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
                                 if (status != Core::ERROR_NONE)
                                 {
                                     if (!errorReason.empty())
@@ -543,8 +589,8 @@ namespace WPEFramework
                         JsonObject loadedAppObject;
 
                         loadedAppObject["appId"] = appEntry.first;
-                        loadedAppObject["type"] = static_cast<int>(appEntry.second.type);
                         loadedAppObject["lifecycleState"] = static_cast<int>(appEntry.second.appNewState);
+                        loadedAppObject["type"] = static_cast<int>(appEntry.second.packageInfo.type);
                         loadedAppObject["targetLifecycleState"] = static_cast<int>(appEntry.second.targetAppState);
                         loadedAppObject["activeSessionId"] = appEntry.second.activeSessionId;
                         loadedAppObject["appInstanceId"] = appEntry.second.appInstanceId;
@@ -615,7 +661,6 @@ namespace WPEFramework
             Exchange::IAppManager::AppLifecycleState newAppState = mapAppLifecycleState(newState);
             Exchange::IAppManager::AppLifecycleState oldAppState = mapAppLifecycleState(oldState);
             bool shouldNotify = false;
-
             LOGINFO("OnAppLifecycleStateChanged event triggered ***\n");
 
             if (newAppState == Exchange::IAppManager::APP_STATE_UNKNOWN ||
@@ -636,6 +681,26 @@ namespace WPEFramework
                         it->second.appNewState = newAppState;
                         it->second.appLifecycleState = newState;
                         it->second.appIntent = navigationIntent;
+
+                        if (oldState == Exchange::ILifecycleManager::LifecycleState::ACTIVE ||
+                            newState == Exchange::ILifecycleManager::LifecycleState::ACTIVE)
+                        {
+                            struct timespec stateChangeTime;
+                            if (timespec_get(&stateChangeTime, TIME_UTC) != 0)
+                            {
+                                it->second.lastActiveStateChangeTime = stateChangeTime;
+                            }
+                            else
+                            {
+                                LOGERR("Unable to update the active state change time for appInstanceId: %s", appInstanceId.c_str());
+                            }
+                        }
+
+                        if (newState == Exchange::ILifecycleManager::LifecycleState::ACTIVE)
+                        {
+                            gAppsActiveCounter++;
+                            it->second.lastActiveIndex = gAppsActiveCounter;
+                        }
                         break;
                     }
                 }
@@ -682,7 +747,38 @@ namespace WPEFramework
                 appManagerImpl->mAppInfo.erase(it);
             else
                 LOGERR("AppInfo for appId '%s' not found", appId.c_str());
-        }      
+        }
 
+        bool LifecycleInterfaceConnector::fileExists(const char* pFileName)
+        {
+            bool isRegular = false;
+
+            if (pFileName != nullptr)
+            {
+                struct stat fileStat;
+                if (stat(pFileName, &fileStat) == 0)
+                {
+                    if (S_ISREG(fileStat.st_mode))
+                    {
+                        isRegular = true;
+                        LOGINFO("File: '%s' exists", pFileName);
+                    }
+                    else
+                    {
+                        LOGINFO("File: '%s' exists but is not a regular file", pFileName);
+                    }
+                }
+                else
+                {
+                    LOGINFO("File: Failed to stat file '%s'", pFileName);
+                }
+            }
+           else
+            {
+                LOGINFO("Filename pointer is null");
+            }
+
+            return isRegular;
+        }
      } /* namespace Plugin */
 } /* namespace WPEFramework */

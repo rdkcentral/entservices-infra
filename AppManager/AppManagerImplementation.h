@@ -33,7 +33,6 @@
 #include <interfaces/IPackageManager.h>
 #include <map>
 
-
 namespace WPEFramework {
 namespace Plugin {
 
@@ -65,19 +64,24 @@ namespace Plugin {
             string version = "";
             uint32_t lockId = 0;
             string unpackedPath = "" ;
-	    WPEFramework::Exchange::RuntimeConfig configMetadata;
+            WPEFramework::Exchange::RuntimeConfig configMetadata;
             string appMetadata = "";
+            ApplicationType type;
         } PackageInfo;
 
         typedef struct _AppInfo
         {
+            /* From LifecycleManager */
             string appInstanceId;
             string activeSessionId;
-            string appIntent;
-            ApplicationType type;
+            /* From PackageManager */
             PackageInfo packageInfo;
+            /* App launch params*/
             Exchange::IAppManager::AppLifecycleState appNewState;
             Exchange::ILifecycleManager::LifecycleState appLifecycleState;
+            timespec lastActiveStateChangeTime;
+            uint32_t lastActiveIndex;
+            string appIntent;
             Exchange::IAppManager::AppLifecycleState targetAppState;
             Exchange::IAppManager::AppLifecycleState appOldState;
         } AppInfo;
@@ -85,7 +89,9 @@ namespace Plugin {
         std::map<std::string, AppInfo> mAppInfo;
 
         enum EventNames {
-            APP_LIFECYCLE_STATE_CHANGED,
+            APP_EVENT_UNKNOWN = 0,
+            APP_EVENT_LIFECYCLE_STATE_CHANGED,
+            APP_EVENT_INSTALLATION_STATUS
         };
 
         enum CurrentAction {
@@ -122,6 +128,7 @@ namespace Plugin {
         private:
             AppManagerImplementation& mParent;
         };
+
         class EXTERNAL Job : public Core::IDispatch {
         protected:
              Job(AppManagerImplementation *appManagerImplementation, EventNames event, JsonObject &params)
@@ -206,11 +213,15 @@ namespace Plugin {
         Exchange::IPackageInstaller* mPackageManagerInstallerObject;
         PluginHost::IShell* mCurrentservice;
         Core::Sink<PackageManagerNotification> mPackageManagerNotification;
+        Core::hresult fetchInstalledPackages(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
+        void checkIsInstalled(const std::string& appId, bool& installed, const std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         Core::hresult packageLock(const string& appId, PackageInfo &packageData, Exchange::IPackageHandler::LockReason lockReason);
         Core::hresult packageUnLock(const string& appId);
         bool createOrUpdatePackageInfoByAppId(const string& appId, PackageInfo &packageData);
         bool removeAppInfoByAppId(const string &appId);
         void OnAppInstallationStatus(const string& jsonresponse);
+        std::string getInstallAppType(ApplicationType type);
+
 
         void dispatchEvent(EventNames, const JsonObject &params);
         void Dispatch(EventNames event, const JsonObject params);
