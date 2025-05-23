@@ -641,6 +641,37 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_Success)
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getVoiceGuidanceHints"), _T("{}"), response));
 }
+
+TEST_F(UserSettingsTest, SetContentPin_Failure)
+{
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setContentPin"), _T("{}"), response));
+}
+
+TEST_F(UserSettingsTest, SetContentPin_Success)
+{
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setContentPin"), _T("{}"), response));
+}
+
+TEST_F(UserSettingsTest, GetContentPin_Failure)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
+
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getContentPin"), _T("{}"), response));
+}
+
+TEST_F(UserSettingsTest, GetContentPin_Success)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getContentPin"), _T("{}"), response));
+}
+
 TEST_F(UserSettingsTest, GetMigrationState_Failure)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
