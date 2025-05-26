@@ -435,6 +435,7 @@ jobs:
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
           -DPLUGIN_OCICONTAINER=ON
+          -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
           &&
           cmake --build build/entservices-infra -j8
@@ -509,6 +510,7 @@ jobs:
           -DUSE_THUNDER_R4=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           -DPLUGIN_OCICONTAINER=ON
+          -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
           &&
           cmake --build build/entservices-testframework -j8

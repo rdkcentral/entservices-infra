@@ -53,6 +53,10 @@ typedef enum : uint32_t {
     UserSettings_onPlaybackWatershedChanged = 0x0000000b,
     UserSettings_onBlockNotRatedContentChanged = 0x0000000c,
     UserSettings_onPinOnPurchaseChanged = 0x0000000d,
+    UserSettings_onHighContrastChanged = 0x0000000e,
+    UserSettings_onVoiceGuidanceChanged = 0x0000000f,
+    UserSettings_onVoiceGuidanceRateChanged = 0x00000011,
+    UserSettings_onVoiceGuidanceHintsChanged = 0x00000012,
     UserSettings_StateInvalid = 0x00000000
 }UserSettingsL2test_async_events_t;
 
@@ -75,6 +79,10 @@ class AsyncHandlerMock_UserSetting
         MOCK_METHOD(void, onPlaybackWatershedChanged, (const bool playbackWatershed));
         MOCK_METHOD(void, onBlockNotRatedContentChanged, (const bool blockNotRatedContent));
         MOCK_METHOD(void, onPinOnPurchaseChanged, (const bool pinOnPurchase));
+        MOCK_METHOD(void, onHighContrastChanged, (const bool enabled));
+        MOCK_METHOD(void, onVoiceGuidanceChanged, (const bool enabled));
+        MOCK_METHOD(void, onVoiceGuidanceRateChanged, (const bool rate));
+        MOCK_METHOD(void, onVoiceGuidanceHintsChanged, (const bool hints));
 
 };
 
@@ -253,6 +261,53 @@ class NotificationHandler : public Exchange::IUserSettings::INotification {
             m_condition_variable.notify_one();
         }
 
+        void OnHighContrastChanged(const bool enabled) override
+        {
+            TEST_LOG("OnHighContrastChanged event triggered ***\n");
+            std::unique_lock<std::mutex> lock(m_mutex);
+            std::string str = enabled ? "true" : "false";
+
+            TEST_LOG("OnHighContrastChanged received: %s\n", str.c_str());
+            /* Notify the requester thread. */
+            m_event_signalled |= UserSettings_onHighContrastChanged;
+            m_condition_variable.notify_one();
+        }
+
+        void OnVoiceGuidanceChanged(const bool enabled) override
+        {
+            TEST_LOG("OnVoiceGuidanceChanged event triggered ***\n");
+            std::unique_lock<std::mutex> lock(m_mutex);
+            std::string str = enabled ? "true" : "false";
+
+            TEST_LOG("OnVoiceGuidanceChanged received: %s\n", str.c_str());
+            /* Notify the requester thread. */
+            m_event_signalled |= UserSettings_onVoiceGuidanceChanged;
+            m_condition_variable.notify_one();
+        }
+
+        void OnVoiceGuidanceRateChanged(const double rate) override
+        {
+            TEST_LOG("OnVoiceGuidanceRateChanged event triggered ***\n");
+            std::unique_lock<std::mutex> lock(m_mutex);
+
+            TEST_LOG("OnVoiceGuidanceRateChanged received: %ld\n", rate);
+            /* Notify the requester thread. */
+            m_event_signalled |= UserSettings_onVoiceGuidanceRateChanged;
+            m_condition_variable.notify_one();
+        }
+
+        void OnVoiceGuidanceHintsChanged(const bool hints) override
+        {
+            TEST_LOG("OnVoiceGuidanceHintsChanged event triggered ***\n");
+            std::unique_lock<std::mutex> lock(m_mutex);
+            std::string str = hints ? "true" : "false";
+
+            TEST_LOG("OnVoiceGuidanceHintsChanged received: %s\n", str.c_str());
+            /* Notify the requester thread. */
+            m_event_signalled |= UserSettings_onVoiceGuidanceHintsChanged;
+            m_condition_variable.notify_one();
+        }
+
         uint32_t WaitForRequestStatus(uint32_t timeout_ms, UserSettingsL2test_async_events_t expected_status)
         {
             std::unique_lock<std::mutex> lock(m_mutex);
@@ -294,6 +349,10 @@ protected:
       void onPlaybackWatershedChanged(const bool playbackWatershed);
       void onBlockNotRatedContentChanged(const bool blockNotRatedContent);
       void onPinOnPurchaseChanged(const bool pinOnPurchase);
+      void onHighContrastChanged(const bool enabled);
+      void onVoiceGuidanceChanged(const bool enabled);
+      void onVoiceGuidanceRateChanged(const double rate);
+      void onVoiceGuidanceHintsChanged(const bool hints);
 
       uint32_t WaitForRequestStatus(uint32_t timeout_ms,UserSettingsL2test_async_events_t expected_status);
       uint32_t CreateUserSettingInterfaceObjectUsingComRPCConnection();
@@ -314,6 +373,7 @@ protected:
 
         /** @brief Pointer to the IUserSettings interface */
         Exchange::IUserSettings *m_usersettingsplugin;
+        Exchange::IUserSettingsInspector *m_usersettings_inspe_plugin;
 };
 
 UserSettingTest:: UserSettingTest():L2TestMocks()
@@ -402,8 +462,9 @@ uint32_t UserSettingTest::CreateUserSettingInterfaceObjectUsingComRPCConnection(
         m_controller_usersettings = Client_UserSettings->Open<PluginHost::IShell>(_T("org.rdk.UserSettings"), ~0, 3000);
         if (m_controller_usersettings)
         {
-        m_usersettingsplugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettings>();
-        return_value = Core::ERROR_NONE;
+            m_usersettingsplugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettings>();
+            m_usersettings_inspe_plugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettingsInspector>();
+            return_value = Core::ERROR_NONE;
         }
     }
     return return_value;
@@ -567,6 +628,53 @@ void UserSettingTest::onPinOnPurchaseChanged(const bool pinOnPurchase)
     m_condition_variable.notify_one();
 }
 
+void UserSettingTest::onHighContrastChanged(const bool enabled)
+{
+    TEST_LOG("OnHighContrastChanged event triggered ***\n");
+    std::unique_lock<std::mutex> lock(m_mutex);
+    std::string str = enabled ? "true" : "false";
+
+    TEST_LOG("OnHighContrastChanged received: %s\n", str.c_str());
+    /* Notify the requester thread. */
+    m_event_signalled |= UserSettings_onHighContrastChanged;
+    m_condition_variable.notify_one();
+}
+
+void UserSettingTest::onVoiceGuidanceChanged(const bool enabled)
+{
+    TEST_LOG("OnVoiceGuidanceChanged event triggered ***\n");
+    std::unique_lock<std::mutex> lock(m_mutex);
+    std::string str = enabled ? "true" : "false";
+
+    TEST_LOG("OnVoiceGuidanceChanged received: %s\n", str.c_str());
+    /* Notify the requester thread. */
+    m_event_signalled |= UserSettings_onVoiceGuidanceChanged;
+    m_condition_variable.notify_one();
+}
+
+void UserSettingTest::onVoiceGuidanceRateChanged(const double rate)
+{
+    TEST_LOG("OnVoiceGuidanceRateChanged event triggered ***\n");
+    std::unique_lock<std::mutex> lock(m_mutex);
+
+    TEST_LOG("OnVoiceGuidanceRateChanged received: %ld\n", rate);
+    /* Notify the requester thread. */
+    m_event_signalled |= UserSettings_onVoiceGuidanceRateChanged;
+    m_condition_variable.notify_one();
+}
+
+void UserSettingTest::onVoiceGuidanceHintsChanged(const bool hints)
+{
+    TEST_LOG("OnVoiceGuidanceHintsChanged event triggered ***\n");
+    std::unique_lock<std::mutex> lock(m_mutex);
+    std::string str = hints ? "true" : "false";
+
+    TEST_LOG("OnVoiceGuidanceHintsChanged received: %s\n", str.c_str());
+    /* Notify the requester thread. */
+    m_event_signalled |= UserSettings_onVoiceGuidanceHintsChanged;
+    m_condition_variable.notify_one();
+}
+
 MATCHER_P(MatchRequestStatusString, data, "")
 {
     std::string actual = arg;
@@ -586,6 +694,17 @@ MATCHER_P(MatchRequestStatusBool, expected, "")
     return expected == actual;
 }
 
+MATCHER_P(MatchRequestStatusDouble, expected, "")
+{
+    double actual = arg;
+    std::string expected_str = std::to_string(expected);
+    std::string actual_str = std::to_string(actual);
+    TEST_LOG("Expected: %s, Actual: %s", expected_str.c_str(), actual_str.c_str());
+    EXPECT_STREQ(expected_str.c_str(), actual_str.c_str());
+    return expected == actual;
+
+}
+
 /* Activating UserSettings and Persistent store plugins and UserSettings namespace has no entries in db.
    So that we can verify whether UserSettings plugin is receiving default values from PersistentStore or not*/
 TEST_F(UserSettingTest, VerifyDefaultValues)
@@ -595,6 +714,7 @@ TEST_F(UserSettingTest, VerifyDefaultValues)
     Core::Sink<NotificationHandler> notification;
     bool defaultBooleanValue = true;
     string defaultStrValue = "eng";
+    double defaultDoubleValue;
 
     if (CreateUserSettingInterfaceObjectUsingComRPCConnection() != Core::ERROR_NONE)
     {
@@ -722,7 +842,6 @@ TEST_F(UserSettingTest, VerifyDefaultValues)
                      TEST_LOG("Err: %s", errorMsg.c_str());
                  }
 
-
                  /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
                  status = m_usersettingsplugin->GetBlockNotRatedContent(defaultBooleanValue);
                  EXPECT_EQ(defaultBooleanValue, false);
@@ -733,9 +852,48 @@ TEST_F(UserSettingTest, VerifyDefaultValues)
                      TEST_LOG("Err: %s", errorMsg.c_str());
                  }
 
-
                  /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
                  status = m_usersettingsplugin->GetPinOnPurchase(defaultBooleanValue);
+                 EXPECT_EQ(defaultBooleanValue, false);
+                 EXPECT_EQ(status,Core::ERROR_NONE);
+                 if (status != Core::ERROR_NONE)
+                 {
+                     std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                     TEST_LOG("Err: %s", errorMsg.c_str());
+                 }
+
+                 /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
+                 status = m_usersettingsplugin->GetHighContrast(defaultBooleanValue);
+                 EXPECT_EQ(defaultBooleanValue, false);
+                 EXPECT_EQ(status,Core::ERROR_NONE);
+                 if (status != Core::ERROR_NONE)
+                 {
+                     std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                     TEST_LOG("Err: %s", errorMsg.c_str());
+                 }
+
+                 /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
+                 status = m_usersettingsplugin->GetVoiceGuidance(defaultBooleanValue);
+                 EXPECT_EQ(defaultBooleanValue, false);
+                 EXPECT_EQ(status,Core::ERROR_NONE);
+                 if (status != Core::ERROR_NONE)
+                 {
+                     std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                     TEST_LOG("Err: %s", errorMsg.c_str());
+                 }
+
+                 /* defaultDoubleValue should get '1' and the return status is Core::ERROR_NONE */
+                 status = m_usersettingsplugin->GetVoiceGuidanceRate(defaultDoubleValue);
+                 EXPECT_EQ(defaultDoubleValue, 1);
+                 EXPECT_EQ(status,Core::ERROR_NONE);
+                 if (status != Core::ERROR_NONE)
+                 {
+                     std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                     TEST_LOG("Err: %s", errorMsg.c_str());
+                 }
+
+                 /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
+                 status = m_usersettingsplugin->GetVoiceGuidanceHints(defaultBooleanValue);
                  EXPECT_EQ(defaultBooleanValue, false);
                  EXPECT_EQ(status,Core::ERROR_NONE);
                  if (status != Core::ERROR_NONE)
@@ -889,6 +1047,46 @@ TEST_F(UserSettingTest, VerifyDefaultValues)
                     TEST_LOG("Err: %s", errorMsg.c_str());
                 }
 
+                /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
+                status = m_usersettingsplugin->GetHighContrast(defaultBooleanValue);
+                EXPECT_EQ(defaultBooleanValue, false);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
+                status = m_usersettingsplugin->GetVoiceGuidance(defaultBooleanValue);
+                EXPECT_EQ(defaultBooleanValue, false);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                /* defaultDoubleValue should get '1' and the return status is Core::ERROR_NONE */
+                status = m_usersettingsplugin->GetVoiceGuidanceRate(defaultDoubleValue);
+                EXPECT_EQ(defaultDoubleValue, 1);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
+                status = m_usersettingsplugin->GetVoiceGuidanceHints(defaultBooleanValue);
+                EXPECT_EQ(defaultBooleanValue, false);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
                 m_usersettingsplugin->Unregister(&notification);
                 m_usersettingsplugin->Release();
             }
@@ -905,7 +1103,8 @@ TEST_F(UserSettingTest, VerifyDefaultValues)
     }
 }
 
-TEST_F(UserSettingTest, DISABLED_SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
+
+TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -918,15 +1117,127 @@ TEST_F(UserSettingTest, DISABLED_SetAndGetMethodsUsingJsonRpcConnectionSuccessCa
     bool playbackWatershed = true;
     bool blockNotRatedContent = true;
     bool pinOnPurchase = true;
+    bool hints = true;
 
     string preferredLanguages = "en";
     string presentationLanguage = "fra";
     string preferredCaptionsLanguages = "en,es";
     string preferredService = "CC3";
     string viewingRestrictions = "ALWAYS";
+    double rate = 1;
+
     Core::JSON::String result_string;
     Core::JSON::Boolean result_bool;
+    Core::JSON::Double result_double;
     JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    TEST_LOG("Testing getMigrationState before migrating properties");
+
+    paramsMigrationState["key"] = "PREFERRED_AUDIO_LANGUAGES";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "AUDIO_DESCRIPTION";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "CAPTIONS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PREFERRED_CAPTIONS_LANGUAGES";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PREFERRED_CLOSED_CAPTION_SERVICE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PRESENTATION_LANGUAGE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "HIGH_CONTRAST";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PIN_CONTROL";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS_WINDOW";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "LIVE_WATERSHED";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PLAYBACK_WATERSHED";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "BLOCK_NOT_RATED_CONTENT";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PIN_ON_PURCHASE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE_RATE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE_HINTS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationStates", paramsMigrationState, result_json);
+    EXPECT_EQ(status, Core::ERROR_NONE);
 
     TEST_LOG("Testing AudioDescriptionSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1273,13 +1584,233 @@ TEST_F(UserSettingTest, DISABLED_SetAndGetMethodsUsingJsonRpcConnectionSuccessCa
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
-}
+    TEST_LOG("Testing HighContrastSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onHighContrastChanged"),
+                                       [this, &async_handler](const JsonObject& parameters) {
+                                           bool enabled = parameters["enabled"].Boolean();
+                                           async_handler.onHighContrastChanged(enabled);
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
 
+    EXPECT_CALL(async_handler, onHighContrastChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onHighContrastChanged));
+
+    JsonObject paramsHighContrast;
+    paramsHighContrast["enabled"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setHighContrast", paramsHighContrast, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onHighContrastChanged);
+    EXPECT_TRUE(signalled & UserSettings_onHighContrastChanged);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onHighContrastChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getHighContrast", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    TEST_LOG("Testing VoiceGuidanceSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onVoiceGuidanceChanged"),
+                                       [this, &async_handler](const JsonObject& parameters) {
+                                           bool enabled = parameters["enabled"].Boolean();
+                                           async_handler.onVoiceGuidanceChanged(enabled);
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceChanged));
+
+    JsonObject paramsVoiceGuidance;
+    paramsVoiceGuidance["enabled"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidance", paramsVoiceGuidance, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceChanged);
+    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceChanged);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidance", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    TEST_LOG("Testing VoiceGuidanceRateSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onVoiceGuidanceRateChanged"),
+                                       [this, &async_handler](const JsonObject& parameters) {
+                                           double rate = parameters["rate"].Double();
+                                           async_handler.onVoiceGuidanceRateChanged(rate);
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceRateChanged(MatchRequestStatusDouble(rate)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceRateChanged));
+
+    JsonObject paramsVoiceGuidanceRate;
+    paramsVoiceGuidanceRate["rate"] = rate;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceRate", paramsVoiceGuidanceRate, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceRateChanged);
+    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceRateChanged);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceRateChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidanceRate", result_double);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_EQ(result_double.Value(), rate);
+
+    TEST_LOG("Testing VoiceGuidanceHintsSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onVoiceGuidanceHintsChanged"),
+                                       [this, &async_handler](const JsonObject& parameters) {
+                                           bool hints = parameters["hints"].Boolean();
+                                           async_handler.onVoiceGuidanceHintsChanged(hints);
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceHintsChanged(MatchRequestStatusBool(hints)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceHintsChanged));
+
+    JsonObject paramsVoiceGuidanceHints;
+    paramsVoiceGuidanceHints["hints"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceHints", paramsVoiceGuidanceHints, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceHintsChanged);
+    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceHintsChanged);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceHintsChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidanceHints", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    TEST_LOG("Testing getMigrationState after migrating properties");
+
+    paramsMigrationState["key"] = "PREFERRED_AUDIO_LANGUAGES";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "AUDIO_DESCRIPTION";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "CAPTIONS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PREFERRED_CAPTIONS_LANGUAGES";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PREFERRED_CLOSED_CAPTION_SERVICE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PRESENTATION_LANGUAGE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "HIGH_CONTRAST";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PIN_CONTROL";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS_WINDOW";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "LIVE_WATERSHED";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PLAYBACK_WATERSHED";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "BLOCK_NOT_RATED_CONTENT";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "PIN_ON_PURCHASE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE_RATE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE_HINTS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationStates", paramsMigrationState, result_json);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+
+}
+#if 0
 TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
 {
     uint32_t status = Core::ERROR_GENERAL;
     bool getBoolValue = false;
     string getStringValue = "";
+    double getDoubleValue = 0;
     Core::Sink<NotificationHandler> notification;
     uint32_t signalled = UserSettings_StateInvalid;
 
@@ -1293,10 +1824,185 @@ TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
         if (m_controller_usersettings)
         {
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
-            if (m_usersettingsplugin)
+            if ((m_usersettingsplugin!= nullptr) && (m_usersettings_inspe_plugin!= nullptr))
             {
                 m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
+                m_usersettings_inspe_plugin->AddRef();
+
+                bool requiresMigration;
+                Exchange::IUserSettingsInspector::IUserSettingsMigrationStateIterator *states;
+
+                TEST_LOG("Testing getMigrationState before migrating properties");
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_AUDIO_LANGUAGES, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::AUDIO_DESCRIPTION, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::CAPTIONS, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_CAPTIONS_LANGUAGES, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_CLOSED_CAPTION_SERVICE, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PRESENTATION_LANGUAGE, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::HIGH_CONTRAST, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PIN_CONTROL, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VIEWING_RESTRICTIONS, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VIEWING_RESTRICTIONS_WINDOW, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::LIVE_WATERSHED, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PLAYBACK_WATERSHED, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::BLOCK_NOT_RATED_CONTENT, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PIN_ON_PURCHASE, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE_RATE, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE_HINTS, requiresMigration);
+                EXPECT_EQ(requiresMigration, true);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                status = m_usersettings_inspe_plugin->GetMigrationStates(states);
+                EXPECT_EQ(status,Core::ERROR_NONE);
+                if (status != Core::ERROR_NONE)
+                {
+                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+                    TEST_LOG("Err: %s", errorMsg.c_str());
+                }
+
+                Exchange::IUserSettingsInspector::SettingsMigrationState migration_states = {};
+                if (nullptr != states)
+                {
+                    while (states->Next(migration_states) == true)
+                    {
+                        EXPECT_EQ(migration_states.requiresMigration, true);
+                    }
+                }
 
                 TEST_LOG("Setting and Getting AudioDescription Values");
                 status = m_usersettingsplugin->SetAudioDescription(true);
@@ -1559,21 +2265,278 @@ TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
                     TEST_LOG("Err: %s", errorMsg.c_str());
                 }
 
-                m_usersettingsplugin->Unregister(&notification);
-                m_usersettingsplugin->Release();
-            }
-            else
-            {
-                TEST_LOG("m_usersettingsplugin is NULL");
-            }
-            m_controller_usersettings->Release();
+        TEST_LOG("Setting and Getting HighContrast Values");
+        status = m_usersettingsplugin->SetHighContrast(true);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
         }
+        signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onHighContrastChanged);
+        EXPECT_TRUE(signalled & UserSettings_onHighContrastChanged);
+
+        status = m_usersettingsplugin->GetHighContrast(getBoolValue);
+        EXPECT_EQ(getBoolValue, true);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+
+        TEST_LOG("Setting and Getting VoiceGuidance Values");
+        status = m_usersettingsplugin->SetVoiceGuidance(true);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+        signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onVoiceGuidanceChanged);
+        EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceChanged);
+
+        status = m_usersettingsplugin->GetVoiceGuidance(getBoolValue);
+        EXPECT_EQ(getBoolValue, true);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        double rate = 9;
+        TEST_LOG("Setting and Getting VoiceGuidanceRate Values");
+        status = m_usersettingsplugin->SetVoiceGuidanceRate(rate);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+        signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onVoiceGuidanceRateChanged);
+        EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceRateChanged);
+
+        status = m_usersettingsplugin->GetVoiceGuidanceRate(getDoubleValue);
+        EXPECT_EQ(getDoubleValue, rate);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        TEST_LOG("Setting and Getting VoiceGuidanceHints Values");
+        status = m_usersettingsplugin->SetVoiceGuidanceHints(true);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+        signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onVoiceGuidanceHintsChanged);
+        EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceHintsChanged);
+
+        status = m_usersettingsplugin->GetVoiceGuidanceHints(getBoolValue);
+        EXPECT_EQ(getBoolValue, true);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        TEST_LOG("Testing getMigrationState after migrating properties");
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_AUDIO_LANGUAGES, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::AUDIO_DESCRIPTION, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::CAPTIONS, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_CAPTIONS_LANGUAGES, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_CLOSED_CAPTION_SERVICE, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PRESENTATION_LANGUAGE, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::HIGH_CONTRAST, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PIN_CONTROL, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VIEWING_RESTRICTIONS, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VIEWING_RESTRICTIONS_WINDOW, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::LIVE_WATERSHED, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PLAYBACK_WATERSHED, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::BLOCK_NOT_RATED_CONTENT, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::PIN_ON_PURCHASE, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE_RATE, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationState(Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE_HINTS, requiresMigration);
+        EXPECT_EQ(requiresMigration, false);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        status = m_usersettings_inspe_plugin->GetMigrationStates(states);
+        EXPECT_EQ(status,Core::ERROR_NONE);
+        if (status != Core::ERROR_NONE)
+        {
+            std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+            TEST_LOG("Err: %s", errorMsg.c_str());
+        }
+
+        migration_states = {};
+        if (nullptr != states)
+        {
+            while (states->Next(migration_states) == true)
+            {
+                EXPECT_EQ(migration_states.requiresMigration, false);
+            }
+        }
+
+        m_usersettingsplugin->Unregister(&notification);
+        m_usersettingsplugin->Release();
+        m_usersettings_inspe_plugin->Release();
+
+    }
+    else
+    {
+        TEST_LOG("m_usersettingsplugin is NULL");
+    }
+    m_controller_usersettings->Release();
+}
         else
         {
             TEST_LOG("m_controller_usersettings is NULL");
         }
     }
 }
+#endif
 
 TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
 {
@@ -1681,7 +2644,7 @@ TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
         }
     }
 }
-#if 0
+
 TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
 {
     uint32_t status = Core::ERROR_GENERAL;
@@ -1721,7 +2684,7 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
                 m_usersettingsplugin->Register(&notification);
 
                 TEST_LOG("Setting and Getting AudioDescription Values");
-                status = m_usersettingsplugin->setAudioDescription(true);
+                status = m_usersettingsplugin->SetAudioDescription(true);
                 EXPECT_EQ(status,Core::ERROR_GENERAL);
                 if (status != Core::ERROR_NONE)
                 {
@@ -1731,12 +2694,12 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
                 signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onAudioDescriptionChanged);
                 EXPECT_FALSE(signalled & UserSettings_onAudioDescriptionChanged);
 
-                status = m_usersettingsplugin->getAudioDescription(getBoolValue);
+                status = m_usersettingsplugin->GetAudioDescription(getBoolValue);
                 EXPECT_EQ(getBoolValue, false);
                 EXPECT_EQ(status, Core::ERROR_NONE);
 
                 TEST_LOG("Setting and Getting PinControl Values");
-                status = m_usersettingsplugin->setPinControl(true);
+                status = m_usersettingsplugin->SetPinControl(true);
                 EXPECT_EQ(status,Core::ERROR_GENERAL);
                 if (status != Core::ERROR_NONE)
                 {
@@ -1746,7 +2709,7 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
                 signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPinControlChanged);
                 EXPECT_FALSE(signalled & UserSettings_onPinControlChanged);
 
-                status = m_usersettingsplugin->getPinControl(getBoolValue);
+                status = m_usersettingsplugin->GetPinControl(getBoolValue);
                 EXPECT_EQ(getBoolValue, false);
                 EXPECT_EQ(status, Core::ERROR_NONE);
 
@@ -1765,7 +2728,7 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
         }
     }
 }
-#endif
+
 TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivatingErrorCase)
 {
     uint32_t status = Core::ERROR_GENERAL;
