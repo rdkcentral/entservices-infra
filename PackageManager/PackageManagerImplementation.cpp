@@ -180,7 +180,9 @@ namespace Plugin {
     }
 
     // IPackageDownloader methods
-    Core::hresult PackageManagerImplementation::Download(const string& url, const Exchange::IPackageDownloader::Options &options, string &downloadId)
+    Core::hresult PackageManagerImplementation::Download(const string& url,
+        const Exchange::IPackageDownloader::Options &options,
+        Exchange::IPackageDownloader::DownloadId &downloadId)
     {
         Core::hresult result = Core::ERROR_NONE;
 
@@ -199,7 +201,7 @@ namespace Plugin {
         }
         cv.notify_one();
 
-        downloadId = di->GetId();
+        downloadId.downloadId = di->GetId();
 
         return result;
     }
@@ -284,12 +286,12 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, uint8_t &percent)
+    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, Percent &percent)
     {
         Core::hresult result = Core::ERROR_NONE;
 
         if (mInprogressDowload.get() != nullptr) {
-            percent = mHttpClient->getProgress();
+            percent.percent = mHttpClient->getProgress();
         } else {
             result = Core::ERROR_GENERAL;
         }
@@ -347,7 +349,7 @@ namespace Plugin {
                 if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
                     LOGINFO("CreateStorage path [%s]", path.c_str());
                     state.installState = InstallState::INSTALLING;
-                    NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
+                    NotifyInstallStatus(packageId, version, state);
                     #ifdef USE_LIBPACKAGE
                     packagemanager::ConfigMetaData config;
                     packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
@@ -355,12 +357,15 @@ namespace Plugin {
                         result = Core::ERROR_NONE;
                         state.installState = InstallState::INSTALLED;
                     } else {
+                        state.failReason = FailReason::SIGNATURE_VERIFICATION_FAILURE;
                         state.installState = InstallState::INSTALL_FAILURE;
                     }
-                    NotifyInstallStatus(packageId, version, state.installState);
+                    NotifyInstallStatus(packageId, version, state);
                     #endif
                 } else {
                     LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+                    // XXX: NotifyInstallStatus ???
+                    state.failReason = FailReason::PERSISTENCE_FAILURE;
                 }
             }
         } else {
@@ -393,7 +398,7 @@ namespace Plugin {
                 if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
                     LOGINFO("DeleteStorage done");
                     state.installState = InstallState::UNINSTALLING;
-                    NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
+                    NotifyInstallStatus(packageId, version, state);
                     #ifdef USE_LIBPACKAGE
                     // XXX: what if DeleteStorage() fails, who Uninstall the package
                     packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
@@ -402,7 +407,7 @@ namespace Plugin {
                     }
                     #endif
                     state.installState = InstallState::UNINSTALLED;
-                    NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
+                    NotifyInstallStatus(packageId, version, state);
                     // XXX: remove from state/cache
                 } else {
                     LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
@@ -425,15 +430,16 @@ namespace Plugin {
         LOGTRACE();
         #ifdef USE_LIBPACKAGE
         string list;
+        // XXX: populate from Cache
         packagemanager::Result pmResult = packageImpl->GetList(list);
         if (pmResult == packagemanager::SUCCESS) {
             Json::Value jv;
             Json::Reader reader;
 
-        if (reader.parse(list.c_str(), jv) ) {
-            if (jv.isArray()) {
-                for (unsigned int i = 0; i < jv.size(); ++i) {
-                    Json::Value val = jv[i];
+            if (reader.parse(list.c_str(), jv) ) {
+                if (jv.isArray()) {
+                    for (unsigned int i = 0; i < jv.size(); ++i) {
+                        Json::Value val = jv[i];
 
                         Exchange::IPackageInstaller::Package package;
                         package.packageId = val["packageId"].asString().c_str();
@@ -542,12 +548,13 @@ namespace Plugin {
             string gatewayMetadataPath;
             if (GetLockedInfo(packageId, version, unpackedPath, runtimeConfig, gatewayMetadataPath, locked) == Core::ERROR_NONE) {
                 LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
-                getRuntimeConfig(state.runtimeConfig, runtimeConfig);
                 if (locked)  {
                     lockId = ++state.mLockCount;
                 } else {
                     packagemanager::ConfigMetaData config;
                     packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, config);
+                    // save the new config in state
+                    getRuntimeConfig(config, state.runtimeConfig);   // XXX: config is unnecessary in Lock
                     if (pmResult == packagemanager::SUCCESS) {
                         lockId = ++state.mLockCount;
                         LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -556,6 +563,7 @@ namespace Plugin {
                         result = Core::ERROR_GENERAL;
                     }
                 }
+                getRuntimeConfig(state.runtimeConfig, runtimeConfig);
             }
             #endif
 
@@ -744,7 +752,7 @@ namespace Plugin {
         JsonObject obj;
         obj["downloadId"] = id;
         obj["fileLocator"] = locator;
-        obj["reason"] = getDownloadReason(reason);
+        obj["failReason"] = getDownloadReason(reason);
         list.Add(obj);
         std::string jsonstr;
         if (!list.ToString(jsonstr)) {
@@ -759,13 +767,14 @@ namespace Plugin {
         mAdminLock.Unlock();
     }
 
-    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const InstallState state)
+    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const State &state)
     {
         JsonArray list = JsonArray();
         JsonObject obj;
         obj["packageId"] = id;
         obj["version"] = version;
-        obj["reason"] = getInstallReason(state);
+        obj["state"] = getInstallState(state.installState);
+        obj["failReason"] = getFailReason(state.failReason);
         list.Add(obj);
         std::string jsonstr;
         if (!list.ToString(jsonstr)) {

@@ -42,6 +42,7 @@ namespace WPEFramework {
 namespace Plugin {
     typedef Exchange::IPackageDownloader::Reason DownloadReason;
     typedef Exchange::IPackageInstaller::InstallState InstallState;
+    typedef Exchange::IPackageInstaller::FailReason FailReason;
 
     class PackageManagerImplementation
     : public Exchange::IPackageDownloader
@@ -61,6 +62,7 @@ namespace Plugin {
             Exchange::RuntimeConfig runtimeConfig;
             string gatewayMetadataPath;
             string unpackedPath;
+            FailReason failReason;
         };
 
         typedef std::pair<std::string, std::string> StateKey;
@@ -125,12 +127,12 @@ namespace Plugin {
         virtual ~PackageManagerImplementation();
 
         // IPackageDownloader methods
-        Core::hresult Download(const string& url, const Exchange::IPackageDownloader::Options &options, string &downloadId) override;
+        Core::hresult Download(const string& url, const Exchange::IPackageDownloader::Options &options, Exchange::IPackageDownloader::DownloadId &downloadId) override;
         Core::hresult Pause(const string &downloadId) override;
         Core::hresult Resume(const string &downloadId) override;
         Core::hresult Cancel(const string &downloadId) override;
         Core::hresult Delete(const string &fileLocator) override;
-        Core::hresult Progress(const string &downloadId, uint8_t &percent);
+        Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::Percent &percent);
         Core::hresult GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB);
         Core::hresult RateLimit(const string &downloadId, uint64_t &limit);
 
@@ -172,7 +174,7 @@ namespace Plugin {
         void InitializeState();
         void downloader(int n);
         void NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason status);
-        void NotifyInstallStatus(const string& id, const string& version, const InstallState state);
+        void NotifyInstallStatus(const string& id, const string& version, const State &state);
 
         DownloadInfoPtr getNext();
         int nextRetryDuration(int n) {
@@ -188,7 +190,7 @@ namespace Plugin {
             }
         }
 
-        string getInstallReason(InstallState state) {
+        string getInstallState(InstallState state) {
             switch (state) {
                 case InstallState::INSTALLING : return "INSTALLING";
                 case InstallState::INSTALLATION_BLOCKED : return "INSTALLATION_BLOCKED";
@@ -201,6 +203,15 @@ namespace Plugin {
             }
         }
 
+        string getFailReason(FailReason reason) {
+            switch (reason) {
+                case FailReason::SIGNATURE_VERIFICATION_FAILURE : return "SIGNATURE_VERIFICATION_FAILURE";
+                case FailReason::PACKAGE_MISMATCH_FAILURE : return "PACKAGE_MISMATCH_FAILURE";
+                case FailReason::INVALID_METADATA_FAILURE : return "INVALID_METADATA_FAILURE";
+                case FailReason::PERSISTENCE_FAILURE : return "PERSISTENCE_FAILURE";
+                default: return "NONE";
+            }
+        }
     Core::hresult createStorageManagerObject();
     void releaseStorageManagerObject();
 
