@@ -141,6 +141,7 @@ namespace Plugin {
             packageImpl = packagemanager::IPackageImpl::instance();
             #endif
 
+            InitializeState();
             mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
 
         } else {
@@ -676,8 +677,6 @@ namespace Plugin {
 
     void PackageManagerImplementation::downloader(int n)
     {
-        InitializeState();
-
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
