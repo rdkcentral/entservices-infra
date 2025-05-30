@@ -124,6 +124,7 @@ int SocketServer::Open(const string& address, int port, const function<void (con
   if (sock_flags < 0)
   {
     LOGERR("SocketServer::Open fcntl get failed: %s", strerror(errno));
+    close(sock);
     return -1;
   }
 
@@ -132,18 +133,21 @@ int SocketServer::Open(const string& address, int port, const function<void (con
   if (fcntl(sock, F_SETFD, sock_flags) < 0)
   {
     LOGERR("SocketServer::Open fcntl set failed: %s", strerror(errno));
+    close(sock);
     return -1;
   }
 
   if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0)
   {
     LOGERR("SocketServer::Open bind failed: %s", strerror(errno));
+    close(sock);
     return -1;
   }
 
   if (listen(sock, 4) < 0)
   {
     LOGERR("SocketServer::Open listen failed: %s", strerror(errno));
+    close(sock);
     return -1;
   }
 
