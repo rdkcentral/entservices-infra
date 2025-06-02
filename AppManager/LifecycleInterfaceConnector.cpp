@@ -653,30 +653,58 @@ namespace WPEFramework
             if (nullptr != mLifecycleManagerRemoteObject)
             {
                 JsonArray loadedAppsArray;
-                if (nullptr != appManagerImplInstance)
+                string loadedApps = "";
+                LOGINFO("Get Loaded Apps");
+                result = mLifecycleManagerRemoteObject->GetLoadedApps(false, loadedApps);
+                // Parse the string into a JSON array
+                JsonArray loadedAppsJsonArray;
+                if ((result != Core::ERROR_NONE) || loadedApps.empty() || !loadedAppsJsonArray.FromString(loadedApps))
                 {
-                    for (const auto& appEntry :appManagerImplInstance->mAppInfo)
-                    {
-                        JsonObject loadedAppObject;
-
-                        loadedAppObject["appId"] = appEntry.first;
-                        loadedAppObject["lifecycleState"] = static_cast<int>(appEntry.second.appNewState);
-                        loadedAppObject["type"] = static_cast<int>(appEntry.second.packageInfo.type);
-                        loadedAppObject["targetLifecycleState"] = static_cast<int>(appEntry.second.targetAppState);
-                        loadedAppObject["activeSessionId"] = appEntry.second.activeSessionId;
-                        loadedAppObject["appInstanceId"] = appEntry.second.appInstanceId;
-
-                        loadedAppsArray.Add(loadedAppObject);
-                    }
-                    loadedAppsArray.ToString(apps);
-                    LOGINFO("getLoadedApps: %s", apps.c_str());
-                    result = Core::ERROR_NONE;
+                    LOGERR("GetLoadedApps call: %s", (result != Core::ERROR_NONE) ? "Failed" : (loadedApps.empty() ? "returned empty list" : "format not a JSON string"));
+                    goto End;
                 }
                 else
                 {
-                    LOGERR("appManagerImplementation instance is nullptr");
+                    LOGINFO("GetLoadedApps succeeded: %s", loadedApps.c_str());
                 }
+
+                auto getIntJsonField = [&](JsonObject& obj, const char* key) -> int {
+	                return obj.HasLabel(key) ? static_cast<int>(obj[key].Number()) : 0;
+	            };
+
+                // Iterate through each app JSON object in the array
+                for (size_t i = 0; i < loadedAppsJsonArray.Length(); ++i)
+                {
+                    JsonObject loadedAppsObject = loadedAppsJsonArray[i].Object();
+                    string appId = loadedAppsObject.HasLabel("appId")?loadedAppsObject["appId"].String():"";
+                    LOGINFO("Loaded appId: %s", appId.c_str());
+                    auto& appInfo = appManagerImplInstance->mAppInfo[appId];
+
+                    JsonObject loadedAppJson;
+                    loadedAppJson["appId"] = appId;
+                    loadedAppJson["appInstanceId"] = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
+                    loadedAppJson["activeSessionId"] = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
+                    appInfo.targetAppState = mapAppLifecycleState(
+                        static_cast<Exchange::ILifecycleManager::LifecycleState>(
+                            getIntJsonField(loadedAppsObject, "targetLifecycleState")));
+                    loadedAppJson["targetLifecycleState"] = static_cast<int>(appInfo.targetAppState);
+                    appInfo.appNewState = mapAppLifecycleState(
+                        static_cast<Exchange::ILifecycleManager::LifecycleState>(
+                            getIntJsonField(loadedAppsObject, "currentLifecycleState")));
+                    loadedAppJson["currentLifecycleState"] = static_cast<int>(appInfo.appNewState);
+
+                    loadedAppsArray.Add(loadedAppJson);
+                }
+                // Convert the JSON array back to string to return
+                loadedAppsArray.ToString(apps);
+                LOGINFO("getLoadedApps result JSON: %s", apps.c_str());
+                result = Core::ERROR_NONE;
             }
+            else
+            {
+                LOGERR("mLifecycleManagerRemoteObject is nullptr");
+            }
+End:
             mAdminLock.Unlock();
             return result;
         }
