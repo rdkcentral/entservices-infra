@@ -129,7 +129,7 @@ if(PLUGIN_PACKAGE_MANAGER)
 endif()
 
 if(PLUGIN_NATIVEJS)
-	add_subdirectory(NativeJS)
+	#add_subdirectory(NativeJS)
 endif()
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
