@@ -142,6 +142,11 @@ namespace Plugin {
             #endif
 
             InitializeState();
+            PluginHost::ISubSystem* subSystem = service->SubSystems();
+            if (subSystem != nullptr) {
+                LOGDBG("ISubSystem::NETWORK is %s", subSystem->IsActive(PluginHost::ISubSystem::NETWORK)? "Active" : "Inactive");
+                LOGDBG("ISubSystem::INSTALLATION is %s", subSystem->IsActive(PluginHost::ISubSystem::INSTALLATION)? "Active" : "Inactive");
+            }
             mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
 
         } else {
@@ -363,16 +368,17 @@ namespace Plugin {
                         result = Core::ERROR_NONE;
                         state.installState = InstallState::INSTALLED;
                     } else {
-                        state.failReason = FailReason::SIGNATURE_VERIFICATION_FAILURE;
                         state.installState = InstallState::INSTALL_FAILURE;
+                        state.failReason = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
+                            FailReason::PACKAGE_MISMATCH_FAILURE : FailReason::SIGNATURE_VERIFICATION_FAILURE;
+                        LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
                     }
-                    NotifyInstallStatus(packageId, version, state);
                     #endif
                 } else {
                     LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
-                    // XXX: NotifyInstallStatus ???
                     state.failReason = FailReason::PERSISTENCE_FAILURE;
                 }
+                NotifyInstallStatus(packageId, version, state);
             }
         } else {
             LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -528,7 +534,6 @@ namespace Plugin {
         if (it != mState.end()) {
             auto &state = it->second;
             #ifdef USE_LIBPACKAGE
-            //bool locked = false;
             string gatewayMetadataPath;
             bool locked = (state.mLockCount > 0);
             LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
@@ -539,7 +544,7 @@ namespace Plugin {
                 packagemanager::Result pmResult = packageImpl->Lock(packageId, version, state.unpackedPath, config);
                 LOGDBG("unpackedPath=%s", unpackedPath.c_str());
                 // save the new config in state
-                getRuntimeConfig(config, state.runtimeConfig);   // XXX: is config unnecessary in Lock ?!
+                getRuntimeConfig(config, state.runtimeConfig);   // XXX: config is unnecessary in Lock ?!
                 if (pmResult == packagemanager::SUCCESS) {
                     lockId = ++state.mLockCount;
                     LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -733,7 +738,8 @@ namespace Plugin {
         JsonObject obj;
         obj["downloadId"] = id;
         obj["fileLocator"] = locator;
-        obj["failReason"] = getDownloadReason(reason);
+        if (reason != DownloadReason::NONE)
+            obj["failReason"] = getDownloadReason(reason);
         list.Add(obj);
         std::string jsonstr;
         if (!list.ToString(jsonstr)) {
@@ -755,7 +761,10 @@ namespace Plugin {
         obj["packageId"] = id;
         obj["version"] = version;
         obj["state"] = getInstallState(state.installState);
-        obj["failReason"] = getFailReason(state.failReason);
+        if (!((state.installState != InstallState::INSTALLED) || (state.installState != InstallState::UNINSTALLED) ||
+            (state.installState != InstallState::INSTALLING) || (state.installState != InstallState::UNINSTALLING))) {
+            obj["failReason"] = getFailReason(state.failReason);
+        }
         list.Add(obj);
         std::string jsonstr;
         if (!list.ToString(jsonstr)) {
