@@ -194,6 +194,7 @@ namespace Plugin {
         bool fetchPackageInfoByAppId(const string& appId, PackageInfo &packageData);
         void handleOnAppLifecycleStateChanged(const string& appId, const string& appInstanceId, const Exchange::IAppManager::AppLifecycleState newState,
                                         const Exchange::IAppManager::AppLifecycleState oldState, const Exchange::IAppManager::AppErrorReason errorReason);
+        void unloadTerminatedApp(const string& appId);
 
         // IConfiguration methods
         uint32_t Configure(PluginHost::IShell* service) override;

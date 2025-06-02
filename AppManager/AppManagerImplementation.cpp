@@ -556,6 +556,10 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
                         LOGERR("Failed to remove the AppInfo");
                         status = Core::ERROR_GENERAL;
                     }
+                    else
+                    {
+                        LOGINFO("Successfully removed the AppInfo for appId %s", appId.c_str());
+                    }
                 }
                 else
                 {
@@ -1168,6 +1172,19 @@ void AppManagerImplementation::getCustomValues(WPEFramework::Exchange::RuntimeCo
             runtimeConfig.appType = 1;
             runtimeConfig.resourceManagerClientEnabled = true;
         }
+}
+
+void AppManagerImplementation::unloadTerminatedApp(const string& appId)
+{
+    if (!appId.empty())
+    {
+        mAdminLock.Lock();
+        if (nullptr != mLifecycleInterfaceConnector)
+        {
+            packageUnLock(appId);
+        }
+        mAdminLock.Unlock();
+    }
 }
 
 } /* namespace Plugin */

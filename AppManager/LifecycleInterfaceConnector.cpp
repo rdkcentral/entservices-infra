@@ -797,6 +797,14 @@ namespace WPEFramework
                     std::lock_guard<std::mutex> lk(mStateMutex);
                     mStateChangedCV.notify_all();
                 }
+
+                else if(oldAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATED &&
+                   newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED &&
+                   appManagerImplInstance->mCurrentAction == AppManagerImplementation::APP_ACTION_LAUNCH) //unexpected terminate like dobby crash
+                {
+                    LOGINFO("App %s with appInstanceId %s has terminated unexpectedly, unloading the app", appId.c_str(), appInstanceId.c_str());
+                    appManagerImplInstance->unloadTerminatedApp(appId);
+                }
             }
         }
 
