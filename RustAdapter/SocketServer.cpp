@@ -110,11 +110,13 @@ int SocketServer::Open(const string& address, int port, const function<void (con
   if (rc == 0)
   {
     LOGERR("SocketServer::Open inet_pton %s invalid ip format", address.c_str());
+    close(sock);
     return -1;
   }
   else if (rc < 0)
   {
     LOGERR("SocketServer::Open inet_pton %s failed: %s", address.c_str(), strerror(errno));
+    close(sock);
     return -1;
   }
   
