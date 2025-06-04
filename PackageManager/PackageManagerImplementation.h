@@ -154,7 +154,8 @@ namespace Plugin {
 
         // IPackageHandler methods
         Core::hresult Lock(const string &packageId, const string &version, const Exchange::IPackageHandler::LockReason &lockReason,
-            uint32_t &lockId, string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& appMetadata
+            uint32_t &lockId, string &unpackedPath, Exchange::RuntimeConfig& configMetadata,
+            Exchange::IPackageHandler::ILockIterator*& appMetadata
         ) override;
 
         Core::hresult Unlock(const string &packageId, const string &version) override;
