@@ -1,3 +1,5 @@
+
+
 /*
 * If not stated otherwise in this file or this component's LICENSE file the
 * following copyright and licenses apply:
@@ -630,6 +632,7 @@ namespace Plugin {
 
                         errorCode = Core::ERROR_NONE;
                     }
+                    close(fd);
                 }
             }
         }
