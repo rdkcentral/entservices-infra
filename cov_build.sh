@@ -23,6 +23,8 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -DDS_FOUND=ON \
 -DPLUGIN_USBDEVICE=ON \
 -DPLUGIN_USB_MASS_STORAGE=ON \
+-DPLUGIN_OCICONTAINER=ON \
+-DPLUGIN_TELEMETRY=ON \
 -DCMAKE_CXX_FLAGS="-DEXCEPTIONS_ENABLE=ON \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/audiocapturemgr \
@@ -32,6 +34,11 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/ccec/drivers \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/network \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/libusb \
+-I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby \
+-I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/Public/Dobby \
+-I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/IpcService \
+-I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks \
+-I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/thunder \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/devicesettings.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Iarm.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Rfc.h \
@@ -42,7 +49,12 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/maintenanceMGR.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/secure_wrappermock.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/libusb/libusb.h \
---coverage -Wall -Werror -Wno-error=format \
+-include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Dobby.h \
+-include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/DobbyProtocol.h \
+-include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/DobbyProxy.h \
+-include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/Public/Dobby/IDobbyProxy.h \
+-include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/IpcService/IpcFactory.h \
+-Wall -Werror -Wno-error=format \
 -Wl,-wrap,system -Wl,-wrap,popen -Wl,-wrap,syslog \
 -DENABLE_TELEMETRY_LOGGING -DUSE_IARMBUS \
 -DENABLE_SYSTEM_GET_STORE_DEMO_LINK -DENABLE_DEEP_SLEEP \

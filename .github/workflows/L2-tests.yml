@@ -9,7 +9,7 @@ on:
 env:
   BUILD_TYPE: Debug
   THUNDER_REF: "R4.4.1"
-  INTERFACES_REF: "main"
+  INTERFACES_REF: "develop"
   AUTOMATICS_UNAME: ${{ secrets.AUTOMATICS_UNAME}}
   AUTOMATICS_PASSCODE: ${{ secrets. AUTOMATICS_PASSCODE}}
 
@@ -101,7 +101,7 @@ jobs:
       - name: Apply patches ThunderTools
         run: |  
           cd $GITHUB_WORKSPACE/ThunderTools
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/patches/00010-R4.4-Add-support-for-project-dir.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/00010-R4.4-Add-support-for-project-dir.patch
           cd -
 
       - name: Build ThunderTools
@@ -121,10 +121,10 @@ jobs:
       - name: Apply patches Thunder
         run: |
           cd $GITHUB_WORKSPACE/Thunder
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/Tests/L2Tests/patches/Use_Legact_Alt_Based_On_ThunderTools_R4.4.3.patch
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/Tests/L2Tests/patches/error_code_R4_4.patch
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/patches/1004-Add-support-for-project-dir.patch
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/patches/RDKEMW-733-Add-ENTOS-IDS.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Use_Legact_Alt_Based_On_ThunderTools_R4.4.3.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/error_code_R4_4.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/1004-Add-support-for-project-dir.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-733-Add-ENTOS-IDS.patch
           cd -
       - name: Build Thunder
         run: >
@@ -155,7 +155,7 @@ jobs:
       - name: Apply patches entservices-apis
         run: |
           cd $GITHUB_WORKSPACE/entservices-apis
-          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/patches/RDKEMW-1007.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-1007.patch
           cd -    
 
       - name: Build entservices-apis
@@ -452,7 +452,7 @@ jobs:
           -DPLUGIN_USB_MASS_STORAGE=ON
           -DPLUGIN_LIFECYCLEMANAGER=OFF
           -DPLUGIN_APPMANAGER=OFF
-          -DPLUGIN_ANALYTICS=OFF
+          -DPLUGIN_ANALYTICS=ON
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
@@ -532,7 +532,7 @@ jobs:
           -DPLUGIN_PERSISTENTSTORE=ON
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
-          -DPLUGIN_ANALYTICS=OFF
+          -DPLUGIN_ANALYTICS=ON
           -DPLUGIN_LIFECYCLEMANAGER=OFF
           -DPLUGIN_APPMANAGER=OFF
           -DPLUGIN_AVINPUT=OFF

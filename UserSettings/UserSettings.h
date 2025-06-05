@@ -108,6 +108,12 @@ namespace Plugin {
                     Exchange::JUserSettings::Event::OnPreferredClosedCaptionServiceChanged(_parent, service);
                 }
 
+                void OnPrivacyModeChanged(const string &privacyMode)
+                {
+                    LOGINFO("PrivacyModeChanged: %s\n", privacyMode.c_str());
+                    Exchange::JUserSettings::Event::OnPrivacyModeChanged(_parent, privacyMode);
+                }
+
                 void OnPinControlChanged(const bool pinControl) override
                 {
                     LOGINFO("PinControlChanged: %d\n", pinControl);
@@ -172,6 +178,12 @@ namespace Plugin {
                 {
                     LOGINFO("GuidanceHintsChanged: %d\n", hints);
                     Exchange::JUserSettings::Event::OnVoiceGuidanceHintsChanged(_parent, hints);
+                }
+
+                void OnContentPinChanged(const string& contentPin) override
+                {
+                    LOGINFO("ContentPinChanged: %s\n", contentPin.c_str());
+                    Exchange::JUserSettings::Event::OnContentPinChanged(_parent, contentPin);
                 }
 
             private:

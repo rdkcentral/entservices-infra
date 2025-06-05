@@ -44,6 +44,7 @@ add_library(${MODULE_NAME} SHARED
         WindowManagerHandler.cpp
         State.cpp
 	StateHandler.cpp
+        StateTransitionHandler.cpp
         WebSocket.cpp
 )
 

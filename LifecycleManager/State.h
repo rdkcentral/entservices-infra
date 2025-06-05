@@ -54,6 +54,14 @@ namespace WPEFramework
                 ApplicationContext* mContext;
         };
 
+        class UnloadedState : public State
+	{
+            public:
+                UnloadedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::UNLOADED) {}
+                ~UnloadedState() {}
+                bool handle(string& errorReason);
+        };
+
         class LoadingState : public State
 	{
             public:
@@ -70,27 +78,11 @@ namespace WPEFramework
                 bool handle(string& errorReason);
         };
 
-        class RunRequestedState : public State
+        class PausedState : public State
 	{
             public:
-                RunRequestedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::RUNREQUESTED) {}
-                ~RunRequestedState() {}
-                bool handle(string& errorReason);
-        };
-
-        class RunningState : public State
-	{
-            public:
-                RunningState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::RUNNING) {}
-                ~RunningState() {}
-                bool handle(string& errorReason);
-        };
-
-        class ActivateRequestedState : public State
-	{
-            public:
-                ActivateRequestedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::ACTIVATEREQUESTED) {}
-                ~ActivateRequestedState() {}
+                PausedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::PAUSED) {}
+                ~PausedState() {}
                 bool handle(string& errorReason);
         };
 
@@ -102,43 +94,11 @@ namespace WPEFramework
                 bool handle(string& errorReason);
         };
 
-        class DeactivateRequestedState : public State
-	{
-            public:
-                DeactivateRequestedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::DEACTIVATEREQUESTED) {}
-                ~DeactivateRequestedState() {}
-                bool handle(string& errorReason);
-        };
-
-        class SuspendRequestedState : public State
-	{
-            public:
-                SuspendRequestedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::SUSPENDREQUESTED) {}
-                ~SuspendRequestedState() {}
-                bool handle(string& errorReason);
-        };
-
         class SuspendedState : public State
 	{
             public:
                 SuspendedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::SUSPENDED) {}
                 ~SuspendedState() {}
-                bool handle(string& errorReason);
-        };
-
-        class ResumeRequestedState : public State
-	{
-            public:
-                ResumeRequestedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::RESUMEREQUESTED) {}
-                ~ResumeRequestedState() {}
-                bool handle(string& errorReason);
-        };
-
-        class HibernateRequestedState : public State
-	{
-            public:
-                HibernateRequestedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::HIBERNATEREQUESTED) {}
-                ~HibernateRequestedState() {}
                 bool handle(string& errorReason);
         };
 
@@ -150,27 +110,11 @@ namespace WPEFramework
                 bool handle(string& errorReason);
         };
 
-        class WakeRequestedState : public State
+        class TerminatingState : public State
 	{
             public:
-                WakeRequestedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::WAKEREQUESTED) {}
-                ~WakeRequestedState() {}
-                bool handle(string& errorReason);
-        };
-
-        class TerminateRequestedState : public State
-	{
-            public:
-                TerminateRequestedState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::TERMINATEREQUESTED) {}
-                ~TerminateRequestedState() {}
-                bool handle(string& errorReason);
-        };
-
-        class TerminateState : public State
-	{
-            public:
-                TerminateState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::TERMINATING) {}
-                ~TerminateState() {}
+                TerminatingState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::TERMINATING) {}
+                ~TerminatingState() {}
                 bool handle(string& errorReason);
         };
     } /* namespace Plugin */

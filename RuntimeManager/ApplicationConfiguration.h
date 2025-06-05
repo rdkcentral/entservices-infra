@@ -42,7 +42,6 @@ namespace Plugin
 
         std::string mAppInstanceId;
         
-        // command to run inside the container, mArgs[0] is application name
         std::vector<std::string> mArgs;
         
         // userId used by the container
@@ -62,28 +61,5 @@ namespace Plugin
         // application storage info - storage path, uid, gid
         AppStorageInfo mAppStorageInfo;
     };
-
-    enum ApplicationType
-    {
-        INTERACTIVE = 0,
-	SYSTEM = 1 
-    };
-
-    struct RuntimeConfig
-    {
-        RuntimeConfig(): systemMemoryLimit(0), gpuMemoryLimit(0), command(""), appType(INTERACTIVE), appPath(""), runtimePath(""), wanLanAccess(true), thunder(true), dial(true), resourceManagerClientEnabled(true), dialId(""), envVariables() {}
-        ssize_t systemMemoryLimit;
-        ssize_t gpuMemoryLimit;
-        string command;
-        ApplicationType appType;
-        string appPath;
-        string runtimePath;
-        bool wanLanAccess;
-        bool thunder;
-        bool dial;
-        bool resourceManagerClientEnabled;
-        string dialId;
-        std::vector<std::string> envVariables;
-    };    
 } /* namespace Plugin */
 } /* namespace WPEFramework */
