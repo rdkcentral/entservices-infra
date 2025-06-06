@@ -60,6 +60,10 @@ install(TARGETS ${MODULE_NAME}
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
     RuntimeManagerImplementation.cpp
     DobbySpecGenerator.cpp
+    WindowManagerConnector.cpp
+    DobbyEventListener.cpp
+    UserIdManager.cpp
+    AIConfiguration.cpp
     Module.cpp)
 
 include_directories(../helpers)
@@ -68,12 +72,22 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
+set( AI_BUILD_TYPE "DEBUG" )
+add_definitions( -DAI_DEBUG=1 -DAI_RELEASE=2 )
+if( AI_BUILD_TYPE STREQUAL "RELEASE" )
+    add_definitions( -DAI_BUILD_TYPE=AI_RELEASE )
+elseif( AI_BUILD_TYPE STREQUAL "DEBUG" )
+    add_definitions( -DAI_BUILD_TYPE=AI_DEBUG )
+else()
+    message( FATAL_ERROR "AI_BUILD_TYPE '${AI_BUILD_TYPE}' not supported" )
+endif()
+
 set(RUNTIME_MANAGER_INCLUDES $ENV{RUNTIME_MANAGER_INCLUDES})
 separate_arguments(RUNTIME_MANAGER_INCLUDES)
-include_directories(BEFORE ${RUNTIME_MANAGER_INCLUDES} /usr/include/jsoncpp)
+include_directories(BEFORE ${RUNTIME_MANAGER_INCLUDES})
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
-    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES} jsoncpp)
+    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES})
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)

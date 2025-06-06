@@ -41,13 +41,31 @@
 namespace WPEFramework {
 namespace Plugin {
     typedef Exchange::IPackageDownloader::Reason DownloadReason;
-    typedef Exchange::IPackageInstaller::PackageLifecycleState InstallState;
+    typedef Exchange::IPackageInstaller::InstallState InstallState;
+    typedef Exchange::IPackageInstaller::FailReason FailReason;
 
     class PackageManagerImplementation
     : public Exchange::IPackageDownloader
     , public Exchange::IPackageInstaller
     , public Exchange::IPackageHandler
     {
+        private:
+        class State {
+            public:
+            State() {}
+            State(const packagemanager::ConfigMetaData &config) {
+                PackageManagerImplementation::getRuntimeConfig(config, runtimeConfig);
+            }
+            InstallState installState = InstallState::UNINSTALLED;
+            bool preInsalled = false;
+            uint32_t mLockCount = 0;
+            Exchange::RuntimeConfig runtimeConfig;
+            string gatewayMetadataPath;
+            string unpackedPath;
+            FailReason failReason;
+        };
+
+        typedef std::pair<std::string, std::string> StateKey;
 
         class Configuration : public Core::JSON::Container {
             public:
@@ -66,7 +84,7 @@ namespace Plugin {
 
             public:
                 Core::JSON::String downloadDir;
-            };
+        };
 
         class DownloadInfo {
             const unsigned MIN_RETRIES = 2;
@@ -77,6 +95,7 @@ namespace Plugin {
                 , priority(false)
                 , retries(retries ? retries : MIN_RETRIES)
                 , rateLimit(limit)
+                , cancel(false)
                 {
                 }
 
@@ -87,6 +106,8 @@ namespace Plugin {
                 long GetRateLimit() { return rateLimit; }
                 string GetFileLocator() { return fileLocator; }
                 void SetFileLocator(string &locator) { fileLocator = locator; }
+                void Cancel() { cancel = true ;}
+                bool Cancelled() { return cancel; }
 
             private:
                 string id;
@@ -95,6 +116,7 @@ namespace Plugin {
                 uint8_t retries;
                 long rateLimit;
                 string fileLocator;
+                bool cancel;
         };
 
         typedef std::shared_ptr<DownloadInfo> DownloadInfoPtr;
@@ -105,12 +127,12 @@ namespace Plugin {
         virtual ~PackageManagerImplementation();
 
         // IPackageDownloader methods
-        Core::hresult Download(const string& url, const bool priority, const uint32_t retries, const uint64_t rateLimit, string &downloadId) override;
+        Core::hresult Download(const string& url, const Exchange::IPackageDownloader::Options &options, Exchange::IPackageDownloader::DownloadId &downloadId) override;
         Core::hresult Pause(const string &downloadId) override;
         Core::hresult Resume(const string &downloadId) override;
         Core::hresult Cancel(const string &downloadId) override;
         Core::hresult Delete(const string &fileLocator) override;
-        Core::hresult Progress(const string &downloadId, uint8_t &percent);
+        Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::Percent &percent);
         Core::hresult GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB);
         Core::hresult RateLimit(const string &downloadId, uint64_t &limit);
 
@@ -125,7 +147,7 @@ namespace Plugin {
         Core::hresult Uninstall(const string &packageId, string &errorReason ) override;
         Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
-        Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::PackageLifecycleState &state) override;
+        Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::InstallState &state) override;
 
         Core::hresult Register(Exchange::IPackageInstaller::INotification *sink) override;
         Core::hresult Unregister(Exchange::IPackageInstaller::INotification *sink) override;
@@ -139,6 +161,8 @@ namespace Plugin {
         Core::hresult GetLockedInfo(const string &packageId, const string &version, string &unpackedPath, Exchange::RuntimeConfig& configMetadata,
             string& gatewayMetadataPath, bool &locked) override;
 
+        static void getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig);
+        static void getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig);
 
         BEGIN_INTERFACE_MAP(PackageManagerImplementation)
             INTERFACE_ENTRY(Exchange::IPackageDownloader)
@@ -147,9 +171,18 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        string GetVersion(const string &id) {
+            for (auto const& [key, val] : mState) {
+                if (id.compare(key.first) == 0) {
+                    return key.second;
+                }
+            }
+            return "";
+        }
+        void InitializeState();
         void downloader(int n);
         void NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason status);
-        void NotifyInstallStatus(const string& id, const string& version, const InstallState state);
+        void NotifyInstallStatus(const string& id, const string& version, const State &state);
 
         DownloadInfoPtr getNext();
         int nextRetryDuration(int n) {
@@ -157,7 +190,7 @@ namespace Plugin {
             return round(nxt);
         }
 
-        std::string getDownloadReason(DownloadReason reason) {
+        string getDownloadReason(DownloadReason reason) {
             switch (reason) {
                 case DownloadReason::DOWNLOAD_FAILURE: return "DOWNLOAD_FAILURE";
                 case DownloadReason::DISK_PERSISTENCE_FAILURE: return "DISK_PERSISTENCE_FAILURE";
@@ -165,16 +198,28 @@ namespace Plugin {
             }
         }
 
-    std::string getInstallReason(InstallState state) {
-        switch (state) {
-            case InstallState::INSTALLING : return "INSTALLING";
-            case InstallState::INSTALLATION_BLOCKED : return "INSTALLATION_BLOCKED";
-            case InstallState::INSTALLED : return "INSTALLED";
-            case InstallState::UNINSTALLING : return "UNINSTALLING";
-            case InstallState::UNINSTALLED : return "UNINSTALLED";
-            default: return "Unknown";
+        string getInstallState(InstallState state) {
+            switch (state) {
+                case InstallState::INSTALLING : return "INSTALLING";
+                case InstallState::INSTALLATION_BLOCKED : return "INSTALLATION_BLOCKED";
+                case InstallState::INSTALL_FAILURE : return "INSTALL_FAILURE";
+                case InstallState::INSTALLED : return "INSTALLED";
+                case InstallState::UNINSTALLING : return "UNINSTALLING";
+                case InstallState::UNINSTALL_FAILURE : return "UNINSTALL_FAILURE";
+                case InstallState::UNINSTALLED : return "UNINSTALLED";
+                default: return "Unknown";
+            }
         }
-    }
+
+        string getFailReason(FailReason reason) {
+            switch (reason) {
+                case FailReason::SIGNATURE_VERIFICATION_FAILURE : return "SIGNATURE_VERIFICATION_FAILURE";
+                case FailReason::PACKAGE_MISMATCH_FAILURE : return "PACKAGE_MISMATCH_FAILURE";
+                case FailReason::INVALID_METADATA_FAILURE : return "INVALID_METADATA_FAILURE";
+                case FailReason::PERSISTENCE_FAILURE : return "PERSISTENCE_FAILURE";
+                default: return "NONE";
+            }
+        }
     Core::hresult createStorageManagerObject();
     void releaseStorageManagerObject();
 
@@ -192,8 +237,10 @@ namespace Plugin {
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
-        std::map<std::string, int>  mLockCount;
+        std::map<StateKey, State>  mState;
+
         std::string downloadDir = "/opt/CDL/";
+        string configStr;
 
         #ifdef USE_LIBPACKAGE
         std::shared_ptr<packagemanager::IPackageImpl> packageImpl;

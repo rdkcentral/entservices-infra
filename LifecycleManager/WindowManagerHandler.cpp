@@ -68,122 +68,64 @@ void WindowManagerHandler::terminate()
     mWindowManager = nullptr;
 }
 
-bool WindowManagerHandler::createDisplay(const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchArgs, const string& displayName, string& errorReason)
-{
-    JsonObject displayParams;
-    displayParams["client"] = runtimeAppId;
-    displayParams["displayName"] = displayName;
-
-    uint32_t userId=0, groupId=0;
-    generateUserId(userId, groupId);
-
-    displayParams["ownerId"] = userId;
-    displayParams["groupId"] = groupId;
-    string displayParamsString;
-    displayParams.ToString(displayParamsString);
-    Core::hresult createDisplayResult = mWindowManager->CreateDisplay(displayParamsString);
-    if (Core::ERROR_NONE != createDisplayResult)
-    {
-        errorReason = "unable to create display for application";
-        return false;
-    }
-    return true;
-}
-
-std::pair<std::string, std::string> WindowManagerHandler::generateDisplayName()
-{
-    std::pair<std::string, std::string> name;
-
-    int xdgRuntimeDirFd = -1;
-
-    const char *xdgRuntimeDir = getenv("XDG_RUNTIME_DIR");
-    if (xdgRuntimeDir)
-    {
-        xdgRuntimeDirFd = open(xdgRuntimeDir, O_CLOEXEC | O_DIRECTORY);
-        if (xdgRuntimeDirFd < 0)
-        {
-            printf("failed to open XDG_RUNTIME_DIR '%s' %d\n", xdgRuntimeDir, errno);
-            fflush(stdout);
-        }
-        else
-        {
-            name.first = xdgRuntimeDir;
-        }
-    }
-
-    // if failed to open the dir then open the default /tmp
-    if (xdgRuntimeDirFd < 0)
-    {
-        xdgRuntimeDirFd = open("/tmp", O_CLOEXEC | O_DIRECTORY);
-        if (xdgRuntimeDirFd < 0)
-        {
-            printf("failed to open XDG_RUNTIME_DIR /tmp %d\n", errno);
-            fflush(stdout);
-            return name;
-        }
-
-        name.first = "/tmp";
-    }
-
-    std::ifstream f("/tmp/specchange");
-    if (f.good())
-    {
-        name.second.assign("testdisplay");
-        f.close();
-    }
-    else
-    {	    
-    // generate  a new random name
-    for (int attempt = 0; attempt < 5; attempt++)
-    {
-        // a bit overkill for generating a random file name, but gcc whines
-        // about mktemp
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(0, 25);
-
-        char buf[] = "westeros-XXXXXX";
-        for (size_t i = 0; i < 6; i++)
-            buf[9 + i] = 'a' + dis(gen);
-
-        // sanity check we don't already have a socket with the same name
-        if (faccessat(xdgRuntimeDirFd, buf, F_OK, 0) != 0)
-        {
-            name.second.assign(buf);
-            break;
-        }
-    }
-    }
-    if (close(xdgRuntimeDirFd) < 0)
-    {
-        printf("failed to close XDG_RUNTIME_DIR \n");
-        fflush(stdout);
-    }
-
-    return name;
-}
-
 void WindowManagerHandler::WindowManagerNotification::OnUserInactivity(const double minutes)
 {
+    printf(" Received onUserInactivity event for %f minutes \n", minutes);
+    fflush(stdout);
+    JsonObject eventData;
+    eventData["minutes"] = minutes;
+    eventData["name"] = "onUserInactivity";
+    _parent.onEvent(eventData);
 }
 
-void WindowManagerHandler::generateUserId(uint32_t& userId, uint32_t& groupId)
+void WindowManagerHandler::WindowManagerNotification::OnDisconnected(const std::string& client)
 {
-    //TODO Generate userid and groupid in random way
-    userId = 30490;
-    FILE* fp = fopen("/tmp/appuid", "r");
-    if (fp != NULL)
+    printf(" Received onDisconnect event for client[%s] \n", client.c_str());
+    fflush(stdout);
+    JsonObject eventData;
+    eventData["client"] = client;
+    eventData["name"] = "onDisconnect";
+    _parent.onEvent(eventData);
+}
+
+void WindowManagerHandler::onEvent(JsonObject& data)
+{
+    if (mEventHandler)
     {
-        char* line = NULL;
-        size_t len = 0;
-        while ((getline(&line, &len, fp)) != -1)
-        {
-            userId = atoi(line);
-            break;
-        }
-        fclose(fp);
+        mEventHandler->onWindowManagerEvent(data);
     }
-    groupId = 30000;
+}
+
+Core::hresult WindowManagerHandler::renderReady(std::string appInstanceId, bool& isReady)
+{
+    Core::hresult renderReadyResult = mWindowManager->RenderReady(appInstanceId, isReady);
+    if (Core::ERROR_NONE != renderReadyResult)
+    {
+        printf("unable to get render ready from window manager [%d] \n", renderReadyResult);
+	fflush(stdout);
+    }
+    return renderReadyResult;
+}
+
+Core::hresult WindowManagerHandler::enableDisplayRender(std::string appInstanceId, bool render)
+{
+    Core::hresult enableDisplayRenderResult = mWindowManager->EnableDisplayRender(appInstanceId, render);
+    if (Core::ERROR_NONE != enableDisplayRenderResult)
+    {
+        printf("unable to perform enable display renderer from window manager [%d] \n", enableDisplayRenderResult);
+	fflush(stdout);
+    }
+    return enableDisplayRenderResult;
+}
+
+void WindowManagerHandler::WindowManagerNotification::OnReady(const std::string &client)
+{
+    printf("MADANA Received onReady event for app[%s] \n", client.c_str());
+    fflush(stdout);
+    JsonObject eventData;
+    eventData["appInstanceId"] = client;
+    eventData["name"] = "onReady";
+    _parent.onEvent(eventData);
 }
 
 } // namespace Plugin

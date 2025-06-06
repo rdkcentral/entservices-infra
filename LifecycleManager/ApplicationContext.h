@@ -23,6 +23,7 @@
 #include <map>
 #include <time.h>
 #include <string>
+#include <semaphore>
 
 namespace WPEFramework
 {
@@ -41,8 +42,8 @@ namespace WPEFramework
 	    string mEnvironmentVars;
 	    bool   mEnableDebugger;
 	    string mLaunchArgs;
-            string mDisplayName;
-            string mXdgRuntimeDir;
+            Exchange::ILifecycleManager::LifecycleState mTargetState;
+	    WPEFramework::Exchange::RuntimeConfig mRuntimeConfigObject;
 	};
 
         struct ApplicationKillParams
@@ -64,7 +65,7 @@ namespace WPEFramework
 		void setState(void* state);
                 void setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState state);
                 void setStateChangeId(uint32_t id);
-                void setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, const string& xdgRuntimeDirectory, const string& displayName);
+                void setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject);
                 void setApplicationKillParams(bool force);
 
                 void* getState();
@@ -78,6 +79,11 @@ namespace WPEFramework
                 uint32_t getStateChangeId();
                 ApplicationLaunchParams& getApplicationLaunchParams();
                 ApplicationKillParams& getApplicationKillParams();
+                sem_t mReachedLoadingStateSemaphore;
+                sem_t mAppRunningSemaphore;
+                sem_t mAppReadySemaphore;
+                sem_t mFirstFrameSemaphore;
+                sem_t mFirstFrameAfterResumeSemaphore;
 
 	    private:
                 std::string mAppInstanceId;

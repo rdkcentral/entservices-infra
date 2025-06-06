@@ -21,6 +21,8 @@
 
 #include "Module.h"
 #include <interfaces/ILifecycleManager.h>
+#include <interfaces/json/JsonData_LifecycleManagerState.h>
+#include <interfaces/json/JLifecycleManagerState.h>
 #include <interfaces/ILifecycleManagerState.h>
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
@@ -30,8 +32,56 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-        class LifecycleManager : public PluginHost::IPlugin
+        class LifecycleManager : public PluginHost::IPlugin, public PluginHost::JSONRPC
 	{
+            class Notification : public RPC::IRemoteConnection::INotification,
+                                 public Exchange::ILifecycleManagerState::INotification
+            {
+                private:
+                    Notification() = delete;
+                    Notification(const Notification&) = delete;
+                    Notification& operator=(const Notification&) = delete;
+
+                public:
+                explicit Notification(LifecycleManager* parent)
+                    : _parent(*parent)
+                    {
+                        ASSERT(parent != nullptr);
+                    }
+
+                    virtual ~Notification()
+                    {
+                    }
+
+                    BEGIN_INTERFACE_MAP(Notification)
+                    INTERFACE_ENTRY(Exchange::ILifecycleManagerState::INotification)
+                    INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+                    END_INTERFACE_MAP
+
+                    void Activated(RPC::IRemoteConnection*) override
+                    {
+                        LOGINFO("LifecycleManagerState Notification Activated");
+                    }
+
+                    void Deactivated(RPC::IRemoteConnection *connection) override
+                    {
+                        LOGINFO("LifecycleManagerState Notification Deactivated");
+                    }
+
+                    void OnAppLifecycleStateChanged(const string& appId,
+                                                const string& appInstanceId,
+                                                const Exchange::ILifecycleManager::LifecycleState oldState,
+                                                const Exchange::ILifecycleManager::LifecycleState newState,
+                                                const string& navigationIntent) override
+                    {
+                        LOGINFO("LifecycleManagerState onAppLifecycleStateChanged");
+                        Exchange::JLifecycleManagerState::Event::OnAppLifecycleStateChanged(_parent, appId,appInstanceId,newState,oldState,navigationIntent);
+                    }
+
+                private:
+                    LifecycleManager& _parent;
+            };
+
             public:
                 LifecycleManager(const LifecycleManager&) = delete;
                 LifecycleManager& operator=(const LifecycleManager&) = delete;
@@ -41,6 +91,7 @@ namespace WPEFramework
 
                 BEGIN_INTERFACE_MAP(LifecycleManager)
                 INTERFACE_ENTRY(PluginHost::IPlugin)
+                INTERFACE_ENTRY(PluginHost::IDispatcher)
                 INTERFACE_AGGREGATE(Exchange::ILifecycleManager, mLifecycleManagerImplementation)
                 INTERFACE_AGGREGATE(Exchange::ILifecycleManagerState, mLifecycleManagerState)
                 END_INTERFACE_MAP
@@ -61,6 +112,7 @@ namespace WPEFramework
                 uint32_t mConnectionId;
                 Exchange::ILifecycleManager* mLifecycleManagerImplementation;
                 Exchange::ILifecycleManagerState* mLifecycleManagerState;
+                Core::Sink<Notification> mLifecycleManagerStateNotification;
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */

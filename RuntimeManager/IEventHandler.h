@@ -1,8 +1,8 @@
-/**
-* If not stated otherwise in this file or this component's LICENSE
-* file the following copyright and licenses apply:
+/*
+* If not stated otherwise in this file or this component's LICENSE file the
+* following copyright and licenses apply:
 *
-* Copyright 2024 RDK Management
+* Copyright 2025 RDK Management
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
 * limitations under the License.
-**/
+*/
 
 #pragma once
 
-#include <string>
 #include <core/JSON.h>
+#include <string>
+
 
 namespace WPEFramework
 {
@@ -29,10 +30,10 @@ namespace WPEFramework
         class IEventHandler
 	{
             public:
-	        virtual void onRuntimeManagerEvent(JsonObject& data) = 0;
-	        virtual void onWindowManagerEvent(JsonObject& data) = 0;
-	        virtual void onRippleEvent(std::string name, JsonObject& data) = 0;
-	        virtual void onStateChangeEvent(JsonObject& data) = 0;
+            virtual void onOCIContainerStartedEvent(std::string name, JsonObject& data) = 0;
+            virtual void onOCIContainerStoppedEvent(std::string name, JsonObject& data) = 0;
+            virtual void onOCIContainerFailureEvent(std::string name, JsonObject& data) = 0;
+            virtual void onOCIContainerStateChangedEvent(std::string name, JsonObject& data) = 0;
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */

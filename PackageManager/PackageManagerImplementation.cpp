@@ -38,11 +38,6 @@ namespace Plugin {
     {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
         mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
-        mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
-
-        #ifdef USE_LIBPACKAGE
-        packageImpl = packagemanager::IPackageImpl::instance();
-        #endif
     }
 
     PackageManagerImplementation::~PackageManagerImplementation()
@@ -110,7 +105,8 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Initialize(PluginHost::IShell* service) {
+    Core::hresult PackageManagerImplementation::Initialize(PluginHost::IShell* service)
+    {
         Core::hresult result = Core::ERROR_GENERAL;
         LOGINFO();
 
@@ -124,17 +120,28 @@ namespace Plugin {
                 result = Core::ERROR_NONE;
             }
 
-            string configStr = service->ConfigLine().c_str();
+            configStr = service->ConfigLine().c_str();
             LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
             PackageManagerImplementation::Configuration config;
             config.FromString(service->ConfigLine());
             downloadDir = config.downloadDir;
             LOGINFO("downloadDir=%s", downloadDir.c_str());
 
+            //std::filesystem::create_directories(path);        // XXX: need C++17
+            int rc = mkdir(downloadDir.c_str(), 0777);
+            if (rc) {
+                if (errno != EEXIST) {
+                    LOGERR("Failed to create dir '%s' rc: %d errno=%d", downloadDir.c_str(), rc, errno);
+                }
+            } else {
+                LOGDBG("created dir '%s'", downloadDir.c_str());
+            }
+
             #ifdef USE_LIBPACKAGE
-            packagemanager::ConfigMetadataArray aConfigMetadata;
-            packageImpl->Initialize(configStr, aConfigMetadata);
+            packageImpl = packagemanager::IPackageImpl::instance();
             #endif
+
+            mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
 
         } else {
             LOGERR("service is null \n");
@@ -143,9 +150,14 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Deinitialize(PluginHost::IShell* service) {
+    Core::hresult PackageManagerImplementation::Deinitialize(PluginHost::IShell* service)
+    {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
+
+        mCurrentservice->Release();
+        mCurrentservice = nullptr;
+
         return result;
     }
 
@@ -174,7 +186,9 @@ namespace Plugin {
     }
 
     // IPackageDownloader methods
-    Core::hresult PackageManagerImplementation::Download(const string& url, const bool priority, const uint32_t retries, const uint64_t rateLimit, string &downloadId)
+    Core::hresult PackageManagerImplementation::Download(const string& url,
+        const Exchange::IPackageDownloader::Options &options,
+        Exchange::IPackageDownloader::DownloadId &downloadId)
     {
         Core::hresult result = Core::ERROR_NONE;
 
@@ -183,17 +197,17 @@ namespace Plugin {
         // XXX: Check Network here ???
         // Utils::isPluginActivated(NETWORK_PLUGIN_CALLSIGN)
 
-        DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), retries, rateLimit));
-        std::string filename = downloadDir + "package" + di->GetId() + ".wgt";
+        DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
+        std::string filename = downloadDir + "package" + di->GetId();
         di->SetFileLocator(filename);
-        if (priority) {
+        if (options.priority) {
             mDownloadQueue.push_front(di);
         } else {
             mDownloadQueue.push_back(di);
         }
         cv.notify_one();
 
-        downloadId = di->GetId();
+        downloadId.downloadId = di->GetId();
 
         return result;
     }
@@ -202,10 +216,16 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
-            mHttpClient->pause();
-            LOGDBG("%s paused", downloadId.c_str());
+        LOGTRACE("Pausing '%s'", downloadId.c_str());
+        if (mInprogressDowload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+                mHttpClient->pause();
+                LOGDBG("%s paused", downloadId.c_str());
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
         } else {
+            LOGERR("Pause Failed, mInprogressDowload=%p", mInprogressDowload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -216,10 +236,16 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
-            mHttpClient->resume();
-            LOGDBG("%s resumed", downloadId.c_str());
+        LOGTRACE("Resuming '%s'", downloadId.c_str());
+        if (mInprogressDowload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+                mHttpClient->resume();
+                LOGDBG("%s resumed", downloadId.c_str());
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
         } else {
+            LOGERR("Resume Failed, mInprogressDowload=%p", mInprogressDowload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -230,10 +256,17 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if ((mInprogressDowload.get() != nullptr) && (downloadId.compare(mInprogressDowload->GetId()) == 0)) {
-            mHttpClient->pause();
-            LOGDBG("%s cancelled", downloadId.c_str());
+        LOGTRACE("Cancelling '%s'", downloadId.c_str());
+        if (mInprogressDowload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+                mInprogressDowload->Cancel();
+                mHttpClient->cancel();
+                LOGDBG("%s cancelled", downloadId.c_str());
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
         } else {
+            LOGERR("Cancel Failed, mInprogressDowload=%p", mInprogressDowload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -259,12 +292,12 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, uint8_t &percent)
+    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, Percent &percent)
     {
         Core::hresult result = Core::ERROR_NONE;
 
         if (mInprogressDowload.get() != nullptr) {
-            percent = mHttpClient->getProgress();
+            percent.percent = mHttpClient->getProgress();
         } else {
             result = Core::ERROR_GENERAL;
         }
@@ -285,7 +318,8 @@ namespace Plugin {
     }
 
     // IPackageInstaller methods
-    Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) {
+    Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason)
+    {
         Core::hresult result = Core::ERROR_GENERAL;
 
         LOGTRACE("Installing '%s' ver:'%s'", packageId.c_str(), version.c_str());
@@ -297,130 +331,156 @@ namespace Plugin {
             keyValues.push_back(std::make_pair(kv.name, kv.value));
         }
 
-        mAdminLock.Lock();
-        if (nullptr == mStorageManagerObject) {
-            if (Core::ERROR_NONE != createStorageManagerObject()) {
-                LOGERR("Failed to create StorageManager");
-            }
+        StateKey key { packageId, version };
+        auto it = mState.find( key );
+        if (it == mState.end()) {
+            State state;
+            mState.insert( { key, state } );
         }
-        ASSERT (nullptr != mStorageManagerObject);
-        if (nullptr != mStorageManagerObject) {
-            string path = "";
-            string errorReason = "";
-            if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
-                LOGINFO("CreateStorage path [%s]", path.c_str());
-                NotifyInstallStatus(packageId, version, InstallState::INSTALLING);
-#ifdef USE_LIBPACKAGE
-                packagemanager::ConfigMetaData config;
-                packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
-                if (pmResult == packagemanager::SUCCESS) {
-                    result = Core::ERROR_NONE;
+
+        it = mState.find( key );
+        if (it != mState.end()) {
+            State &state = it->second;
+
+            if (nullptr == mStorageManagerObject) {
+                if (Core::ERROR_NONE != createStorageManagerObject()) {
+                    LOGERR("Failed to create StorageManager");
                 }
-#endif
-                NotifyInstallStatus(packageId, version, InstallState::INSTALLED);
-            } else {
-                LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
             }
-        }
-
-        mAdminLock.Unlock();
-        return result;
-    }
-
-    Core::hresult PackageManagerImplementation::Uninstall(const string &packageId, string &errorReason ) {
-        Core::hresult result = Core::ERROR_GENERAL;
-        string version = "";
-
-        LOGTRACE("Uninstalling %s", packageId.c_str());
-
-        mAdminLock.Lock();
-        if (nullptr == mStorageManagerObject) {
-            LOGINFO("Create StorageManager object");
-            if (Core::ERROR_NONE != createStorageManagerObject()) {
-                LOGERR("Failed to create StorageManager");
-            }
-        }
-        ASSERT (nullptr != mStorageManagerObject);
-        if (nullptr != mStorageManagerObject) {
-            if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
-                LOGINFO("DeleteStorage done");
-                NotifyInstallStatus(packageId, version, InstallState::UNINSTALLING);
-#ifdef USE_LIBPACKAGE
-                // XXX: what if DeleteStorage(), who Uninstall the package
-                packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
-                if (pmResult == packagemanager::SUCCESS) {
-                    result = Core::ERROR_NONE;
-                }
-#endif
-                NotifyInstallStatus(packageId, version, InstallState::UNINSTALLED);
-            } else {
-                LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
-            }
-        }
-
-        mAdminLock.Unlock();
-
-        return result;
-    }
-
-    Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages) {
-        Core::hresult result = Core::ERROR_NONE;
-        std::list<Exchange::IPackageInstaller::Package> packageList;
-
-        LOGTRACE();
-        #ifdef USE_LIBPACKAGE
-        string list;
-        packagemanager::Result pmResult = packageImpl->GetList(list);
-        if (pmResult == packagemanager::SUCCESS) {
-            Json::Value jv;
-            Json::Reader reader;
-
-        if (reader.parse(list.c_str(), jv) ) {
-            if (jv.isArray()) {
-                for (unsigned int i = 0; i < jv.size(); ++i) {
-                    Json::Value val = jv[i];
-
-                        Exchange::IPackageInstaller::Package package;
-                        package.packageId = val["packageId"].asString().c_str();
-                        package.version = val["version"].asString().c_str();
-                        package.packageState = InstallState::INSTALLED;
-                        package.sizeKb = 0;         // XXX: getPackageSpaceInKBytes
-                        packageList.emplace_back(package);
+            ASSERT (nullptr != mStorageManagerObject);
+            if (nullptr != mStorageManagerObject) {
+                string path = "";
+                string errorReason = "";
+                if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
+                    LOGINFO("CreateStorage path [%s]", path.c_str());
+                    state.installState = InstallState::INSTALLING;
+                    NotifyInstallStatus(packageId, version, state);
+                    #ifdef USE_LIBPACKAGE
+                    packagemanager::ConfigMetaData config;
+                    packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
+                    if (pmResult == packagemanager::SUCCESS) {
+                        result = Core::ERROR_NONE;
+                        state.installState = InstallState::INSTALLED;
+                    } else {
+                        state.failReason = FailReason::SIGNATURE_VERIFICATION_FAILURE;
+                        state.installState = InstallState::INSTALL_FAILURE;
                     }
+                    NotifyInstallStatus(packageId, version, state);
+                    #endif
                 } else {
-                    LOGERR("Invalid json response");
+                    LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+                    // XXX: NotifyInstallStatus ???
+                    state.failReason = FailReason::PERSISTENCE_FAILURE;
                 }
             }
         } else {
-            result = Core::ERROR_GENERAL;
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
         }
-        #endif
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::Uninstall(const string &packageId, string &errorReason )
+    {
+        Core::hresult result = Core::ERROR_GENERAL;
+        string version = GetVersion(packageId);
+
+        LOGTRACE("Uninstalling id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
+
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+
+            if (nullptr == mStorageManagerObject) {
+                LOGINFO("Create StorageManager object");
+                if (Core::ERROR_NONE != createStorageManagerObject()) {
+                    LOGERR("Failed to create StorageManager");
+                }
+            }
+            ASSERT (nullptr != mStorageManagerObject);
+            if (nullptr != mStorageManagerObject) {
+                if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
+                    LOGINFO("DeleteStorage done");
+                    state.installState = InstallState::UNINSTALLING;
+                    NotifyInstallStatus(packageId, version, state);
+                    #ifdef USE_LIBPACKAGE
+                    // XXX: what if DeleteStorage() fails, who Uninstall the package
+                    packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
+                    if (pmResult == packagemanager::SUCCESS) {
+                        result = Core::ERROR_NONE;
+                    }
+                    #endif
+                    state.installState = InstallState::UNINSTALLED;
+                    NotifyInstallStatus(packageId, version, state);
+                } else {
+                    LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+                }
+            }
+        } else {
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+        }
+
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages)
+    {
+        LOGTRACE();
+        Core::hresult result = Core::ERROR_NONE;
+        std::list<Exchange::IPackageInstaller::Package> packageList;
+
+        for (auto const& [key, state] : mState) {
+            Exchange::IPackageInstaller::Package package;
+            package.packageId = key.first.c_str();
+            package.version = key.second.c_str();
+            package.state = state.installState;
+            package.sizeKb = state.runtimeConfig.dataImageSize;
+            packageList.emplace_back(package);
+        }
 
         packages = (Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList));
+
         LOGTRACE();
 
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) {
+    Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig)
+    {
+        LOGTRACE();
         Core::hresult result = Core::ERROR_NONE;
 
-        LOGTRACE();
-        // XXX: will return configMetadata after metaDAta caching is done
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            getRuntimeConfig(state.runtimeConfig, runtimeConfig);
+        } else {
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
+            result = Core::ERROR_GENERAL;
+        }
 
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::PackageLifecycleState &state) {
+    Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version,
+        Exchange::IPackageInstaller::InstallState &installState)
+    {
+        LOGTRACE();
         Core::hresult result = Core::ERROR_NONE;
 
-        LOGTRACE();
-        state = INSTALLATION_BLOCKED;
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            installState = state.installState;
+        } else {
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+        }
 
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Register(Exchange::IPackageInstaller::INotification *notification) {
+    Core::hresult PackageManagerImplementation::Register(Exchange::IPackageInstaller::INotification *notification)
+    {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGINFO();
@@ -456,87 +516,167 @@ namespace Plugin {
 
     // IPackageHandler methods
     Core::hresult PackageManagerImplementation::Lock(const string &packageId, const string &version, const Exchange::IPackageHandler::LockReason &lockReason,
-        uint32_t &lockId, string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& appMetadata
+        uint32_t &lockId, string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& appMetadata
         )
     {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
 
-        #ifdef USE_LIBPACKAGE
-        bool locked = false;
-        string gatewayMetadataPath;
-        if (GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked) == Core::ERROR_NONE) {
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            #ifdef USE_LIBPACKAGE
+            //bool locked = false;
+            string gatewayMetadataPath;
+            bool locked = (state.mLockCount > 0);
+            LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
             if (locked)  {
-                lockId = ++mLockCount[packageId];
+                lockId = ++state.mLockCount;
             } else {
                 packagemanager::ConfigMetaData config;
-                packagemanager::Result pmResult = packageImpl->Lock(packageId, version, unpackedPath, config);
+                packagemanager::Result pmResult = packageImpl->Lock(packageId, version, state.unpackedPath, config);
+                LOGDBG("unpackedPath=%s", unpackedPath.c_str());
+                // save the new config in state
+                getRuntimeConfig(config, state.runtimeConfig);   // XXX: is config unnecessary in Lock ?!
                 if (pmResult == packagemanager::SUCCESS) {
-                    lockId = ++mLockCount[packageId];
+                    lockId = ++state.mLockCount;
                     LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
-                    configMetadata.dial = config.dial;
-                    configMetadata.wanLanAccess = config.wanLanAccess;
-                    configMetadata.thunder = config.thunder;
-                    configMetadata.systemMemoryLimit = config.systemMemoryLimit;
-                    configMetadata.gpuMemoryLimit = config.gpuMemoryLimit;
-
-                    configMetadata.userId = config.userId;
-                    configMetadata.groupId = config.groupId;
-                    configMetadata.dataImageSize = config.dataImageSize;
                 } else {
                     LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
                     result = Core::ERROR_GENERAL;
                 }
             }
+            getRuntimeConfig(state.runtimeConfig, runtimeConfig);
+            unpackedPath = state.unpackedPath;
+            #endif
+
+            LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
+        } else {
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            result = Core::ERROR_BAD_REQUEST;
         }
-        #endif
-        LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), mLockCount[packageId]);
 
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version) {
+    // XXX: right way to do this is via copy ctor, when we move Thunder 5.2 and have commone struct RuntimeConfig
+    void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig)
+    {
+        runtimeConfig.dial = config.dial;
+        runtimeConfig.wanLanAccess = config.wanLanAccess;
+        runtimeConfig.thunder = config.thunder;
+        runtimeConfig.systemMemoryLimit = config.systemMemoryLimit;
+        runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
+
+        runtimeConfig.userId = config.userId;
+        runtimeConfig.groupId = config.groupId;
+        runtimeConfig.dataImageSize = config.dataImageSize;
+
+        runtimeConfig.fkpsFiles = config.fkpsFiles;
+        runtimeConfig.appType = config.appType;
+        runtimeConfig.appPath = config.appPath;
+        runtimeConfig.command= config.command;
+        runtimeConfig.runtimePath = config.runtimePath;
+    }
+
+    void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig)
+    {
+        runtimeConfig.dial = config.dial;
+        runtimeConfig.wanLanAccess = config.wanLanAccess;
+        runtimeConfig.thunder = config.thunder;
+        runtimeConfig.systemMemoryLimit = config.systemMemoryLimit;
+        runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
+
+        runtimeConfig.userId = config.userId;
+        runtimeConfig.groupId = config.groupId;
+        runtimeConfig.dataImageSize = config.dataImageSize;
+
+        JsonArray list = JsonArray();
+        for (const std::string &fkpsFile : config.fkpsFiles) {
+            list.Add(fkpsFile);
+        }
+
+        if (!list.ToString(runtimeConfig.fkpsFiles)) {
+            LOGERR("Failed to  stringify fkpsFiles to JsonArray");
+        }
+        runtimeConfig.appType = config.appType == packagemanager::ApplicationType::SYSTEM ? "SYSTEM" : "INTERACTIVE";
+        runtimeConfig.appPath = config.appPath;
+        runtimeConfig.command= config.command;
+        runtimeConfig.runtimePath = config.runtimePath;
+    }
+
+    Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version)
+    {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
 
-        #ifdef USE_LIBPACKAGE
-        if (mLockCount[packageId]) {
-            packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
-            if (pmResult != packagemanager::SUCCESS) {
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            #ifdef USE_LIBPACKAGE
+            if (state.mLockCount) {
+                if (--state.mLockCount == 0) {
+                    packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
+                    state.unpackedPath = "";
+                    if (pmResult != packagemanager::SUCCESS) {
+                        result = Core::ERROR_GENERAL;
+                    }
+                }
+            } else {
+                LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
                 result = Core::ERROR_GENERAL;
             }
-            --mLockCount[packageId];
+            #endif
+            LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
-            LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            result = Core::ERROR_BAD_REQUEST;
         }
-        #endif
-        LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), mLockCount[packageId]);
 
         return result;
     }
 
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
-        string &unpackedPath, Exchange::RuntimeConfig& configMetadata, string& gatewayMetadataPath, bool &locked) {
-
+        string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked)
+    {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
-        // XXX: will return configMetadata after metaDAta caching is done
-
-        #ifdef USE_LIBPACKAGE
-        packagemanager::Result pmResult = packageImpl->GetLockInfo(packageId, version, unpackedPath, locked);
-        if (pmResult != packagemanager::SUCCESS) {
-            result = Core::ERROR_GENERAL;
+        auto it = mState.find( { packageId, version } );
+        if (it != mState.end()) {
+            auto &state = it->second;
+            getRuntimeConfig(state.runtimeConfig, runtimeConfig);
+            unpackedPath = state.unpackedPath;
+            locked = (state.mLockCount > 0);
+            LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
+        } else {
+            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            result = Core::ERROR_BAD_REQUEST;
         }
-        #endif
-
         return result;
     }
 
-    void PackageManagerImplementation::downloader(int n) {
+    void PackageManagerImplementation::InitializeState()
+    {
         LOGTRACE();
+        #ifdef USE_LIBPACKAGE
+        packagemanager::ConfigMetadataArray aConfigMetadata;
+        packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+        LOGDBG("aConfigMetadata.count:%d pmResult=%d", aConfigMetadata.size(), pmResult);
+        for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
+            StateKey key = it->first;
+            State state(it->second);
+            mState.insert( { key, state } );
+        }
+        #endif
+        LOGTRACE();
+    }
+
+    void PackageManagerImplementation::downloader(int n)
+    {
+        InitializeState();
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
@@ -549,8 +689,12 @@ namespace Plugin {
                 for (int i = 0; i < di->GetRetries(); i++) {
                     if (i) {
                         waitTime = nextRetryDuration(waitTime);
-                        LOGTRACE("waitTime=%d retry %d/%d", waitTime, i, di->GetRetries());
+                        LOGDBG("waitTime=%d retry %d/%d", waitTime, i, di->GetRetries());
                         std::this_thread::sleep_for(std::chrono::seconds(waitTime));
+                        // XXX: retrying because of server error, Cancel ?!
+                        if (di->Cancelled()) {
+                            break;
+                        }
                     }
                     LOGTRACE("Downloading id=%s url=%s file=%s rateLimit=%ld",
                         di->GetId().c_str(), di->GetUrl().c_str(), di->GetFileLocator().c_str(), di->GetRateLimit());
@@ -583,12 +727,13 @@ namespace Plugin {
         }
     }
 
-    void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason) {
+    void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason)
+    {
         JsonArray list = JsonArray();
         JsonObject obj;
         obj["downloadId"] = id;
         obj["fileLocator"] = locator;
-        obj["reason"] = getDownloadReason(reason);
+        obj["failReason"] = getDownloadReason(reason);
         list.Add(obj);
         std::string jsonstr;
         if (!list.ToString(jsonstr)) {
@@ -603,12 +748,14 @@ namespace Plugin {
         mAdminLock.Unlock();
     }
 
-    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const InstallState state) {
+    void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const State &state)
+    {
         JsonArray list = JsonArray();
         JsonObject obj;
         obj["packageId"] = id;
         obj["version"] = version;
-        obj["reason"] = getInstallReason(state);
+        obj["state"] = getInstallState(state.installState);
+        obj["failReason"] = getFailReason(state.failReason);
         list.Add(obj);
         std::string jsonstr;
         if (!list.ToString(jsonstr)) {
@@ -623,7 +770,8 @@ namespace Plugin {
         mAdminLock.Unlock();
     }
 
-    PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext() {
+    PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext()
+    {
         std::lock_guard<std::mutex> lock(mMutex);
         LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDowload == nullptr) {
