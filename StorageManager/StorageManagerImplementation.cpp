@@ -381,7 +381,7 @@ namespace Plugin {
                                         ((uint64_t)statPtr->st_blocks *(uint64_t)gStorageSize.blockSize) :
                                         (uint64_t)statPtr->st_size;
             gStorageSize.usedBytes += usedBytesForFile;
-            LOGINFO("path: %s usedBytes: %lu blockSize: %zu", path, gStorageSize.usedBytes, gStorageSize.blockSize);
+            LOGINFO("path: %s usedBytes: %zu blockSize: %zu", path, gStorageSize.usedBytes, gStorageSize.blockSize);
         }
         (void)internalFtwUsage;
         return 0;
@@ -551,7 +551,7 @@ namespace Plugin {
                     std::lock_guard<std::mutex> storageSizelock(mStorageSizeLock);
 
                     gStorageSize.blockSize = (statFs.f_bsize != 0) ? statFs.f_bsize : DEFAULT_STORAGE_DEV_BLOCK_SIZE; /* Fallback to default block size */
-                    LOGINFO("path: %s f_bsize:%lu f_frsize:%lu, blockSize is set to %zu", baseDir.c_str(), statFs.f_bsize, statFs.f_frsize, gStorageSize.blockSize);
+                    LOGINFO("path: %s f_bsize:%zu f_frsize:%zu, blockSize is set to %zu", baseDir.c_str(), statFs.f_bsize, statFs.f_frsize, gStorageSize.blockSize);
                 }
 
                 /* Calculate the current available storage in KB */
