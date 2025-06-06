@@ -373,7 +373,7 @@ namespace Plugin {
             {
                 /* Check and Store the current storage dev block size */
                 gStorageSize.blockSize = (0 != statPtr->st_blksize) ? statPtr->st_blksize : DEFAULT_STORAGE_DEV_BLOCK_SIZE;
-                LOGINFO("path: %s dev blksize:%u blockSize is set to %lu", path, statPtr->st_blksize, gStorageSize.blockSize);
+                LOGINFO("path: %s dev blksize:%u blockSize is set to %zu", path, statPtr->st_blksize, gStorageSize.blockSize);
             }
 
             // Calculate used bytes
@@ -381,7 +381,7 @@ namespace Plugin {
                                         ((uint64_t)statPtr->st_blocks *(uint64_t)gStorageSize.blockSize) :
                                         (uint64_t)statPtr->st_size;
             gStorageSize.usedBytes += usedBytesForFile;
-            LOGINFO("path: %s usedBytes: %lu blockSize: %lu", path, gStorageSize.usedBytes, gStorageSize.blockSize);
+            LOGINFO("path: %s usedBytes: %lu blockSize: %zu", path, gStorageSize.usedBytes, gStorageSize.blockSize);
         }
         (void)internalFtwUsage;
         return 0;
