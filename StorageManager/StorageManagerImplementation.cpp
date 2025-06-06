@@ -551,7 +551,7 @@ namespace Plugin {
                     std::lock_guard<std::mutex> storageSizelock(mStorageSizeLock);
 
                     gStorageSize.blockSize = (statFs.f_bsize != 0) ? statFs.f_bsize : DEFAULT_STORAGE_DEV_BLOCK_SIZE; /* Fallback to default block size */
-                    LOGINFO("path: %s f_bsize:%lu f_frsize:%lu, blockSize is set to %lu", baseDir.c_str(), statFs.f_bsize, statFs.f_frsize, gStorageSize.blockSize);
+                    LOGINFO("path: %s f_bsize:%lu f_frsize:%lu, blockSize is set to %zu", baseDir.c_str(), statFs.f_bsize, statFs.f_frsize, gStorageSize.blockSize);
                 }
 
                 /* Calculate the current available storage in KB */
@@ -581,13 +581,13 @@ namespace Plugin {
                 /* Determine if required space is available */
                 if (availableSizeKB >= static_cast<uint64_t>(requiredSpaceKB))
                 {
-                    LOGINFO("Enough space available. Required: %u KB, Available: %lu KB",
+                    LOGINFO("Enough space available. Required: %u KB, Available: %zu KB",
                             requiredSpaceKB, availableSizeKB);
                     hasEnoughSpace = true;
                 }
                 else
                 {
-                    LOGERR("Not enough space available. Required: %u KB, Available: %lu KB",
+                    LOGERR("Not enough space available. Required: %u KB, Available: %zu KB",
                             requiredSpaceKB, availableSizeKB);
                 }
             }
