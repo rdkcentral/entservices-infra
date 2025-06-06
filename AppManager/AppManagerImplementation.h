@@ -30,8 +30,8 @@
 #include <core/core.h>
 #include <plugins/plugins.h>
 #include "LifecycleInterfaceConnector.h"
+#include <interfaces/IPackageManager.h>
 #include <map>
-
 
 namespace WPEFramework {
 namespace Plugin {
@@ -64,27 +64,71 @@ namespace Plugin {
             string version = "";
             uint32_t lockId = 0;
             string unpackedPath = "" ;
-            string configMetadata = "";
+            WPEFramework::Exchange::RuntimeConfig configMetadata;
             string appMetadata = "";
+            ApplicationType type;
         } PackageInfo;
 
         typedef struct _AppInfo
         {
+            /* From LifecycleManager */
             string appInstanceId;
             string activeSessionId;
-            string appIntent;
-            ApplicationType type;
+            /* From PackageManager */
             PackageInfo packageInfo;
-            Exchange::IAppManager::AppLifecycleState currentAppState;
-            Exchange::ILifecycleManager::LifecycleState currentAppLifecycleState;
+            /* App launch params*/
+            Exchange::IAppManager::AppLifecycleState appNewState;
+            Exchange::ILifecycleManager::LifecycleState appLifecycleState;
+            timespec lastActiveStateChangeTime;
+            uint32_t lastActiveIndex;
+            string appIntent;
             Exchange::IAppManager::AppLifecycleState targetAppState;
+            Exchange::IAppManager::AppLifecycleState appOldState;
         } AppInfo;
 
         std::map<std::string, AppInfo> mAppInfo;
 
         enum EventNames {
-            APP_STATE_CHANGED
+            APP_EVENT_UNKNOWN = 0,
+            APP_EVENT_LIFECYCLE_STATE_CHANGED,
+            APP_EVENT_INSTALLATION_STATUS
         };
+
+        enum CurrentAction {
+            APP_ACTION_NONE,
+            APP_ACTION_LAUNCH,
+            APP_ACTION_PRELOAD,
+            APP_ACTION_SUSPEND,
+            APP_ACTION_RESUME,
+            APP_ACTION_CLOSE,
+            APP_ACTION_TERMINATE,
+            APP_ACTION_HIBERNATE,
+            APP_ACTION_KILL,
+        };
+
+        CurrentAction mCurrentAction;
+
+        private:
+        class PackageManagerNotification : public Exchange::IPackageInstaller::INotification {
+
+        public:
+            PackageManagerNotification(AppManagerImplementation& parent) : mParent(parent){}
+            ~PackageManagerNotification(){}
+
+        void OnAppInstallationStatus(const string& jsonresponse)
+        {
+            LOGINFO("AppManagerImplementation on OnAppInstallationStatus");
+            mParent.OnAppInstallationStatus(jsonresponse);
+        }
+
+        BEGIN_INTERFACE_MAP(PackageManagerNotification)
+        INTERFACE_ENTRY(Exchange::IPackageInstaller::INotification)
+        END_INTERFACE_MAP
+
+        private:
+            AppManagerImplementation& mParent;
+        };
+
         class EXTERNAL Job : public Core::IDispatch {
         protected:
              Job(AppManagerImplementation *appManagerImplementation, EventNames event, JsonObject &params)
@@ -148,6 +192,8 @@ namespace Plugin {
         Core::hresult GetMaxHibernatedFlashUsage(int32_t& maxHibernatedFlashUsage) const override;
         Core::hresult GetMaxInactiveRamUsage(int32_t& maxInactiveRamUsage) const override;
         bool fetchPackageInfoByAppId(const string& appId, PackageInfo &packageData);
+        void handleOnAppLifecycleStateChanged(const string& appId, const string& appInstanceId, const Exchange::IAppManager::AppLifecycleState newState,
+                                        const Exchange::IAppManager::AppLifecycleState oldState, const Exchange::IAppManager::AppErrorReason errorReason);
 
         // IConfiguration methods
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -157,6 +203,7 @@ namespace Plugin {
         void releasePersistentStoreRemoteStoreObject();
         Core::hresult createPackageManagerObject();
         void releasePackageManagerObject();
+        void getCustomValues(WPEFramework::Exchange::RuntimeConfig& runtimeConfig);
     private:
         mutable Core::CriticalSection mAdminLock;
         std::list<Exchange::IAppManager::INotification*> mAppManagerNotification;
@@ -165,10 +212,16 @@ namespace Plugin {
         Exchange::IPackageHandler* mPackageManagerHandlerObject;
         Exchange::IPackageInstaller* mPackageManagerInstallerObject;
         PluginHost::IShell* mCurrentservice;
+        Core::Sink<PackageManagerNotification> mPackageManagerNotification;
+        Core::hresult fetchInstalledPackages(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
+        void checkIsInstalled(const std::string& appId, bool& installed, const std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         Core::hresult packageLock(const string& appId, PackageInfo &packageData, Exchange::IPackageHandler::LockReason lockReason);
         Core::hresult packageUnLock(const string& appId);
         bool createOrUpdatePackageInfoByAppId(const string& appId, PackageInfo &packageData);
         bool removeAppInfoByAppId(const string &appId);
+        void OnAppInstallationStatus(const string& jsonresponse);
+        std::string getInstallAppType(ApplicationType type);
+
 
         void dispatchEvent(EventNames, const JsonObject &params);
         void Dispatch(EventNames event, const JsonObject params);

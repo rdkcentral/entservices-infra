@@ -25,6 +25,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include "StateTransitionRequest.h"
 
 namespace WPEFramework
 {
@@ -34,7 +35,7 @@ namespace WPEFramework
 	{
             public:
                 static void initialize();
-	        static bool changeState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState lifeCycleState, string& errorReason);
+	        static bool changeState(StateTransitionRequest& request, string& errorReason);
 
             private:
                 static uint32_t sStateChangeCount;

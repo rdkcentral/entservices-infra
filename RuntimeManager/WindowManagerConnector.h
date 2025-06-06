@@ -21,14 +21,13 @@
 #include <interfaces/IRDKWindowManager.h>
 #include <map>
 #include <plugins/plugins.h>
-#include "IEventHandler.h"
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <utility>
 
 namespace WPEFramework {
 namespace Plugin {
-    class WindowManagerHandler
+    class WindowManagerConnector
     {
         class WindowManagerNotification : public Exchange::IRDKWindowManager::INotification
         {
@@ -37,7 +36,7 @@ namespace Plugin {
                 WindowManagerNotification& operator=(const WindowManagerNotification&) = delete;
 
             public:
-                explicit WindowManagerNotification(WindowManagerHandler& parent)
+                explicit WindowManagerNotification(WindowManagerConnector& parent)
                     : _parent(parent)
                 {
                 }
@@ -48,30 +47,28 @@ namespace Plugin {
                 END_INTERFACE_MAP
 
                 virtual void OnUserInactivity(const double minutes) override;
-                virtual void OnDisconnected(const std::string& client) override;
-                virtual void OnReady(const std::string &client) override;
 
             private:
-                WindowManagerHandler& _parent;
+                WindowManagerConnector& _parent;
         };
         public:
-            WindowManagerHandler();
-            ~WindowManagerHandler();
+            WindowManagerConnector();
+            ~WindowManagerConnector();
 
             // We do not allow this plugin to be copied !!
-            WindowManagerHandler(const WindowManagerHandler&) = delete;
-            WindowManagerHandler& operator=(const WindowManagerHandler&) = delete;
+            WindowManagerConnector(const WindowManagerConnector&) = delete;
+            WindowManagerConnector& operator=(const WindowManagerConnector&) = delete;
 
         public:
-            bool initialize(PluginHost::IShell* service, IEventHandler* eventHandler);
-            void terminate();
-            void onEvent(JsonObject& data);
-            Core::hresult renderReady(std::string appInstanceId, bool& isReady);
-            Core::hresult enableDisplayRender(std::string appInstanceId, bool render);
+            bool initializePlugin(PluginHost::IShell* service); //, IEventHandler* eventHandler
+            void releasePlugin();
+            bool createDisplay(const string& appInstanceId , const string& displayName, const uint32_t& userId, const uint32_t& groupId);
+            bool isPluginInitialized();
+            void getDisplayInfo(const string& appInstanceId , string& xdgRuntimeDir , string& waylandDisplayName);\
         private:
             Exchange::IRDKWindowManager* mWindowManager;
             Core::Sink<WindowManagerNotification> mWindowManagerNotification;
-            IEventHandler* mEventHandler;
+            bool mPluginInitialized = false;
     };
 } // namespace Plugin
 } // namespace WPEFramework

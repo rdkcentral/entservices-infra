@@ -20,6 +20,9 @@
 #include "LifecycleManagerImplementation.h"
 #include "RequestHandler.h"
 #include "UtilsJsonRpc.h"
+#include <interfaces/json/JsonData_LifecycleManagerState.h>
+#include <interfaces/json/JLifecycleManagerState.h>
+#include <semaphore.h>
 
 namespace WPEFramework
 {
@@ -134,9 +137,10 @@ namespace WPEFramework
              switch(event)
              {
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
+                     handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
                      {
-                         (*index)->OnAppStateChanged(appId, (LifecycleState)oldLifecycleState, errorReason);
+                         (*index)->OnAppStateChanged(appId, (LifecycleState)newLifecycleState, errorReason);
                          ++index;
                      }
                      while (stateNotificationIndex != mLifecycleManagerStateNotification.end())
@@ -148,6 +152,9 @@ namespace WPEFramework
                  case LIFECYCLE_MANAGER_EVENT_RUNTIME:
                      handleRuntimeManagerEvent(obj);
                      break;
+                 case LIFECYCLE_MANAGER_EVENT_WINDOW:
+                      handleWindowManagerEvent(obj);
+                      break;
                  default:
                      LOGWARN("Event[%u] not handled", event);
                      break;
@@ -218,35 +225,20 @@ namespace WPEFramework
             return status;
         }
         
-        Core::hresult LifecycleManagerImplementation::SpawnApp(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const LifecycleState targetLifecycleState, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success)
+        Core::hresult LifecycleManagerImplementation::SpawnApp(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const LifecycleState targetLifecycleState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success)
         {
 	    // Launches an app.  This will be an asynchronous call.
             // Notifies appropriate API Gateway when an app is about to be loaded
             // Lifecycle manager will create the appInstanceId once the app is loaded.  Ripple is responsible for creating a token. 
             Core::hresult status = Core::ERROR_NONE;
-            ApplicationContext* context = getContext(appId, "");
+            ApplicationContext* context = getContext("", appId);
+            bool firstLaunch = false;
             if (nullptr == context)
 	    {
                 context = new ApplicationContext(appId);
-                WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
-                std::pair<std::string, std::string> displayDetails;
-                if (nullptr != windowManagerHandler)
-                {
-                    displayDetails = windowManagerHandler->generateDisplayName();
-		    if (displayDetails.first.empty() || displayDetails.second.empty())
-		    {
-                        if (nullptr != context)
-		        {
-                            delete context;
-                        }
-                        errorReason = "unable to get display details for application launch";
-                        status = Core::ERROR_GENERAL;
-                        success = false;
-                        return status;
-		    }
-                }
-                context->setApplicationLaunchParams(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, launchIntent, environmentVars, enableDebugger, launchArgs, displayDetails.first, displayDetails.second);
+                context->setApplicationLaunchParams(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, launchIntent, environmentVars, enableDebugger, launchArgs, targetLifecycleState, runtimeConfigObject);
 		mLoadedApplications.push_back(context);
+                firstLaunch = true;
 	    }
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
@@ -257,6 +249,10 @@ namespace WPEFramework
 	    }
             else
 	    {
+                if (firstLaunch)
+		{
+                    sem_wait(&context->mReachedLoadingStateSemaphore);
+		}
                 appInstanceId = context->getAppInstanceId();
             }
             return status;
@@ -323,26 +319,6 @@ namespace WPEFramework
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(true);
             success = RequestHandler::getInstance()->terminate(context, true, errorReason);
-            if (success)
-	    {
-                std::list<ApplicationContext*>::iterator iter = mLoadedApplications.end();
-	        for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
-	        {
-                    if (context == *iter)
-	            {
-		        break;	    
-                    }
-	        }
-		if (iter != mLoadedApplications.end())
-		{
-                    delete context;
-                    mLoadedApplications.erase(iter);
-		}
-            }
-            else
-	    {
-                status = Core::ERROR_GENERAL;
-	    }
             return status;
         }
         
@@ -416,6 +392,13 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_NONE;
 	    printf("[LifecycleManager] Received appReady event for [%s] \n", appId.c_str());
 	    fflush(stdout);
+            ApplicationContext* context = getContext("", appId);
+            if (nullptr == context)
+	    {
+                status = Core::ERROR_GENERAL;
+                return status;
+	    }
+            sem_post(&context->mAppReadySemaphore);
 	    return status;
 	}
 
@@ -451,7 +434,7 @@ namespace WPEFramework
             activate = (closeReason == KILL_AND_ACTIVATE);		    
 
             ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
-	    status = SpawnApp(launchParams.mAppId, launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchIntent, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, activate?Exchange::ILifecycleManager::LifecycleState::ACTIVE:Exchange::ILifecycleManager::LifecycleState::RUNNING, launchParams.mLaunchArgs, appInstanceId, errorReason, success);
+	    status = SpawnApp(launchParams.mAppId, launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchIntent, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, activate?Exchange::ILifecycleManager::LifecycleState::ACTIVE:Exchange::ILifecycleManager::LifecycleState::PAUSED, launchParams.mRuntimeConfigObject, launchParams.mLaunchArgs, appInstanceId, errorReason, success);
 	    return status;
 	}
 
@@ -509,9 +492,9 @@ namespace WPEFramework
             dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_RUNTIME, data);
 	}
 
-        void LifecycleManagerImplementation::onWindowManagerEvent(string name, JsonObject& data)
+        void LifecycleManagerImplementation::onWindowManagerEvent(JsonObject& data)
 	{
-            //mLifecycleManager->dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, JsonValue(minutes));
+            dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_WINDOW, data);
 	}
 
         void LifecycleManagerImplementation::onRippleEvent(string name, JsonObject& data)
@@ -549,7 +532,95 @@ namespace WPEFramework
                     }
                 }            
 	    }
+	    else if (eventName.compare("onStateChanged") == 0)
+	    {
+                string appInstanceId = data["appInstanceId"];
+                uint32_t runtimeState = data["state"].Number();
+                if (Exchange::IRuntimeManager::RuntimeState::RUNTIME_STATE_RUNNING == runtimeState)
+		{
+                    ApplicationContext* context = getContext(appInstanceId, "");
+                    if (nullptr == context)
+                    {
+		        printf("Received state change event for app which is not available\n");
+	                fflush(stdout);	    
+                    }
+                    else
+		    {
+                        sem_post(&context->mAppRunningSemaphore);
+		    }
+                }
+            }
+        else if (eventName.compare("onFailure") == 0)
+        {
+            string appInstanceId = data["appInstanceId"];
+            string errorCode = data["errorCode"];
+            printf("Received container failure event from runtime manager for app[%s] error[%s]\n", appInstanceId.c_str(), errorCode.c_str());
+            fflush(stdout);
+        }
+        else if (eventName.compare("onStarted") == 0)
+        {
+            string appInstanceId = data["appInstanceId"];
+            printf("Received container started event from runtime manager for app[%s]\n", appInstanceId.c_str());
+            fflush(stdout);
+        }
 	}
+
+	void LifecycleManagerImplementation::handleStateChangeEvent(const JsonObject &data)
+    {
+            string appInstanceId = data["appInstanceId"];
+	    uint32_t stateInput = data["newLifecycleState"].Number();
+            Exchange::ILifecycleManager::LifecycleState state = (Exchange::ILifecycleManager::LifecycleState) stateInput;
+            if (state != Exchange::ILifecycleManager::LifecycleState::UNLOADED)
+	    {
+                return;
+	    }
+            ApplicationContext* context = nullptr;
+            std::list<ApplicationContext*>::iterator iter = mLoadedApplications.end();
+	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
+	    {
+                context = *iter;
+                if (nullptr == context)
+		{
+                    continue;
+		}
+                if (context->getAppInstanceId() == appInstanceId)
+	        {
+	            break;	    
+                }
+	    }
+	    if ((iter != mLoadedApplications.end()) && (nullptr != context))
+	    {
+                delete context;
+                mLoadedApplications.erase(iter);
+	    }
+    }
+
+
+    void LifecycleManagerImplementation::handleWindowManagerEvent(const JsonObject &data)
+    {
+        string eventName = data["name"];
+        if (eventName.compare("onUserInactivity") == 0)
+        {
+            printf("Received onUserInactivity event from window manager \n");
+            fflush(stdout);
+        }
+        else if (eventName.compare("onDisconnect") == 0)
+        {
+            printf("Received onDisconnect event from window manager \n");
+            fflush(stdout);
+	}
+        else if (eventName.compare("onReady") == 0)
+        {
+            printf("Received onReady event from window manager \n");
+            fflush(stdout);
+            std::string appInstanceId = data["appInstanceId"];
+            ApplicationContext* context = getContext(appInstanceId, "");
+            if (nullptr != context)
+	    {
+                sem_post(&context->mFirstFrameSemaphore);
+	    }
+	}
+    }
 
     } /* namespace Plugin */
 } /* namespace WPEFramework */

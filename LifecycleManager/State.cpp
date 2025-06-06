@@ -29,98 +29,141 @@ namespace WPEFramework
 {
     namespace Plugin
     {
+        bool UnloadedState::handle(string& errorReason)
+	{
+            return true;
+	}
+
         bool LoadingState::handle(string& errorReason)
 	{
+            ApplicationContext* context = getContext();
+
+            boost::uuids::uuid tag = boost::uuids::random_generator()();
+            std::string generatedInstanceId =  boost::uuids::to_string(tag);
+            context->setAppInstanceId(generatedInstanceId);
+            sem_post(&context->mReachedLoadingStateSemaphore);
             return true;
 	}
 
         bool InitializingState::handle(string& errorReason)
         {
-            WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
-            bool result = false;
-            if (nullptr != windowManagerHandler)
-            {
-                ApplicationContext* context = getContext();
-                ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
-                result = windowManagerHandler->createDisplay(launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchArgs, launchParams.mDisplayName, errorReason);
-            }
-
-            return result;
-        }
-
-        bool RunRequestedState::handle(string& errorReason)
-	{
-            bool ret = false;
             RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
+            bool ret = false;
 	    if (nullptr != runtimeManagerHandler)
 	    {
                 ApplicationContext* context = getContext();
-
-                boost::uuids::uuid tag = boost::uuids::random_generator()();
-                std::string generatedInstanceId =  boost::uuids::to_string(tag);
-                context->setAppInstanceId(generatedInstanceId);
-
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
-
-                ret = runtimeManagerHandler->run(context->getAppId(), generatedInstanceId, launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, launchParams.mLaunchArgs, launchParams.mXdgRuntimeDir, launchParams.mDisplayName, errorReason);
+                ret = runtimeManagerHandler->run(context->getAppId(), context->getAppInstanceId(), launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, launchParams.mLaunchArgs, launchParams.mTargetState, launchParams.mRuntimeConfigObject, errorReason);
+                printf("MADANA APPLICATION RUN RETURNS [%d] \n", ret);
+		fflush(stdout);
+                ret = true;
+                sem_wait(&context->mAppRunningSemaphore);
 	    }
             return ret;
-	}
+        }
 
-        bool RunningState::handle(string& errorReason)
+        bool PausedState::handle(string& errorReason)
 	{
-            return true;
-	}
-
-        bool ActivateRequestedState::handle(string& errorReason)
-	{
+	    bool ret = false;
             ApplicationContext* context = getContext();
-            boost::uuids::uuid tag = boost::uuids::random_generator()();
-            std::string generatedSessionId =  boost::uuids::to_string(tag);
-            context->setActiveSessionId(generatedSessionId);
-            return true;
+            if (Exchange::ILifecycleManager::LifecycleState::INITIALIZING == context->getCurrentLifecycleState())
+	    {
+                //TODO : Remove wait for now
+                //sem_wait(&context->mAppReadySemaphore);
+                ret = true;
+	    }
+	    else if (Exchange::ILifecycleManager::LifecycleState::SUSPENDED == context->getCurrentLifecycleState())
+	    {
+                RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
+	        if (nullptr != runtimeManagerHandler)
+	        {
+                    ApplicationContext* context = getContext();
+                    ret = runtimeManagerHandler->resume(context->getAppInstanceId(), errorReason);
+                    if (true == ret)
+		    {
+                        WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
+	                if (nullptr != windowManagerHandler)
+	                {
+                            ApplicationContext* context = getContext();
+                            Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), true);
+                            printf("enabled display in window manager [%d] \n", retValue);
+			     fflush(stdout);
+                        }
+		    }
+                   ret = true;
+                   //TODO: Error cases
+	        }
+            }
+	    else if (Exchange::ILifecycleManager::LifecycleState::ACTIVE == context->getCurrentLifecycleState())
+	    {
+                ret = true;		    
+            }
+            return ret;
 	}
 
         bool ActiveState::handle(string& errorReason)
 	{
-            return true;
-	}
-
-        bool DeactivateRequestedState::handle(string& errorReason)
-	{
-            return true;
-	}
-
-        bool SuspendRequestedState::handle(string& errorReason)
-	{
-	    bool ret = false;
-            RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
-	    if (nullptr != runtimeManagerHandler)
+            WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
+	    if (nullptr != windowManagerHandler)
 	    {
                 ApplicationContext* context = getContext();
-                ret = runtimeManagerHandler->suspend(context->getAppInstanceId(), errorReason);
+                bool isRenderReady = false;
+		Core::hresult ret = windowManagerHandler->renderReady(context->getAppInstanceId(), isRenderReady);
+                if (Core::ERROR_NONE == ret)
+		{
+                    if (isRenderReady)
+		    {
+		        return true;	
+		    }
+		    else
+		    {
+                        sem_wait(&context->mFirstFrameSemaphore);
+		    }
+                }
+		else
+		{
+                    return false;
+                }
 	    }
-            return ret;
+            return true;
 	}
 
         bool SuspendedState::handle(string& errorReason)
 	{
-            return true;
-	}
-
-        bool ResumeRequestedState::handle(string& errorReason)
-	{
 	    bool ret = false;
+            //TODO : Remove wait for now
+            //ApplicationContext* context = getContext();
+            //sem_wait(&context->mAppReadySemaphore);
             RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
 	    if (nullptr != runtimeManagerHandler)
 	    {
                 ApplicationContext* context = getContext();
-                ret = runtimeManagerHandler->resume(context->getAppInstanceId(), errorReason);
+                if (Exchange::ILifecycleManager::LifecycleState::HIBERNATED == context->getCurrentLifecycleState())
+	        {
+                    ret = runtimeManagerHandler->wake(context->getAppInstanceId(), Exchange::ILifecycleManager::LifecycleState::SUSPENDED, errorReason);
+	        }
+                else
+	        {
+                    ret = runtimeManagerHandler->suspend(context->getAppInstanceId(), errorReason);
+                    if (true == ret)
+		    {
+                        WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
+	                if (nullptr != windowManagerHandler)
+	                {
+                            ApplicationContext* context = getContext();
+	                    Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), false);
+                            printf("disabled display in window manager [%d] \n", retValue);
+			     fflush(stdout);
+                            ret = true;
+                        }
+		    }
+                   //TODO: Handle error cases
+                }
 	    }
             return ret;
 	}
 
-        bool HibernateRequestedState::handle(string& errorReason)
+        bool HibernatedState::handle(string& errorReason)
 	{
             bool ret = false;
             RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
@@ -131,12 +174,7 @@ namespace WPEFramework
 	    }
             return ret;
 	}
-
-        bool HibernatedState::handle(string& errorReason)
-	{
-            return true;
-	}
-
+/*
         bool WakeRequestedState::handle(string& errorReason)
         {
             bool ret = false;
@@ -148,8 +186,9 @@ namespace WPEFramework
             }
             return ret;
         }
+*/
 
-        bool TerminateRequestedState::handle(string& errorReason)
+        bool TerminatingState::handle(string& errorReason)
 	{
             bool success = false;
             RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
@@ -165,14 +204,11 @@ namespace WPEFramework
                 {
                     success = runtimeManagerHandler->terminate(context->getAppInstanceId(), errorReason);
                 }
+                //TODO: handle return properly
+                success = true;
             }
+            //TODO: handle return properly	
             return success;
-	}
-
-        bool TerminateState::handle(string& errorReason)
-	{
-            return true;
-	}
-
-    } /* namespace Plugin */
+        }
+    }
 } /* namespace WPEFramework */

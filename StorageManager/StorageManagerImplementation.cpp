@@ -290,7 +290,7 @@ namespace Plugin {
         else
         {
             /* Ensure the persistent store object is created if necessary */
-            if (mPersistentStoreRemoteStoreObject == nullptr && Core::ERROR_NONE != createPersistentStoreRemoteStoreObject()) 
+            if (mPersistentStoreRemoteStoreObject == nullptr && Core::ERROR_NONE != createPersistentStoreRemoteStoreObject())
             {
                 LOGERR("Failed to create PersistentStoreRemoteStoreObject");
                 status = Core::ERROR_GENERAL;  // Set status to indicate failure
@@ -373,7 +373,7 @@ namespace Plugin {
             {
                 /* Check and Store the current storage dev block size */
                 gStorageSize.blockSize = (0 != statPtr->st_blksize) ? statPtr->st_blksize : DEFAULT_STORAGE_DEV_BLOCK_SIZE;
-                LOGINFO("path: %s dev blksize:%lu blockSize is set to %llu", path, statPtr->st_blksize, gStorageSize.blockSize);
+                LOGINFO("path: %s dev blksize:%u blockSize is set to %zu", path, statPtr->st_blksize, gStorageSize.blockSize);
             }
 
             // Calculate used bytes
@@ -381,7 +381,7 @@ namespace Plugin {
                                         ((uint64_t)statPtr->st_blocks *(uint64_t)gStorageSize.blockSize) :
                                         (uint64_t)statPtr->st_size;
             gStorageSize.usedBytes += usedBytesForFile;
-            LOGINFO("path: %s usedBytes: %llu blockSize: %llu", path, gStorageSize.usedBytes, gStorageSize.blockSize);
+            LOGINFO("path: %s usedBytes: %zu blockSize: %zu", path, gStorageSize.usedBytes, gStorageSize.blockSize);
         }
         (void)internalFtwUsage;
         return 0;
@@ -551,7 +551,7 @@ namespace Plugin {
                     std::lock_guard<std::mutex> storageSizelock(mStorageSizeLock);
 
                     gStorageSize.blockSize = (statFs.f_bsize != 0) ? statFs.f_bsize : DEFAULT_STORAGE_DEV_BLOCK_SIZE; /* Fallback to default block size */
-                    LOGINFO("path: %s f_bsize:%lu f_frsize:%lu, blockSize is set to %llu", baseDir.c_str(), statFs.f_bsize, statFs.f_frsize, gStorageSize.blockSize);
+                    LOGINFO("path: %s f_bsize:%zu f_frsize:%zu, blockSize is set to %zu", baseDir.c_str(), statFs.f_bsize, statFs.f_frsize, gStorageSize.blockSize);
                 }
 
                 /* Calculate the current available storage in KB */
@@ -581,13 +581,13 @@ namespace Plugin {
                 /* Determine if required space is available */
                 if (availableSizeKB >= static_cast<uint64_t>(requiredSpaceKB))
                 {
-                    LOGINFO("Enough space available. Required: %u KB, Available: %llu KB",
+                    LOGINFO("Enough space available. Required: %u KB, Available: %zu KB",
                             requiredSpaceKB, availableSizeKB);
                     hasEnoughSpace = true;
                 }
                 else
                 {
-                    LOGERR("Not enough space available. Required: %u KB, Available: %llu KB",
+                    LOGERR("Not enough space available. Required: %u KB, Available: %zu KB",
                             requiredSpaceKB, availableSizeKB);
                 }
             }

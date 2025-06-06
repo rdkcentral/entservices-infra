@@ -24,13 +24,18 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-	ApplicationLaunchParams::ApplicationLaunchParams(): mAppId(""), mAppPath(""), mAppConfig(""), mRuntimeAppId(""), mRuntimePath(""), mRuntimeConfig(""), mLaunchIntent(""), mEnvironmentVars(""), mEnableDebugger(false), mLaunchArgs(""), mDisplayName(""), mXdgRuntimeDir("")
+	ApplicationLaunchParams::ApplicationLaunchParams(): mAppId(""), mAppPath(""), mAppConfig(""), mRuntimeAppId(""), mRuntimePath(""), mRuntimeConfig(""), mLaunchIntent(""), mEnvironmentVars(""), mEnableDebugger(false), mLaunchArgs(""), mTargetState(Exchange::ILifecycleManager::LifecycleState::UNLOADED), mRuntimeConfigObject()
         {
 	}
 
         ApplicationContext::ApplicationContext (std::string appId): mAppInstanceId(""), mAppId(std::move(appId)), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
         {
-            mState = (void*) new LoadingState(this);
+            mState = (void*) new UnloadedState(this);
+            sem_init(&mReachedLoadingStateSemaphore, 0, 0);
+            sem_init(&mAppRunningSemaphore, 0, 0);
+            sem_init(&mAppReadySemaphore, 0, 0);
+            sem_init(&mFirstFrameSemaphore, 0, 0);
+            sem_init(&mFirstFrameAfterResumeSemaphore, 0, 0);
         }
 
 	ApplicationKillParams::ApplicationKillParams(): mForce(false)
@@ -82,7 +87,7 @@ namespace WPEFramework
             mStateChangeId = id;		
 	}
 
-        void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, const string& xdgRuntimeDirectory, const string& displayName)
+        void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject)
 	{
             mLaunchParams.mAppId = appId;
             mLaunchParams.mAppPath = appPath;
@@ -94,8 +99,8 @@ namespace WPEFramework
             mLaunchParams.mEnvironmentVars = environmentVars;
             mLaunchParams.mEnableDebugger = enableDebugger;
             mLaunchParams.mLaunchArgs = launchArgs;
-            mLaunchParams.mDisplayName = displayName;
-            mLaunchParams.mXdgRuntimeDir = xdgRuntimeDirectory;
+            mLaunchParams.mTargetState = targetState;
+            mLaunchParams.mRuntimeConfigObject = runtimeConfigObject;
 	}
 
         void ApplicationContext::setApplicationKillParams(bool force)

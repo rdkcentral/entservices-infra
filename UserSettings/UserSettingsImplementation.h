@@ -39,6 +39,7 @@
 #define USERSETTINGS_CAPTIONS_KEY                             "captions"
 #define USERSETTINGS_PREFERRED_CAPTIONS_LANGUAGES_KEY         "preferredCaptionsLanguages"
 #define USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY    "preferredClosedCaptionsService"
+#define USERSETTINGS_PRIVACY_MODE_KEY                         "privacyMode"
 #define USERSETTINGS_PIN_CONTROL_KEY                          "pinControl"
 #define USERSETTINGS_VIEWING_RESTRICTIONS_KEY                 "viewingRestrictions"
 #define USERSETTINGS_VIEWING_RESTRICTIONS_WINDOW_KEY          "viewingRestrictionsWindow"
@@ -117,6 +118,7 @@ namespace Plugin {
             CAPTIONS_CHANGED,
             PREFERRED_CAPTIONS_LANGUAGE_CHANGED,
             PREFERRED_CLOSED_CAPTIONS_SERVICE_CHANGED,
+            PRIVACY_MODE_CHANGED,
             PIN_CONTROL_CHANGED,
             VIEWING_RESTRICTIONS_CHANGED,
             VIEWING_RESTRICTIONS_WINDOW_CHANGED,
@@ -185,6 +187,8 @@ namespace Plugin {
         Core::hresult GetPreferredCaptionsLanguages(string &preferredLanguages) const override;
         Core::hresult SetPreferredClosedCaptionService(const string& service) override;
         Core::hresult GetPreferredClosedCaptionService(string &service) const override;
+        Core::hresult SetPrivacyMode(const string& privacyMode);
+        Core::hresult GetPrivacyMode(string &privacyMode) const;
         Core::hresult SetPinControl(const bool pinControl) override;
         Core::hresult GetPinControl(bool &pinControl) const override;
         Core::hresult SetViewingRestrictions(const string& viewingRestrictions) override;

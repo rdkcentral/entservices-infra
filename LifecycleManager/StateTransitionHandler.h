@@ -19,20 +19,27 @@
 
 #pragma once
 
-#include <string>
-#include <core/JSON.h>
+#include "ApplicationContext.h"
+#include <thread>
+#include "StateTransitionRequest.h"
 
 namespace WPEFramework
 {
     namespace Plugin
     {
-        class IEventHandler
+        class StateTransitionHandler
 	{
             public:
-	        virtual void onRuntimeManagerEvent(JsonObject& data) = 0;
-	        virtual void onWindowManagerEvent(JsonObject& data) = 0;
-	        virtual void onRippleEvent(std::string name, JsonObject& data) = 0;
-	        virtual void onStateChangeEvent(JsonObject& data) = 0;
+                StateTransitionHandler(const StateTransitionHandler& obj) = delete;
+                static StateTransitionHandler* getInstance();
+                ~StateTransitionHandler ();
+                bool initialize();
+		void terminate();
+                void addRequest(StateTransitionRequest& request);
+	    private: /* members */
+                StateTransitionHandler();
+                static StateTransitionHandler* mInstance;
+		//std::vector<StateTransitionRequest> mRequests; //TODO
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */
