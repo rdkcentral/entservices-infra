@@ -20,6 +20,7 @@ cmake_minimum_required(VERSION 3.14)
 set(PLUGIN_NAME SharedStorage)
 find_package(WPEFramework)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
 set(PLUGIN_SHAREDSTORAGE_AUTOSTART "true" CACHE STRING "Automatically start SharedStorage plugin")
 set(PLUGIN_SHAREDSTORAGE_STARTUPORDER "51" CACHE STRING "To configure startup order of SharedStorage plugin")
@@ -32,15 +33,33 @@ add_library(${MODULE_NAME} SHARED
         Module.cpp
 )
 
+include_directories(
+   ../helpers)
+   
+add_library(${PLUGIN_IMPLEMENTATION} SHARED
+    SharedStorageImplementation.cpp
+    Module.cpp)
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+
 target_include_directories(${MODULE_NAME} PRIVATE ../helpers)
 target_link_libraries(${MODULE_NAME} PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
 )
 
+target_link_libraries(${PLUGIN_IMPLEMENTATION}
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
 install(TARGETS ${MODULE_NAME}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})
