@@ -1,4 +1,10 @@
-autostart = "@PLUGIN_SHAREDSTORAGE_AUTOSTART@"
 precondition = ["Platform"]
 callsign = "org.rdk.SharedStorage"
 startuporder = "@PLUGIN_SHAREDSTORAGE_STARTUPORDER@"
+
+configuration = JSON()
+
+rootobject = JSON()
+rootobject.add("mode", "@PLUGIN_SHAREDSTORAGE_MODE@")
+rootobject.add("locator", "lib@PLUGIN_IMPLEMENTATION@.so")
+configuration.add("root", rootobject)
