@@ -332,7 +332,7 @@ namespace WPEFramework
         gStorageSize.usedBytes = 0;
         storageSizelock.unlock();
         const int result = nftw(path.c_str(), getSize, MAX_NUM_OF_FILE_DESCRIPTORS, flags);
-
+        LOGINFO("VEEKSHA %d",gStorageSize.usedBytes);
         if (result == -1)
         {
             LOGERR("nftw returned with [%d]", result);
@@ -495,7 +495,7 @@ namespace WPEFramework
                 for (auto& entry : mStorageAppInfo)
                 {
                     entry.second.usedKB = static_cast<uint32_t>(getDirectorySizeInBytes(entry.second.path) / 1024);
-
+ 		LOGINFO("VEEKSHA entry.second.usedKB %d",entry.second.usedKB):
                     /* Ensure applications do not exceed allocated space */
                     if (entry.second.usedKB > entry.second.quotaKB)
                     {
@@ -506,6 +506,7 @@ namespace WPEFramework
                     {
                         /* quotaKB is total allocated space for the app, and usedKB is the current usage */
                         existingAppsReservationSpaceKB += (entry.second.quotaKB - entry.second.usedKB);
+			    LOGINFO("VEEKSHA existingAppsReservationSpaceKB %d ", existingAppsReservationSpaceKB);
                     }
                 }
 
