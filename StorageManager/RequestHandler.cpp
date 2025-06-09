@@ -897,6 +897,9 @@ namespace WPEFramework
         {
             exemptedIdsStrList.push_back(exemptedIdsjson[i].String());
         }
+	for (const auto& id : exemptedIdsStrList) {
+    		LOGINFO("Exempted ID: %s", id.c_str());
+	}
 
         DIR* dir = opendir(mBaseStoragePath.c_str());
         if (!dir)
