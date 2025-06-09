@@ -495,7 +495,7 @@ namespace WPEFramework
                 for (auto& entry : mStorageAppInfo)
                 {
                     entry.second.usedKB = static_cast<uint32_t>(getDirectorySizeInBytes(entry.second.path) / 1024);
- 		LOGINFO("VEEKSHA entry.second.usedKB %d",entry.second.usedKB):
+ 		LOGINFO("VEEKSHA entry.second.usedKB %d",entry.second.usedKB);
                     /* Ensure applications do not exceed allocated space */
                     if (entry.second.usedKB > entry.second.quotaKB)
                     {
