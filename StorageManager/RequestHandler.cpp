@@ -511,10 +511,10 @@ namespace WPEFramework
                 }
 
                 /* Calculate available space for new apps */
-                availableSizeKB = curStorageFreeSpaceKB - existingAppsReservationSpaceKB;
+                availableSizeKB = static_cast<int64_t>(curStorageFreeSpaceKB) - static_cast<int64_t>(existingAppsReservationSpaceKB)s;
 
                 /* Determine if required space is available */
-                if (availableSizeKB >= static_cast<uint64_t>(requiredSpaceKB))
+                if (availableSizeKB >= static_cast<int64_t>(requiredSpaceKB))
                 {
                     LOGINFO("Enough space available. Required: %u KB, Available: %llu KB",
                             requiredSpaceKB, availableSizeKB);
