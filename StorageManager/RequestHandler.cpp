@@ -901,16 +901,12 @@ namespace WPEFramework
 	    LOGINFO("JSON parsed successfully");
 	
 	    JsonArray exemptedIdsjson;
-	    if (parameters.IsArray()) {
-	        LOGINFO("Input is an array, treating as exemption list");
-	        exemptedIdsjson = parameters.Array();
-	    } else if (parameters.HasLabel("exemptionAppIds")) {
+	    if (parameters.HasLabel("exemptionAppIds")) {
 	        LOGINFO("Found exemptionAppIds key");
 	        exemptedIdsjson = parameters["exemptionAppIds"].Array();
 	    } else {
 	        LOGERR("JSON is neither an array nor an object with exemptionAppIds");
-	        errorReason = "Invalid JSON structure: expected array or object with exemptionAppIds";
-	        return status;
+	        exemptedIdsjson = JsonArray();
 	    }
 	
 	    LOGINFO("exemptionAppIds array length: %u", exemptedIdsjson.Length());
