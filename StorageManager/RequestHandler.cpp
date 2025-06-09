@@ -891,7 +891,29 @@ namespace WPEFramework
         std::unique_lock<std::mutex> lock(mStorageManagerImplLock);
 	LOGINFO("JSON input: %s", exemptionAppIds.c_str());
         parameters.FromString(exemptionAppIds);
-        const JsonArray exemptedIdsjson = parameters.HasLabel("exemptionAppIds") ? parameters["exemptionAppIds"].Array() : JsonArray();
+        //const JsonArray exemptedIdsjson = parameters.HasLabel("exemptionAppIds") ? parameters["exemptionAppIds"].Array() : JsonArray();
+	    bool parseSuccess = parameters.FromString(exemptionAppIds);
+	    if (!parseSuccess) {
+	        LOGERR("Failed to parse JSON: %s", exemptionAppIds.c_str());
+	        errorReason = "Invalid JSON format";
+	        return status;
+	    }
+	    LOGINFO("JSON parsed successfully");
+	
+	    JsonArray exemptedIdsjson;
+	    if (parameters.IsArray()) {
+	        LOGINFO("Input is an array, treating as exemption list");
+	        exemptedIdsjson = parameters.Array();
+	    } else if (parameters.HasLabel("exemptionAppIds")) {
+	        LOGINFO("Found exemptionAppIds key");
+	        exemptedIdsjson = parameters["exemptionAppIds"].Array();
+	    } else {
+	        LOGERR("JSON is neither an array nor an object with exemptionAppIds");
+	        errorReason = "Invalid JSON structure: expected array or object with exemptionAppIds";
+	        return status;
+	    }
+	
+	    LOGINFO("exemptionAppIds array length: %u", exemptedIdsjson.Length());
         std::list<std::string> exemptedIdsStrList;
         for (unsigned int i = 0; i < exemptedIdsjson.Length(); i++)
         {
