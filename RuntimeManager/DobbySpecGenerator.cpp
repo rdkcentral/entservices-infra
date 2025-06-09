@@ -27,6 +27,9 @@
 #include <bitset>
 #include <set>
 #include <sys/sysinfo.h>
+//TODO SUPPORT THIS
+//#include <IPackage.h>
+#include <curl/curl.h>
 
 namespace WPEFramework
 {
@@ -35,28 +38,55 @@ namespace Plugin
 
 namespace 
 {
-    const std::string WESTEROS_SOCKET_MOUNT_POINT = "/tmp/westeros";
-    const std::string RUNTIME_PATH_MOUNT_POINT = "/runtime";
-
-    const int NONHOMEAPP_MEM_LIMIT = 524288000;
-    const int NONHOMEAPP_GPUMEM_LIMIT = 367001600;
-    const int ION_DEFAULT_HEAP_QUOTA_LIMIT = 268435456;
-
-    const size_t CONTAINER_LOG_CAP = 65536;
+    #define XDG_RUNTIME_DIR "/tmp"
 }
 
-DobbySpecGenerator::DobbySpecGenerator(): mIonMemoryPluginData(Json::objectValue), mPackageMountPoint("/package"), mRuntimeMountPoint("/runtime")
+DobbySpecGenerator::DobbySpecGenerator(): mIonMemoryPluginData(Json::objectValue), mPackageMountPoint("/package"), mRuntimeMountPoint("/runtime"), mGstRegistrySourcePath(""), mGstRegistryDestinationPath("/tmp/gstreamer-cached-registry.bin")
 {
     LOGINFO("DobbySpecGenerator()");
+    mAIConfiguration = new AIConfiguration();
+    mAIConfiguration->initialize();
     initialiseIonHeapsJson();
+//TODO SUPPORT THIS
+/*
+    if (mAIConfiguration->getGstreamerRegistryEnabled())
+    {
+	GStreamerRegistry gstRegistry;
+        if (gstRegistry.generate())
+        {
+            mGstRegistrySourcePath = gstRegistry.path();
+	}
+    }
+*/
 }
 
 DobbySpecGenerator::~DobbySpecGenerator()
 {
     LOGINFO("~DobbySpecGenerator()");
+    if (nullptr != mAIConfiguration)
+    {
+        delete mAIConfiguration;
+    }
 }
 
-bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig, string& resultSpec)
+Json::Value DobbySpecGenerator::getWorkingDir(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
+{
+    // default to the package directory
+    std::string workingDir(mPackageMountPoint);
+
+    // TODO SUPPORT execFilePath in runtime config - appPath
+    /*
+    char *execFilePathCopy = strdup(appPackage->execFilePath().c_str()); //Get it from metadata path
+    const char* execFileDir = dirname(execFilePathCopy);
+    if (execFileDir && (strcmp(execFileDir, ".") != 0))
+        workingDir += execFileDir;
+
+    free(execFilePathCopy);
+    */
+    return Json::Value(workingDir);
+}
+
+bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig, string& resultSpec)
 {
     LOGINFO("DobbySpecGenerator::generate()");
     resultSpec = "";
@@ -80,15 +110,13 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, Runtim
     spec["memLimit"] = getSysMemoryLimit(config, runtimeConfig);
 
     Json::Value args(Json::arrayValue);
-    args.append(runtimeConfig.command);
-    //TODO : What if more args?
-    /*
-    for (const string& arg : config.mArgs)
-        args.append(arg);
-    */
+    //TODO CHECK FOR APPEND OR NOT
+    std::string command ="/runtime/";
+    command.append(runtimeConfig.command);
+
+    args.append(command);
     spec["args"] = std::move(args);
-    spec["cwd"] = mPackageMountPoint;
-    // if app uses graphics enable gpu and gpu mem limit
+    spec["cwd"] = getWorkingDir(config, runtimeConfig);
     if (shouldEnableGpu(config))
     {
         Json::Value gpuObj(Json::objectValue);
@@ -99,18 +127,32 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, Runtim
     spec["restartOnCrash"] = false;
 
     Json::Value vpuObj;
-    vpuObj["enable"] = getVpuEnabled(config);
+    vpuObj["enable"] = getVpuEnabled(config, runtimeConfig);
     spec["vpu"] = std::move(vpuObj);
     
+    //TODO CHECK FOR OPTIMIZATION
+    std::list<std::string> dbusRequiringApps = mAIConfiguration->getAppsRequiringDBus(); 
+    for (auto it = dbusRequiringApps.begin(); it != dbusRequiringApps.end(); ++it)
+    {
+        std::string appId = *it;
+        if (appId.compare(config.mAppId) == 0)
+	{
+            Json::Value dbusObj(Json::objectValue);
+            dbusObj["system"] = "system";
+            spec["dbus"] = std::move(dbusObj);
+	}
+    }
     Json::Value cpuObj;
     cpuObj["cores"] = getCpuCores();
     spec["cpu"] = std::move(cpuObj);
 
+#if (AI_BUILD_TYPE == AI_DEBUG)
     Json::Value consoleObj;
-    //TODO: limit, path properties are retrieved from app package and need to be populated here
-    consoleObj["limit"] = CONTAINER_LOG_CAP;
+    consoleObj["limit"] = mAIConfiguration->getContainerConsoleLogCap();
+    //TODO: SUPPORT Read console path from runtime config: RDKEMW-4432
     consoleObj["path"] = "/tmp/container.log";
     spec["console"] = std::move(consoleObj);
+#endif // (AI_BUILD_TYPE == AI_DEBUG)
 
     Json::Value etcObj;
     Json::Value hostsArray(Json::arrayValue);
@@ -127,22 +169,30 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, Runtim
     servicesArray.append("ntp\t\t123/udp");
     servicesArray.append("https\t\t443/tcp");
     servicesArray.append("https\t\t443/udp");
-    //TODO Read for mapi capability from package and populate below for every mapi ports
-    //servicesArray.append("mapi\t\t" + std::to_string(port) + "/tcp");
 
-    //TODO: Based on soc and if broadcom, populate wayland-client and wayland-egl
+    //TODO SUPPORT mapi in runtime config: RDKEMW-4432
+    //if (runtimeConfig.mapi)
+    if (true)
+    {
+        for (int port : mAIConfiguration->getMapiPorts())
+        {
+            servicesArray.append("mapi\t\t" + std::to_string(port) + "/tcp");
+        }
+    }
+
     Json::Value preloadsArray(Json::arrayValue);
+    //TODO CHECK FOR OPTIMIZATION
+    std::list<std::string> preloads = mAIConfiguration->getPreloads();
+    for (auto it = preloads.begin(); it != preloads.end(); ++it)
+    {
+        preloadsArray.append(*it);
+    }
+
     etcObj["hosts"] = hostsArray;
     etcObj["services"] = servicesArray;
     etcObj["ld-preload"] = preloadsArray;
     spec["etc"] = std::move(etcObj);
 
-    // TODO: verify if we need EthanLog plugin, it seems it works in conjunction with AI 1.0
-    // standard plugins are EthanLog and OCDM, OCDM is enabled if an app does not user rialto nad requires drm
-    // TODO: not for Q1 vpu, dbus, seccomp
-
-    // TODO: network field should not be needed, in dobby it just forces adding network plugin
-    // verify, if we can safely remove it, as we always add network plugin
     if (runtimeConfig.wanLanAccess)
     {
         spec["network"] = "nat";
@@ -174,84 +224,95 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, Runtim
     return true;
 }
 
-Json::Value DobbySpecGenerator::createEnvVars(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+Json::Value DobbySpecGenerator::createEnvVars(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     Json::Value env(Json::arrayValue);
     env.append(std::string("APPLICATION_NAME=") + config.mAppId);
     
-//"APPLICATION_LAUNCH_PARAMETERS=eyJHV19JUCI6IiIsImFyZ3MiOnt9LCJjb250ZXh0Ijp7InNvdXJjZSI6ImFwcHMtcmFpbC1sYXVuY2gifSwib3JpZ2luIjoiRVBHIn0=",
-//"APPLICATION_LAUNCH_METHOD=EPG",
-//"APPLICATION_TOKEN=1ae0cc31-7d6e-4d2a-bf15-5522126c1b2e",
-//"DEVICE_FRIENDLYNAME=Living Room",
-//"DEVICE_MODEL_NUM=ELTE11MWR",
-//"PARTNER_ID=xglobal",
-//"REGION=USA",
-//"LANG=en_US",
-//"ADDITIONAL_DATA_URL=http%3A%2F%2F127.0.0.1%3A8009%2Fe6486224-8058-49c2-936b-4f5a87c45bb2%2FYouTube%2Fdial_data",
+     //TODO YET TO ANALYZE SUPPORT APPLICATION_LAUNCH_PARAMETERS
+     //TODO YET TO ANALYZE SUPPORT APPLICATION_LAUNCH_METHOD
+     //TODO YET TO ANALYZE SUPPORT APPLICATION_TOKEN
 
-    for (const std::string& str : runtimeConfig.envVariables)
-    {
-        env.append(str);
-    }
+   JsonArray envInputArray;
+   envInputArray.FromString(runtimeConfig.envVariables);
+   for (unsigned int i = 0; i < envInputArray.Length(); ++i)
+   {
+       std::string envInputItem = envInputArray[i].String();
+       env.append(envInputArray[i].String());
+   }
 
-    if (!config.mWesterosSocketPath.empty())
-    {
-        env.append("XDG_RUNTIME_DIR=/tmp");
-        env.append("WAYLAND_DISPLAY=westeros");
-        env.append("WESTEROS_SINK_VIRTUAL_WIDTH=1920");
-        env.append("WESTEROS_SINK_VIRTUAL_HEIGHT=1080");
-        env.append("QT_WAYLAND_CLIENT_BUFFER_INTEGRATION=wayland-egl");
-        env.append("QT_WAYLAND_SHELL_INTEGRATION=wl-simple-shell");
+   std::list<std::string> configEnvs = mAIConfiguration->getEnvs();
+   for (auto it = configEnvs.begin(); it != configEnvs.end(); ++it)
+   {
+       env.append(*it);
+   }
 
-        //TODO Find the place where it is populated from appsservice
-        env.append("WESTEROS_SINK_AMLOGIC_USE_DMABUF=1");
-        env.append("WESTEROS_GL_USE_AMLOGIC_AVSYNC=1");
-        env.append("WESTEROS_SINK_USE_FREERUN=1");
-        env.append("WESTEROS_GL_MODE=3840x2160x60");
-        env.append("WESTEROS_GL_GRAPHICS_MAX_SIZE=1920x1080");
-        env.append("WESTEROS_GL_USE_REFRESH_LOCK=1");
-    }
-    //TODO: If broadcom soc
-    //WESTEROS_VPC_BRIDGE=westeros
-    //TODO: This is true by default
-    if (runtimeConfig.resourceManagerClientEnabled)
-    {
-        env.append("ESSRMGR_APPID=" + config.mAppId);
-        env.append("CLIENT_IDENTIFIER=" + config.mAppId);
-        if (!config.mWesterosSocketPath.empty())
-        {
-            env.append("WESTEROS_SINK_USE_ESSRMGR=1");
-        }
-    }	     
+   if (!config.mWesterosSocketPath.empty())
+   {
+       env.append("XDG_RUNTIME_DIR=/tmp");
+       env.append("WAYLAND_DISPLAY=westeros");
+       env.append("WESTEROS_SINK_VIRTUAL_WIDTH=1920");
+       env.append("WESTEROS_SINK_VIRTUAL_HEIGHT=1080");
+       env.append("QT_WAYLAND_CLIENT_BUFFER_INTEGRATION=wayland-egl");
+       env.append("QT_WAYLAND_SHELL_INTEGRATION=wl-simple-shell");
+       env.append("QT_WAYLAND_INPUTDEVICE_INTEGRATION=skyq-input");
+       env.append("QT_QPA_PLATFORM=wayland-sky-rdk");
+   }
+   if (mAIConfiguration->getResourceManagerClientEnabled())
+   {
+       env.append("ESSRMGR_APPID=" + config.mAppId);
+       env.append("CLIENT_IDENTIFIER=" + config.mAppId);
+       if (!config.mWesterosSocketPath.empty())
+       {
+           env.append("WESTEROS_SINK_USE_ESSRMGR=1");
+       }
+   }	     
 
-    if (runtimeConfig.dial)
-    {
-        std::string dialId = runtimeConfig.dialId;
-        if (dialId.empty())
-            dialId = config.mAppId;
+   if (runtimeConfig.dial)
+   {
+       std::string dialId = runtimeConfig.dialId;
+       env.append(std::string("APPLICATION_DIAL_NAME=") + dialId);
+       std::ostringstream dataUrlStream;
+       dataUrlStream << "http://127.0.0.1:"
+                     << mAIConfiguration->getDialServerPort() << '/'
+                     << mAIConfiguration->getDialServerPathPrefix() << '/'
+                     << dialId << '/'
+                     << "dial_data";
 
-        env.append(std::string("APPLICATION_DIAL_NAME=") + dialId);
-        //TODO: Need dial config get from somewhere
-        //std::ostringstream dataUrlStream;
-        //dataUrlStream << "http://127.0.0.1:"
-        //              << mDialConfig->getDialServerPort() << '/'
-        //              << mDialConfig->getDialServerPathPrefix() << '/'
-        //              << dialId << '/'
-        //              << "dial_data";
+       std::string dataUrl = encodeURL(dataUrlStream.str());
+       env.append(std::string("ADDITIONAL_DATA_URL=") + dataUrl);
+       env.append(std::string("DIAL_USN=") + mAIConfiguration->getDialUsn());
+   }
 
-        //const std::string dataUrl = AICommon::encodeURL(dataUrlStream.str());
-        //env.append(std::string("ADDITIONAL_DATA_URL=") + dataUrl);
+   //TODO SUPPORT RIALTO
+   //TODO SUPPORT rialto in runtime config
+   //if (rialtoSMClient && appPackage->hasCapability(IPackage::Capability::RequiresRialto))
+   if (false)
+   {
+       //const std::string rialtoSocketPath = rialtoSMClient->getSocketPath();
+       //if (!rialtoSocketPath.empty())
+       //{
+       //    // Pass Rialto socket name used by RialtoClient to communicate with RialtoSessionServer
+       //    env.append(std::string("RIALTO_SOCKET_PATH=") + rialtoSocketPath);
+       //}
+   }
+   else if (!mGstRegistrySourcePath.empty())
+   {
+       env.append("GST_REGISTRY=" + mGstRegistryDestinationPath);
+       env.append("GST_REGISTRY_UPDATE=no");
+   }
 
-        //env.append(std::string("DIAL_USN=") + mDialConfig->getDialUsn());
-	const std::string dataUrl("");
-	const std::string dialUsn("");
-        env.append(std::string("ADDITIONAL_DATA_URL=") + dataUrl);
-        env.append(std::string("DIAL_USN=") + dialUsn);
-    }
-    return env;
+   //TODO SUPPORT WATCHDOG
+   //TODO SUPPORT runtime parameter in runtime config: RDKEMW-4432
+   //TODO SUPPORT Add only for web runtime
+#if(AI_BUILD_TYPE == AI_DEBUG)
+   env.append("WEBKIT_LEGACY_INSPECTOR_SERVER=0.0.0.0:22222");
+#endif // (AI_BUILD_TYPE == AI_DEBUG)
+
+   return env;
 }
 
-Json::Value DobbySpecGenerator::createMounts(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+Json::Value DobbySpecGenerator::createMounts(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     Json::Value mounts(Json::arrayValue);
 
@@ -265,12 +326,49 @@ Json::Value DobbySpecGenerator::createMounts(const ApplicationConfiguration& con
         mounts.append(createBindMount(runtimeConfig.runtimePath, mRuntimeMountPoint, MS_BIND | MS_RDONLY | MS_NOSUID | MS_NODEV));
     }
 
-    // TODO add extra mounts from config
     mounts.append(createBindMount("/etc/ssl/certs", "/etc/ssl/certs",
                                (MS_BIND | MS_RDONLY | MS_NOSUID | MS_NODEV)));
 
     mounts.append(createPrivateDataMount(runtimeConfig));
+    
     createFkpsMounts(config, runtimeConfig, mounts);
+
+    if (!config.mWesterosSocketPath.empty())
+    {
+        if (mAIConfiguration->getResourceManagerClientEnabled())
+        {
+            // bind mount the resource manager socket into the container
+            Json::Value resmgrMount = createResourceManagerMount(config);
+            if (!resmgrMount.isNull())
+                mounts.append(std::move(resmgrMount));
+        }
+    }
+
+    //TODO SUPPORT Handle rialto
+    //TODO SUPPORT Netflix specific mounts
+    //TODO SUPPORT SVP file mounts
+    //TODO SUPPORT Platform specific mounts
+    //TODO SUPPORT Airplay specific mounts
+    //TODO SUPPORT TSB Storage
+    //TODO SUPPORT EPG specific migration data store mount
+    //TODO SUPPORT USB Mass storage
+    //TODO SUPPORT PerfettoSocketPath not mounted
+    /*
+    if (usingRialto)
+    {
+        Json::Value rialtoMount = createRialtoMount(appPackage, rialtoSMClient);
+        if (!rialtoMount.isNull())
+            mountsArray.append(std::move(rialtoMount));
+    }
+    */
+    if (!mGstRegistrySourcePath.empty())
+    {
+        mounts.append(createBindMount(mGstRegistrySourcePath,
+                                           mGstRegistryDestinationPath,
+                                           (MS_BIND | MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_RDONLY)));
+    }
+
+
     return mounts;
 }
 
@@ -333,59 +431,71 @@ bool DobbySpecGenerator::shouldEnableGpu(const ApplicationConfiguration& config)
     return !config.mWesterosSocketPath.empty();
 }
 
-ssize_t DobbySpecGenerator::getSysMemoryLimit(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+ssize_t DobbySpecGenerator::getSysMemoryLimit(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     ssize_t memoryLimit = runtimeConfig.systemMemoryLimit;
     if (memoryLimit <= 0)
     {
-        if (runtimeConfig.appType == ApplicationType::INTERACTIVE)
+        if (runtimeConfig.appType.compare("INTERACTIVE") == 0)
 	{
-            memoryLimit = NONHOMEAPP_MEM_LIMIT;  
+            memoryLimit = mAIConfiguration->getNonHomeAppMemoryLimit();
         }
-        //TODO: Add other application types
+        //TODO SUPPORT Add other application types
     }
     return memoryLimit;
 }
 
-ssize_t DobbySpecGenerator::getGPUMemoryLimit(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+ssize_t DobbySpecGenerator::getGPUMemoryLimit(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     ssize_t gpuMemoryLimit = runtimeConfig.gpuMemoryLimit;
     if (gpuMemoryLimit <= 0)
     {
-        if (runtimeConfig.appType == ApplicationType::INTERACTIVE)
+        if (runtimeConfig.appType.compare("INTERACTIVE") == 0)
 	{
-            gpuMemoryLimit = NONHOMEAPP_GPUMEM_LIMIT;
+            gpuMemoryLimit = mAIConfiguration->getNonHomeAppGpuLimit();
         }
-        //TODO: Add other application types
+        //TODO SUPPORT Add other application types
     }
     return gpuMemoryLimit;
 }
 
-bool DobbySpecGenerator::getVpuEnabled(const ApplicationConfiguration& config) const
+bool DobbySpecGenerator::getVpuEnabled(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
-    //TODO: To return true, if below conditions are met:
-    // check if app is not system app
-    // rialto is not enabled
-    // vpus blacklist is not having app
-    
-    return true;
+    // TODO SUPPORT RIALTO
+    /*
+    if (rialToEnabled)
+    {
+        return false;
+    }
+    */
+    if (runtimeConfig.appType.compare("SYSTEM") == 0)
+    {
+        return false;
+    }
+    std::list<std::string> vpuAccessBlackList = mAIConfiguration->getVpuAccessBlacklist();
+    bool isBlackListed = false;
+    for (auto it = vpuAccessBlackList.begin(); it != vpuAccessBlackList.end(); ++it)
+    {
+        if ((*it).compare(config.mAppId) == 0)
+	{
+            isBlackListed = true;
+            break;	    
+	}
+    }
+    return !isBlackListed;
 }
 
 std::string DobbySpecGenerator::getCpuCores()
 {
-    //TODO: Populate cpu bitmask from config (aisettings.json)
-    
-    //std::bitset<32> cpuSetBitmask = mConfig->getAppsCpuSet();
-    //cpuSetBitmask &= ((0x1U << nCores) - 1);
-
-    // check the bitmask so that we have at least one core enabled
-    //if (cpuSetBitmask.none())
-    //{
-    //    cpuSetBitmask = ((0x1U << nCores) - 1);
-    //}
-
     const int nCores = std::min(32, get_nprocs());
-    std::bitset<32> cpuSetBitmask = ((0x1U << nCores) - 1);
+    std::bitset<32> cpuSetBitmask = mAIConfiguration->getAppsCpuSet();
+    cpuSetBitmask &= ((0x1U << nCores) - 1);
+    // check the bitmask so that we have at least one core enabled
+    if (cpuSetBitmask.none())
+    {
+        cpuSetBitmask = ((0x1U << nCores) - 1);
+    }
+
     // create the json string for the cores to enable
     std::ostringstream coresStream;
     for (int core = 0; core < nCores; core++)
@@ -404,18 +514,15 @@ std::string DobbySpecGenerator::getCpuCores()
     return coresStr;
 }
 
-Json::Value DobbySpecGenerator::createRdkPlugins(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+Json::Value DobbySpecGenerator::createRdkPlugins(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     Json::Value rdkPluginsObj(Json::objectValue);
-    //TODO: Appsservice plugin is not needed for sure?
     if (!config.mPorts.empty())
     {
         rdkPluginsObj["appservicesrdk"] = createAppServiceSDKPlugin(config, runtimeConfig);
     }
-    // TODO create ionplugin on xione
     rdkPluginsObj["ionmemory"] = createIonMemoryPlugin();
 
-    rdkPluginsObj["minidump"] = createMinidumpPlugin();
 
 
     rdkPluginsObj["networking"] = createNetworkPlugin(config, runtimeConfig);
@@ -423,7 +530,29 @@ Json::Value DobbySpecGenerator::createRdkPlugins(const ApplicationConfiguration&
     {
         rdkPluginsObj["thunder"] = createThunderPlugin(config);
     }
-    //TODO: Nat holepuncher, multicast socket plugin, credentialmanager plugin, httpproxy
+
+    //WORK: runtime config need to have credmgr certificate
+    /*
+    std::optional<IPackage::Certificate> credmgrCert = appPackage->credmgrCertificate();
+    if (credmgrCert)
+    {
+        rdkPluginsObj["credentialsmanager"]["data"] =
+            createCredentialsManagerData(credmgrCert->x509Certificate, credmgrCert->rsaKey);
+    }
+    */
+    rdkPluginsObj["minidump"] = createMinidumpPlugin();
+
+    //WORK: httpproxy only for debug builds
+    /*
+    if (!mHttpProxyHostname.empty())
+    {
+        rdkPluginsObj["httpproxy"] = createHttpProxyPlugin(false,
+                                                           mHttpProxyHostname,
+                                                           mHttpProxyPort,
+                                                           mHttpProxyCACert);
+    }
+    */
+    //WORK: seccomp
     return rdkPluginsObj;
 }
 
@@ -445,9 +574,10 @@ Json::Value DobbySpecGenerator::createMinidumpPlugin() const
     return pluginObj;
 }
 
-Json::Value DobbySpecGenerator::createAppServiceSDKPlugin(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+//TODO SUPPORT localservices in appsservice plugin
+//TODO SUPPORT airplay2 ports in appsservice plugin
+Json::Value DobbySpecGenerator::createAppServiceSDKPlugin(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
-    //TODO: May need to check for any local services, dial port
     Json::Value pluginObj(Json::objectValue);
 
     pluginObj["required"] = false;
@@ -457,27 +587,29 @@ Json::Value DobbySpecGenerator::createAppServiceSDKPlugin(const ApplicationConfi
 
     pluginObj["dependsOn"] = std::move(dependencies);
 
+    Json::Value ports(Json::arrayValue);
     if (runtimeConfig.dial)
     {
-        //TODO: Need to populate dial ports	    
+        ports.append(mAIConfiguration->getDialServerPort());
     }
-    Json::Value ports(Json::arrayValue);
     for (auto port : config.mPorts)
         ports.append(port);
-
+    for (int port : mAIConfiguration->getMapiPorts())
+    {
+        ports.append(port);
+    }
     pluginObj["data"]["additionalPorts"] = std::move(ports);
 
     return pluginObj;
 }
 
-Json::Value DobbySpecGenerator::createNetworkPlugin(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+Json::Value DobbySpecGenerator::createNetworkPlugin(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     Json::Value pluginObj(Json::objectValue);
 
     pluginObj["required"] = true;
 
     Json::Value dataObj(Json::objectValue);
-
     if (runtimeConfig.wanLanAccess)
     {
         dataObj["type"] = "nat";
@@ -490,10 +622,9 @@ Json::Value DobbySpecGenerator::createNetworkPlugin(const ApplicationConfigurati
     }
 
     dataObj["ipv4"] = true;
-    //TODO: Need to read config to enable ipv6 or not
-    dataObj["ipv6"] = false;
+    dataObj["ipv6"] = mAIConfiguration->getIPv6Enabled();
 
-    //TODO May or may not need these parameters
+    //TODO SUPPORT Nat holepunch
     /*
     // add NAT holepunch support if requested (only for non-html apps)
     if (appPackage->hasCapability(IPackage::Capability::NatHolePunch) &&
@@ -502,13 +633,14 @@ Json::Value DobbySpecGenerator::createNetworkPlugin(const ApplicationConfigurati
         data["portForwarding"]["hostToContainer"] = createHolePunchArray(appPackage);
     }
 
+    //TODO SUPPORT Multicast forwarding
     // add multicast forwarding - primarily used for netflix MDX
     if (appPackage->hasCapability(IPackage::Capability::MulticastForward))
     {
         data["multicastForwarding"] = createMulticastGroupsArray(appPackage);
     }
 
-    // add inter-container communication
+    // TODO SUPPORT inter-container communication
     if (appPackage->hasCapability(IPackage::Capability::LocalSocketServer) ||
         appPackage->hasCapability(IPackage::Capability::LocalSocketClient))
     {
@@ -524,19 +656,51 @@ Json::Value DobbySpecGenerator::createNetworkPlugin(const ApplicationConfigurati
     return pluginObj;
 }
 
-void DobbySpecGenerator::populateClassicPlugins(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig, Json::Value& spec)
+void DobbySpecGenerator::populateClassicPlugins(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig, Json::Value& spec)
 {
     Json::Value pluginsArray(Json::arrayValue);
     // enable the logging plugin
     pluginsArray.append(createEthanLogPlugin(config, runtimeConfig));
     
-    //TODO: if webapp or not needed rialto. how to get these info?
+    //TODO SUPPORT Runtime config need to have requiresDrm parameter
+    /*
+    if (!usingRialto)
+    {
+        if ((appPackage->hasCapability(IPackage::Capability::RequiresDrm)) ||
+            (appPackage->runtime() == "application/html"))
+        {
+            pluginsArray.append(createOpenCDMPlugin(config, runtimeConfig));
+        }
+    }
+    */    
     pluginsArray.append(createOpenCDMPlugin(config, runtimeConfig));
 
+    //TODO SUPPORT Runtime config need to have multicastSocket, multicastForward,NatHolePunch capability parameter
+    /*
+    if (appPackage->hasCapability(IPackage::Capability::MulticastSocket))
+    if (false)
+    {
+        pluginsArray.append(createMulticastSocketPlugin(config, runtimeConfig));
+    }
+    }
+
+    // add multicast forwarding - primarily used for netflix MDX
+    if (appPackage->hasCapability(IPackage::Capability::MulticastForward))
+    {
+        pluginsArray.append(createMulticastForwarderPlugin(appPackage));
+    }
+
+    // add NAT holepunch support if requested (only for non-html apps)
+    if (appPackage->hasCapability(IPackage::Capability::NatHolePunch) &&
+        isAllowedHolePunch(appPackage)) //(package->runtime() == "application/system")
+    {
+        pluginsArray.append(createHolePuncherPlugin(appPackage));
+    }
+    */
     spec["plugins"] = std::move(pluginsArray);
 }
 
-Json::Value DobbySpecGenerator::createEthanLogPlugin(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+Json::Value DobbySpecGenerator::createEthanLogPlugin(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     Json::Value plugin(Json::objectValue);
     static const Json::StaticString name("name");
@@ -552,7 +716,7 @@ Json::Value DobbySpecGenerator::createEthanLogPlugin(const ApplicationConfigurat
     static const Json::StaticString debug("debug");
 
     Json::Value levels(Json::arrayValue);
-    //TODO: Read logging mask from package
+    //TODO SUPPORT logging mask in runtime config: RDKEMW-4432
     /*
     unsigned logMask = package->loggingMask();
     if (logMask & unsigned(IPackage::LogLevel::Default))
@@ -584,6 +748,38 @@ Json::Value DobbySpecGenerator::createEthanLogPlugin(const ApplicationConfigurat
     return plugin;
 }
 
+
+Json::Value DobbySpecGenerator::createMulticastSocketPlugin(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
+{
+    //TODO SUPPORT multicast socket plugin
+    /*
+    static const Json::StaticString name("name");
+    static const Json::StaticString data("data");
+    static const Json::StaticString pluginName("MulticastSockets");
+
+    static const Json::StaticString serverSockets("serverSockets");
+    static const Json::StaticString clientSockets("clientSockets");
+
+    Json::Value serverSocketsArray = createMulticastServerSocketArray(package);
+    Json::Value clientSocketsArray = createMulticastClientSocketArray(package);
+
+    if (serverSocketsArray.empty() && clientSocketsArray.empty())
+    {
+        return Json::Value::null;
+    }
+
+    Json::Value plugin(Json::objectValue);
+    plugin[name] = pluginName;
+    if (!serverSocketsArray.empty())
+        plugin[data][serverSockets] = std::move(serverSocketsArray);
+    if (!clientSocketsArray.empty())
+        plugin[data][clientSockets] = std::move(clientSocketsArray);
+
+    return plugin;
+    */
+    return Json::Value::null;
+}
+
 Json::Value DobbySpecGenerator::createIonMemoryPlugin() const
 {
     Json::Value plugin(Json::objectValue);
@@ -597,22 +793,36 @@ Json::Value DobbySpecGenerator::createThunderPlugin(const ApplicationConfigurati
     static const Json::StaticString dependsOn("dependsOn");
     static const Json::StaticString bearerUrl("bearerUrl");
     static const Json::StaticString data("data");
-    static const Json::StaticString localServices2("");
-    static const Json::StaticString localServices5("");
+    static const Json::StaticString localServices1("http://local-services-1.sky.com");
+    static const Json::StaticString localServices2("http://local-services-2.sky.com");
+    static const Json::StaticString localServices3("http://local-services-3.sky.com");
+    static const Json::StaticString localServices4("http://local-services-4.sky.com");
+    static const Json::StaticString localServices5("http://local-services-5.sky.com");
 
     Json::Value plugin(Json::objectValue);
     Json::Value dependencies(Json::arrayValue);
     dependencies.append("networking");
     plugin[dependsOn] = std::move(dependencies);
 
-    //TODO: Check for localservices1,localservices2,localservices3,localservices4
-    //plugin[data][bearerUrl] = localServices5;
+    //TODO SUPPORT Runtime config to check for localservices1,localservices2,localservices3,localservices4
+    /*
+    if (package->hasCapability(IPackage::Capability::LocalServices1))
+        plugin[data][bearerUrl] = localServices1;
+    else if (package->hasCapability(IPackage::Capability::LocalServices2))
+        plugin[data][bearerUrl] = localServices2;
+    else if (package->hasCapability(IPackage::Capability::LocalServices3))
+        plugin[data][bearerUrl] = localServices3;
+    else if (package->hasCapability(IPackage::Capability::LocalServices4))
+        plugin[data][bearerUrl] = localServices4;
+    else
+        plugin[data][bearerUrl] = localServices5;
+    */
     plugin[data][bearerUrl] = localServices2;
 
     return plugin;
 }
 
-Json::Value DobbySpecGenerator::createOpenCDMPlugin(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig) const
+Json::Value DobbySpecGenerator::createOpenCDMPlugin(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     static const Json::StaticString name("name");
     static const Json::StaticString data("data");
@@ -628,9 +838,7 @@ Json::Value DobbySpecGenerator::createOpenCDMPlugin(const ApplicationConfigurati
 void DobbySpecGenerator::initialiseIonHeapsJson()
 {
     Json::Value heapsArray(Json::arrayValue);
-    //TODO: Get ion heap quotas and default heap quota
-    /*
-    for (const auto &heapQuota : mConfig->getIonHeapQuotas())
+    for (const auto &heapQuota : mAIConfiguration->getIonHeapQuotas())
     {
         Json::Value heapObject(Json::objectValue);
         heapObject["name"] = heapQuota.first;
@@ -639,13 +847,11 @@ void DobbySpecGenerator::initialiseIonHeapsJson()
         heapsArray.append(std::move(heapObject));
     }
 
-    mIonMemoryPluginData["defaultLimit"] = mConfig->getIonHeapDefaultQuota();
-    */
-    mIonMemoryPluginData["defaultLimit"] = ION_DEFAULT_HEAP_QUOTA_LIMIT;
+    mIonMemoryPluginData["defaultLimit"] = mAIConfiguration->getIonHeapDefaultQuota();
     mIonMemoryPluginData["heaps"] = std::move(heapsArray);
 }
 
-Json::Value DobbySpecGenerator::createPrivateDataMount(RuntimeConfig& runtimeConfig) const
+Json::Value DobbySpecGenerator::createPrivateDataMount(const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     static const Json::StaticString source("source");
     static const Json::StaticString destination("destination");
@@ -660,11 +866,7 @@ Json::Value DobbySpecGenerator::createPrivateDataMount(RuntimeConfig& runtimeCon
     static const Json::StaticString noexec("noexec");
 
     Json::Value mount(Json::objectValue);
-    //TODO: Read data image from package manager from here
-    /*
-    const std::string sourcePath = package->privateDataImagePath();
-    */
-    const std::string sourcePath("");
+    std::string sourcePath(runtimeConfig.unpackedPath);
     if (sourcePath.empty())
     {
         return Json::nullValue;
@@ -684,50 +886,21 @@ Json::Value DobbySpecGenerator::createPrivateDataMount(RuntimeConfig& runtimeCon
     return mount;
 }
 
-void DobbySpecGenerator::createFkpsMounts(const ApplicationConfiguration& config, RuntimeConfig& runtimeConfig, Json::Value& spec) const
+void DobbySpecGenerator::createFkpsMounts(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig, Json::Value& spec) const
 {
-
-    // TODO: get the list of fkps files from app config from package manager
-    // get the list of FKPS files to map, this comes from the apps config.xml
-    /*
-    std::optional<std::set<std::string>> fkpsFiles =
-        package->capabilityValueSet(packagemanager::IPackage::Capability::FkpsAccess);
-    */
-    std::set<std::string> fkpsFiles = {
-        "ffffffff00000001.key",
-        "ffffffff00000001.sha",
-        "ffffffff00000001.keyinfo",
-        "ffffffff00000002.bin",
-        "ffffffff00000002.sha",
-        "ffffffff00000004.bin",
-        "ffffffff00000004.sha",
-        "ffffffff00000006.bin",
-        "ffffffff00000006.sha",
-        "ffffffff00000007.bin",
-        "ffffffff00000008.bin",
-        "ffffffff00000009.key",
-        "ffffffff00000009.sha",
-        "ffffffff00000009.keyinfo",
-        "ffffffff0000000a.sha",
-        "ffffffff0000000a.bin",
-        "0381000003810001.key",
-        "0381000003810001.keyinfo",
-        "0381000003810001.sha",
-        "0381000003810002.key",
-        "0381000003810002.keyinfo",
-        "0381000003810003.key",
-        "0381000003810003.keyinfo",
-        "0681000006810001.bin"
-    };
-//TODO: Check size is 0
-
+    std::list<std::string> fkpsFiles;
+    JsonArray fkpsFilesArray;
+    fkpsFilesArray.FromString(runtimeConfig.fkpsFiles);
+    for (unsigned int i = 0; i < fkpsFilesArray.Length(); ++i)
+    {
+        fkpsFiles.push_back(fkpsFilesArray[i].String());
+    }
     if (fkpsFiles.empty())
         return;
 
     // iterate through the files and make sure they're accessible
     const std::string fkpsPathPrefix("/opt/drm/");
-    for (std::set<std::string>::iterator it=fkpsFiles.begin(); it!=fkpsFiles.end(); ++it)
-    //for (const std::string &fkpsFile : fkpsFiles.value())
+    for (std::list<std::string>::iterator it=fkpsFiles.begin(); it!=fkpsFiles.end(); ++it)
     {
 	std::string fkpsFile = *it;      
         const std::string fkpsFilePath = fkpsPathPrefix + fkpsFile;
@@ -831,5 +1004,65 @@ Json::Value DobbySpecGenerator::createTmpfsMount(const std::string &mntDestinati
 
     return mount;
 }
+
+Json::Value DobbySpecGenerator::createResourceManagerMount(const ApplicationConfiguration& config) const
+{
+    constexpr unsigned long mntOptions = (MS_BIND | MS_NOSUID | MS_NODEV | MS_NOEXEC);
+    static const std::string resmgrMountSource = XDG_RUNTIME_DIR "/resource";
+    static const std::string resmgrMountPoint = XDG_RUNTIME_DIR "/resource";
+
+    struct stat details;
+    Json::Value resmgrMount;
+    if (stat(resmgrMountSource.c_str(), &details) == 0)
+    {
+        resmgrMount = createBindMount(resmgrMountSource, resmgrMountPoint, mntOptions);
+
+        // check the group owner matches the app
+        if ((details.st_gid != config.mGroupId) &&
+            (chown(resmgrMountSource.c_str(), -1, config.mGroupId) != 0))
+        {
+            printf("failed to change group owner of '%s'", resmgrMountSource.c_str());
+        }
+
+        // and that the group perms are set to 0770
+        if (chmod(resmgrMountSource.c_str(), 0770) != 0)
+        {
+            printf("failed to set file permissions to 0770 for '%s'", resmgrMountSource.c_str());
+        }
+    }
+
+    return resmgrMount;
+}
+
+std::string DobbySpecGenerator::encodeURL(std::string url) const
+{
+    std::string encodedUrl;
+
+    CURL *curl = curl_easy_init();
+    if (curl)
+    {
+      char *escapedUrl = curl_easy_escape(curl, url.c_str(), (int)url.length());
+      if (escapedUrl)
+      {
+          encodedUrl = std::string(escapedUrl);
+          curl_free(escapedUrl);
+      }
+      else
+      {
+          printf("curl_easy_escape() failed");
+          fflush(stdout);
+      }
+
+      curl_easy_cleanup(curl);
+    }
+    else
+    {
+        printf("curl_easy_init() failed");
+        fflush(stdout);
+    }
+
+    return encodedUrl;
+}
+
 } // namespace Plugin
 } // namespace WPEFramework

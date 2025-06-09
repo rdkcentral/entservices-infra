@@ -43,7 +43,8 @@ const std::map<string, string> UserSettingsImplementation::usersettingsDefaultMa
                          {USERSETTINGS_HIGH_CONTRAST_KEY, "false"},
                          {USERSETTINGS_VOICE_GUIDANCE_KEY, "false"},
                          {USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, "1"},
-                         {USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, "false"}};
+                         {USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, "false"},
+                         {USERSETTINGS_CONTENT_PIN_KEY, ""}};
 
 const std::map<Exchange::IUserSettingsInspector::SettingsKey, string> UserSettingsImplementation::_userSettingsInspectorMap =
          {{Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_AUDIO_LANGUAGES, USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY},
@@ -62,7 +63,9 @@ const std::map<Exchange::IUserSettingsInspector::SettingsKey, string> UserSettin
          {Exchange::IUserSettingsInspector::SettingsKey::PIN_ON_PURCHASE, USERSETTINGS_PIN_ON_PURCHASE_KEY},
          {Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE, USERSETTINGS_VOICE_GUIDANCE_KEY},
          {Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE_RATE, USERSETTINGS_VOICE_GUIDANCE_RATE_KEY},
-         {Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE_HINTS, USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY}};
+         {Exchange::IUserSettingsInspector::SettingsKey::VOICE_GUIDANCE_HINTS, USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY},
+         {Exchange::IUserSettingsInspector::SettingsKey::CONTENT_PIN, USERSETTINGS_CONTENT_PIN_KEY}};
+
 
 const double UserSettingsImplementation::minVGR = 0.1;
 const double UserSettingsImplementation::maxVGR = 10;
@@ -125,9 +128,11 @@ UserSettingsImplementation* UserSettingsImplementation::instance(UserSettingsImp
 
 UserSettingsImplementation::~UserSettingsImplementation()
 {
+    LOGINFO("UserSettingsImplementation Destructor");
     if(_remotStoreObject)
     {
         _remotStoreObject->Release();
+        _remotStoreObject = nullptr;
     }
     if (_service != nullptr)
     {
@@ -263,6 +268,14 @@ void UserSettingsImplementation::Dispatch(Event event, const JsonValue params)
              }
          break;
 
+         case PRIVACY_MODE_CHANGED:
+             while (index != _userSettingNotification.end())
+             {
+                 (*index)->OnPrivacyModeChanged(params.String());
+                 ++index;
+             }
+         break;
+
          case PIN_CONTROL_CHANGED:
               while (index != _userSettingNotification.end())
               {
@@ -351,6 +364,14 @@ void UserSettingsImplementation::Dispatch(Event event, const JsonValue params)
               }
          break;
 
+         case CONTENT_PIN_CHANGED:
+              while (index != _userSettingNotification.end())
+              {
+                  (*index)->OnContentPinChanged(params.String());
+                  ++index;
+              }
+         break;
+
          default:
            break;
      }
@@ -385,6 +406,10 @@ void UserSettingsImplementation::ValueChanged(const Exchange::IStore2::ScopeType
     else if(0 == (ns.compare(USERSETTINGS_NAMESPACE)) && (0 == key.compare(USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY)))
     {
         dispatchEvent(PREFERRED_CLOSED_CAPTIONS_SERVICE_CHANGED, JsonValue((string)value));
+    }
+    else if((ns.compare(USERSETTINGS_NAMESPACE) == 0) && (key.compare(USERSETTINGS_PRIVACY_MODE_KEY) == 0))
+    {
+        dispatchEvent(PRIVACY_MODE_CHANGED, JsonValue((string)value));
     }
     else if(0 == (ns.compare(USERSETTINGS_NAMESPACE)) && (0 == key.compare(USERSETTINGS_PIN_CONTROL_KEY)))
     {
@@ -429,6 +454,10 @@ void UserSettingsImplementation::ValueChanged(const Exchange::IStore2::ScopeType
     else if(0 == (ns.compare(USERSETTINGS_NAMESPACE)) && (0 == key.compare(USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY)))
     {
         dispatchEvent(VOICE_GUIDANCE_HINTS_CHANGED, JsonValue((bool)(value.compare("true")==0)?true:false));
+    }
+    else if(0 == (ns.compare(USERSETTINGS_NAMESPACE)) && (0 == key.compare(USERSETTINGS_CONTENT_PIN_KEY)))
+    {
+        dispatchEvent(CONTENT_PIN_CHANGED, JsonValue((string)value));
     }
     else
     {
@@ -617,6 +646,67 @@ Core::hresult UserSettingsImplementation::GetPreferredClosedCaptionService(strin
     std::string value = "";
 
     status = GetUserSettingsValue(USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY, service);
+    return status;
+}
+
+Core::hresult UserSettingsImplementation::SetPrivacyMode(const string& privacyMode)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+
+    LOGINFO("privacyMode: %s", privacyMode.c_str());
+
+    if (privacyMode != "SHARE" && privacyMode != "DO_NOT_SHARE")
+    {
+        LOGERR("Wrong privacyMode value: '%s', returning default", privacyMode.c_str());
+        return status;
+    }
+
+    _adminLock.Lock();
+
+    ASSERT (nullptr != _remotStoreObject);
+
+    if (nullptr != _remotStoreObject)
+    {
+        uint32_t ttl = 0;
+        string oldPrivacyMode;
+        status = _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, USERSETTINGS_PRIVACY_MODE_KEY, oldPrivacyMode, ttl);
+        LOGINFO("oldPrivacyMode: %s", oldPrivacyMode.c_str());
+
+        if (privacyMode != oldPrivacyMode)
+        {
+            status = _remotStoreObject->SetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, USERSETTINGS_PRIVACY_MODE_KEY, privacyMode, 0);
+        }
+    }
+
+    _adminLock.Unlock();
+
+    return status;
+}
+
+Core::hresult UserSettingsImplementation::GetPrivacyMode(string &privacyMode) const
+{
+    uint32_t status = Core::ERROR_NONE;
+    std::string value = "";
+    uint32_t ttl = 0;
+    privacyMode = "";
+
+    _adminLock.Lock();
+
+    ASSERT (nullptr != _remotStoreObject);
+
+    if (nullptr != _remotStoreObject)
+    {
+        _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, USERSETTINGS_PRIVACY_MODE_KEY, privacyMode, ttl);
+    }
+
+    _adminLock.Unlock();
+    
+    if (privacyMode != "SHARE" && privacyMode != "DO_NOT_SHARE") 
+    {
+        LOGWARN("Wrong privacyMode value: '%s', returning default", privacyMode.c_str());
+        privacyMode = "SHARE";
+    }
+
     return status;
 }
 
@@ -928,6 +1018,24 @@ Core::hresult UserSettingsImplementation::GetVoiceGuidanceHints(bool &hints) con
     return status;
 }
 
+Core::hresult UserSettingsImplementation::SetContentPin(const string& contentPin)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+
+    LOGINFO("contentPin: %s", contentPin.c_str());
+    status = SetUserSettingsValue(USERSETTINGS_CONTENT_PIN_KEY, contentPin);
+    return status;
+
+}
+
+Core::hresult UserSettingsImplementation::GetContentPin(string& contentPin) const
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+
+    status = GetUserSettingsValue(USERSETTINGS_CONTENT_PIN_KEY, contentPin);
+    return status;
+}
+
 Core::hresult UserSettingsImplementation::GetMigrationState(const SettingsKey key, bool &requiresMigration) const
 {
     uint32_t status = Core::ERROR_GENERAL;
@@ -988,6 +1096,7 @@ Core::hresult UserSettingsImplementation::GetMigrationStates(IUserSettingsMigrat
     {
         for (auto uimap = _userSettingsInspectorMap.begin(); uimap != _userSettingsInspectorMap.end(); uimap++)
         {
+            value.assign("");
             LOGINFO("Property [%s] value is fetching...", (uimap->second).c_str());
             status = _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, uimap->second, value, ttl);
             LOGINFO("value[%s] status[%d]", value.c_str(), status);

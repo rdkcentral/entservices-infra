@@ -630,6 +630,7 @@ namespace Plugin {
 
                         errorCode = Core::ERROR_NONE;
                     }
+                    close(fd);
                 }
             }
         }

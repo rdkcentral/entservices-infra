@@ -37,6 +37,8 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/Public/Dobby \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/IpcService \
+-I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks \
+-I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/thunder \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/devicesettings.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Iarm.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Rfc.h \
@@ -52,7 +54,7 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/DobbyProxy.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/Public/Dobby/IDobbyProxy.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/Dobby/IpcService/IpcFactory.h \
---coverage -Wall -Werror -Wno-error=format \
+-Wall -Werror -Wno-error=format \
 -Wl,-wrap,system -Wl,-wrap,popen -Wl,-wrap,syslog \
 -DENABLE_TELEMETRY_LOGGING -DUSE_IARMBUS \
 -DENABLE_SYSTEM_GET_STORE_DEMO_LINK -DENABLE_DEEP_SLEEP \

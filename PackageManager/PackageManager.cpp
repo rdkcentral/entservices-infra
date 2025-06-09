@@ -117,7 +117,7 @@ namespace Plugin
                 Exchange::JPackageDownloader::Unregister(*this);
 
                 RPC::IRemoteConnection* connection(mService->RemoteConnection(mConnectionId));
-                if(mPackageDownloader->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                if (mPackageDownloader->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
                     LOGERR("PackageManager Plugin is not properly destructed. %d", mConnectionId);
                 }
                 mPackageDownloader = nullptr;
@@ -133,6 +133,7 @@ namespace Plugin
             mService->Release();
             mService = nullptr;
             mConnectionId = 0;
+            SYSLOG(Logging::Shutdown, (string(_T("PackageManager de-initialised"))));
         }
     }
 

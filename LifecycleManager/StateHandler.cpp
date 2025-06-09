@@ -60,50 +60,29 @@ namespace WPEFramework
             State* state = nullptr;
             switch (lifeCycleState)
             {
+	        case Exchange::ILifecycleManager::LifecycleState::UNLOADED:
+                    state = new UnloadedState(context);
+                    break;
 	        case Exchange::ILifecycleManager::LifecycleState::LOADING:
                     state = new LoadingState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::INITIALIZING:
                     state = new InitializingState(context);
                     break;
-	        case Exchange::ILifecycleManager::LifecycleState::RUNREQUESTED:
-                    state = new RunRequestedState(context);
-                    break;
-	        case Exchange::ILifecycleManager::LifecycleState::RUNNING:
-                    state = new RunningState(context);
-                    break;
-	        case Exchange::ILifecycleManager::LifecycleState::ACTIVATEREQUESTED:
-                    state = new ActivateRequestedState(context);
+	        case Exchange::ILifecycleManager::LifecycleState::PAUSED:
+                    state = new PausedState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::ACTIVE:
                     state = new ActiveState(context);
                     break;
-	        case Exchange::ILifecycleManager::LifecycleState::DEACTIVATEREQUESTED:
-                    state = new DeactivateRequestedState(context);
-                    break;
-	        case Exchange::ILifecycleManager::LifecycleState::SUSPENDREQUESTED:
-                    state = new SuspendRequestedState(context);
-                    break;
 	        case Exchange::ILifecycleManager::LifecycleState::SUSPENDED:
                     state = new SuspendedState(context);
-                    break;
-	        case Exchange::ILifecycleManager::LifecycleState::RESUMEREQUESTED:
-                    state = new ResumeRequestedState(context);
-                    break;
-	        case Exchange::ILifecycleManager::LifecycleState::HIBERNATEREQUESTED:
-                    state = new HibernateRequestedState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::HIBERNATED:
                     state = new HibernatedState(context);
                     break;
-	        case Exchange::ILifecycleManager::LifecycleState::WAKEREQUESTED:
-                    state = new WakeRequestedState(context);
-                    break;
-    	        case Exchange::ILifecycleManager::LifecycleState::TERMINATEREQUESTED:
-                    state = new TerminateRequestedState(context);
-                    break;
     	        case Exchange::ILifecycleManager::LifecycleState::TERMINATING:
-                    state = new TerminateState(context);
+                    state = new TerminatingState(context);
                     break;
                 default:
 		    state = nullptr;	
@@ -144,62 +123,49 @@ namespace WPEFramework
 
 	void StateHandler::initialize()
 	{
-            mPossibleStateTransitions[Lifecycle::LOADING] = std::list<Exchange::ILifecycleManager::LifecycleState>();    
+            mPossibleStateTransitions[Lifecycle::UNLOADED] = std::list<Exchange::ILifecycleManager::LifecycleState>();
+            mPossibleStateTransitions[Lifecycle::LOADING] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::UNLOADED);
             mPossibleStateTransitions[Lifecycle::INITIALIZING] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::LOADING); 
-            mPossibleStateTransitions[Lifecycle::RUNREQUESTED] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::INITIALIZING);    
 
-            mPossibleStateTransitions[Lifecycle::RUNNING] = std::list<Exchange::ILifecycleManager::LifecycleState>();
-	    std::list<Exchange::ILifecycleManager::LifecycleState>& runningStatePre = mPossibleStateTransitions[Lifecycle::RUNNING];
-	    runningStatePre.push_back(Lifecycle::RUNREQUESTED);
-	    runningStatePre.push_back(Lifecycle::DEACTIVATEREQUESTED);
-	    runningStatePre.push_back(Lifecycle::RESUMEREQUESTED);
+            mPossibleStateTransitions[Lifecycle::PAUSED] = std::list<Exchange::ILifecycleManager::LifecycleState>();
+	    std::list<Exchange::ILifecycleManager::LifecycleState>& pausedStatePre = mPossibleStateTransitions[Lifecycle::PAUSED];
+	    pausedStatePre.push_back(Lifecycle::INITIALIZING);
+	    pausedStatePre.push_back(Lifecycle::ACTIVE);
+	    pausedStatePre.push_back(Lifecycle::SUSPENDED);
           
-            mPossibleStateTransitions[Lifecycle::ACTIVATEREQUESTED] = std::list<Exchange::ILifecycleManager::LifecycleState>();
-	    std::list<Exchange::ILifecycleManager::LifecycleState>& activateRequestedStatePre = mPossibleStateTransitions[Lifecycle::ACTIVATEREQUESTED];
-            //activateRequestedStatePre.push_backgLifecycle::INITIALIZING);
-            activateRequestedStatePre.push_back(Lifecycle::RUNNING);
-
-            mPossibleStateTransitions[Lifecycle::ACTIVE] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::ACTIVATEREQUESTED);    
-            mPossibleStateTransitions[Lifecycle::DEACTIVATEREQUESTED] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::ACTIVE);    
-            mPossibleStateTransitions[Lifecycle::SUSPENDREQUESTED] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::RUNNING);    
+            mPossibleStateTransitions[Lifecycle::ACTIVE] = std::list<Exchange::ILifecycleManager::LifecycleState>();
+	    std::list<Exchange::ILifecycleManager::LifecycleState>& activeStatePre = mPossibleStateTransitions[Lifecycle::ACTIVE];
+            activeStatePre.push_back(Lifecycle::PAUSED);
 
             mPossibleStateTransitions[Lifecycle::SUSPENDED] = std::list<Exchange::ILifecycleManager::LifecycleState>();
 	    std::list<Exchange::ILifecycleManager::LifecycleState>& suspendedStatePre = mPossibleStateTransitions[Lifecycle::SUSPENDED];
-            suspendedStatePre.push_back(Lifecycle::SUSPENDREQUESTED);
-            suspendedStatePre.push_back(Lifecycle::WAKEREQUESTED);
+            suspendedStatePre.push_back(Lifecycle::INITIALIZING);
+            suspendedStatePre.push_back(Lifecycle::PAUSED);
+            suspendedStatePre.push_back(Lifecycle::HIBERNATED);
 
-            mPossibleStateTransitions[Lifecycle::RESUMEREQUESTED] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::SUSPENDED);    
-            mPossibleStateTransitions[Lifecycle::HIBERNATEREQUESTED] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::SUSPENDED);    
-            mPossibleStateTransitions[Lifecycle::HIBERNATED] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::HIBERNATEREQUESTED);    
-            mPossibleStateTransitions[Lifecycle::WAKEREQUESTED] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::HIBERNATED);    
+            mPossibleStateTransitions[Lifecycle::HIBERNATED] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::SUSPENDED);    
 
-            mPossibleStateTransitions[Lifecycle::TERMINATEREQUESTED] = std::list<Exchange::ILifecycleManager::LifecycleState>();
-	    std::list<Exchange::ILifecycleManager::LifecycleState>& terminateRequestedStatePre = mPossibleStateTransitions[Lifecycle::TERMINATEREQUESTED];
-            terminateRequestedStatePre.push_back(Lifecycle::RUNNING);
-            terminateRequestedStatePre.push_back(Lifecycle::SUSPENDED);
-
-            mPossibleStateTransitions[Lifecycle::TERMINATING] = std::list<Exchange::ILifecycleManager::LifecycleState>(1, Lifecycle::TERMINATEREQUESTED);    
+            mPossibleStateTransitions[Lifecycle::TERMINATING] = std::list<Exchange::ILifecycleManager::LifecycleState>();
+	    std::list<Exchange::ILifecycleManager::LifecycleState>& terminatingStatePre = mPossibleStateTransitions[Lifecycle::TERMINATING];
+            terminatingStatePre.push_back(Lifecycle::PAUSED);
+            terminatingStatePre.push_back(Lifecycle::SUSPENDED);
 
 	    //state strings
+            mStateStrings[Lifecycle::UNLOADED] = "Unloaded";
             mStateStrings[Lifecycle::LOADING] = "Loading";
             mStateStrings[Lifecycle::INITIALIZING] = "Initializing"; 
-            mStateStrings[Lifecycle::RUNREQUESTED] = "RunRequested";
-            mStateStrings[Lifecycle::RUNNING] = "Running";
-            mStateStrings[Lifecycle::ACTIVATEREQUESTED] = "ActivateRequested";
+            mStateStrings[Lifecycle::PAUSED] = "Paused";
             mStateStrings[Lifecycle::ACTIVE] = "Active"; 
-            mStateStrings[Lifecycle::DEACTIVATEREQUESTED] = "DeactivateRequested"; 
-            mStateStrings[Lifecycle::SUSPENDREQUESTED] = "SuspendRequested"; 
             mStateStrings[Lifecycle::SUSPENDED] = "Suspended";
-            mStateStrings[Lifecycle::RESUMEREQUESTED] = "ResumeRequested";
-            mStateStrings[Lifecycle::HIBERNATEREQUESTED] = "HibernateRequested";
             mStateStrings[Lifecycle::HIBERNATED] = "Hibernated";
-            mStateStrings[Lifecycle::WAKEREQUESTED] = "WakeRequested";
-            mStateStrings[Lifecycle::TERMINATEREQUESTED] = "TerminateRequested";
             mStateStrings[Lifecycle::TERMINATING] = "Terminating";
 	}
 
-        bool StateHandler::changeState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState lifecycleState, string& errorReason)
+        bool StateHandler::changeState(StateTransitionRequest& request, string& errorReason)
 	{
+            Exchange::ILifecycleManager::LifecycleState lifecycleState = request.mTargetState;
+            ApplicationContext* context = request.mContext;
+
             if (!context)
 	    {
                 return false;
@@ -222,17 +188,30 @@ namespace WPEFramework
             //ensure final state is pushed here
             statePath.push_back(lifecycleState);
 
+            if (Exchange::ILifecycleManager::LifecycleState::TERMINATING == lifecycleState)
+	    {
+                statePath.push_back(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
+	    }
             bool result = false;
             IEventHandler* eventHandler = RequestHandler::getInstance()->getEventHandler();
+            bool isStateTerminating = false;
             // start from next state
 	    for (size_t stateIndex=1; stateIndex<statePath.size(); stateIndex++)
 	    {
                 Exchange::ILifecycleManager::LifecycleState oldLifecycleState = ((State*)context->getState())->getValue();
-                result = updateState(context, statePath[stateIndex], errorReason);
-                if (!result)
+                isStateTerminating = (Exchange::ILifecycleManager::LifecycleState::TERMINATING == statePath[stateIndex]);
+                if (!isStateTerminating)
 		{
+                    result = updateState(context, statePath[stateIndex], errorReason);
+                printf("StateHandler::changeState: %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                if (!result)
+                {
+                    printf("StateHandler::changeState: Failed to change state to %s\n", mStateStrings[statePath[stateIndex]].c_str());
+                    printf("errorReason %s", errorReason.c_str());
                     break;
-		}
+                }
+                fflush(stdout);
+            }
 
                 struct timespec stateChangeTime;
                 timespec_get(&stateChangeTime, TIME_UTC);
@@ -243,21 +222,37 @@ namespace WPEFramework
                 if (nullptr != eventHandler)
                 {
 		    Exchange::ILifecycleManager::LifecycleState newLifecycleState = ((State*)context->getState())->getValue();
+                    if (isStateTerminating)
+		    {
+                        newLifecycleState = statePath[stateIndex];
+                    }
                     JsonObject eventData;
                     eventData["appId"] = context->getAppId();
                     eventData["appInstanceId"] = context->getAppInstanceId();
                     eventData["oldLifecycleState"] = (uint32_t)oldLifecycleState;
                     eventData["newLifecycleState"] = (uint32_t)newLifecycleState;
-                    if (newLifecycleState == Exchange::ILifecycleManager::LifecycleState::ACTIVATEREQUESTED)
+                    if (newLifecycleState == Exchange::ILifecycleManager::LifecycleState::ACTIVE)
                     {
                         eventData["navigationIntent"] = context->getMostRecentIntent();
                     }
                     eventData["errorReason"] = errorReason;
                     eventHandler->onStateChangeEvent(eventData);
                 }
-	    }
-	    return result;
-	}
+                if (isStateTerminating)
+            {
+                result = updateState(context, statePath[stateIndex], errorReason);
+                printf("StateHandler::changeState: %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                if (!result)
+                {
+                    printf("StateHandler::changeState: Failed to change state to %s\n", mStateStrings[statePath[stateIndex]].c_str());
+                    printf("errorReason %s", errorReason.c_str());
+                    break;
+                }
+                fflush(stdout);
+            }
+        }
+        return result;
+    }
 
     } /* namespace Plugin */
 } /* namespace WPEFramework */

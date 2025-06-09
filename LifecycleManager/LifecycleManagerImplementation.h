@@ -42,7 +42,8 @@ namespace WPEFramework
                 enum EventNames
                 {
                     LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED,
-                    LIFECYCLE_MANAGER_EVENT_RUNTIME
+                    LIFECYCLE_MANAGER_EVENT_RUNTIME,
+                    LIFECYCLE_MANAGER_EVENT_WINDOW
                 };
 
                 class EXTERNAL Job : public Core::IDispatch
@@ -107,7 +108,7 @@ namespace WPEFramework
                 virtual Core::hresult Unregister(Exchange::ILifecycleManager::INotification *notification) override;
                 virtual Core::hresult GetLoadedApps(const bool verbose, string& apps) override;
                 virtual Core::hresult IsAppLoaded(const string& appId, bool& loaded) const override;
-                virtual Core::hresult SpawnApp(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success) override;
+                virtual Core::hresult SpawnApp(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success) override;
                 virtual Core::hresult SetTargetAppState(const string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState, const string& launchIntent) override;
                 virtual Core::hresult UnloadApp(const string& appInstanceId, string& errorReason, bool& success) override;
                 virtual Core::hresult KillApp(const string& appInstanceId, string& errorReason, bool& success) override;
@@ -127,7 +128,7 @@ namespace WPEFramework
 
                 /* IEventHandler methods  */
                 virtual void onRuntimeManagerEvent(JsonObject& data) override;
-                virtual void onWindowManagerEvent(string name, JsonObject& data) override;
+                virtual void onWindowManagerEvent(JsonObject& data) override;
                 virtual void onRippleEvent(string name, JsonObject& data) override;
                 virtual void onStateChangeEvent(JsonObject& data) override;
 
@@ -137,13 +138,14 @@ namespace WPEFramework
 	        std::list<Exchange::ILifecycleManagerState::INotification*> mLifecycleManagerStateNotification;
                 std::list<ApplicationContext*> mLoadedApplications;
                 PluginHost::IShell* mService;
-
 	    private: /* internal methods */
                 bool initialize(PluginHost::IShell* service);
                 void terminate();
                 void dispatchEvent(EventNames, const JsonValue &params);
                 void Dispatch(EventNames event, const JsonValue params);
                 void handleRuntimeManagerEvent(const JsonObject &data);
+                void handleStateChangeEvent(const JsonObject &data);
+                void handleWindowManagerEvent(const JsonObject &data);
                 ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
 
                 friend class Job;

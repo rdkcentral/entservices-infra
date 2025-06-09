@@ -82,7 +82,7 @@ bool RuntimeManagerHandler::getRuntimeStats(const string& appInstanceId, string&
     return true;
 }
 
-bool RuntimeManagerHandler::run(const string& appId, const string& appInstanceId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& environmentVars, const bool enableDebugger, const string& launchArgs, const string& xdgRuntimeDir, const string& displayName, string& errorReason)
+bool RuntimeManagerHandler::run(const string& appId, const string& appInstanceId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& environmentVars, const bool enableDebugger, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, string& errorReason)
 {
     JsonArray environmentVarsArray, debugSettingsArray, pathsArray, portsArray;
     // read data from parameters
@@ -94,33 +94,44 @@ bool RuntimeManagerHandler::run(const string& appId, const string& appInstanceId
     // -- debugSettings - [] //for vbn builds
     // -- paths - paths to set in container - path for XDG_RUNTIME_DIR
     
+    runtimeConfigObject.dialId = appId;
+
     uint32_t userId = 0, groupId = 0;
     std::list<string> environmentVarsList, debugSettingsList, pathsList;
     std::list<uint32_t> portsList;
+    JsonArray envNewArray;
 
     portsList.push_back(mFireboltAccessPort);
-
-    pathsList.push_back(xdgRuntimeDir);
 
     for (unsigned int i=0; i<environmentVarsArray.Length(); i++)
     {
         environmentVarsList.push_back(environmentVarsArray[i].String());
+        envNewArray.Add(environmentVarsArray[i].String());
     }
     std::stringstream ss;
-    ss << "FIREBOLT_ENDPOINT=http://localhost:" << mFireboltAccessPort << "?session=" << appInstanceId;
+    ss << "FIREBOLT_ENDPOINT=http://127.0.0.1:" << mFireboltAccessPort << "?session=" << appInstanceId;
     string fireboltEndPoint(ss.str());
     environmentVarsList.push_back(fireboltEndPoint);
+    envNewArray.Add(fireboltEndPoint);
 
-    std::stringstream xdgRuntimeEnv;
-    xdgRuntimeEnv << "XDG_RUNTIME_DIR=" << xdgRuntimeDir;
-    string xdgRuntimeEnvString(xdgRuntimeEnv.str());
-    environmentVarsList.push_back(xdgRuntimeEnvString);
+    std::stringstream targetAppStateEnvironmentString;
+    targetAppStateEnvironmentString << "TARGET_STATE=" << (uint32_t)targetState;
+    string targetAppState(targetAppStateEnvironmentString.str());
+    environmentVarsList.push_back(targetAppState);
+    envNewArray.Add(targetAppState);
 
-    std::stringstream waylandDisplayEnv;
-    waylandDisplayEnv << "WAYLAND_DISPLAY=" << displayName;
-    string displayNameEnvString(waylandDisplayEnv.str());
-    environmentVarsList.push_back(displayNameEnvString);
-   
+    JsonArray envInputArray, envResultArray;
+    envInputArray.FromString(runtimeConfigObject.envVariables);
+    for (unsigned int i = 0; i < envInputArray.Length(); ++i)
+    {
+        envResultArray.Add(envInputArray[i].String());
+    }
+    for (unsigned int i = 0; i < envNewArray.Length(); ++i)
+    {
+        envResultArray.Add(envNewArray[i].String());
+    }
+    envResultArray.ToString(runtimeConfigObject.envVariables);
+
     // prepare arguments to pass
     RPC::IStringIterator* environmentVarsIterator{};
     RPC::IStringIterator* debugSettingsIterator{};
@@ -132,7 +143,7 @@ bool RuntimeManagerHandler::run(const string& appId, const string& appInstanceId
     pathsIterator = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(pathsList);
     portsIterator = Core::Service<RPC::ValueIterator>::Create<RPC::IValueIterator>(portsList);
 
-    Core::hresult result = mRuntimeManager->Run(appId, appInstanceId, appPath, runtimePath, environmentVarsIterator, userId, groupId, portsIterator, pathsIterator, debugSettingsIterator);
+    Core::hresult result = mRuntimeManager->Run(appId, appInstanceId, appPath, runtimePath, environmentVarsIterator, userId, groupId, portsIterator, pathsIterator, debugSettingsIterator, runtimeConfigObject);
     if (Core::ERROR_NONE != result)
     {
         errorReason = "unable to start running application";
@@ -203,7 +214,7 @@ bool RuntimeManagerHandler::wake(const string& appInstanceId, Exchange::ILifecyc
     {
         runtimeState = Exchange::IRuntimeManager::RuntimeState::RUNTIME_STATE_SUSPENDED;
     }
-    else if ((state == Exchange::ILifecycleManager::LifecycleState::RUNNING) || (state == Exchange::ILifecycleManager::LifecycleState::ACTIVE))
+    else if ((state == Exchange::ILifecycleManager::LifecycleState::PAUSED) || (state == Exchange::ILifecycleManager::LifecycleState::ACTIVE))
     {
         runtimeState = Exchange::IRuntimeManager::RuntimeState::RUNTIME_STATE_RUNNING;
     }
@@ -237,6 +248,7 @@ void RuntimeManagerHandler::RuntimeManagerNotification::OnFailure(const string& 
     JsonObject eventData;
     eventData["appInstanceId"] = appInstanceId; 
     eventData["name"] = "onFailure";
+    eventData["errorCode"] = error;
     _parent.onEvent(eventData);
 }
 

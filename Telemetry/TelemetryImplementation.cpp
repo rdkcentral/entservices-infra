@@ -39,7 +39,7 @@
 #define T2_PERSISTENT_FOLDER "/opt/.t2reportprofiles/"
 #define DEFAULT_PROFILES_FILE "/etc/t2profiles/default.json"
 
-#define SYSTEMSERVICES_CALLSIGN "org.rdk.System"
+#define USERSETTINGS_CALLSIGN "org.rdk.UserSettings"
 
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 2
@@ -64,6 +64,10 @@ namespace Plugin {
     : _adminLock()
     , _service(nullptr)
     , _pwrMgrNotification(*this)
+#ifdef HAS_RBUS
+    , _userSettingsPlugin(nullptr)
+    , _userSettingsNotification(*this)
+#endif
     , _registeredEventHandlers(false)
     {
         LOGINFO("Create TelemetryImplementation Instance");
@@ -74,6 +78,8 @@ namespace Plugin {
     TelemetryImplementation::~TelemetryImplementation()
     {
          if (_powerManagerPlugin) {
+		 // Unregister from PowerManagerPlugin Notification
+		_powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>());
                 _powerManagerPlugin.Reset();
             }
 
@@ -87,8 +93,13 @@ namespace Plugin {
                 rbus_close(rbusHandle);
                 rbusHandleStatus = RBUS_ERROR_NOT_INITIALIZED;
             }
-#endif
 
+            if (_userSettingsPlugin) {
+                 _userSettingsPlugin->Unregister(&_userSettingsNotification);
+                 _userSettingsPlugin->Release();
+                 _userSettingsPlugin = nullptr;
+            }
+#endif
     }
 
     Core::hresult TelemetryImplementation::Register(Exchange::ITelemetry::INotification *notification)
@@ -140,46 +151,25 @@ namespace Plugin {
     }
 
 #ifdef HAS_RBUS
-    void TelemetryImplementation::activateSystemPluginandGetPrivacyMode()
+    void TelemetryImplementation::activateUserSettingsandGetPrivacyMode()
     {
         PluginHost::IShell::state state;
-        if ((Utils::getServiceState(_service, SYSTEMSERVICES_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
-            Utils::activatePlugin(_service, SYSTEMSERVICES_CALLSIGN);
 
-        if ((Utils::getServiceState(_service, SYSTEMSERVICES_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
+        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
+            Utils::activatePlugin(_service, USERSETTINGS_CALLSIGN);
+            
+        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
         {
-            m_systemServiceConnection = Utils::getThunderControllerClient(SYSTEMSERVICES_CALLSIGN);
+            ASSERT(_service != nullptr);
 
-            if (!m_systemServiceConnection)
+            _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
+            if (_userSettingsPlugin)
             {
-                LOGERR("%s plugin initialisation failed", SYSTEMSERVICES_CALLSIGN);
-            }
-            else
-            {
-                uint32_t err = m_systemServiceConnection->Subscribe<JsonObject>(2000, "onPrivacyModeChanged", [this](const JsonObject& parameters) {
+                _userSettingsPlugin->Register(&_userSettingsNotification);
                 
-                if (parameters.HasLabel("privacyMode"))
+                std::string privacyMode;
+                if (_userSettingsPlugin->GetPrivacyMode(privacyMode) == Core::ERROR_NONE)
                 {
-                    std::string privacyMode = parameters["privacyMode"].String();
-                    notifyT2PrivacyMode(privacyMode);
-                }
-                else
-                {
-                    LOGERR("No 'privacyMode' parameter");
-                }
-                });
-
-                if (err != Core::ERROR_NONE)
-                {
-                    LOGERR("Failed to subscribe to onPrivacyModeChanged: %d", err);
-                }
-
-                JsonObject params;
-                JsonObject res;
-                m_systemServiceConnection->Invoke<JsonObject, JsonObject>(2000, "getPrivacyMode", params, res);
-                if (res["success"].Boolean())
-                {
-                    std::string privacyMode = res["privacyMode"].String();
                     notifyT2PrivacyMode(privacyMode);
                 }
                 else
@@ -190,7 +180,7 @@ namespace Plugin {
         }
         else
         {
-            LOGERR("%s plugin is not activated", SYSTEMSERVICES_CALLSIGN);
+            LOGERR("Failed to activate %s", USERSETTINGS_CALLSIGN);
         }
     }
     
@@ -352,7 +342,7 @@ namespace Plugin {
         InitializePowerManager();
 
 #ifdef HAS_RBUS        
-        activateSystemPluginandGetPrivacyMode();
+        activateUserSettingsandGetPrivacyMode();
 #endif        
         setRFCReportProfiles();
         
@@ -400,7 +390,7 @@ namespace Plugin {
             Core::IWorkerPool::Instance().Submit(Job::Create( this,TELEMETRY_EVENT_ABORTREPORT, params));
         }
     }
-    
+
     void TelemetryImplementation::dispatchEvent(Event event, const JsonValue &params)
     {
         Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));

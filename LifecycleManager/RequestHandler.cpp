@@ -18,7 +18,7 @@
 **/
 
 #include "RequestHandler.h"
-#include "StateHandler.h"
+#include "StateTransitionHandler.h"
 #include <interfaces/IRDKWindowManager.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -50,7 +50,6 @@ namespace WPEFramework
         bool RequestHandler::initialize(PluginHost::IShell* service, IEventHandler* eventHandler)
 	{
 	    bool ret = false;
-            StateHandler::initialize();
 	    mEventHandler = eventHandler;	
             mRippleHandler = new RippleHandler();
             ret = mRippleHandler->initialize(eventHandler);
@@ -76,11 +75,13 @@ namespace WPEFramework
 		fflush(stdout);
 		return ret;
 	    }
+            StateTransitionHandler::getInstance()->initialize();
             return ret;
 	}
 
         void RequestHandler::terminate()
 	{
+            StateTransitionHandler::getInstance()->terminate();
             mRippleHandler->terminate();
             if (mWindowManagerHandler)
             {
@@ -123,11 +124,8 @@ namespace WPEFramework
 
 	bool RequestHandler::updateState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState state, string& errorReason)
 	{
-           bool success = StateHandler::changeState(context, state, errorReason);
-           if (!success)
-	   {
-	       return false;
-	   }
+           StateTransitionRequest request(context, state);
+           StateTransitionHandler::getInstance()->addRequest(request); 
            return true;
 	}
 

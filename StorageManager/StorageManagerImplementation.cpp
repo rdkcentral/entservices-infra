@@ -296,6 +296,7 @@ namespace Plugin {
     //         {
     //             ASSERT(mPersistentStoreRemoteStoreObject != nullptr);
 
+
     //             /* Perform action based on the StorageActionType */
     //             if (mPersistentStoreRemoteStoreObject != nullptr)
     //             {
@@ -383,6 +384,7 @@ namespace Plugin {
     //     (void)internalFtwUsage;
     //     return 0;
     // }
+
 
     // /**
     //  * @brief : Get the directory size traversing through the given directory path
@@ -551,6 +553,7 @@ namespace Plugin {
     //                 LOGINFO("path: %s f_bsize:%lu f_frsize:%lu, blockSize is set to %llu", baseDir.c_str(), statFs.f_bsize, statFs.f_frsize, gStorageSize.blockSize);
     //             }
 
+
     //             /* Calculate the current available storage in KB */
     //             curStorageFreeSpaceKB = (static_cast<uint64_t>(statFs.f_bfree) * statFs.f_frsize) / 1024;
 
@@ -596,6 +599,7 @@ namespace Plugin {
     //             gStorageSize.blockSize = DEFAULT_STORAGE_DEV_BLOCK_SIZE; /* Fallback to default block size */
     //         }
     //     }
+
 
     //     return hasEnoughSpace;
     // }

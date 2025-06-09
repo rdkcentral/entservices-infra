@@ -125,7 +125,7 @@ TEST_F(OCIContainerInitializedTest, getContainerStateTest)
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getContainerState"), _T("{"
         "\"containerId\": \"com.bskyb.epgui\"}"), response));
-    EXPECT_EQ(response, string("{\"state\":\"Running\",\"success\":true,\"errorReason\":\"\"}"));
+    EXPECT_EQ(response, string("{\"state\":\"RUNNING\",\"success\":true,\"errorReason\":\"\"}"));
 }
 
 

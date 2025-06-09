@@ -39,6 +39,7 @@
 #define USERSETTINGS_CAPTIONS_KEY                             "captions"
 #define USERSETTINGS_PREFERRED_CAPTIONS_LANGUAGES_KEY         "preferredCaptionsLanguages"
 #define USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY    "preferredClosedCaptionsService"
+#define USERSETTINGS_PRIVACY_MODE_KEY                         "privacyMode"
 #define USERSETTINGS_PIN_CONTROL_KEY                          "pinControl"
 #define USERSETTINGS_VIEWING_RESTRICTIONS_KEY                 "viewingRestrictions"
 #define USERSETTINGS_VIEWING_RESTRICTIONS_WINDOW_KEY          "viewingRestrictionsWindow"
@@ -50,6 +51,7 @@
 #define USERSETTINGS_VOICE_GUIDANCE_KEY                       "voiceGuidance"
 #define USERSETTINGS_VOICE_GUIDANCE_RATE_KEY                  "voiceGuidanceRate"
 #define USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY                 "voiceGuidanceHints"
+#define USERSETTINGS_CONTENT_PIN_KEY                          "contentPin"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -60,8 +62,8 @@ namespace Plugin {
     public:
         static const std::map<string, string> usersettingsDefaultMap;
         static const std::map<SettingsKey, string> _userSettingsInspectorMap;
-	static const double minVGR;
-	static const double maxVGR;
+        static const double minVGR;
+        static const double maxVGR;
 
     private:
         class Store2Notification : public Exchange::IStore2::INotification {
@@ -116,6 +118,7 @@ namespace Plugin {
             CAPTIONS_CHANGED,
             PREFERRED_CAPTIONS_LANGUAGE_CHANGED,
             PREFERRED_CLOSED_CAPTIONS_SERVICE_CHANGED,
+            PRIVACY_MODE_CHANGED,
             PIN_CONTROL_CHANGED,
             VIEWING_RESTRICTIONS_CHANGED,
             VIEWING_RESTRICTIONS_WINDOW_CHANGED,
@@ -126,7 +129,8 @@ namespace Plugin {
             HIGH_CONTRAST_CHANGED,
             VOICE_GUIDANCE_CHANGED,
             VOICE_GUIDANCE_RATE_CHANGED,
-            VOICE_GUIDANCE_HINTS_CHANGED
+            VOICE_GUIDANCE_HINTS_CHANGED,
+            CONTENT_PIN_CHANGED
         };
 
         class EXTERNAL Job : public Core::IDispatch {
@@ -183,6 +187,8 @@ namespace Plugin {
         Core::hresult GetPreferredCaptionsLanguages(string &preferredLanguages) const override;
         Core::hresult SetPreferredClosedCaptionService(const string& service) override;
         Core::hresult GetPreferredClosedCaptionService(string &service) const override;
+        Core::hresult SetPrivacyMode(const string& privacyMode);
+        Core::hresult GetPrivacyMode(string &privacyMode) const;
         Core::hresult SetPinControl(const bool pinControl) override;
         Core::hresult GetPinControl(bool &pinControl) const override;
         Core::hresult SetViewingRestrictions(const string& viewingRestrictions) override;
@@ -205,6 +211,8 @@ namespace Plugin {
         Core::hresult GetVoiceGuidanceRate(double &rate) const override;
         Core::hresult SetVoiceGuidanceHints(const bool hints) override;
         Core::hresult GetVoiceGuidanceHints(bool &hints) const override;
+        Core::hresult SetContentPin(const string& contentPin) override;
+        Core::hresult GetContentPin(string& contentPin) const override;
 
         // IUserSettingsInspector methods
         Core::hresult GetMigrationState(const SettingsKey key, bool &requiresMigration) const override;
