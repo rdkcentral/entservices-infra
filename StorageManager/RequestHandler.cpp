@@ -470,7 +470,7 @@ namespace WPEFramework
         struct statvfs statFs;
         uint64_t curStorageFreeSpaceKB = 0;
         uint64_t existingAppsReservationSpaceKB = 0;
-        uint64_t availableSizeKB = 0;
+        int64_t availableSizeKB = 0;
 
         if (baseDir.empty())
         {
