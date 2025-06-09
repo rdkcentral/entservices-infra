@@ -889,7 +889,7 @@ namespace WPEFramework
         JsonObject parameters;
         LOGINFO("Entered ClearAll Implementation");
         std::unique_lock<std::mutex> lock(mStorageManagerImplLock);
-
+	LOGINFO("JSON input: %s", exemptionAppIds.c_str());
         parameters.FromString(exemptionAppIds);
         const JsonArray exemptedIdsjson = parameters.HasLabel("exemptionAppIds") ? parameters["exemptionAppIds"].Array() : JsonArray();
         std::list<std::string> exemptedIdsStrList;
