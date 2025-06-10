@@ -672,6 +672,21 @@ TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureFiveDigitNumber)
     EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"12345\"}"), response));
 }
 
+TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureAllSpecialCharacters)
+{
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"&%$*\"}"), response));
+}
+
+TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureWithOneSpecialCharacter)
+{
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"12&5\"}"), response));
+}
+
+TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureSpecialCharactersAndDecimal)
+{
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"12$#%#$56\"}"), response));
+}
+
 TEST_F(UserSettingsTest, GetContentPin_Failure)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
