@@ -897,7 +897,7 @@ namespace WPEFramework
 	        LOGINFO("Found exemptionAppIds key");
 	        exemptedIdsjson = parameters["exemptionAppIds"].Array();
 	    } else {
-	        LOGERR("JSON is neither an array nor an object with exemptionAppIds");
+	        LOGERR("JSON else case entered");
 	        exemptedIdsjson = JsonArray();
 	    }
 	    LOGINFO("exemptionAppIds array length: %u", exemptedIdsjson.Length());
