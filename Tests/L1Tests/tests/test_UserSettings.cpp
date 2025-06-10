@@ -649,6 +649,13 @@ TEST_F(UserSettingsTest, SetContentPin_Success)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"1234\"}"), response));
 }
 
+TEST_F(UserSettingsTest, SetContentPin_SuccessWithEmptyString)
+{
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"\"}"), response));
+}
+
 TEST_F(UserSettingsTest, SetContentPin_Failure)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
