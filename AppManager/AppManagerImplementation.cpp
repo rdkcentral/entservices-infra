@@ -29,8 +29,7 @@ SERVICE_REGISTRATION(AppManagerImplementation, 1, 0);
 AppManagerImplementation* AppManagerImplementation::_instance = nullptr;
 
 AppManagerImplementation::AppManagerImplementation()
-: mCurrentAction(APP_ACTION_NONE)
-, mAdminLock()
+: mAdminLock()
 , mAppManagerNotification()
 , mLifecycleInterfaceConnector(nullptr)
 , mPersistentStoreRemoteStoreObject(nullptr)
@@ -1169,6 +1168,20 @@ void AppManagerImplementation::getCustomValues(WPEFramework::Exchange::RuntimeCo
             runtimeConfig.appType = 1;
             runtimeConfig.resourceManagerClientEnabled = true;
         }
+}
+
+void AppManagerImplementation::updateCurrentAction(const std::string& appId, CurrentAction action)
+{
+    auto it = mAppInfo.find(appId);
+    if(it != mAppInfo.end())
+    {
+        it->second.currentAction = action;
+        LOGINFO("Updated currentAction for appId %s to %d", appId.c_str(), static_cast<int>(action));
+    }
+    else
+    {
+        LOGERR("App ID %s not found while updating currentAction", appId.c_str());
+    }
 }
 
 } /* namespace Plugin */
