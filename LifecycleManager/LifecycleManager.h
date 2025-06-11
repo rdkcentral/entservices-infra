@@ -75,7 +75,7 @@ namespace WPEFramework
                                                 const string& navigationIntent) override
                     {
                         LOGINFO("LifecycleManagerState onAppLifecycleStateChanged");
-                        Exchange::JLifecycleManagerState::Event::OnAppLifecycleStateChanged(_parent, appId,appInstanceId,newState,oldState,navigationIntent);
+                        Exchange::JLifecycleManagerState::Event::OnAppLifecycleStateChanged(_parent, appId,appInstanceId,oldState, newState, navigationIntent);
                     }
 
                 private:
