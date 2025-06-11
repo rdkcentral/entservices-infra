@@ -113,8 +113,9 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
-          token: ${{ secrets.RDKCM_RDKE }}
+          ref: storagemanager_mocks
+          #ref: develop
+          #token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
         uses: actions/checkout@v3
@@ -419,7 +420,7 @@ jobs:
           -DHAS_API_POWERSTATE
           -DHAS_RBUS
           -DENABLE_DEVICE_MANUFACTURER_INFO"
-          -DCOMCAST_CONFIG=OFF
+          -DCOMCAST_CONFIG=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_DS=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_IARMBus=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_Udev=ON
@@ -430,13 +431,14 @@ jobs:
           -DHAS_FRONT_PANEL=ON
           -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
-          -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
-          -DPLUGIN_TELEMETRY=ON
-          -DPLUGIN_USBDEVICE=ON
-          -DPLUGIN_USB_MASS_STORAGE=ON
-          -DPLUGIN_OCICONTAINER=ON
-          -DPLUGIN_USERSETTINGS=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
+          -DHIDE_NON_EXTERNAL_SYMBOLS=ON
+          -DPLUGIN_TELEMETRY=OFF
+          -DPLUGIN_USBDEVICE=OFF
+          -DPLUGIN_USB_MASS_STORAGE=OFF
+          -DPLUGIN_STORAGE_MANAGER=ON
+          -DPLUGIN_OCICONTAINER=OFF
+          -DPLUGIN_USERSETTINGS=OFF
+          -DPLUGIN_RESOURCEMANAGER=OFF
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -495,7 +497,7 @@ jobs:
           -DHAS_API_POWERSTATE
           -DHAS_RBUS
           -DENABLE_DEVICE_MANUFACTURER_INFO"
-          -DCOMCAST_CONFIG=OFF
+          -DCOMCAST_CONFIG=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_DS=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_IARMBus=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_Udev=ON
@@ -503,15 +505,16 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DCMAKE_BUILD_TYPE=Debug
           -DDS_FOUND=ON
-          -DPLUGIN_TELEMETRY=ON
-          -DPLUGIN_USBDEVICE=ON
-          -DPLUGIN_USB_MASS_STORAGE=ON
+          -DPLUGIN_TELEMETRY=OFF
+          -DPLUGIN_USBDEVICE=OFF
+          -DPLUGIN_USB_MASS_STORAGE=OFF
           -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
-          -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
-          -DPLUGIN_OCICONTAINER=ON
-          -DPLUGIN_USERSETTINGS=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
+          -DHIDE_NON_EXTERNAL_SYMBOLS=ON
+          -DPLUGIN_OCICONTAINER=OFF
+          -DPLUGIN_USERSETTINGS=OFF
+          -DPLUGIN_RESOURCEMANAGER=OFF
+          -DPLUGIN_STORAGE_MANAGER=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&

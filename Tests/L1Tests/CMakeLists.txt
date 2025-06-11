@@ -139,6 +139,10 @@ set (RUNTIMEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/RuntimeManager 
 set (RUNTIMEMANAGER_LIBS ${NAMESPACE}RuntimeManager ${NAMESPACE}RuntimeManagerImplementation)
 add_plugin_test_ex(PLUGIN_RUNTIME_MANAGER tests/test_RunTimeManager.cpp "${RUNTIMEMANAGER_INC}" "${RUNTIMEMANAGER_LIBS}")
 
+#PLUGIN_STORAGE_MANAGER
+set (STORAGE_MANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/StorageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (STORAGE_MANAGER_LIBS ${NAMESPACE}StorageManager ${NAMESPACE}StorageManagerImplementation)
+add_plugin_test_ex(PLUGIN_STORAGE_MANAGER tests/test_StorageManager.cpp "${STORAGE_MANAGER_INC}" "${STORAGE_MANAGER_LIBS}")
 
 # PLUGIN_USERSETTINGS
 set (USERSETTINGS_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/UserSettings ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
