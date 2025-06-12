@@ -228,6 +228,8 @@ AnalyticsTest::AnalyticsTest()
     // Activate plugin in constructor
     status = ActivateService("org.rdk.PersistentStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
+    status = ActivateService("org.rdk.PowerManager");
+    EXPECT_EQ(Core::ERROR_NONE, status);
     status = ActivateService("org.rdk.System");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
