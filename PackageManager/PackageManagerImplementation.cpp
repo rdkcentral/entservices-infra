@@ -690,8 +690,9 @@ namespace Plugin {
         LOGDBG("entry");
         #ifdef USE_LIBPACKAGE
         packagemanager::ConfigMetadataArray aConfigMetadata;
-        packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
-        LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);
+        /*packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);*/
+        /*LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);*/
+        packageImpl->Initialize(configStr, aConfigMetadata);
         for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
             StateKey key = it->first;
             State state(it->second);
@@ -730,9 +731,9 @@ namespace Plugin {
                     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
                     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
                     if (elapsed) {
-                        LOGDBG("Download status=%d code=%ld time=%ld ms", status,
+                        /*LOGDBG("Download status=%d code=%ld time=%ld ms", status,
                             mHttpClient->getStatusCode(),
-                            elapsed);
+                            elapsed);*/
                     }
                     if ( status == HttpClient::Status::Success || mHttpClient->getStatusCode() == 404) {  // XXX: other status codes
                         break;
