@@ -18,6 +18,7 @@
  */
 
 #include "SharedStorage.h"
+#include "SharedStorageImplementation.h"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -58,11 +59,9 @@ namespace Plugin {
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
 
-        Exchange::IStore2* _storeObject = getRemoteStoreObject(params.Scope.Value());
-        ASSERT (nullptr != _storeObject);
-        if (nullptr != _storeObject)
+        if (nullptr != _sharedStorage)
         {
-            status = _storeObject->SetValue(
+            status = _sharedStorage->SetValue(
                         Exchange::IStore2::ScopeType(params.Scope.Value()),
                         params.Namespace.Value(),
                         params.Key.Value(),
@@ -70,9 +69,6 @@ namespace Plugin {
                         params.Ttl.Value() );
             if (status == Core::ERROR_NONE) {
                 response.Success = true;
-            }
-            else {
-                TRACE(Trace::Error, (_T("%s: Status: %d"), __FUNCTION__, status));
             }
         }
         return status;
@@ -84,11 +80,9 @@ namespace Plugin {
         string value;
         uint32_t ttl = 0;
 
-        Exchange::IStore2* _storeObject = getRemoteStoreObject(params.Scope.Value());
-        ASSERT (nullptr != _storeObject);
-        if (nullptr != _storeObject)
+        if (nullptr != _sharedStorage)
         {
-            status = _storeObject->GetValue(
+            status = _sharedStorage->GetValue(
                         Exchange::IStore2::ScopeType(params.Scope.Value()),
                         params.Namespace.Value(),
                         params.Key.Value(),
@@ -111,11 +105,10 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_deleteKey(const DeleteKeyParamsInfo& params, DeleteKeyResultInfo& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
-        Exchange::IStore2* _storeObject = getRemoteStoreObject(params.Scope.Value());
-        ASSERT (nullptr != _storeObject);
-        if (nullptr != _storeObject)
+        
+        if (nullptr != _sharedStorage)
         {
-            status = _storeObject->DeleteKey(
+            status = _sharedStorage->DeleteKey(
                         Exchange::IStore2::ScopeType(params.Scope.Value()),
                         params.Namespace.Value(),
                         params.Key.Value() );
@@ -132,11 +125,10 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_deleteNamespace(const DeleteNamespaceParamsInfo& params, DeleteKeyResultInfo& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
-        Exchange::IStore2* _storeObject = getRemoteStoreObject(params.Scope.Value());
-        ASSERT (nullptr != _storeObject);
-        if (nullptr != _storeObject)
+        
+        if (nullptr != _sharedStorage)
         {
-            status = _storeObject->DeleteNamespace(
+            status = _sharedStorage->DeleteNamespace(
                         Exchange::IStore2::ScopeType(params.Scope.Value()),
                         params.Namespace.Value() );
             if (status == Core::ERROR_NONE) {
@@ -152,15 +144,16 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_getKeys(const DeleteNamespaceParamsInfo& params, GetKeysResultData& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
+
         if(params.Scope.Value() != ScopeType::DEVICE)
         {
             return status;
         }
-        ASSERT (nullptr != _psInspector);
-        if (nullptr != _psInspector)
+
+        if (nullptr != _sharedInspector)
         {
             RPC::IStringIterator* it;
-            status = _psInspector->GetKeys(
+            status = _sharedInspector->GetKeys(
                         Exchange::IStoreInspector::ScopeType(params.Scope.Value()),
                         params.Namespace.Value(),
                         it);
@@ -182,15 +175,16 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_getNamespaces(const GetNamespacesParamsInfo& params, GetNamespacesResultData& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
+
         if(params.Scope.Value() != ScopeType::DEVICE)
         {
             return status;
         }
-        ASSERT (nullptr != _psInspector);
-        if (nullptr != _psInspector)
+
+        if (nullptr != _sharedInspector)
         {
             RPC::IStringIterator* it;
-            status = _psInspector->GetNamespaces(
+            status = _sharedInspector->GetNamespaces(
                         Exchange::IStoreInspector::ScopeType(params.Scope.Value()),
                         it);
             if (status == Core::ERROR_NONE) {
@@ -205,6 +199,7 @@ namespace Plugin {
                 TRACE(Trace::Error, (_T("%s: Status: %d"), __FUNCTION__, status));
             }
         }
+
         return status;
     }
 
@@ -212,15 +207,16 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_getStorageSize(const GetNamespacesParamsInfo& params, JsonObject& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
+        
         if(params.Scope.Value() != ScopeType::DEVICE)
         {
             return status;
         }
-        ASSERT (nullptr != _psInspector);
-        if (nullptr != _psInspector)
+
+        if (nullptr != _sharedInspector)
         {
             Exchange::IStoreInspector::INamespaceSizeIterator* it;
-            status = _psInspector->GetStorageSizes(
+            status = _sharedInspector->GetStorageSizes(
                         Exchange::IStoreInspector::ScopeType(params.Scope.Value()),
                         it);
             if (status == Core::ERROR_NONE) {
@@ -243,15 +239,16 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_getStorageSizes(const GetNamespacesParamsInfo& params, GetStorageSizesResultData& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
+
         if(params.Scope.Value() != ScopeType::DEVICE)
         {
             return status;
         }
-        ASSERT (nullptr != _psInspector);
-        if (nullptr != _psInspector)
+
+        if (nullptr != _sharedInspector)
         {
             Exchange::IStoreInspector::INamespaceSizeIterator* it;
-            status = _psInspector->GetStorageSizes(
+            status = _sharedInspector->GetStorageSizes(
                         Exchange::IStoreInspector::ScopeType(params.Scope.Value()),
                         it);
             if (status == Core::ERROR_NONE) {
@@ -273,10 +270,10 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_flushCache(DeleteKeyResultInfo& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
-        ASSERT (nullptr != _psCache);
-        if (nullptr != _psCache)
+
+        if (nullptr != _sharedCache)
         {
-            status = _psCache->FlushCache();
+            status = _sharedCache->FlushCache();
             if (status == Core::ERROR_NONE) {
                 response.Success = true;
             }
@@ -290,15 +287,16 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_getNamespaceStorageLimit(const DeleteNamespaceParamsInfo& params, GetNamespaceStorageLimitResultData& response)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
+
         if(params.Scope.Value() != ScopeType::DEVICE)
         {
             return status;
         }
-        ASSERT (nullptr != _psLimit);
-        if (nullptr != _psLimit)
+
+        if (nullptr != _sharedLimit)
         {
             uint32_t size;
-            status = _psLimit->GetNamespaceStorageLimit(
+            status = _sharedLimit->GetNamespaceStorageLimit(
                         Exchange::IStoreInspector::ScopeType(params.Scope.Value()),
                         params.Namespace.Value(),
                         size);
@@ -315,14 +313,15 @@ namespace Plugin {
     uint32_t SharedStorage::endpoint_setNamespaceStorageLimit(const SetNamespaceStorageLimitParamsData& params)
     {
         uint32_t status = Core::ERROR_NOT_SUPPORTED;
+
         if(params.Scope.Value() != ScopeType::DEVICE)
         {
             return status;
         }
-        ASSERT (nullptr != _psLimit);
-        if (nullptr != _psLimit)
+
+        if (nullptr != _sharedLimit)
         {
-            status = _psLimit->SetNamespaceStorageLimit(
+            status = _sharedLimit->SetNamespaceStorageLimit(
                         Exchange::IStoreInspector::ScopeType(params.Scope.Value()),
                         params.Namespace.Value(),
                         params.StorageLimit.Value());
