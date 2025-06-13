@@ -69,6 +69,18 @@ namespace Plugin {
             ApplicationType type;
         } PackageInfo;
 
+        enum CurrentAction {
+            APP_ACTION_NONE,
+            APP_ACTION_LAUNCH,
+            APP_ACTION_PRELOAD,
+            APP_ACTION_SUSPEND,
+            APP_ACTION_RESUME,
+            APP_ACTION_CLOSE,
+            APP_ACTION_TERMINATE,
+            APP_ACTION_HIBERNATE,
+            APP_ACTION_KILL,
+        };
+
         typedef struct _AppInfo
         {
             /* From LifecycleManager */
@@ -84,6 +96,8 @@ namespace Plugin {
             string appIntent;
             Exchange::IAppManager::AppLifecycleState targetAppState;
             Exchange::IAppManager::AppLifecycleState appOldState;
+            /* Current Action*/
+            CurrentAction currentAction = APP_ACTION_NONE;
         } AppInfo;
 
         std::map<std::string, AppInfo> mAppInfo;
@@ -93,20 +107,6 @@ namespace Plugin {
             APP_EVENT_LIFECYCLE_STATE_CHANGED,
             APP_EVENT_INSTALLATION_STATUS
         };
-
-        enum CurrentAction {
-            APP_ACTION_NONE,
-            APP_ACTION_LAUNCH,
-            APP_ACTION_PRELOAD,
-            APP_ACTION_SUSPEND,
-            APP_ACTION_RESUME,
-            APP_ACTION_CLOSE,
-            APP_ACTION_TERMINATE,
-            APP_ACTION_HIBERNATE,
-            APP_ACTION_KILL,
-        };
-
-        CurrentAction mCurrentAction;
 
         private:
         class PackageManagerNotification : public Exchange::IPackageInstaller::INotification {
@@ -229,6 +229,10 @@ namespace Plugin {
 
     public/*members*/:
         static AppManagerImplementation* _instance;
+
+    public: /* public methods */
+        void updateCurrentAction(const std::string& appId, CurrentAction action);
+
     };
 } /* namespace Plugin */
 } /* namespace WPEFramework */

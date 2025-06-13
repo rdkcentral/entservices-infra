@@ -94,7 +94,7 @@ namespace WPEFramework
                     PluginHost::IShell* mCurrentservice;
                     std::condition_variable mStateChangedCV;
                     std::mutex mStateMutex;
-                    std::string mAwaitedAppId;
+                    std::string mAppIdAwaitingPause;
         };
     }
 }
