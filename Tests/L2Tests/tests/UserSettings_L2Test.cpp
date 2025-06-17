@@ -2765,7 +2765,6 @@ TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
         }
     }
 }
-#endif
 
 TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
 {
@@ -2850,6 +2849,7 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
         }
     }
 }
+#endif
 
 TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivatingErrorCase)
 {
