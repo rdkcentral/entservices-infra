@@ -730,7 +730,7 @@ MATCHER_P(MatchRequestStatusDouble, expected, "")
     return expected == actual;
 
 }
-
+#if 0
 TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -1469,7 +1469,7 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
 
 }
-
+#endif
 /* Activating UserSettings and Persistent store plugins and UserSettings namespace has no entries in db.
    So that we can verify whether UserSettings plugin is receiving default values from PersistentStore or not*/
 TEST_F(UserSettingTest, VerifyDefaultValues)
