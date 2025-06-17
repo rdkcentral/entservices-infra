@@ -36,6 +36,10 @@ jobs:
           python-version: '3.x'
       - run: pip install jsonref
 
+      - name: ACK External Trigger
+        run: |
+           echo "Message: HELLO KK External Trigger Recieved for L2-oop Tests"
+
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
@@ -101,13 +105,16 @@ jobs:
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
         with:
+          repository: rdkcentral/entservices-deviceanddisplay
           path: entservices-deviceanddisplay
           ref: develop
 
       - name: Checkout entservices-infra
         uses: actions/checkout@v3
         with:
+          repository: rdkcentral/entservices-infra
           path: entservices-infra
+          ref: feature/RDKEMW-3513-yml
 
       - name: Apply  ThunderTools
         run: |
