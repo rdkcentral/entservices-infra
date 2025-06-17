@@ -865,7 +865,7 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     paramsMigrationState.Clear();
 
     paramsMigrationState["key"] = "CONTENT_PIN";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getContentPin", paramsMigrationState, result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
     paramsMigrationState.Clear();
