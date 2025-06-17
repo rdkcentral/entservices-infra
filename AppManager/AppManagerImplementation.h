@@ -25,6 +25,7 @@
 #include <interfaces/IStore2.h>
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IAppPackageManager.h>
+#include <interfaces/IStorageManager.h>
 #include "tracing/Logging.h"
 #include <com/com.h>
 #include <core/core.h>
@@ -204,6 +205,8 @@ namespace Plugin {
         Core::hresult createPackageManagerObject();
         void releasePackageManagerObject();
         void getCustomValues(WPEFramework::Exchange::RuntimeConfig& runtimeConfig);
+        Core::hresult createStorageManagerRemoteObject();
+        void releaseStorageManagerRemoteObject();
     private:
         mutable Core::CriticalSection mAdminLock;
         std::list<Exchange::IAppManager::INotification*> mAppManagerNotification;
@@ -211,6 +214,7 @@ namespace Plugin {
         Exchange::IStore2* mPersistentStoreRemoteStoreObject;
         Exchange::IPackageHandler* mPackageManagerHandlerObject;
         Exchange::IPackageInstaller* mPackageManagerInstallerObject;
+        Exchange::IStorageManager* mStorageManagerRemoteObject;
         PluginHost::IShell* mCurrentservice;
         Core::Sink<PackageManagerNotification> mPackageManagerNotification;
         Core::hresult fetchInstalledPackages(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
