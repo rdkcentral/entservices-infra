@@ -2849,7 +2849,6 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
         }
     }
 }
-#endif
 
 TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivatingErrorCase)
 {
@@ -2931,5 +2930,5 @@ TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivating
         }
     }
 }
-
+#endif
 
