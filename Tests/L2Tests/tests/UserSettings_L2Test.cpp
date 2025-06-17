@@ -1887,7 +1887,6 @@ TEST_F(UserSettingTest, VerifyDefaultValues)
         }
     }
 }
-#endif
 
 TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
 {
@@ -2659,6 +2658,7 @@ TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
         }
     }
 }
+#endif
 
 TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
 {
