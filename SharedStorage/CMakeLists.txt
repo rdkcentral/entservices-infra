@@ -28,7 +28,6 @@ set(CMAKE_CXX_STANDARD 11)
 
 add_library(${MODULE_NAME} SHARED
         SharedStorage.cpp
-        SharedStorageJsonRpc.cpp
         Module.cpp
 )
 

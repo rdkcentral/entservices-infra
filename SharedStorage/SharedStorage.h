@@ -23,44 +23,101 @@
 #include "UtilsLogging.h"
 #include <interfaces/IStore2.h>
 #include <interfaces/IStoreCache.h>
+#include <interfaces/json/JStore2.h>
+#include <interfaces/json/JStoreLimit.h>
+#include <interfaces/json/JStoreInspector.h>
+#include <interfaces/json/JStoreCache.h>
 #include <interfaces/json/JsonData_PersistentStore.h>
+#include <interfaces/IConfiguration.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     class SharedStorage : public PluginHost::IPlugin, public PluginHost::JSONRPC {
     private:
-        class Store2Notification : public Exchange::IStore2::INotification {
-        private:
-            Store2Notification(const Store2Notification&) = delete;
-            Store2Notification& operator=(const Store2Notification&) = delete;
+        class Implementation : public Exchange::IStore2,
+                               public Exchange::IStoreCache,
+                               public Exchange::IStoreInspector,
+                               public Exchange::IStoreLimit,
+                               public Exchange::IConfiguration {
+
+            class Store2Notification : public Exchange::IStore2::INotification
+            {
+            private:
+                Store2Notification(const Store2Notification &) = delete;
+                Store2Notification &operator=(const Store2Notification &) = delete;
+
+            public:
+                explicit Store2Notification(Implementation &parent)
+                    : _parent(parent)
+                {
+                }
+                ~Store2Notification() override = default;
+
+            public:
+                void ValueChanged(const Exchange::IStore2::ScopeType scope, const string &ns, const string &key, const string &value) override
+                {
+                    // TRACE(Trace::Information, (_T("ValueChanged event")));
+                    JsonData::PersistentStore::SetValueParamsData params;
+                    params.Scope = JsonData::PersistentStore::ScopeType(scope);
+                    params.Namespace = ns;
+                    params.Key = key;
+                    params.Value = value;
+
+                    _parent._shared.event_onValueChanged(params);
+                }
+
+                BEGIN_INTERFACE_MAP(Store2Notification)
+                INTERFACE_ENTRY(Exchange::IStore2::INotification)
+                END_INTERFACE_MAP
+
+            private:
+                Implementation &_parent;
+            };
 
         public:
-            explicit Store2Notification(SharedStorage& parent)
-                : _parent(parent)
-            {
-            }
-            ~Store2Notification() override = default;
+            Implementation(const Implementation &) = delete;
+            Implementation &operator=(const Implementation &) = delete;
 
-        public:
-            void ValueChanged(const Exchange::IStore2::ScopeType scope, const string& ns, const string& key, const string& value) override
-            {
-                //TRACE(Trace::Information, (_T("ValueChanged event")));
-                JsonData::PersistentStore::SetValueParamsData params;
-                params.Scope = JsonData::PersistentStore::ScopeType(scope);
-                params.Namespace = ns;
-                params.Key = key;
-                params.Value = value;
+            explicit Implementation(SharedStorage& parent);
+            ~Implementation() override;
 
-                _parent.event_onValueChanged(params);
-            }
-
-            BEGIN_INTERFACE_MAP(Store2Notification)
-            INTERFACE_ENTRY(Exchange::IStore2::INotification)
+            BEGIN_INTERFACE_MAP(Implementation)
+            INTERFACE_ENTRY(Exchange::IStore2)
+            INTERFACE_ENTRY(Exchange::IStoreCache)
+            INTERFACE_ENTRY(Exchange::IStoreInspector)
+            INTERFACE_ENTRY(Exchange::IStoreLimit)
+            INTERFACE_ENTRY(Exchange::IConfiguration)
             END_INTERFACE_MAP
 
+            uint32_t Configure(PluginHost::IShell *service) override;
+            uint32_t SetValue(const IStore2::ScopeType scope, const string &ns, const string &key, const string &value, const uint32_t ttl) override;
+            uint32_t GetValue(const IStore2::ScopeType scope, const string &ns, const string &key, string &value, uint32_t &ttl) override;
+            uint32_t DeleteKey(const IStore2::ScopeType scope, const string &ns, const string &key) override;
+            uint32_t DeleteNamespace(const IStore2::ScopeType scope, const string &ns) override;
+            uint32_t FlushCache() override;
+            uint32_t GetKeys(const IStore2::ScopeType scope, const string &ns, RPC::IStringIterator *&keys) override;
+            uint32_t GetNamespaces(const IStore2::ScopeType scope, RPC::IStringIterator *&namespaces) override;
+            uint32_t GetStorageSizes(const IStore2::ScopeType scope, INamespaceSizeIterator *&storageList) override;
+            uint32_t SetNamespaceStorageLimit(const IStore2::ScopeType scope, const string &ns, const uint32_t size) override;
+            uint32_t GetNamespaceStorageLimit(const IStore2::ScopeType scope, const string &ns, uint32_t &size) override;
+            uint32_t Register(Exchange::IStore2::INotification* notification) override;
+            uint32_t Unregister(Exchange::IStore2::INotification* notification) override;
+
         private:
-            SharedStorage& _parent;
+            Exchange::IStore2 *getRemoteStoreObject(Exchange::IStore2::ScopeType scope);
+
+        private:
+            // Exchange::IStore2* _store;
+            SharedStorage &_shared;
+            Core::Sink<Store2Notification> _storeNotification;
+            Exchange::IStore2 *_psObject;
+            Exchange::IStoreCache *_psCache;
+            Exchange::IStoreInspector *_psInspector;
+            Exchange::IStoreLimit *_psLimit;
+            Exchange::IStore2 *_csObject;
+            PluginHost::IPlugin *m_PersistentStoreRef;
+            PluginHost::IPlugin *m_CloudStoreRef;
         };
 
     private:
@@ -74,6 +131,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(SharedStorage)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        //INTERFACE_AGGREGATE(Exchange::IStore2, _implementation)
         END_INTERFACE_MAP
 
     public:
@@ -82,37 +140,19 @@ namespace Plugin {
         string Information() const override;
 
     private:
-        void RegisterAll();
-        void UnregisterAll();
-
-        uint32_t endpoint_setValue(const JsonData::PersistentStore::SetValueParamsData& params, JsonData::PersistentStore::DeleteKeyResultInfo& response);
-        uint32_t endpoint_getValue(const JsonData::PersistentStore::DeleteKeyParamsInfo& params, JsonData::PersistentStore::GetValueResultData& response);
-        uint32_t endpoint_deleteKey(const JsonData::PersistentStore::DeleteKeyParamsInfo& params, JsonData::PersistentStore::DeleteKeyResultInfo& response);
-        uint32_t endpoint_deleteNamespace(const JsonData::PersistentStore::DeleteNamespaceParamsInfo& params, JsonData::PersistentStore::DeleteKeyResultInfo& response);
-        uint32_t endpoint_getKeys(const JsonData::PersistentStore::DeleteNamespaceParamsInfo& params, JsonData::PersistentStore::GetKeysResultData& response);
-        uint32_t endpoint_getNamespaces(const JsonData::PersistentStore::GetNamespacesParamsInfo& params, JsonData::PersistentStore::GetNamespacesResultData& response);
-        uint32_t endpoint_getStorageSize(const JsonData::PersistentStore::GetNamespacesParamsInfo& params, JsonObject& response); // Deprecated
-        uint32_t endpoint_getStorageSizes(const JsonData::PersistentStore::GetNamespacesParamsInfo& params, JsonData::PersistentStore::GetStorageSizesResultData& response);
-        uint32_t endpoint_flushCache(JsonData::PersistentStore::DeleteKeyResultInfo& response);
-        uint32_t endpoint_getNamespaceStorageLimit(const JsonData::PersistentStore::DeleteNamespaceParamsInfo& params, JsonData::PersistentStore::GetNamespaceStorageLimitResultData& response);
-        uint32_t endpoint_setNamespaceStorageLimit(const JsonData::PersistentStore::SetNamespaceStorageLimitParamsData& params);
-
         void event_onValueChanged(const JsonData::PersistentStore::SetValueParamsData& params)
         {
             Notify(_T("onValueChanged"), params);
         }
-        Exchange::IStore2* getRemoteStoreObject(JsonData::PersistentStore::ScopeType eScope);
 
     private:
         PluginHost::IShell* _service{};
-        Exchange::IStore2* _psObject;
-        Exchange::IStoreCache* _psCache;
-        Exchange::IStoreInspector* _psInspector;
-        Exchange::IStoreLimit* _psLimit;
-        Exchange::IStore2* _csObject;
-        Core::Sink<Store2Notification> _storeNotification;
-        PluginHost::IPlugin *m_PersistentStoreRef;
-        PluginHost::IPlugin *m_CloudStoreRef;
+        Implementation* _impl;
+        Exchange::IStore2* _implementation;
+        //Exchange::IStore2* _storeImpl;
+        Exchange::IStoreCache* _cacheImpl;
+        Exchange::IStoreLimit* _limitImpl;
+        Exchange::IStoreInspector* _inspectorImpl;
     };
 
 } // namespace Plugin
