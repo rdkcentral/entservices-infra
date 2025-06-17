@@ -2658,7 +2658,6 @@ TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
         }
     }
 }
-#endif
 
 TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
 {
@@ -2766,6 +2765,7 @@ TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
         }
     }
 }
+#endif
 
 TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
 {
