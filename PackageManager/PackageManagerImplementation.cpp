@@ -321,6 +321,17 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::RateLimit(const string &downloadId, uint64_t &limit)
     {
         Core::hresult result = Core::ERROR_NONE;
+        LOGTRACE("'%s' limit=%ld", downloadId.c_str(), limit);
+        if (mInprogressDowload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+                mHttpClient->setRateLimit(limit);
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
+        } else {
+            LOGERR("set RateLimit Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            result = Core::ERROR_GENERAL;
+        }
         return result;
     }
 
@@ -603,7 +614,7 @@ namespace Plugin {
         runtimeConfig.fkpsFiles = config.fkpsFiles;
         runtimeConfig.appType = config.appType;
         runtimeConfig.appPath = config.appPath;
-        runtimeConfig.command= config.command;
+        runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
     }
 
@@ -629,7 +640,7 @@ namespace Plugin {
         }
         runtimeConfig.appType = config.appType == packagemanager::ApplicationType::SYSTEM ? "SYSTEM" : "INTERACTIVE";
         runtimeConfig.appPath = config.appPath;
-        runtimeConfig.command= config.command;
+        runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
     }
 
