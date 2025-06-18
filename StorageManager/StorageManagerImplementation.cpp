@@ -29,7 +29,6 @@ namespace WPEFramework {
 namespace Plugin {
 
     SERVICE_REGISTRATION(StorageManagerImplementation, 1, 0);
-    RequestHandler* handler = RequestHandler::getInstance();
 
     StorageManagerImplementation::StorageManagerImplementation()
     : mCurrentservice(nullptr)
@@ -40,7 +39,8 @@ namespace Plugin {
     StorageManagerImplementation::~StorageManagerImplementation()
     {
         LOGINFO("Delete StorageManagerImplementation Instance");
-        handler->releasePersistentStoreRemoteStoreObject();
+        RequestHandler& handler = RequestHandler::getInstance();
+        handler.releasePersistentStoreRemoteStoreObject();
 
         if (nullptr != mCurrentservice)
         {
@@ -65,13 +65,15 @@ namespace Plugin {
 
                 _config.FromString(configLine);
                 mBaseStoragePath = _config.Path.Value();
+                RequestHandler& handler = RequestHandler::getInstance();
                 if (mBaseStoragePath.empty())
                 {
                     LOGWARN("Base storage path is empty. Setting default path: %s", DEFAULT_APP_STORAGE_PATH);
                     mBaseStoragePath = DEFAULT_APP_STORAGE_PATH;  // Fallback path
                 }
-                handler->setCurrentService(mCurrentservice);
-                if (Core::ERROR_NONE != handler->createPersistentStoreRemoteStoreObject())
+                
+                handler.setCurrentService(mCurrentservice);
+                if (Core::ERROR_NONE != handler.createPersistentStoreRemoteStoreObject())
                 {
                     LOGERR("Failed to create createPersistentStoreRemoteStoreObject");
                 }
@@ -82,8 +84,8 @@ namespace Plugin {
 
                 Core::SystemInfo::SetEnvironment(PATH_ENV, mBaseStoragePath.c_str());
                 LOGINFO("Base Storage Path Set: %s", mBaseStoragePath.c_str());
-                handler->SetBaseStoragePath(mBaseStoragePath);
-                status = handler->populateAppInfoCacheFromStoragePath();
+                handler.SetBaseStoragePath(mBaseStoragePath);
+                status = handler.populateAppInfoCacheFromStoragePath();
                 if (Core::ERROR_NONE != status)
                 {
                     LOGERR("populateAppInfoCacheFromStoragePath Failed!!!");
@@ -108,23 +110,21 @@ namespace Plugin {
      */
     Core::hresult StorageManagerImplementation::CreateStorage(const std::string& appId, const uint32_t& size, std::string& path, std::string& errorReason)
     {
-        Core::hresult status = Core::ERROR_GENERAL;
         LOGINFO("Entered CreateStorage Implementation appId: %s", appId.c_str());
+        Core::hresult status = Core::ERROR_GENERAL;
+        RequestHandler& handler = RequestHandler::getInstance();
         if (appId.empty())
         {
             LOGERR("Invalid App ID");
             errorReason = "appId cannot be empty";
         }
+        else if (Core::ERROR_NONE != (status = handler.CreateStorage(appId, size, path, errorReason)))
+        {
+            LOGERR("Failed to create storage for appId: %s, status %u, Error: %s", appId.c_str(), status, errorReason.c_str());
+        }
         else
         {
-            handler->SetBaseStoragePath(mBaseStoragePath);
-            status = handler->CreateStorage(appId, size, path, errorReason);
-            if (status == Core::ERROR_NONE)
-            {
-                LOGINFO("Storage created successfully for appId: %s", appId.c_str());
-                return status;
-            }
-
+            LOGINFO("Storage created successfully for appId: %s", appId.c_str());
         }
         return status;
     }
@@ -134,17 +134,21 @@ namespace Plugin {
      */
     Core::hresult StorageManagerImplementation::GetStorage(const string& appId, const int32_t& userId, const int32_t& groupId, string& path, uint32_t& size, uint32_t& used)
     {
-        Core::hresult status = Core::ERROR_GENERAL;
-
         LOGINFO("Entered GetStorage Implementation");
-
-        status = handler->GetStorage(appId, userId, groupId, path, size, used);
-        if (status == Core::ERROR_NONE)
+        Core::hresult status = Core::ERROR_GENERAL;
+        RequestHandler& handler = RequestHandler::getInstance();
+        if (appId.empty())
         {
-            LOGINFO("Storage information retrieved successfully for appId: %s", appId.c_str());
-            return status;
+            LOGERR("Invalid App ID");
         }
-
+        else if (Core::ERROR_NONE != (status = handler.GetStorage(appId, userId, groupId, path, size, used)))
+        {
+            LOGERR("Failed to get storage information for appId: %s status %u", appId.c_str(), status);
+        }
+        else
+        {
+            LOGINFO("Storage retreived successfully for appId: %s", appId.c_str());
+        }
         return status;
     }
 
@@ -153,22 +157,21 @@ namespace Plugin {
      */
     Core::hresult StorageManagerImplementation::DeleteStorage(const string& appId, string& errorReason)
     {
-        Core::hresult status = Core::ERROR_GENERAL;
         LOGINFO("Entered DeleteStorage Implementation");
-
+        Core::hresult status = Core::ERROR_GENERAL;
+        RequestHandler& handler = RequestHandler::getInstance();
         if (appId.empty())
         {
             errorReason = "AppId is empty";
             LOGERR("AppId is empty");
         }
+        else if (Core::ERROR_NONE != (status = handler.DeleteStorage(appId, errorReason)))
+        {
+            LOGERR("Failed to delete storage for appId: %s, status %u,Error: %s", appId.c_str(), status, errorReason.c_str());
+        }
         else
         {
-            status = handler->DeleteStorage(appId, errorReason);
-            if (status == Core::ERROR_NONE)
-            {
-                LOGINFO("Storage deleted successfully for appId: %s", appId.c_str());
-                return status;
-            }
+            LOGINFO("Storage deleted successfully for appId: %s", appId.c_str());
         }
         return status;
     }
@@ -178,9 +181,23 @@ namespace Plugin {
      */
     Core::hresult StorageManagerImplementation::Clear(const string& appId, string& errorReason)
     {
-        Core::hresult status = Core::ERROR_GENERAL;
         LOGINFO("Entered Clear Implementation");
-        status = handler->Clear(appId, errorReason);
+        Core::hresult status = Core::ERROR_GENERAL;
+        RequestHandler& handler = RequestHandler::getInstance();
+
+        if(appId.empty())
+        {
+            errorReason = "Clear called with no appId";
+            LOGERR("Clear called with no appId");
+        }
+        else if(Core::ERROR_NONE != (status = handler.Clear(appId, errorReason)))
+        {
+            LOGERR("Failed to clear storage for appId: %s, status %u, Error: %s", appId.c_str(), status, errorReason.c_str());
+        }
+        else
+        {
+            LOGINFO("Cleared storage successfully for appId: %s", appId.c_str());
+        }
         return status;
     }
 
@@ -189,10 +206,19 @@ namespace Plugin {
      */
     Core::hresult StorageManagerImplementation::ClearAll(const string& exemptionAppIds, string& errorReason)
     {
+        LOGINFO("Entered ClearAll Implementation");
         Core::hresult status = Core::ERROR_GENERAL;
         JsonObject parameters;
-        LOGINFO("Entered ClearAll Implementation");
-        status = RequestHandler::getInstance()->ClearAll(exemptionAppIds, errorReason);
+        RequestHandler& handler = RequestHandler::getInstance();
+
+        if (Core::ERROR_NONE != (status = handler.ClearAll(exemptionAppIds, errorReason)))
+        {
+            LOGERR("Failed to clear all storage status %u, Error: %s", status, errorReason.c_str());
+        }
+        else
+        {
+            LOGINFO("Cleared all storage successfully, except for exempted app ids %s", exemptionAppIds.c_str());
+        }
         return status;
     }
 } /* namespace Plugin */

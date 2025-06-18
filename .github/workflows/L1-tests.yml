@@ -2,7 +2,7 @@ name: L1-tests
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+    branches: [ main, develop, 'sprint/**', 'release/**', RDKEMW-4928_L1_testing ]
   pull_request:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
 
@@ -114,7 +114,7 @@ jobs:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
           ref: RDKEMW-4928_L1_testing
-          #token: ${{ secrets.RDKCM_RDKE }}
+          token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
         uses: actions/checkout@v3
