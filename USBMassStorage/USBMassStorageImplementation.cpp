@@ -65,6 +65,9 @@ namespace Plugin {
             if (_remoteUSBDeviceObject != nullptr)
             {
                 registerEventHandlers();
+
+		/* Getting USB Device list and mounting available USB devices */
+                MountDevicesOnBootUp();
             }
             else
             {
