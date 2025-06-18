@@ -65,6 +65,9 @@ namespace Plugin {
             if (_remoteUSBDeviceObject != nullptr)
             {
                 registerEventHandlers();
+
+                /* Getting USB Device list and mounting available USB devices */
+                MountDevicesOnBootUp();
             }
             else
             {
@@ -202,15 +205,11 @@ namespace Plugin {
             {
                 string partition = "/dev/" + line.substr(line.find_last_of(' ') + 1); 
                 LOGINFO("Device path [%s], partition [%s]", storageDeviceInfo.devicePath.c_str(),partition.c_str());
-                if (storageDeviceInfo.devicePath != partition)
-                {
-                    LOGINFO("partition [%s] to be mounted", partition.c_str());
-                    partitions.push_back(partition);
-                }
+                partitions.push_back(partition);
             }
         }
         num_partitions = partitions.size();
-        LOGINFO("Device path[%s] Device Name[%s] num_partitions [%zd]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str(),num_partitions);
+        LOGINFO("Device path[%s] Device Name[%s] num_partitions [%zd]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str(),num_partitions-1);
 
         if (!directoryExists(MEDIA_PATH))
         {
@@ -226,6 +225,12 @@ namespace Plugin {
             string mountPoint;
             Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo = {};
             int index = 1;
+
+            /* Skipping the mount path creation for partitions[0], as this is always device path(/dev/sdx). If there
+            is only one partition then we are creating the mount path on the device path (partitions[0]). */
+            if((num_partitions > 1) && (i == 0))
+            continue;
+
             while (directoryExists(MOUNT_PATH + std::to_string(index)))
             {
                 ++index;
