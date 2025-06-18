@@ -1130,3 +1130,4 @@ TEST_F(USBMassStorageTest, USBMassStorage_Succeed_MountPoints)
     usbDeviceList.clear();
 
 }
+

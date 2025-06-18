@@ -20,17 +20,18 @@
 #pragma once
 
 #include "Module.h"
-#include "UtilsLogging.h"
-#include <interfaces/IStore2.h>
-#include <interfaces/IStoreCache.h>
-#include <interfaces/json/JsonData_PersistentStore.h>
+#include <interfaces/json/JSharedStorage.h>
+#include <interfaces/IConfiguration.h>
+#include <interfaces/json/JSharedStorageInspector.h>
+#include <interfaces/json/JSharedStorageLimit.h>
+#include <interfaces/json/JSharedStorageCache.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     class SharedStorage : public PluginHost::IPlugin, public PluginHost::JSONRPC {
     private:
-        class Store2Notification : public Exchange::IStore2::INotification {
+        class Store2Notification : public Exchange::ISharedStorage::INotification {
         private:
             Store2Notification(const Store2Notification&) = delete;
             Store2Notification& operator=(const Store2Notification&) = delete;
@@ -43,37 +44,81 @@ namespace Plugin {
             ~Store2Notification() override = default;
 
         public:
-            void ValueChanged(const Exchange::IStore2::ScopeType scope, const string& ns, const string& key, const string& value) override
+            void OnValueChanged(const Exchange::ISharedStorage::ScopeType scope, const string& ns, const string& key, const string& value) override
             {
-                //TRACE(Trace::Information, (_T("ValueChanged event")));
-                JsonData::PersistentStore::SetValueParamsData params;
-                params.Scope = JsonData::PersistentStore::ScopeType(scope);
-                params.Namespace = ns;
-                params.Key = key;
-                params.Value = value;
-
-                _parent.event_onValueChanged(params);
+		SYSLOG(Logging::Startup, (_T("SharedStorage OnValueChanged")));
+                Exchange::JSharedStorage::Event::OnValueChanged(_parent, scope, ns, key, value);
             }
 
             BEGIN_INTERFACE_MAP(Store2Notification)
-            INTERFACE_ENTRY(Exchange::IStore2::INotification)
+            INTERFACE_ENTRY(Exchange::ISharedStorage::INotification)
             END_INTERFACE_MAP
 
         private:
             SharedStorage& _parent;
         };
 
+        class RemoteConnectionNotification : public RPC::IRemoteConnection::INotification {
+        private:
+            RemoteConnectionNotification() = delete;
+            RemoteConnectionNotification(const RemoteConnectionNotification&) = delete;
+            RemoteConnectionNotification& operator=(const RemoteConnectionNotification&) = delete;
+
+        public:
+            explicit RemoteConnectionNotification(SharedStorage& parent)
+                : _parent(parent)
+            {
+            }
+            ~RemoteConnectionNotification() override = default;
+
+            BEGIN_INTERFACE_MAP(RemoteConnectionNotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            END_INTERFACE_MAP
+
+            void Activated(RPC::IRemoteConnection*) override
+            {
+            }
+            void Deactivated(RPC::IRemoteConnection* connection) override
+            {
+                if (connection->Id() == _parent._connectionId) {
+                    ASSERT(_parent._service != nullptr);
+                    Core::IWorkerPool::Instance().Schedule(
+                        Core::Time::Now(),
+                        PluginHost::IShell::Job::Create(
+                            _parent._service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+                }
+            }
+
+        private:
+            SharedStorage& _parent;
+        };
+
     private:
-        SharedStorage(const SharedStorage&) = delete;
-        SharedStorage& operator=(const SharedStorage&) = delete;
+    SharedStorage(const SharedStorage&) = delete;
+    SharedStorage& operator=(const SharedStorage&) = delete;
 
     public:
-        SharedStorage();
-        ~SharedStorage() override;
+    SharedStorage()
+            : PluginHost::JSONRPC()
+            , _service(nullptr)
+            , _connectionId(0)
+            , _store2(nullptr)
+            , _store2Sink(*this)
+            , _notification(*this)
+            , _storeInspector(nullptr)
+            , _storeLimit(nullptr)
+            , _storeCache(nullptr)
+        {
+        }
+        ~SharedStorage() override = default;
 
         BEGIN_INTERFACE_MAP(SharedStorage)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_AGGREGATE(Exchange::ISharedStorage, _store2)
+        INTERFACE_AGGREGATE(Exchange::ISharedStorageInspector, _storeInspector)
+        INTERFACE_AGGREGATE(Exchange::ISharedStorageLimit, _storeLimit)
+        INTERFACE_AGGREGATE(Exchange::ISharedStorageCache, _storeCache)
         END_INTERFACE_MAP
 
     public:
@@ -82,37 +127,15 @@ namespace Plugin {
         string Information() const override;
 
     private:
-        void RegisterAll();
-        void UnregisterAll();
-
-        uint32_t endpoint_setValue(const JsonData::PersistentStore::SetValueParamsData& params, JsonData::PersistentStore::DeleteKeyResultInfo& response);
-        uint32_t endpoint_getValue(const JsonData::PersistentStore::DeleteKeyParamsInfo& params, JsonData::PersistentStore::GetValueResultData& response);
-        uint32_t endpoint_deleteKey(const JsonData::PersistentStore::DeleteKeyParamsInfo& params, JsonData::PersistentStore::DeleteKeyResultInfo& response);
-        uint32_t endpoint_deleteNamespace(const JsonData::PersistentStore::DeleteNamespaceParamsInfo& params, JsonData::PersistentStore::DeleteKeyResultInfo& response);
-        uint32_t endpoint_getKeys(const JsonData::PersistentStore::DeleteNamespaceParamsInfo& params, JsonData::PersistentStore::GetKeysResultData& response);
-        uint32_t endpoint_getNamespaces(const JsonData::PersistentStore::GetNamespacesParamsInfo& params, JsonData::PersistentStore::GetNamespacesResultData& response);
-        uint32_t endpoint_getStorageSize(const JsonData::PersistentStore::GetNamespacesParamsInfo& params, JsonObject& response); // Deprecated
-        uint32_t endpoint_getStorageSizes(const JsonData::PersistentStore::GetNamespacesParamsInfo& params, JsonData::PersistentStore::GetStorageSizesResultData& response);
-        uint32_t endpoint_flushCache(JsonData::PersistentStore::DeleteKeyResultInfo& response);
-        uint32_t endpoint_getNamespaceStorageLimit(const JsonData::PersistentStore::DeleteNamespaceParamsInfo& params, JsonData::PersistentStore::GetNamespaceStorageLimitResultData& response);
-        uint32_t endpoint_setNamespaceStorageLimit(const JsonData::PersistentStore::SetNamespaceStorageLimitParamsData& params);
-
-        void event_onValueChanged(const JsonData::PersistentStore::SetValueParamsData& params)
-        {
-            Notify(_T("onValueChanged"), params);
-        }
-        Exchange::IStore2* getRemoteStoreObject(JsonData::PersistentStore::ScopeType eScope);
-
-    private:
-        PluginHost::IShell* _service{};
-        Exchange::IStore2* _psObject;
-        Exchange::IStoreCache* _psCache;
-        Exchange::IStoreInspector* _psInspector;
-        Exchange::IStoreLimit* _psLimit;
-        Exchange::IStore2* _csObject;
-        Core::Sink<Store2Notification> _storeNotification;
-        PluginHost::IPlugin *m_PersistentStoreRef;
-        PluginHost::IPlugin *m_CloudStoreRef;
+        PluginHost::IShell* _service;
+        uint32_t _connectionId;
+        Exchange::ISharedStorage* _store2;
+        Core::Sink<Store2Notification> _store2Sink;
+        Core::Sink<RemoteConnectionNotification> _notification;
+        Exchange::IConfiguration* configure;
+        Exchange::ISharedStorageInspector* _storeInspector;
+        Exchange::ISharedStorageLimit* _storeLimit;
+        Exchange::ISharedStorageCache* _storeCache;
     };
 
 } // namespace Plugin

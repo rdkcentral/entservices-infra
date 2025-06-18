@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2024 RDK Management
+# Copyright 2022 RDK Management
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,29 +18,44 @@
 cmake_minimum_required(VERSION 3.14)
 
 set(PLUGIN_NAME SharedStorage)
-find_package(WPEFramework)
+find_package(WPEFramework NAMES WPEFramework Thunder)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
-
-set(PLUGIN_SHAREDSTORAGE_AUTOSTART "true" CACHE STRING "Automatically start SharedStorage plugin")
-set(PLUGIN_SHAREDSTORAGE_STARTUPORDER "51" CACHE STRING "To configure startup order of SharedStorage plugin")
 
 set(CMAKE_CXX_STANDARD 11)
 
+set(PLUGIN_SHAREDSTORAGE_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
+set(PLUGIN_SHAREDSTORAGE_STARTUPORDER "51" CACHE STRING "To configure startup order of the plugin")
+
 add_library(${MODULE_NAME} SHARED
         SharedStorage.cpp
-        SharedStorageJsonRpc.cpp
         Module.cpp
 )
 
+include_directories(
+        ../helpers)
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-target_include_directories(${MODULE_NAME} PRIVATE ../helpers)
 target_link_libraries(${MODULE_NAME} PRIVATE
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
 )
 
 install(TARGETS ${MODULE_NAME}
+        DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
+add_library(${PLUGIN_IMPLEMENTATION} SHARED
+        Module.cpp
+        SharedStorageImplementation.cpp
+)
+
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+)
+
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

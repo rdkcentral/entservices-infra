@@ -75,6 +75,14 @@ jobs:
           path: Thunder
           ref: ${{env.THUNDER_REF}}
 
+      - name: Checkout googletest
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v3
+        with:
+          repository: google/googletest
+          path: googletest
+          ref: v1.15.0
+
       - name: Checkout ThunderTools
         uses: actions/checkout@v3
         with:
@@ -272,6 +280,22 @@ jobs:
           &&
           cmake --install build/mocks
 
+      - name: Build googletest
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: >
+          cmake -G Ninja
+          -S "$GITHUB_WORKSPACE/googletest"
+          -B build/googletest
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DBUILD_TYPE=Debug
+          -DBUILD_GMOCK=ON
+          &&
+          cmake --build build/googletest -j8
+          &&
+          cmake --install build/googletest
+
       - name: Build entservices-infra
         run: >
           cmake
@@ -299,6 +323,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices/proc
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/libusb
+          -I $GITHUB_WORKSPACE/install/usr/include
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -398,6 +423,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices/proc
           -I $GITHUB_WORKSPACE/entservices-deviceanddisplay/helpers
+          -I $GITHUB_WORKSPACE/install/usr/include
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -417,6 +443,7 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvTypes.h
           -Werror -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format=
+          -Wl,--no-as-needed
           -DUSE_IARMBUS
           -DRDK_SERVICE_L2_TEST
           -DDISABLE_SECURITY_TOKEN
@@ -583,6 +610,9 @@ jobs:
           '*/Tests/headers/*'
           '*/Tests/mocks/*'
           '*/Tests/L2Tests/*'
+          '*/googlemock/*'
+          '*/googletest/*'
+          '*/sqlite/*'
           -o filtered_coverage.info
           &&
           genhtml
