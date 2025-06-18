@@ -157,7 +157,7 @@ TEST_F(StorageManagerTest, CreateStorage_Failure){
     std::string path = " ";
     std::string errorReason = "";
     EXPECT_EQ(Core::ERROR_GENERAL, interface->CreateStorage(appId, size, path, errorReason));
-    TEST_LOG("CreateStorage_Failure errorReason = %s",errorReason);
+    TEST_LOG("CreateStorage_Failure errorReason = %s",errorReason.c_str());
 
 }
 
@@ -203,7 +203,7 @@ TEST_F(StorageManagerTest, CreateStorageSizeExceeded_Failure){
         return Core::ERROR_NONE;
     }));
     EXPECT_EQ(Core::ERROR_GENERAL, interface->CreateStorage(appId, size, path, errorReason));
-    TEST_LOG("CreateStorageSizeExceeded_Failure errorReason = %s",errorReason);
+    TEST_LOG("CreateStorageSizeExceeded_Failure errorReason = %s",errorReason.c_str());
 }
 
 //Test for CreateStorage
@@ -221,7 +221,7 @@ TEST_F(StorageManagerTest, CreateStoragemkdirFail_Failure){
         });
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->CreateStorage(appId, size, path, errorReason));
-    TEST_LOG("CreateStoragemkdirFail_Failure errorReason = %s",errorReason);
+    TEST_LOG("CreateStoragemkdirFail_Failure errorReason = %s",errorReason.c_str());
 
 }
 
@@ -278,6 +278,7 @@ TEST_F(StorageManagerTest, CreateStorage_PathDoesNotExists_Success){
     }));
 
     EXPECT_EQ(Core::ERROR_NONE, interface->CreateStorage(appId, size, path, errorReason));
+
 
 }
 
@@ -418,7 +419,6 @@ TEST_F(StorageManagerTest, GetStorage_Success){
     
     EXPECT_EQ(Core::ERROR_NONE, interface->CreateStorage(appId, size, path, errorReason));
     EXPECT_EQ(Core::ERROR_NONE, interface->GetStorage(appId, userId, groupId, path, size, used));
-    TEST_LOG("GetStorage_Success errorReason = %s",errorReason);
 }
 
 //DeleteStorage
@@ -428,7 +428,7 @@ TEST_F(StorageManagerTest, DeleteStorage_Failure){
     std::string errorReason = "";
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->DeleteStorage(appId, errorReason));
-    TEST_LOG("DeleteStorage_Failure errorReason = %s",errorReason);
+    TEST_LOG("DeleteStorage_Failure errorReason = %s",errorReason.c_str());
 }
 
 // Test for DeleteStorage
@@ -491,7 +491,7 @@ TEST_F(StorageManagerTest, test_clear_failure_json){
     std::string errorReason = "";
 
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("clear"), _T("{\"appId\":\"\"}"), response));
-    TEST_LOG("Clear_Failure errorReason = %s",errorReason);
+    TEST_LOG("Clear_Failure errorReason = %s",errorReason.c_str());
 }
 
 TEST_F(StorageManagerTest, test_clear_success_json){

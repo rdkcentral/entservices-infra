@@ -19,6 +19,7 @@
 
 
 #include "StorageManager.h"
+#include "UtilsLogging.h"
 
 const string WPEFramework::Plugin::StorageManager::SERVICE_NAME = "org.rdk.StorageManager";
 
@@ -113,47 +114,94 @@ namespace WPEFramework
         return message;
     }
 
+    // void StorageManager::Deinitialize(PluginHost::IShell* service)
+    // {
+    //     ASSERT(mCurrentService == service);
+
+    //     SYSLOG(Logging::Shutdown, (string(_T("StorageManager::veeksha Deinitialize"))));
+
+    //     if (nullptr != mStorageManagerImpl)
+    //     {
+    //         Exchange::JStorageManager::Unregister(*this);
+    //         SYSLOG(Logging::Shutdown, (string(_T("StorageManager de-initialising..."))));
+    //         // Stop processing:
+    //         RPC::IRemoteConnection* connection = service->RemoteConnection(mConnectionId);
+    //         VARIABLE_IS_NOT_USED uint32_t result = mStorageManagerImpl->Release();
+
+    //         if (result != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+    //             //Add commentMore actions
+    //             LOGINFO("StorageManager Plugin is not properly destructed result = %d", result);
+    //             SYSLOG(Logging::Shutdown, (_T("StorageManager Plugin is not properly destructed.")));
+    //         }
+
+    //         mStorageManagerImpl = nullptr;
+    //         // It should have been the last reference we are releasing,
+    //         // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+    //         // are leaking...
+    //         ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+    //         // If this was running in a (container) process...
+    //         if (nullptr != connection)
+    //         {
+    //            // Lets trigger the cleanup sequence for
+    //            // out-of-process code. Which will guard
+    //            // that unwilling processes, get shot if
+    //            // not stopped friendly :-)
+    //            connection->Terminate();
+    //            connection->Release();
+    //         }
+    //     }
+
+    //     mConnectionId = 0;
+    //     mCurrentService->Release();
+    //     mCurrentService = nullptr;
+    //     SYSLOG(Logging::Shutdown, (string(_T("StorageManager de-initialised"))));
+    // }
+
     void StorageManager::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(mCurrentService == service);
-
         SYSLOG(Logging::Shutdown, (string(_T("StorageManager::Deinitialize"))));
 
         if (nullptr != mStorageManagerImpl)
         {
             Exchange::JStorageManager::Unregister(*this);
-
-            // Stop processing:
-            RPC::IRemoteConnection* connection = service->RemoteConnection(mConnectionId);
-            //VARIABLE_IS_NOT_USED uint32_t result = mStorageManagerImpl->Release();
-            if (mStorageManagerImpl->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-                SYSLOG(Logging::Shutdown, (_T("StorageManager Plugin is not properly destructed.")));
+            if (mConfigure != nullptr) {
+                mConfigure->Release();
+                mConfigure = nullptr;
+                SYSLOG(Logging::Shutdown, (_T("Released config interface")));
             }
 
+            uint32_t result = mStorageManagerImpl->Release();
+            if (result == Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                SYSLOG(Logging::Shutdown, (_T("Core object destroyed successfully")));
+            }
+            else
+            {
+                SYSLOG(Logging::Shutdown, (_T("Reference count not zero (%d). Forcing cleanup."), result));
+                while (mStorageManagerImpl->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED)
+                {
+                    SYSLOG(Logging::Shutdown, (_T("Releasing additional reference")));
+                }
+                SYSLOG(Logging::Shutdown, (_T("All references released")));
+            }
+            
             mStorageManagerImpl = nullptr;
 
-            // It should have been the last reference we are releasing,
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            //ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-            // If this was running in a (container) process...
-            if (nullptr != connection)
-            {
-               // Lets trigger the cleanup sequence for
-               // out-of-process code. Which will guard
-               // that unwilling processes, get shot if
-               // not stopped friendly :-)
-               connection->Terminate();
-               connection->Release();
+            RPC::IRemoteConnection* connection = service->RemoteConnection(mConnectionId);
+            if (connection) {
+                connection->Terminate();
+                connection->Release();
             }
         }
 
         mConnectionId = 0;
-        mCurrentService->Release();
-        mCurrentService = nullptr;
-        SYSLOG(Logging::Shutdown, (string(_T("StorageManager de-initialised"))));
-    }
+        if (mCurrentService) {
+            mCurrentService->Release();
+            mCurrentService = nullptr;
+        }
+        SYSLOG(Logging::Shutdown, (string(_T("StorageManager deinitialized"))));
+}
 
     string StorageManager::Information() const
     {
