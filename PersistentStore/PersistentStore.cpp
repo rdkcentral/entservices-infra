@@ -105,6 +105,8 @@ namespace Plugin {
             result = _T("Couldn't create implementation instance");
         }
 
+        SYSLOG(Logging::Startup, (_T("PersistentStore::Initialize: Return=%s"), result.c_str()));
+
         return result;
     }
 
