@@ -507,63 +507,54 @@ namespace WPEFramework
             dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, data);
 	}
 
-	void LifecycleManagerImplementation::handleRuntimeManagerEvent(const JsonObject &data)
-	{
+        void LifecycleManagerImplementation::handleRuntimeManagerEvent(const JsonObject &data)
+        {
             string eventName = data["name"];
-	    if (eventName.compare("onTerminated") == 0)
-	    {
-                printf("Received onterminated event from runtime manager \n");
-		fflush(stdout);
+            if (eventName.compare("onTerminated") == 0)
+            {
+                LOGINFO("Received onterminated event from runtime manager");
                 string appInstanceId = data["appInstanceId"];
                 ApplicationContext* context = getContext(appInstanceId, "");
                 if (nullptr == context)
                 {
-		    printf("Received termination event for app which is not available\n");
-	            fflush(stdout);	    
+                    LOGERR("Received termination event for app which is not available");
                 }
                 else
-		{
-                    string errorReason("");
-                    bool success = RequestHandler::getInstance()->updateState(context, Exchange::ILifecycleManager::LifecycleState::TERMINATING, errorReason);
-                    if (!success || !(errorReason.empty()))
-                    {
-		        printf("Received error during app[%s] state change error[%s]\n", appInstanceId.c_str(), errorReason.c_str());
-	                fflush(stdout);
-                    }
-                }            
-	    }
-	    else if (eventName.compare("onStateChanged") == 0)
-	    {
+                {
+                    LOGINFO("Received state change event for app Onterminated event ");
+                    sem_post(&context->mAppTerminatingSemaphore);
+                }
+            }
+            else if (eventName.compare("onStateChanged") == 0)
+            {
                 string appInstanceId = data["appInstanceId"];
                 uint32_t runtimeState = data["state"].Number();
                 if (Exchange::IRuntimeManager::RuntimeState::RUNTIME_STATE_RUNNING == runtimeState)
-		{
+                {
                     ApplicationContext* context = getContext(appInstanceId, "");
                     if (nullptr == context)
                     {
-		        printf("Received state change event for app which is not available\n");
-	                fflush(stdout);	    
+                        LOGERR("Received state change event for app which is not available");
                     }
                     else
-		    {
+                    {
+                        LOGINFO("Received state change event for app which is available ie running");
                         sem_post(&context->mAppRunningSemaphore);
-		    }
+                    }
                 }
             }
-        else if (eventName.compare("onFailure") == 0)
-        {
-            string appInstanceId = data["appInstanceId"];
-            string errorCode = data["errorCode"];
-            printf("Received container failure event from runtime manager for app[%s] error[%s]\n", appInstanceId.c_str(), errorCode.c_str());
-            fflush(stdout);
+            else if (eventName.compare("onFailure") == 0)
+            {
+                string appInstanceId = data["appInstanceId"];
+                string errorCode = data["errorCode"];
+                LOGINFO("Received container failure event from runtime manager for app[%s] error[%s]", appInstanceId.c_str(), errorCode.c_str());
+            }
+            else if (eventName.compare("onStarted") == 0)
+            {
+                string appInstanceId = data["appInstanceId"];
+                LOGINFO("Received container started event from runtime manager for app[%s]", appInstanceId.c_str());
+            }
         }
-        else if (eventName.compare("onStarted") == 0)
-        {
-            string appInstanceId = data["appInstanceId"];
-            printf("Received container started event from runtime manager for app[%s]\n", appInstanceId.c_str());
-            fflush(stdout);
-        }
-	}
 
 	void LifecycleManagerImplementation::handleStateChangeEvent(const JsonObject &data)
     {

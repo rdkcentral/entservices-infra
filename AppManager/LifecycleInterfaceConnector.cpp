@@ -739,8 +739,8 @@ End:
                     result = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
                     break;
                 case Exchange::ILifecycleManager::LifecycleState::TERMINATING:
-                    LOGINFO("TERMINATED state %u", state);
-                    result = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATED;
+                    LOGINFO("TERMINATING state %u", state);
+                    result = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                     break;
                 case Exchange::ILifecycleManager::LifecycleState::HIBERNATED:
                     LOGINFO("HIBERNATED state %u", state);
