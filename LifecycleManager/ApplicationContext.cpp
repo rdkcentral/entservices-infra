@@ -24,7 +24,7 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-	ApplicationLaunchParams::ApplicationLaunchParams(): mAppId(""), mAppPath(""), mAppConfig(""), mRuntimeAppId(""), mRuntimePath(""), mRuntimeConfig(""), mLaunchIntent(""), mEnvironmentVars(""), mEnableDebugger(false), mLaunchArgs(""), mTargetState(Exchange::ILifecycleManager::LifecycleState::UNLOADED), mRuntimeConfigObject()
+	ApplicationLaunchParams::ApplicationLaunchParams(): mAppId(""), mLaunchIntent(""), mLaunchArgs(""), mTargetState(Exchange::ILifecycleManager::LifecycleState::UNLOADED), mRuntimeConfigObject()
         {
 	}
 
@@ -87,17 +87,10 @@ namespace WPEFramework
             mStateChangeId = id;		
 	}
 
-        void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject)
+        void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& launchIntent, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject)
 	{
             mLaunchParams.mAppId = appId;
-            mLaunchParams.mAppPath = appPath;
-            mLaunchParams.mAppConfig = appConfig;
-            mLaunchParams.mRuntimeAppId = runtimeAppId;
-            mLaunchParams.mRuntimePath = runtimePath;
-            mLaunchParams.mRuntimeConfig = runtimeConfig;
             mLaunchParams.mLaunchIntent = launchIntent;
-            mLaunchParams.mEnvironmentVars = environmentVars;
-            mLaunchParams.mEnableDebugger = enableDebugger;
             mLaunchParams.mLaunchArgs = launchArgs;
             mLaunchParams.mTargetState = targetState;
             mLaunchParams.mRuntimeConfigObject = runtimeConfigObject;

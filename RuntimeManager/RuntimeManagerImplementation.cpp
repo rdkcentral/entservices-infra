@@ -446,7 +446,7 @@ err_ret:
             }
             return containerId;
         }
-        Core::hresult RuntimeManagerImplementation::Run(const string& appId, const string& appInstanceId, const string& appPath, const string& runtimePath, IStringIterator* const& envVars, const uint32_t userId, const uint32_t groupId, IValueIterator* const& ports, IStringIterator* const& paths, IStringIterator* const& debugSettings, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject)
+        Core::hresult RuntimeManagerImplementation::Run(const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, IValueIterator* const& ports, IStringIterator* const& paths, IStringIterator* const& debugSettings, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject)
         {
             Core::hresult status = Core::ERROR_GENERAL;
             RuntimeAppInfo runtimeAppInfo;
@@ -510,9 +510,9 @@ err_ret:
 
             LOGINFO("ApplicationConfiguration populated for InstanceId: %s", appInstanceId.c_str());
 
-            if (!envVars)
+            if (runtimeConfigObject.envVariables.empty())
             {
-                LOGERR("envVars is null inside Run()");
+                LOGERR("envVariables is empty inside Run()");
             }
 
             if (!appId.empty())
@@ -597,8 +597,6 @@ err_ret:
                                 runtimeAppInfo.appId = std::move(appId);
                             }
                             runtimeAppInfo.appInstanceId = std::move(appInstanceId);
-                            runtimeAppInfo.appPath = std::move(appPath);
-                            runtimeAppInfo.runtimePath = std::move(runtimePath);
                             runtimeAppInfo.descriptor = std::move(descriptor);
                             runtimeAppInfo.containerState = Exchange::IRuntimeManager::RUNTIME_STATE_STARTING;
 

@@ -53,7 +53,7 @@ namespace WPEFramework
 	    {
                 ApplicationContext* context = getContext();
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
-                ret = runtimeManagerHandler->run(context->getAppId(), context->getAppInstanceId(), launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, launchParams.mLaunchArgs, launchParams.mTargetState, launchParams.mRuntimeConfigObject, errorReason);
+                ret = runtimeManagerHandler->run(context->getAppId(), context->getAppInstanceId(), launchParams.mLaunchArgs, launchParams.mTargetState, launchParams.mRuntimeConfigObject, errorReason);
                 printf("MADANA APPLICATION RUN RETURNS [%d] \n", ret);
 		fflush(stdout);
                 ret = true;

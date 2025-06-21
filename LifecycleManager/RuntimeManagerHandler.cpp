@@ -82,11 +82,10 @@ bool RuntimeManagerHandler::getRuntimeStats(const string& appInstanceId, string&
     return true;
 }
 
-bool RuntimeManagerHandler::run(const string& appId, const string& appInstanceId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& environmentVars, const bool enableDebugger, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, string& errorReason)
+bool RuntimeManagerHandler::run(const string& appId, const string& appInstanceId, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, string& errorReason)
 {
-    JsonArray environmentVarsArray, debugSettingsArray, pathsArray, portsArray;
+    JsonArray debugSettingsArray, pathsArray, portsArray;
     // read data from parameters
-    environmentVarsArray.FromString(environmentVars);
     // QUESTION HOW TO GET OTHER PARAMS ports, paths, debugsettings?
     // convert launchArgs to meaningful environment variables when launching a container
 
@@ -97,27 +96,20 @@ bool RuntimeManagerHandler::run(const string& appId, const string& appInstanceId
     runtimeConfigObject.dialId = appId;
 
     uint32_t userId = 0, groupId = 0;
-    std::list<string> environmentVarsList, debugSettingsList, pathsList;
+    std::list<string> debugSettingsList, pathsList;
     std::list<uint32_t> portsList;
     JsonArray envNewArray;
 
     portsList.push_back(mFireboltAccessPort);
 
-    for (unsigned int i=0; i<environmentVarsArray.Length(); i++)
-    {
-        environmentVarsList.push_back(environmentVarsArray[i].String());
-        envNewArray.Add(environmentVarsArray[i].String());
-    }
     std::stringstream ss;
     ss << "FIREBOLT_ENDPOINT=http://127.0.0.1:" << mFireboltAccessPort << "?session=" << appInstanceId;
     string fireboltEndPoint(ss.str());
-    environmentVarsList.push_back(fireboltEndPoint);
     envNewArray.Add(fireboltEndPoint);
 
     std::stringstream targetAppStateEnvironmentString;
     targetAppStateEnvironmentString << "TARGET_STATE=" << (uint32_t)targetState;
     string targetAppState(targetAppStateEnvironmentString.str());
-    environmentVarsList.push_back(targetAppState);
     envNewArray.Add(targetAppState);
 
     JsonArray envInputArray, envResultArray;
@@ -133,17 +125,15 @@ bool RuntimeManagerHandler::run(const string& appId, const string& appInstanceId
     envResultArray.ToString(runtimeConfigObject.envVariables);
 
     // prepare arguments to pass
-    RPC::IStringIterator* environmentVarsIterator{};
     RPC::IStringIterator* debugSettingsIterator{};
     RPC::IStringIterator* pathsIterator{};
     RPC::IValueIterator* portsIterator{};
 
-    environmentVarsIterator = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(environmentVarsList);
     debugSettingsIterator = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(debugSettingsList);
     pathsIterator = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(pathsList);
     portsIterator = Core::Service<RPC::ValueIterator>::Create<RPC::IValueIterator>(portsList);
 
-    Core::hresult result = mRuntimeManager->Run(appId, appInstanceId, appPath, runtimePath, environmentVarsIterator, userId, groupId, portsIterator, pathsIterator, debugSettingsIterator, runtimeConfigObject);
+    Core::hresult result = mRuntimeManager->Run(appId, appInstanceId, userId, groupId, portsIterator, pathsIterator, debugSettingsIterator, runtimeConfigObject);
     if (Core::ERROR_NONE != result)
     {
         errorReason = "unable to start running application";
