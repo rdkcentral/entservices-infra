@@ -21,6 +21,7 @@
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <sstream>
+#include <interfaces/IRuntimeManager.h>
 
 #define SEND_EVENT_TO_RUNTIME_MANAGER(eventMethod, name, data) \
     if ((_parent.mEventHandler) != nullptr)                 \
@@ -119,11 +120,42 @@ namespace WPEFramework {
 
         void DobbyEventListener::OCIContainerNotification::OnContainerStateChanged(const string& containerId, Exchange::IOCIContainer::ContainerState state)
         {
-            // LOGINFO("Container state changed: %s", containerId.c_str());
+            Exchange::IRuntimeManager::RuntimeState runtimeState;
+            switch(state)
+            {
+                case Exchange::IOCIContainer::ContainerState::STARTING:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_STARTING;
+                    break;
+                case Exchange::IOCIContainer::ContainerState::RUNNING:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_RUNNING;
+                    break;
+                case Exchange::IOCIContainer::ContainerState::STOPPING:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_TERMINATING;
+                    break;
+                case Exchange::IOCIContainer::ContainerState::PAUSED:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_SUSPENDED;
+                    break;
+                case Exchange::IOCIContainer::ContainerState::STOPPED:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_TERMINATED;
+                    break;
+                case Exchange::IOCIContainer::ContainerState::HIBERNATING:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_HIBERNATING;
+                    break;
+                case Exchange::IOCIContainer::ContainerState::HIBERNATED:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_HIBERNATED;
+                    break;
+                case Exchange::IOCIContainer::ContainerState::AWAKENING:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_WAKING;
+                    break;
+                default:
+                    runtimeState = Exchange::IRuntimeManager::RUNTIME_STATE_UNKNOWN;
+                    break;
+            }
             JsonObject data;
             data["containerId"] = containerId;
-            data["state"] = static_cast<int>(state);
+            data["state"] = static_cast<int>(runtimeState);
             data["eventName"] = "onContainerStateChanged";
+            LOGINFO("Container state changed: %s state: %d runtimeState: %d", containerId.c_str(), static_cast<int>(state), static_cast<int>(runtimeState));
             SEND_EVENT_TO_RUNTIME_MANAGER(onOCIContainerStateChangedEvent, containerId, data);
         }
 
