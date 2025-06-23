@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
   pull_request:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+    branches: [ main, develop, 'sprint/**', 'release/**' , rdkwm2804_workflow]
 
 env:
   BUILD_TYPE: Debug
@@ -113,7 +113,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: rdkwm2804_workflow
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
@@ -463,6 +463,7 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_STORAGE_MANAGER=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -540,6 +541,7 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_STORAGE_MANAGER=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
