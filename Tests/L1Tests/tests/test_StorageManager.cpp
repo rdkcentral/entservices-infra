@@ -171,15 +171,18 @@ TEST_F(StorageManagerTest, CreateStorageSizeExceeded_Failure){
     // mock the mkdir function to always return success
     EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
         .WillRepeatedly([](const char* path, mode_t mode) {
+            TEST_LOG("VEEKSHA mkdir called with path: %s", path);
             return 0;
     });
     ON_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, int mode) {
+            TEST_LOG("VEEKSHA access called with path: %s", path);
             // Simulate file exists
             return 0;
     });
     EXPECT_CALL(*p_wrapsImplMock, nftw(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly([](const char* dirpath, int (*fn)(const char*, const struct stat*, int, struct FTW*), int nopenfd, int flags) {
+            TEST_LOG("VEEKSHA nftw called with dirpath: %s", dirpath);
             // Simulate success
             return 0;
     });
@@ -595,8 +598,8 @@ TEST_F(StorageManagerTest, test_clearall_failure_json){
         return Core::ERROR_NONE;
     }));
 
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* pathname) {
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Invoke([](const char* pathname) {
         TEST_LOG("VEEKSHA opendir called with pathname: %s", pathname);
         // Simulate success
         return reinterpret_cast<DIR*>(0xDEADBEEF); // Simulated DIR* pointer

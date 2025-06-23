@@ -40,7 +40,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         StorageManager.cpp
-		RequestHandler.cpp
         Module.cpp
 )
 
@@ -61,6 +60,7 @@ install(TARGETS ${MODULE_NAME}
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
     StorageManagerImplementation.cpp
+	RequestHandler.cpp
     Module.cpp)
 
 include_directories(../helpers)
