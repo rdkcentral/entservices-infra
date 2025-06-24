@@ -118,7 +118,11 @@ namespace WPEFramework
         ASSERT(mCurrentService == service);
 
         SYSLOG(Logging::Shutdown, (string(_T("StorageManager::Deinitialize"))));
-
+        if (mConfigure != nullptr)
+        {
+            mConfigure->Release();
+            mConfigure = nullptr;
+        }
         if (nullptr != mStorageManagerImpl)
         {
             Exchange::JStorageManager::Unregister(*this);
