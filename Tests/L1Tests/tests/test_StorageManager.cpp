@@ -718,7 +718,7 @@ TEST_F(StorageManagerTest, test_clear_nftwFailure_json){
     }));
  
     EXPECT_EQ(Core::ERROR_NONE, interface->CreateStorage("testApp", 1024, path, errorReason));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("clear"), _T("{\"appId\":\"testApp\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("clear"), _T("{\"appId\":\"testApp\"}"), response));
 }
 
 /*
