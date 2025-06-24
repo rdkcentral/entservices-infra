@@ -301,7 +301,7 @@ jobs:
         run: echo "TOOLCHAIN_FILE=$GITHUB_WORKSPACE/entservices-testframework/Tests/clang.cmake" >> $GITHUB_ENV
 
       - name: Set gcc/with-coverage toolchain
-        if: ${{ matrix.compiler == 'gcc' && matrix.coverage == 'with-coverage' && !env.ACT }}
+        if: ${{ matrix.compiler == 'gcc' && matrix.coverage == 'with-coverage' }}
         run: echo "TOOLCHAIN_FILE=$GITHUB_WORKSPACE/entservices-testframework/Tests/gcc-with-coverage.cmake" >> $GITHUB_ENV
 
       - name: Build mocks
@@ -556,6 +556,7 @@ jobs:
           /opt/secure/reboot
           /opt/secure/persistent
           /opt/secure/persistent/System
+          /opt/persistent/storageManager
           /opt/logs
           /lib/rdk
           /run/media/sda1/logs/PreviousLogs

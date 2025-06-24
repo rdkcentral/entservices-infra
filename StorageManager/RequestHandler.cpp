@@ -556,8 +556,8 @@ namespace WPEFramework
                     /* Check if the error is not directory already exists */
                     if (errno != EEXIST)
                     {
-                        errorReason = "Failed to create base storage directory: " + appDir;
-                        LOGERR("Error creating base storage directory %s", appDir.c_str());
+                        errorReason = "Failed to create base storage directory: " + mBaseStoragePath;
+                        LOGERR("Error creating base storage directory %s", mBaseStoragePath.c_str());
                         goto ret_fail;
                     }
                 }
@@ -602,6 +602,7 @@ namespace WPEFramework
                         /* Check if the error is not directory already exists */
                         if (errno != EEXIST)
                         {
+                            LOGERR("Failed to create app storage directory: %s", appDir.c_str());
                             errorReason = "Failed to create app storage directory: " + appDir;
                             LOGERR("Error creating app storage directory %s", appDir.c_str());
                             goto ret_fail;
