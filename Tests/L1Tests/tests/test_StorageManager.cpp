@@ -673,6 +673,55 @@ TEST_F(StorageManagerTest, test_clear_failure_json){
 }
 
 /*
+    test_clear_failure_json checks the failure of the clear methon when nftw fails during deletedirectoryentries
+*/
+
+TEST_F(StorageManagerTest, test_clear_nftwFailure_json){
+    
+    std::string path = "";
+    std::string errorReason = "";
+    // mock the mkdir function to always return success
+    EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+        .WillRepeatedly([](const char* path, mode_t mode) {
+            return 0;
+    });
+    ON_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
+        .WillByDefault([](const char* path, int mode) {
+            // Simulate file exists
+            return 0;
+    });
+    ON_CALL(*p_wrapsImplMock, nftw(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault([](const char* dirpath, int (*fn)(const char*, const struct stat*, int, struct FTW*), int nopenfd, int flags) {
+            // Simulate failure
+            return -1;
+    });
+
+    EXPECT_CALL(*p_wrapsImplMock, statvfs(::testing::_, ::testing::_))
+        .WillRepeatedly([](const char* path, struct statvfs* buf) {
+            // Simulate success
+            buf->f_bsize = 4096; // Block size
+            buf->f_frsize = 4096; // Fragment size
+            buf->f_blocks = 100000; // Total blocks
+            buf->f_bfree = 50000; // Free blocks
+            buf->f_bavail = 50000; // Available blocks
+            return 0;
+    });
+
+    ON_CALL(*mStore2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke([](Exchange::IStore2::ScopeType scope,
+                                        const std::string& appId,
+                                        const std::string& key,
+                                        const std::string& value,
+                                        const uint32_t ttl) -> uint32_t {
+        // Simulate success
+        return Core::ERROR_NONE;
+    }));
+ 
+    EXPECT_EQ(Core::ERROR_NONE, interface->CreateStorage("testApp", 1024, path, errorReason));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("clear"), _T("{\"appId\":\"testApp\"}"), response));
+}
+
+/*
     test_clear_success_json checks the successful execution of the clear method for a given appId.
     It creates a mock environment where the necessary functions like mkdir, access, nftw, statvfs, and SetValue are set up to simulate a successful result.
     It creates a storage for the appId "testApp" with a size of 1024 bytes.
