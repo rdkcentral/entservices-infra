@@ -224,15 +224,15 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("Pausing '%s'", downloadId.c_str());
-        if (mInprogressDowload.get() != nullptr) {
-            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+        if (mInprogressDownload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
                 mHttpClient->pause();
                 LOGDBG("%s paused", downloadId.c_str());
             } else {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
         } else {
-            LOGERR("Pause Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            LOGERR("Pause Failed, mInprogressDownload=%p", mInprogressDownload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -244,15 +244,15 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("Resuming '%s'", downloadId.c_str());
-        if (mInprogressDowload.get() != nullptr) {
-            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+        if (mInprogressDownload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
                 mHttpClient->resume();
                 LOGDBG("%s resumed", downloadId.c_str());
             } else {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
         } else {
-            LOGERR("Resume Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            LOGERR("Resume Failed, mInprogressDownload=%p", mInprogressDownload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -264,16 +264,16 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("Cancelling '%s'", downloadId.c_str());
-        if (mInprogressDowload.get() != nullptr) {
-            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
-                mInprogressDowload->Cancel();
+        if (mInprogressDownload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
+                mInprogressDownload->Cancel();
                 mHttpClient->cancel();
                 LOGDBG("%s cancelled", downloadId.c_str());
             } else {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
         } else {
-            LOGERR("Cancel Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            LOGERR("Cancel Failed, mInprogressDownload=%p", mInprogressDownload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -284,7 +284,7 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if ((mInprogressDowload.get() != nullptr) && (fileLocator.compare(mInprogressDowload->GetFileLocator()) == 0)) {
+        if ((mInprogressDownload.get() != nullptr) && (fileLocator.compare(mInprogressDownload->GetFileLocator()) == 0)) {
             LOGWARN("%s in in progress", fileLocator.c_str());
             result = Core::ERROR_GENERAL;
         } else {
@@ -303,7 +303,7 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if (mInprogressDowload.get() != nullptr) {
+        if (mInprogressDownload.get() != nullptr) {
             percent.percent = mHttpClient->getProgress();
         } else {
             result = Core::ERROR_GENERAL;
@@ -322,14 +322,14 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
         LOGTRACE("'%s' limit=%ld", downloadId.c_str(), limit);
-        if (mInprogressDowload.get() != nullptr) {
-            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+        if (mInprogressDownload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
                 mHttpClient->setRateLimit(limit);
             } else {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
         } else {
-            LOGERR("set RateLimit Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            LOGERR("set RateLimit Failed, mInprogressDownload=%p", mInprogressDownload.get());
             result = Core::ERROR_GENERAL;
         }
         return result;
@@ -761,7 +761,7 @@ namespace Plugin {
                     default: break; /* Do nothing */
                 }
                 NotifyDownloadStatus(di->GetId(), di->GetFileLocator(), reason);
-                mInprogressDowload.reset();
+                mInprogressDownload.reset();
             }
         }
     }
@@ -817,11 +817,11 @@ namespace Plugin {
     {
         std::lock_guard<std::mutex> lock(mMutex);
         LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
-        if (!mDownloadQueue.empty() && mInprogressDowload == nullptr) {
-            mInprogressDowload = mDownloadQueue.front();
+        if (!mDownloadQueue.empty() && mInprogressDownload == nullptr) {
+            mInprogressDownload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
         }
-        return mInprogressDowload;
+        return mInprogressDownload;
     }
 
 } // namespace Plugin
