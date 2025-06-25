@@ -26,6 +26,8 @@
 #include <interfaces/IStore2.h>
 #include <interfaces/IStoreCache.h>
 #include <mutex>
+#include "SecureStorageServerMock.h"
+#include "SecureStorageServiceMock.h"
 
 #define EVNT_TIMEOUT (100)
 #define SHAREDSTORAGE_CALLSIGN _T("org.rdk.SharedStorage.1")
