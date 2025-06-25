@@ -189,11 +189,11 @@ namespace WPEFramework
 */
 
         bool TerminatingState::handle(string& errorReason)
-	{
+        {
             bool success = false;
             RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
-	    if (nullptr != runtimeManagerHandler)
-	    {
+            if (nullptr != runtimeManagerHandler)
+            {
                 ApplicationContext* context = getContext();
                 ApplicationKillParams& killParams = context->getApplicationKillParams();
                 if (killParams.mForce)
@@ -204,10 +204,11 @@ namespace WPEFramework
                 {
                     success = runtimeManagerHandler->terminate(context->getAppInstanceId(), errorReason);
                 }
-                //TODO: handle return properly
-                success = true;
+                if(success)
+                {
+                    sem_wait(&context->mAppTerminatingSemaphore);
+                }
             }
-            //TODO: handle return properly	
             return success;
         }
     }
