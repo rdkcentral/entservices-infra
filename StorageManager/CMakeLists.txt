@@ -60,6 +60,7 @@ install(TARGETS ${MODULE_NAME}
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
     StorageManagerImplementation.cpp
+    RequestHandler.cpp
     Module.cpp)
 
 include_directories(../helpers)
