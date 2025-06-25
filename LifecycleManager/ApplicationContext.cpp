@@ -36,6 +36,7 @@ namespace WPEFramework
             sem_init(&mAppReadySemaphore, 0, 0);
             sem_init(&mFirstFrameSemaphore, 0, 0);
             sem_init(&mFirstFrameAfterResumeSemaphore, 0, 0);
+            sem_init(&mAppTerminatingSemaphore, 0, 0);
         }
 
 	ApplicationKillParams::ApplicationKillParams(): mForce(false)

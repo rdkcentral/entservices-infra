@@ -84,6 +84,8 @@ namespace WPEFramework
                 sem_t mAppReadySemaphore;
                 sem_t mFirstFrameSemaphore;
                 sem_t mFirstFrameAfterResumeSemaphore;
+                sem_t mAppTerminatingSemaphore;
+
 
 	    private:
                 std::string mAppInstanceId;
