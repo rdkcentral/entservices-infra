@@ -721,6 +721,7 @@ jobs:
           '*/install/usr/include/*'
           '*/Tests/headers/*'
           '*/Tests/mocks/*'
+          '*/build/mocks/*'
           '*/Tests/L2Tests/*'
           '*/googlemock/*'
           '*/googletest/*'
