@@ -65,11 +65,6 @@ target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
 )
 
-target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-)
-
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
