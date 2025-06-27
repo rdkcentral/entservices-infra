@@ -234,7 +234,7 @@ namespace Plugin {
         std::condition_variable cv;
         std::unique_ptr<std::thread> mDownloadThreadPtr;
         bool done = false;
-        DownloadInfoPtr mInprogressDowload;
+        DownloadInfoPtr mInprogressDownload;
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
