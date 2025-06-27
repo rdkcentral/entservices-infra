@@ -27,7 +27,7 @@
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
 #include "ServiceMock.h"
-#include "LifecycleManagerMock.h"
+//#include "LifecycleManagerMock.h"
 //#include "RuntimeManagerMock.h"
 //#include "WindowManagerMock.h"
 #include "COMLinkMock.h"
@@ -105,7 +105,7 @@ protected:
 
         // Get the LifecycleManagerImplementation instance
         // This should be removed once the LifecycleManager notification is handled here.
-        mLifecycleManagerImpl = Plugin::LifecycleManagerImplementation::getInstance();
+        //mLifecycleManagerImpl = Plugin::LifecycleManagerImplementation::getInstance();
     }
 
     void releaseResources()
@@ -113,7 +113,7 @@ protected:
         // Deinitialize the plugin
         mPlugin->Deinitialize(&mService);
         // This should be removed once the LifecycleManager notification is handled here.
-        mLifecycleManagerImpl = nullptr;
+        //mLifecycleManagerImpl = nullptr;
 
         // Clean up mocks
         if (mServiceMock != nullptr)
@@ -139,29 +139,29 @@ protected:
     {
         std::ostringstream oss;
             oss << "{";
-            oss << "\"dial\":"   << (run.dial ? "true" : "false") << ",";
-            oss << "\"wanLanAccess\":"  << (run.wanLanAccess ? "true" : "false") << ",";
-            oss << "\"thunder\":"     << (run.thunder ? "true" : "false") << ",";
-            oss << "\"systemMemoryLimit\":"     << run.systemMemoryLimit << ",";
-            oss << "\"gpuMemoryLimit\":"     << run.gpuMemoryLimit << ",";
-            oss << "\"envVariables\":\""   << run.envVariables << "\",";
-            oss << "\"userId\":"     << run.userId << ",";
-            oss << "\"groupId\":"     << run.groupId << ",";
-            oss << "\"dataImageSize\":"     << run.dataImageSize << ",";
-            oss << "\"resourceManagerClientEnabled\":"   << (run.resourceManagerClientEnabled ? "true" : "false") << ",";
-            oss << "\"dialId\":\""  << run.dialId << "\",";
-            oss << "\"command\":\""   << run.command << "\",";
-            oss << "\"appType\":\""    << run.appType << "\",";
-            oss << "\"appPath\":\""  << run.appPath << "\",";
-            oss << "\"runtimePath\":\""<< run.runtimePath << "\",";
-            oss << "\"logFilePath\":\""   << run.logFilePath << "\",";
-            oss << "\"logFileMaxSize\":"    << run.logFileMaxSize << ",";
-            oss << "\"logLevels\":\""  << run.logLevels << "\",";
-            oss << "\"mapi\":"     << (run.mapi ? "true" : "false") << ",";
-            oss << "\"fkpsFiles\":\""  << run.fkpsFiles << "\",";
-            oss << "\"fireboltVersion\":\""<< run.fireboltVersion << "\",";
-            oss << "\"enableDebugger\":"  << (run.enableDebugger ? "true" : "false") << ",";
-            oss << "\"unpackedPath\":\"" << run.unpackedPath << "\"";
+            oss << "\"dial\":"   << (runtimeConfigObject.dial ? "true" : "false") << ",";
+            oss << "\"wanLanAccess\":"  << (runtimeConfigObject.wanLanAccess ? "true" : "false") << ",";
+            oss << "\"thunder\":"     << (runtimeConfigObject.thunder ? "true" : "false") << ",";
+            oss << "\"systemMemoryLimit\":"     << runtimeConfigObject.systemMemoryLimit << ",";
+            oss << "\"gpuMemoryLimit\":"     << runtimeConfigObject.gpuMemoryLimit << ",";
+            oss << "\"envVariables\":\""   << runtimeConfigObject.envVariables << "\",";
+            oss << "\"userId\":"     << runtimeConfigObject.userId << ",";
+            oss << "\"groupId\":"     << runtimeConfigObject.groupId << ",";
+            oss << "\"dataImageSize\":"     << runtimeConfigObject.dataImageSize << ",";
+            oss << "\"resourceManagerClientEnabled\":"   << (runtimeConfigObject.resourceManagerClientEnabled ? "true" : "false") << ",";
+            oss << "\"dialId\":\""  << runtimeConfigObject.dialId << "\",";
+            oss << "\"command\":\""   << runtimeConfigObject.command << "\",";
+            oss << "\"appType\":\""    << runtimeConfigObject.appType << "\",";
+            oss << "\"appPath\":\""  << runtimeConfigObject.appPath << "\",";
+            oss << "\"runtimePath\":\""<< runtimeConfigObject.runtimePath << "\",";
+            oss << "\"logFilePath\":\""   << runtimeConfigObject.logFilePath << "\",";
+            oss << "\"logFileMaxSize\":"    << runtimeConfigObject.logFileMaxSize << ",";
+            oss << "\"logLevels\":\""  << runtimeConfigObject.logLevels << "\",";
+            oss << "\"mapi\":"     << (runtimeConfigObject.mapi ? "true" : "false") << ",";
+            oss << "\"fkpsFiles\":\""  << runtimeConfigObject.fkpsFiles << "\",";
+            oss << "\"fireboltVersion\":\""<< runtimeConfigObject.fireboltVersion << "\",";
+            oss << "\"enableDebugger\":"  << (runtimeConfigObject.enableDebugger ? "true" : "false") << ",";
+            oss << "\"unpackedPath\":\"" << runtimeConfigObject.unpackedPath << "\"";
             oss << "}";
             return oss.str();
     }
