@@ -638,10 +638,7 @@ err_ret:
                     if ((success == false))
                     {
                         LOGERR("Failed to HibernateContainer %s",errorReason.c_str());
-                        if (!success)
-                        {
-                            status = Core::ERROR_GENERAL;
-                        }
+                        status = Core::ERROR_GENERAL; //todo return proper error code in OCIContainerPlugin
                     }
                     else
                     {
