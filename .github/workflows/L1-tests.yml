@@ -489,6 +489,7 @@ jobs:
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_LIFECYCLEMANAGER=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -569,6 +570,7 @@ jobs:
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_LIFECYCLEMANAGER=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
