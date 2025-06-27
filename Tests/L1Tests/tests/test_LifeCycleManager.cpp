@@ -49,6 +49,7 @@ protected:
     DECL_CORE_JSONRPC_CONX connection;
     string mResponse;
     Core::ProxyType<Plugin::LifecycleManagerImplementation> LifecycleManagerImpl;
+    WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject;
     NiceMock<COMLinkMock> mComLinkMock;
     NiceMock<ServiceMock> mService;
     RuntimeManagerManagerMock* mRuntimeManagerMock = nullptr;
@@ -57,6 +58,19 @@ protected:
     // Currently, this is used for TerminateApp test cases, as it depends on the LifecycleManager state change.
     // This should be removed once the LifecycleManager notification is handled here.
     Plugin::LifecycleManagerImplementation *mLifecycleManagerImpl;
+
+    void SetUp() override 
+    {
+        // Initialize the runtimeConfigObject with default values
+        runtimeConfigObject = {
+            true,true,true,1024,512,"test.env.variables",1,1,1024,true,"test.dial.id","test.command","test.app.type","test.app.path","test.runtime.path","test.logfile.path",1024,"test.log.levels",true,"test.fkps.files","test.firebolt.version",true,"test.unpacked.path"
+        };
+    }
+
+    void TearDown() override
+    {
+
+    }
 
     void createResources()
     {
@@ -119,7 +133,33 @@ protected:
 
     std::string runtimeConfigtoJson(const WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject)
     {
-        
+        std::ostringstream oss;
+            oss << "{";
+            oss << "\"dial\":"   << (run.dial ? "true" : "false") << ",";
+            oss << "\"wanLanAccess\":"  << (run.wanLanAccess ? "true" : "false") << ",";
+            oss << "\"thunder\":"     << (run.thunder ? "true" : "false") << ",";
+            oss << "\"systemMemoryLimit\":"     << run.systemMemoryLimit << ",";
+            oss << "\"gpuMemoryLimit\":"     << run.gpuMemoryLimit << ",";
+            oss << "\"envVariables\":\""   << run.envVariables << "\",";
+            oss << "\"userId\":"     << run.userId << ",";
+            oss << "\"groupId\":"     << run.groupId << ",";
+            oss << "\"dataImageSize\":"     << run.dataImageSize << ",";
+            oss << "\"resourceManagerClientEnabled\":"   << (run.resourceManagerClientEnabled ? "true" : "false") << ",";
+            oss << "\"dialId\":\""  << run.dialId << "\",";
+            oss << "\"command\":\""   << run.command << "\",";
+            oss << "\"appType\":\""    << run.appType << "\",";
+            oss << "\"appPath\":\""  << run.appPath << "\",";
+            oss << "\"runtimePath\":\""<< run.runtimePath << "\",";
+            oss << "\"logFilePath\":\""   << run.logFilePath << "\",";
+            oss << "\"logFileMaxSize\":"    << run.logFileMaxSize << ",";
+            oss << "\"logLevels\":\""  << run.logLevels << "\",";
+            oss << "\"mapi\":"     << (run.mapi ? "true" : "false") << ",";
+            oss << "\"fkpsFiles\":\""  << run.fkpsFiles << "\",";
+            oss << "\"fireboltVersion\":\""<< run.fireboltVersion << "\",";
+            oss << "\"enableDebugger\":"  << (run.enableDebugger ? "true" : "false") << ",";
+            oss << "\"unpackedPath\":\"" << run.unpackedPath << "\"";
+            oss << "}";
+            return oss.str();
     }
 
 
@@ -159,16 +199,15 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
     // TC-1: Spawn an app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     // TC-2: Spawn an app with only required parameters as valid
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"\",\"runtimePath\":\"\",\"runtimeConfig\":\"\",\"launchIntent\":\"\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"\",\"runtimePath\":\"\",\"runtimeConfig\":\"\",\"launchIntent\":\"\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
     
-
     releaseResources();
 }
 
@@ -228,7 +267,7 @@ TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppSuccess)
     // TC-10: Check if app is loaded after spawning
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
@@ -268,7 +307,7 @@ TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
     // TC-12: Verify error on passing an invalid appId
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
@@ -288,7 +327,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseEnabled)
     // TC-13: Get loaded apps with verbose enabled
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
@@ -308,7 +347,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
     // TC-14: Get loaded apps with verbose enabled
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
@@ -342,7 +381,7 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"test.app.instance\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     // TC-16: Set the target state of a loaded app with all parameters valid
@@ -366,7 +405,7 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"test.app.instance\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     // TC-18: Set the target state of a loaded app with invalid appInstanceId
@@ -396,7 +435,7 @@ TEST_F(LifecycleManagerTest, unloadApp_afterSpawnApp)
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"test.app.instance\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     // TC-21: Unload the app after spawning
@@ -434,7 +473,7 @@ TEST_F(LifecycleManagerTest, killApp_afterSpawnApp)
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"test.app.instance\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     // TC-23: Kill the app after spawning
@@ -472,7 +511,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_afterSpawnApp)
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"test.app.instance\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     // TC-25: Send intent to the app after spawning
@@ -510,7 +549,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_withinvalidParams)
 
     EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
         _T("spawnApp"),
-        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":null,\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"test.app.instance\",\"errorReason\":\"\",\"success\":true}"),
+        _T("{\"appId\":\"com.test.app\",\"appPath\":\"test.app.path\",\"appConfig\":\"test.app.config\",\"runtimeAppId\":\"test.runtime.app\",\"runtimePath\":\"test.runtime.path\",\"runtimeConfig\":\"test.runtime.config\",\"launchIntent\":\"test.launch.intent\",\"environmentVars\":\"test.env.vars\",\"enableDebugger\":true,\"targetLifecycleState\":Exchange::ILifecycleManager::LifecycleState::ACTIVE,\"runtimeConfigObject\":" + runtimeConfigtoJson(runtimeConfigObject) + ",\"launchArgs\":\"test.arguments\",\"appInstanceId\":\"\",\"errorReason\":\"\",\"success\":true}"),
          mResponse));
 
     // TC-27: Send intent to the app after spawn fails with both parameters invalid
