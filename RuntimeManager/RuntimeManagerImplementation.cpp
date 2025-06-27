@@ -635,9 +635,13 @@ err_ret:
                 if (!containerId.empty())
                 {
                     status =  mOciContainerObject->HibernateContainer(containerId, options, success, errorReason);
-                    if ((success == false) || (status != Core::ERROR_NONE))
+                    if ((success == false))
                     {
                         LOGERR("Failed to HibernateContainer %s",errorReason.c_str());
+                        if (!success)
+                        {
+                            status = Core::ERROR_GENERAL;
+                        }
                     }
                     else
                     {
