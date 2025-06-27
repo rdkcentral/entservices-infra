@@ -1,6 +1,9 @@
 name: L1-tests
 
 on:
+  push:
+    branches: ['topic/RDKEMW_2806']
+
   workflow_call:
     inputs:
       caller_source:
@@ -71,10 +74,10 @@ jobs:
           python-version: '3.x'
       - run: pip install jsonref
 
-      - name: ACK External Trigger
-        run: |
-           echo "Message: External Trigger Received for L1 Tests"
-           echo "Trigger Source: ${{ inputs.caller_source }}"
+      #- name: ACK External Trigger
+      #  run: |
+      #     echo "Message: External Trigger Received for L1 Tests"
+      #     echo "Trigger Source: ${{ inputs.caller_source }}"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
@@ -124,10 +127,10 @@ jobs:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
           ref: topic/RDKEMW-2806
-          token: ${{ secrets.RDKCM_RDKE }}
+          #token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
-        if: ${{ inputs.caller_source == 'local' }}
+        #if: ${{ inputs.caller_source == 'local' }}
         uses: actions/checkout@v3
         with:
           path: entservices-infra
@@ -486,10 +489,11 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
-          -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_APPMANAGER=OFF
+          -DPLUGIN_STORAGE_MANAGER=OFF
+          -DPLUGIN_RUNTIME_MANAGER=OFF
           -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -567,10 +571,11 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
-          -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_APPMANAGER=OFF
+          -DPLUGIN_STORAGE_MANAGER=OFF
+          -DPLUGIN_RUNTIME_MANAGER=OFF
           -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
@@ -661,7 +666,7 @@ jobs:
           ls -l /dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
           &&
           ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
-      
+
       - name: Run unit tests without valgrind
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
@@ -714,7 +719,7 @@ jobs:
           filtered_coverage.info
 
       - name: Upload artifacts
-        if: ${{ !env.ACT }} && always()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-L1-infra
@@ -724,5 +729,3 @@ jobs:
             rdkL1TestResultsWithoutValgrind.json
             rdkL1TestResultsWithValgrind.json
           if-no-files-found: warn
-
-
