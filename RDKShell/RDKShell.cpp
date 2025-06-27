@@ -306,6 +306,23 @@ static bool waitForHibernateUnblocked(int timeoutMs)
 namespace WPEFramework {
     namespace Plugin {
 
+        void RDKShell::KeyEventQueue::push(KeyEvent&& event)
+        {
+            std::lock_guard<std::mutex> lg(mutex);
+            m_queue.push(std::move(event));
+        }
+
+        bool RDKShell::KeyEventQueue::pop(KeyEvent& outEvent)
+        {
+            std::lock_guard<std::mutex> lg(mutex);
+            if(m_queue.empty()) {
+                return false;
+            }
+            outEvent = std::move(m_queue.front());
+            m_queue.pop();
+            return true;
+        }
+
         namespace {
             static Plugin::Metadata<Plugin::RDKShell> metadata(
                 // Version (Major, Minor, Patch)
@@ -1426,7 +1443,8 @@ namespace WPEFramework {
                 mLastWakeupKeyTimestamp(0),
                 mEnableEasterEggs(true),
                 mScreenCapture(this),
-                mErmEnabled(false)
+                mErmEnabled(false),
+                m_keyEventQueue()
         {
             LOGINFO("ctor");
             RDKShell::_instance = this;
@@ -1789,6 +1807,13 @@ namespace WPEFramework {
                   }
                   RdkShell::update();
                   isRunning = sRunning;
+
+                  KeyEventQueue::KeyEvent event;
+                  while(m_keyEventQueue.pop(event)){
+                    bool result = CompositorController::injectKey(event.keyCode, event.flags);
+                    event.resultPromise.set_value(result);
+                  }
+
                   gRdkShellMutex.unlock();
                   double frameTime = (int)RdkShell::microseconds() - (int)startFrameTime;
                   if (frameTime < maxSleepTime)
@@ -7000,15 +7025,17 @@ namespace WPEFramework {
 
         bool RDKShell::injectKey(const uint32_t& keyCode, const JsonArray& modifiers)
         {
-            bool ret = false;
             uint32_t flags = 0;
             for (int i=0; i<modifiers.Length(); i++) {
               flags |= getKeyFlag(modifiers[i].String());
             }
-            gRdkShellMutex.lock();
-            ret = CompositorController::injectKey(keyCode, flags);
-            gRdkShellMutex.unlock();
-            return ret;
+
+            std::promise<bool> promise;
+            auto result = promise.get_future();
+            KeyEventQueue::KeyEvent event {keyCode, flags, std::move(promise)};
+            m_keyEventQueue.push(std::move(event));
+
+            return result.get();
         }
 
         bool RDKShell::generateKey(const string& client, const JsonArray& keyInputs)

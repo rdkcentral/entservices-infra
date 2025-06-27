@@ -20,6 +20,7 @@
 #pragma once
 
 #include <mutex>
+#include <future>
 #include "Module.h"
 #include <rdkshell/rdkshellevents.h>
 #include <rdkshell/rdkshell.h>
@@ -466,6 +467,26 @@ namespace WPEFramework {
                 std::vector<ICapture::IStore *>mCaptureStorers;
             };
 
+            class KeyEventQueue {
+            public:
+                struct KeyEvent {
+                    uint32_t keyCode;
+                    uint32_t flags;
+                    std::promise<bool> resultPromise;
+                };
+            public:
+                KeyEventQueue() = default;
+                ~KeyEventQueue() = default;
+                KeyEventQueue(const KeyEventQueue&) = delete;
+                KeyEventQueue& operator=(const KeyEventQueue&) = delete;
+
+                void push(KeyEvent&& event);
+                bool pop(KeyEvent& outEvent);
+            private:
+                std::queue<KeyEvent> m_queue;
+                std::mutex m_mutex;
+            };
+
         private/*members*/:
             bool mRemoteShell;
             bool mEnableUserInactivityNotification;
@@ -480,6 +501,7 @@ namespace WPEFramework {
             bool mEnableEasterEggs;
             ScreenCapture mScreenCapture;
             bool mErmEnabled;
+            KeyEventQueue m_keyEventQueue;
 #ifdef ENABLE_RIALTO_FEATURE
         std::shared_ptr<RialtoConnector>  rialtoConnector;
 #endif //ENABLE_RIALTO_FEATURE
