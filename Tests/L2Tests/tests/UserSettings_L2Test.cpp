@@ -470,17 +470,39 @@ uint32_t UserSettingTest::CreateUserSettingInterfaceObjectUsingComRPCConnection(
     if (!Client_UserSettings.IsValid())
     {
         TEST_LOG("Invalid Client_UserSettings");
+        return return_value;
     }
-    else
-    {
-        m_controller_usersettings = Client_UserSettings->Open<PluginHost::IShell>(_T("org.rdk.UserSettings"), ~0, 3000);
-        if (m_controller_usersettings)
-        {
+    const int max_retries = 5;
+    int retry_count = 0;
+    
+    while (retry_count < max_retries) {
+        m_controller_usersettings = Client_UserSettings->Open<PluginHost::IShell>(
+            _T("org.rdk.UserSettings"), ~0, 3000
+        );
+
+        if (m_controller_usersettings) {
             m_usersettingsplugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettings>();
             m_usersettings_inspe_plugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettingsInspector>();
-            return_value = Core::ERROR_NONE;
+            
+            // Check if we got valid interfaces
+            if (m_usersettingsplugin) {
+                return_value = Core::ERROR_NONE;
+                TEST_LOG("Successfully created UserSettings interface on attempt %d", retry_count + 1);
+                break;
+            }
         }
+        
+        TEST_LOG("Retrying UserSettings connection... (%d/%d)", retry_count + 1, max_retries);
+        
+        // Wait before retrying
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        retry_count++;
     }
+
+    if (return_value != Core::ERROR_NONE) {
+        TEST_LOG("Failed to create UserSettings interface after %d attempts", max_retries);
+    }
+
     return return_value;
 }
 
@@ -730,7 +752,7 @@ MATCHER_P(MatchRequestStatusDouble, expected, "")
     return expected == actual;
 
 }
-#if 0
+
 TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -2849,7 +2871,7 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
         }
     }
 }
-#endif
+
 TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivatingErrorCase)
 {
     uint32_t status = Core::ERROR_GENERAL;
