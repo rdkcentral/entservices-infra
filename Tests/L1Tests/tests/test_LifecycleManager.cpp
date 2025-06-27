@@ -49,7 +49,7 @@ protected:
     DECL_CORE_JSONRPC_CONX connection;
     string mResponse;
     Core::ProxyType<Plugin::LifecycleManagerImplementation> LifecycleManagerImpl;
-    WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject;
+    WPEFramework::Exchange::RuntimeConfig runtimeConfigObject;
     NiceMock<COMLinkMock> mComLinkMock;
     NiceMock<ServiceMock> mService;
     //RuntimeManagerManagerMock* mRuntimeManagerMock = nullptr;
