@@ -69,4 +69,8 @@ set(LIFECYCLE_MANAGER_INCLUDES $ENV{LIFECYCLE_MANAGER_INCLUDES})
 separate_arguments(LIFECYCLE_MANAGER_INCLUDES)
 include_directories(BEFORE ${LIFECYCLE_MANAGER_INCLUDES})
 
+if (RDK_SERVICES_L1_TEST)
+	target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,open -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,nftw -Wl,--wrap,statvfs -Wl,--wrap,rmdir -Wl,--wrap,chown -Wl,--wrap,opendir -Wl,--wrap,readdir -Wl,--wrap,stat -Wl,--wrap,closedir)
+endif (RDK_SERVICES_L1_TEST)
+
 write_config(${PLUGIN_NAME})
