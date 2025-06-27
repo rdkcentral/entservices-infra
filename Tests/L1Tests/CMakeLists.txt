@@ -121,6 +121,11 @@ set (APPMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/AppManager ${CMAKE_
 set (APPMANAGER_LIBS ${NAMESPACE}AppManager ${NAMESPACE}AppManagerImplementation)
 add_plugin_test_ex(PLUGIN_APPMANAGER tests/test_AppManager.cpp "${APPMANAGER_INC}" "${APPMANAGER_LIBS}")
 
+# PLUGIN_LIFECYCLE_MANAGER
+set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager ${NAMESPACE}LifecycleManagerImplementation)
+add_plugin_test_ex(PLUGIN_LIFECYCLEMANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
+
 # PLUGIN_OCICONTAINER
 set (OCICONTAINER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/OCIContainer ${CMAKE_SOURCE_DIR}/../entservices-infra/OCIContainer/stubs)
 set (OCICONTAINER_LIBS ${NAMESPACE}OCIContainer)
