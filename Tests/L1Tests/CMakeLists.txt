@@ -153,9 +153,9 @@ add_plugin_test_ex(PLUGIN_STORAGE_MANAGER tests/test_StorageManager.cpp "${STORA
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
-if (RDK_SERVICES_L1_TEST)
-    target_link_options(${MODULE_NAME} PRIVATE "-Wl,-wrap,opendir")
-endif (RDK_SERVICES_L1_TEST)
+# if (RDK_SERVICES_L1_TEST)
+#    target_link_options(${MODULE_NAME} PRIVATE "-Wl,-wrap,opendir")
+# endif (RDK_SERVICES_L1_TEST)
 
 include_directories(${TEST_INC})
 
@@ -173,9 +173,9 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
         )
 
+target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
+
 #install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
 write_config(${PLUGIN_NAME})
-
-
