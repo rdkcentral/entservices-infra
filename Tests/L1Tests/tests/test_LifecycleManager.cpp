@@ -27,9 +27,9 @@
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
 #include "ServiceMock.h"
-//#include "LifecycleManagerMock.h"
-//#include "RuntimeManagerMock.h"
-//#include "WindowManagerMock.h"
+#include "LifecycleManagerMock.h"
+#include "RuntimeManagerMock.h"
+#include "WindowManagerMock.h"
 #include "COMLinkMock.h"
 #include "ThunderPortability.h"
 
@@ -52,8 +52,8 @@ protected:
     WPEFramework::Exchange::RuntimeConfig runtimeConfigObject;
     NiceMock<COMLinkMock> mComLinkMock;
     NiceMock<ServiceMock> mService;
-    //RuntimeManagerManagerMock* mRuntimeManagerMock = nullptr;
-    //WindowManagerMock* mWindowManagerMock = nullptr;
+    RuntimeManagerManagerMock* mRuntimeManagerMock = nullptr;
+    WindowManagerMock* mWindowManagerMock = nullptr;
     ServiceMock* mServiceMock = nullptr;
     // Currently, this is used for TerminateApp test cases, as it depends on the LifecycleManager state change.
     // This should be removed once the LifecycleManager notification is handled here.
@@ -83,7 +83,6 @@ protected:
                 }));
 
         mServiceMock = new NiceMock<ServiceMock>;
-        #if 0
         mRuntimeManagerMock = new NiceMock<RuntimeManagerManagerMock>;
         mWindowManagerMock = new NiceMock<WindowManagerMock>;
 
@@ -121,7 +120,6 @@ protected:
             delete mServiceMock;
             mServiceMock = nullptr;
         }
-        #if 0
         if (mRuntimeManagerMock != nullptr)
         {
             delete mRuntimeManagerMock;
@@ -132,7 +130,6 @@ protected:
             delete mWindowManagerMock;
             mWindowManagerMock = nullptr;
         }
-        #endif
     }
 
     std::string runtimeConfigtoJson(const WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject)
