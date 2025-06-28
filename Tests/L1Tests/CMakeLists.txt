@@ -123,7 +123,7 @@ add_plugin_test_ex(PLUGIN_APPMANAGER tests/test_AppManager.cpp "${APPMANAGER_INC
 
 # PLUGIN_LIFECYCLE_MANAGER
 set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager ${NAMESPACE}LifecycleManagerImplementation)
+set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
 add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
 
 # PLUGIN_OCICONTAINER
