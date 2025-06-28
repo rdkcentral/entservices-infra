@@ -57,7 +57,7 @@ protected:
     ServiceMock* mServiceMock = nullptr;
     // Currently, this is used for TerminateApp test cases, as it depends on the LifecycleManager state change.
     // This should be removed once the LifecycleManager notification is handled here.
-    Plugin::LifecycleManagerImplementation *mLifecycleManagerImpl;
+    //Plugin::LifecycleManagerImplementation *mLifecycleManagerImpl;
 
     void SetUp() override 
     {
