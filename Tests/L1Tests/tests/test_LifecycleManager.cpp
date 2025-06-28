@@ -83,7 +83,7 @@ protected:
                 }));
 
         mServiceMock = new NiceMock<ServiceMock>;
-        mRuntimeManagerMock = new NiceMock<RuntimeManagerManagerMock>;
+        mRuntimeManagerMock = new NiceMock<RuntimeManagerMock>;
         mWindowManagerMock = new NiceMock<WindowManagerMock>;
 
         EXPECT_CALL(mService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
