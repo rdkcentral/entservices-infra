@@ -27,7 +27,6 @@
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
 #include "ServiceMock.h"
-#include "LifecycleManagerMock.h"
 #include "RuntimeManagerMock.h"
 #include "WindowManagerMock.h"
 #include "COMLinkMock.h"
