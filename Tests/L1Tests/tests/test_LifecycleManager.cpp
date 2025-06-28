@@ -97,7 +97,6 @@ protected:
                 } 
             return nullptr;
         }));
-        #endif
 
         // Initialize the plugin
         EXPECT_EQ(string(""), mPlugin->Initialize(&mService));
