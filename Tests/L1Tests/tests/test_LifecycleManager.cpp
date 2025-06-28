@@ -52,7 +52,7 @@ protected:
     WPEFramework::Exchange::RuntimeConfig runtimeConfigObject;
     NiceMock<COMLinkMock> mComLinkMock;
     NiceMock<ServiceMock> mService;
-    RuntimeManagerManagerMock* mRuntimeManagerMock = nullptr;
+    RuntimeManagerMock* mRuntimeManagerMock = nullptr;
     WindowManagerMock* mWindowManagerMock = nullptr;
     ServiceMock* mServiceMock = nullptr;
     // Currently, this is used for TerminateApp test cases, as it depends on the LifecycleManager state change.
