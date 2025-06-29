@@ -47,31 +47,16 @@ protected:
     Core::JSONRPC::Handler& mHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mResponse;
-    Exchange::ILifecycleManager* interface = nullptr;
-    Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
-    Exchange::RuntimeConfig runtimeConfigObject;
+    Core::ProxyType<Plugin::LifecycleManagerImplementation> LifecycleManagerImpl;
+    WPEFramework::Exchange::RuntimeConfig runtimeConfigObject;
     NiceMock<COMLinkMock> mComLinkMock;
     NiceMock<ServiceMock> mService;
     RuntimeManagerMock* mRuntimeManagerMock = nullptr;
     WindowManagerMock* mWindowManagerMock = nullptr;
     ServiceMock* mServiceMock = nullptr;
-
-    LifecycleManagerTest()
-        : mPlugin(Core::ProxyType<Plugin::LifecycleManager>::Create())
-        , mHandler(*(mPlugin))
-        , INIT_CONX(1, 0)
-    {
-        // Create the LifecycleManagerImplementation instance
-        //mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementation>::Create();
-
-        interface = static_cast<Exchange::ILifecycleManager*>(
-            mPlugin->QueryInterface(Exchange::ILifecycleManager::ID));
-    }
-
-    virtual ~LifecycleManagerTest() override
-    {
-        interface->Release();
-    }
+    // Currently, this is used for TerminateApp test cases, as it depends on the LifecycleManager state change.
+    // This should be removed once the LifecycleManager notification is handled here.
+    //Plugin::LifecycleManagerImplementation *mLifecycleManagerImpl;
 
     void SetUp() override 
     {
@@ -79,13 +64,11 @@ protected:
         runtimeConfigObject = {
             true,true,true,1024,512,"test.env.variables",1,1,1024,true,"test.dial.id","test.command","test.app.type","test.app.path","test.runtime.path","test.logfile.path",1024,"test.log.levels",true,"test.fkps.files","test.firebolt.version",true,"test.unpacked.path"
         };
-
-        ASSERT_TRUE(interface != nullptr);
     }
 
     void TearDown() override
     {
-        ASSERT_TRUE(interface != nullptr);
+
     }
 
     void createResources()
@@ -117,6 +100,9 @@ protected:
         // Initialize the plugin
         EXPECT_EQ(string(""), mPlugin->Initialize(&mService));
 
+        // Get the LifecycleManagerImplementation instance
+        // This should be removed once the LifecycleManager notification is handled here.
+        //mLifecycleManagerImpl = Plugin::LifecycleManagerImplementation::getInstance();
     }
 
     void releaseResources()
@@ -174,6 +160,20 @@ protected:
             oss << "}";
             return oss.str();
     }
+
+
+    LifecycleManagerTest()
+        : mPlugin(Core::ProxyType<Plugin::LifecycleManager>::Create())
+        , mHandler(*(mPlugin))
+        , INIT_CONX(1, 0)
+    {
+
+    }
+
+    virtual ~LifecycleManagerTest() override
+    {
+
+    }
 };
 
 
@@ -181,13 +181,13 @@ protected:
 TEST_F(LifecycleManagerTest, RegisteredMethods)
 {
     createResources();
-    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("spawnApp")));
-    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("getLoadedApps")));
-    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("isAppLoaded")));
-    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("setTargetAppState")));
-    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("unloadApp")));
-    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("killApp")));
-    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("sendIntenttoActiveApp")));
+    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("SpawnApp")));
+    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("GetLoadedApps")));
+    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("IsAppLoaded")));
+    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("SetTargetAppState")));
+    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("UnloadApp")));
+    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("KillApp")));
+    EXPECT_EQ(Core::ERROR_NONE, mHandler.Exists(_T("SendIntentToActiveApp")));
     releaseResources();
 }
 
@@ -362,11 +362,14 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
 TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
 {
     createResources();
-    
-    std::string apps;
 
     // TC-15: Check that no apps are loaded
-    EXPECT_EQ(Core::ERROR_NONE, interface->GetLoadedApps(true, apps));
+    EXPECT_EQ(Core::ERROR_NONE, mHandler.Invoke(connection,
+        _T("getLoadedApps"),
+        _T("{\"verbose\":true}"),
+         mResponse));
+
+    EXPECT_EQ(mResponse, "\"[]\"");
 
     releaseResources();
 }
@@ -568,18 +571,3 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_withinvalidParams)
 
     releaseResources();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
