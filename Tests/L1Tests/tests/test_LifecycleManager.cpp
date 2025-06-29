@@ -47,8 +47,9 @@ protected:
     Core::JSONRPC::Handler& mHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mResponse;
+    Exchange::IRuntimeManager* interface = nullptr;
     Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
-    WPEFramework::Exchange::RuntimeConfig runtimeConfigObject;
+    Exchange::RuntimeConfig runtimeConfigObject;
     NiceMock<COMLinkMock> mComLinkMock;
     NiceMock<ServiceMock> mService;
     RuntimeManagerMock* mRuntimeManagerMock = nullptr;
