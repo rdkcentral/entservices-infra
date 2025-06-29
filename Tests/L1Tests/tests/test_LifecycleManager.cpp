@@ -62,7 +62,7 @@ protected:
         , INIT_CONX(1, 0)
     {
         // Create the LifecycleManagerImplementation instance
-        mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementation>::Create();
+        //mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementation>::Create();
 
         interface = static_cast<Exchange::ILifecycleManager*>(
             mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManager::ID));
@@ -70,7 +70,7 @@ protected:
 
     virtual ~LifecycleManagerTest() override
     {
-        interface->Release();
+        //interface->Release();
     }
 
     void SetUp() override 
