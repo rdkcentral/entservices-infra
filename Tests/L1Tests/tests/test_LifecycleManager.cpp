@@ -47,7 +47,7 @@ protected:
     Core::JSONRPC::Handler& mHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mResponse;
-    Exchange::IRuntimeManager* interface = nullptr;
+    Exchange::ILifecycleManager* interface = nullptr;
     Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
     Exchange::RuntimeConfig runtimeConfigObject;
     NiceMock<COMLinkMock> mComLinkMock;
