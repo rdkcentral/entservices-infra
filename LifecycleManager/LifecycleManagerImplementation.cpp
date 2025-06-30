@@ -529,19 +529,7 @@ namespace WPEFramework
             {
                 string appInstanceId = data["appInstanceId"];
                 uint32_t runtimeState = data["state"].Number();
-                if (Exchange::IRuntimeManager::RuntimeState::RUNTIME_STATE_RUNNING == runtimeState)
-                {
-                    ApplicationContext* context = getContext(appInstanceId, "");
-                    if (nullptr == context)
-                    {
-                        LOGERR("Received state change event for app which is not available");
-                    }
-                    else
-                    {
-                        LOGINFO("Received state change event for app which is available ie running");
-                        sem_post(&context->mAppRunningSemaphore);
-                    }
-                }
+                LOGINFO("Received state change event from runtime manager for app[%s] state[%u]", appInstanceId.c_str(), runtimeState);
             }
             else if (eventName.compare("onFailure") == 0)
             {
@@ -552,7 +540,16 @@ namespace WPEFramework
             else if (eventName.compare("onStarted") == 0)
             {
                 string appInstanceId = data["appInstanceId"];
-                LOGINFO("Received container started event from runtime manager for app[%s]", appInstanceId.c_str());
+                ApplicationContext* context = getContext(appInstanceId, "");
+                if (nullptr == context)
+                {
+                    LOGERR("Received OnStarted event for app which is not available");
+                }
+                else
+                {
+                    LOGINFO("Received OnStarted event for app which is available ie running [%s]", appInstanceId.c_str());
+                    sem_post(&context->mAppRunningSemaphore);
+                }
             }
         }
 
