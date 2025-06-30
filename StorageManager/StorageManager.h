@@ -49,9 +49,6 @@ namespace Plugin {
             string Information() const override;
 
         private:
-            void Deactivated(RPC::IRemoteConnection* connection);
-
-        private:
             PluginHost::IShell* mCurrentService{};
             uint32_t mConnectionId{};
             Exchange::IStorageManager* mStorageManagerImpl{};
