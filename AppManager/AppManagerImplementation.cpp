@@ -277,6 +277,15 @@ uint32_t AppManagerImplementation::Configure(PluginHost::IShell* service)
             LOGINFO("created createPackageManagerObject");
         }
 
+        if (Core::ERROR_NONE != createStorageManagerRemoteObject())
+        {
+            LOGERR("Failed to create createStorageManagerRemoteObject");
+        }
+        else
+        {
+            LOGINFO("created createStorageManagerRemoteObject");
+        }
+
         result = Core::ERROR_NONE;
     }
     else
@@ -357,6 +366,55 @@ void AppManagerImplementation::releasePackageManagerObject()
         mPackageManagerInstallerObject->Unregister(&mPackageManagerNotification);
         mPackageManagerInstallerObject->Release();
         mPackageManagerInstallerObject = nullptr;
+    }
+}
+
+Core::hresult AppManagerImplementation::createStorageManagerRemoteObject()
+{
+     #define MAX_STORAGE_MANAGER_OBJECT_CREATION_RETRIES 2
+
+    Core::hresult status = Core::ERROR_GENERAL;
+    uint8_t retryCount = 0;
+
+    if (nullptr == mCurrentservice)
+    {
+        LOGERR("mCurrentservice is null");
+    }
+    else
+    {
+        do
+        {
+            mStorageManagerRemoteObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::IStorageManager>("org.rdk.StorageManager");
+
+            if (nullptr == mStorageManagerRemoteObject)
+            {
+                LOGERR("storageManagerRemoteObject is null (Attempt %d)", retryCount + 1);
+                retryCount++;
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            }
+            else
+            {
+                LOGINFO("Successfully created Storage Manager Object");
+                status = Core::ERROR_NONE;
+                break;
+            }
+        } while (retryCount < MAX_STORAGE_MANAGER_OBJECT_CREATION_RETRIES);
+
+        if (status != Core::ERROR_NONE)
+        {
+            LOGERR("Failed to create Storage Manager Object after %d attempts", MAX_STORAGE_MANAGER_OBJECT_CREATION_RETRIES);
+        }
+    }
+    return status;
+}
+
+void AppManagerImplementation::releaseStorageManagerRemoteObject()
+{
+    ASSERT(nullptr != mStorageManagerRemoteObject);
+    if(mStorageManagerRemoteObject)
+    {
+        mStorageManagerRemoteObject->Release();
+        mStorageManagerRemoteObject = nullptr;
     }
 }
 
@@ -1042,6 +1100,30 @@ Core::hresult AppManagerImplementation::ClearAppData(const string& appId)
 
     LOGINFO("ClearAppData Entered");
 
+    if (appId.empty())
+    {
+        LOGERR("appId is empty");
+        status = Core::ERROR_GENERAL;
+        return status;
+    }
+
+    mAdminLock.Lock(); //required??
+    if (nullptr != mStorageManagerRemoteObject)
+    {
+        std::string errorReason;
+        status = mStorageManagerRemoteObject->Clear(appId,errorReason);
+        if (status != Core::ERROR_NONE)
+        {
+            LOGERR("Failed to clear app data for appId: %s errorReason : %s", appId.c_str(), errorReason.c_str());
+        }
+    }
+    else
+    {
+        LOGERR("StorageManager Remote Object is null");
+        status = Core::ERROR_GENERAL;
+    }
+    mAdminLock.Unlock();
+
     return status;
 }
 
@@ -1050,6 +1132,24 @@ Core::hresult AppManagerImplementation::ClearAllAppData()
     Core::hresult status = Core::ERROR_NONE;
 
     LOGINFO("ClearAllAppData Entered");
+
+    mAdminLock.Lock(); //required??
+    if (nullptr != mStorageManagerRemoteObject)
+    {
+        std::string errorReason;
+        std::string exemptedAppIds = "";
+        status = mStorageManagerRemoteObject->ClearAll(exemptedAppIds,errorReason);
+        if (status != Core::ERROR_NONE)
+        {
+            LOGERR("Failed to clear all app data errorReason : %s", errorReason.c_str());
+        }
+    }
+    else
+    {
+        LOGERR("StorageManager Remote Object is null");
+        status = Core::ERROR_GENERAL;
+    }
+    mAdminLock.Unlock();
 
     return status;
 }
