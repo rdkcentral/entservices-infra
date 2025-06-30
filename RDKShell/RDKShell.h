@@ -20,7 +20,6 @@
 #pragma once
 
 #include <mutex>
-#include <future>
 #include "Module.h"
 #include <rdkshell/rdkshellevents.h>
 #include <rdkshell/rdkshell.h>
@@ -467,24 +466,20 @@ namespace WPEFramework {
                 std::vector<ICapture::IStore *>mCaptureStorers;
             };
 
-            class KeyEventQueue {
+            class TaskQueue {
             public:
-                struct KeyEvent {
-                    uint32_t keyCode;
-                    uint32_t flags;
-                    std::promise<bool> resultPromise;
-                };
+                using Task = std::function<void(void)>;
             public:
-                KeyEventQueue() = default;
-                ~KeyEventQueue() = default;
-                KeyEventQueue(const KeyEventQueue&) = delete;
-                KeyEventQueue& operator=(const KeyEventQueue&) = delete;
+                TaskQueue() = default;
+                ~TaskQueue() = default;
+                TaskQueue(const TaskQueue&) = delete;
+                TaskQueue& operator=(const TaskQueue&) = delete;
 
-                void push(KeyEvent&& event);
-                bool pop(KeyEvent& outEvent);
+                void push(Task task);
+                bool pop(Task& outTask);
             private:
-                std::queue<KeyEvent> m_queue;
-                std::mutex m_mutex;
+                std::queue<Task> mQueue;
+                std::mutex mMutex;
             };
 
         private/*members*/:
@@ -501,7 +496,7 @@ namespace WPEFramework {
             bool mEnableEasterEggs;
             ScreenCapture mScreenCapture;
             bool mErmEnabled;
-            KeyEventQueue m_keyEventQueue;
+            TaskQueue mTaskQueue;
 #ifdef ENABLE_RIALTO_FEATURE
         std::shared_ptr<RialtoConnector>  rialtoConnector;
 #endif //ENABLE_RIALTO_FEATURE

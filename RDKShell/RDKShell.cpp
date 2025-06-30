@@ -24,6 +24,7 @@
 #include <mutex>
 #include <thread>
 #include <fstream>
+#include <future>
 #include <set>
 #include <sstream>
 #include <condition_variable>
@@ -306,20 +307,20 @@ static bool waitForHibernateUnblocked(int timeoutMs)
 namespace WPEFramework {
     namespace Plugin {
 
-        void RDKShell::KeyEventQueue::push(KeyEvent&& event)
+        void RDKShell::TaskQueue::push(RDKShell::TaskQueue::Task task)
         {
-            std::lock_guard<std::mutex> lg(mutex);
-            m_queue.push(std::move(event));
+            std::lock_guard<std::mutex> lg(mMutex);
+            mQueue.push(task);
         }
 
-        bool RDKShell::KeyEventQueue::pop(KeyEvent& outEvent)
+        bool RDKShell::TaskQueue::pop(RDKShell::TaskQueue::Task& outTask)
         {
-            std::lock_guard<std::mutex> lg(mutex);
-            if(m_queue.empty()) {
+            std::lock_guard<std::mutex> lg(mMutex);
+            if(mQueue.empty()) {
                 return false;
             }
-            outEvent = std::move(m_queue.front());
-            m_queue.pop();
+            outTask = mQueue.front();
+            mQueue.pop();
             return true;
         }
 
@@ -1444,7 +1445,7 @@ namespace WPEFramework {
                 mEnableEasterEggs(true),
                 mScreenCapture(this),
                 mErmEnabled(false),
-                m_keyEventQueue()
+                mTaskQueue()
         {
             LOGINFO("ctor");
             RDKShell::_instance = this;
@@ -1808,10 +1809,9 @@ namespace WPEFramework {
                   RdkShell::update();
                   isRunning = sRunning;
 
-                  KeyEventQueue::KeyEvent event;
-                  while(m_keyEventQueue.pop(event)){
-                    bool result = CompositorController::injectKey(event.keyCode, event.flags);
-                    event.resultPromise.set_value(result);
+                  TaskQueue::Task task;
+                  while(mTaskQueue.pop(task)){
+                    task();
                   }
 
                   gRdkShellMutex.unlock();
@@ -7031,9 +7031,13 @@ namespace WPEFramework {
             }
 
             std::promise<bool> promise;
-            auto result = promise.get_future();
-            KeyEventQueue::KeyEvent event {keyCode, flags, std::move(promise)};
-            m_keyEventQueue.push(std::move(event));
+            auto promisePtr = std::make_shared<std::promise<bool>>(std::move(promise));
+            auto result = promisePtr->get_future();
+
+            mTaskQueue.push([keyCode, flags, promisePtr](){
+                bool status = CompositorController::injectKey(keyCode, flags);
+                promisePtr->set_value(status);
+            });
 
             return result.get();
         }
