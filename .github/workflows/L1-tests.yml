@@ -113,7 +113,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: topic/RDKEMW-2806
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
@@ -463,6 +463,7 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_LIFECYCLE_MANAGER=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -540,6 +541,7 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_LIFECYCLE_MANAGER=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
@@ -554,6 +556,7 @@ jobs:
           /opt/secure/reboot
           /opt/secure/persistent
           /opt/secure/persistent/System
+          /opt/persistent/lifecycleManager
           /opt/logs
           /lib/rdk
           /run/media/sda1/logs/PreviousLogs
