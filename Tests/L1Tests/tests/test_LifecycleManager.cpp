@@ -401,7 +401,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppFailure)
     appInstanceId = "test.app.instance";
     string intent = "test.intent";
 
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, false));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, success));
 
     // TC-23: Send intent to the app after spawn fails
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));
