@@ -172,7 +172,7 @@ TEST_F(LifecycleManagerTest, spawnApp_withInvalidParams)
     createResources();
     
     // TC-2: Spawn an app with all parameters invalid 
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, nullptr, "", appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, success));
 
     // TC-3: Spawn an app with appId as invalid
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
@@ -183,10 +183,7 @@ TEST_F(LifecycleManagerTest, spawnApp_withInvalidParams)
     // TC-5: Spawn an app with targetLifecycleState as invalid
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp(appId, launchIntent, Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
-    // TC-6: Spawn an app with launchConfig as invalid
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp(appId, launchIntent, targetLifecycleState, nullptr, launchArgs, appInstanceId, errorReason, success));
-    
-    // TC-7: Spawn an app with launchArgs as invalid
+    // TC-6: Spawn an app with launchArgs as invalid
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, "", appInstanceId, errorReason, success));
 
     releaseResources();
@@ -198,7 +195,7 @@ TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppSuccess)
 
     bool loaded = false;
 
-    // TC-8: Check if app is loaded after spawning
+    // TC-7: Check if app is loaded after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     EXPECT_EQ(Core::ERROR_NONE, interface->IsAppLoaded(appId, loaded));
@@ -214,8 +211,8 @@ TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppFailure)
 
     bool loaded = true;
 
-    // TC-9: Check that app is not loaded after spawnApp fails
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, nullptr, "", appInstanceId, errorReason, success));
+    // TC-8: Check that app is not loaded after spawnApp fails
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, success));
 
     EXPECT_EQ(Core::ERROR_NONE, interface->IsAppLoaded(appId, loaded));
 
@@ -230,7 +227,7 @@ TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
 	
     bool loaded = true;
 
-    // TC-10: Verify error on passing an invalid appId
+    // TC-9: Verify error on passing an invalid appId
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->IsAppLoaded("", loaded));
@@ -245,7 +242,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseEnabled)
     bool verbose = true;
     string apps = "";
 
-    // TC-11: Get loaded apps with verbose enabled
+    // TC-10: Get loaded apps with verbose enabled
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     EXPECT_EQ(Core::ERROR_NONE, interface->GetLoadedApps(verbose, apps));
@@ -262,7 +259,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
     bool verbose = false;
     string apps = "";
 
-    // TC-12: Get loaded apps with verbose disabled
+    // TC-11: Get loaded apps with verbose disabled
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     EXPECT_EQ(Core::ERROR_NONE, interface->GetLoadedApps(verbose, apps));
@@ -279,7 +276,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
     bool verbose = true;
     string apps = "";
 
-    // TC-13: Check that no apps are loaded
+    // TC-12: Check that no apps are loaded
     EXPECT_EQ(Core::ERROR_NONE, interface->GetLoadedApps(verbose, apps));
 
     EXPECT_EQ(apps, "\"[]\"");
@@ -295,10 +292,10 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    // TC-14: Set the target state of a loaded app with all parameters valid
+    // TC-13: Set the target state of a loaded app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, launchIntent));
 
-    // TC-15: Set the target state of a loaded app with only required parameters valid
+    // TC-14: Set the target state of a loaded app with only required parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, ""));
 
     releaseResources();
@@ -312,13 +309,13 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    // TC-16: Set the target state of a loaded app with invalid appInstanceId
+    // TC-15: Set the target state of a loaded app with invalid appInstanceId
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SetTargetAppState("", targetLifecycleState, launchIntent));
 
-    // TC-17: Set the target state of a loaded app with invalid targetLifecycleState
+    // TC-16: Set the target state of a loaded app with invalid targetLifecycleState
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::UNLOADED, launchIntent));
 
-    // TC-18: Set the target state of a loaded app with all parameters invalid
+    // TC-17: Set the target state of a loaded app with all parameters invalid
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SetTargetAppState("", Exchange::ILifecycleManager::LifecycleState::UNLOADED, launchIntent));
 
     releaseResources();
@@ -332,7 +329,7 @@ TEST_F(LifecycleManagerTest, unloadApp_afterSpawnApp)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    // TC-19: Unload the app after spawning
+    // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
 
     releaseResources();
@@ -344,9 +341,9 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppFailure)
 
     appInstanceId = "test.app.instance";
 
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, nullptr, "", appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, success));
 
-    // TC-20: Unload the app after spawn fails
+    // TC-19: Unload the app after spawn fails
     EXPECT_EQ(Core::ERROR_GENERAL, interface->UnloadApp(appInstanceId, errorReason, success));
 
     releaseResources();
@@ -360,7 +357,7 @@ TEST_F(LifecycleManagerTest, killApp_afterSpawnApp)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    // TC-21: Kill the app after spawning
+    // TC-20: Kill the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->KillApp(appInstanceId, errorReason, success));
 
     releaseResources();
@@ -372,9 +369,9 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppFailure)
 
     appInstanceId = "test.app.instance";
 
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, nullptr, "", appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, success));
 
-    // TC-22: Kill the app after spawn fails
+    // TC-21: Kill the app after spawn fails
     EXPECT_EQ(Core::ERROR_GENERAL, interface->KillApp(appInstanceId, errorReason, success));
 
     releaseResources();
@@ -389,7 +386,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_afterSpawnApp)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    // TC-23: Send intent to the app after spawning
+    // TC-22: Send intent to the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));
 
     //EXPECT_EQ(, "\"[{\\\"loaded\\\":false}]\"");
@@ -404,9 +401,9 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppFailure)
     appInstanceId = "test.app.instance";
     string intent = "test.intent";
 
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, nullptr, "", appInstanceId, errorReason, false));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, false));
 
-    // TC-24: Send intent to the app after spawn fails
+    // TC-23: Send intent to the app after spawn fails
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));
 
     releaseResources();
@@ -421,13 +418,13 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_withinvalidParams)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    // TC-25: Send intent to the app after spawn fails with both parameters invalid
+    // TC-24: Send intent to the app after spawn fails with both parameters invalid
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SendIntentToActiveApp("", "", errorReason, success));
 
-    // TC-26: Send intent to the app after spawn fails with appInstanceId invalid
+    // TC-25: Send intent to the app after spawn fails with appInstanceId invalid
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SendIntentToActiveApp("", intent, errorReason, success));
 
-    // TC-27: Send intent to the app after spawn fails with intent invalid
+    // TC-26: Send intent to the app after spawn fails with intent invalid
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SendIntentToActiveApp(appInstanceId, "", errorReason, success));
 
     releaseResources();
