@@ -43,13 +43,7 @@ const string callSign = _T("LifecycleManager");
 
 class LifecycleManagerTest : public ::testing::Test {
 protected:
-    string mResponse;
     string appId;
-    string appPath;
-    string appConfig;
-    string runtimeAppId;
-    string runtimePath;
-    string runtimeConfig;
     string launchIntent;
     string environmentVars;
     bool enableDebugger;
@@ -82,14 +76,7 @@ protected:
     {
         // Initialize the parameters with default values
         appId = "com.test.app";
-        appPath = "test.app.path";
-        appConfig = "test.app.config";
-        runtimeAppId = "test.runtime.app";
-        runtimePath = "test.runtime.path";
-        runtimeConfig = "test.runtime.config";
         launchIntent = "test.launch.intent";
-        environmentVars = "test.env.vars";
-        enableDebugger = true;
         targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
         launchArgs = "test.arguments";
         appInstanceId = "";
@@ -241,7 +228,7 @@ TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
 {
     createResources();
 	
-	bool loaded = true;
+    bool loaded = true;
 
     // TC-10: Verify error on passing an invalid appId
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
@@ -405,7 +392,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_afterSpawnApp)
     // TC-23: Send intent to the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));
 
-    //EXPECT_EQ(mResponse, "\"[{\\\"loaded\\\":false}]\"");
+    //EXPECT_EQ(, "\"[{\\\"loaded\\\":false}]\"");
 
     releaseResources();
 }
