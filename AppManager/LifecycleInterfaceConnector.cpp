@@ -157,13 +157,6 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_GENERAL;
             AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
             bool loaded = false;
-            string appPath = "";
-            string appConfig = "";
-            string runtimeAppId = "";
-            string runtimePath = "";
-            string runtimeConfig = "";
-            string environmentVars = "";
-            bool enableDebugger = false;
             string appInstanceId = "";
             string errorReason = "";
             bool success = true;
@@ -175,19 +168,6 @@ namespace WPEFramework
             else
             {
                 mAdminLock.Lock();
-                if (nullptr != appManagerImplInstance)
-                {
-                    AppManagerImplementation::PackageInfo packageData;
-                    if(appManagerImplInstance->fetchPackageInfoByAppId(appId, packageData))
-                    {
-                        appPath = packageData.unpackedPath;
-                        LOGINFO("Got PackageAppInfo appPath :[%s]", appPath.c_str());
-                    }
-                    else
-                    {
-                        LOGERR("Couldn't get the package details for appId: %s", appId.c_str());
-                    }
-                }
                 /* Checking if mLifecycleManagerRemoteObject is not valid then create the object */
                 if (nullptr == mLifecycleManagerRemoteObject)
                 {
@@ -239,8 +219,7 @@ namespace WPEFramework
                                 state = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
                             }
                             LOGINFO("spawnApp called ,state %u",state);
-                            status = mLifecycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
-                                                                          enableDebugger, state, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success);
+                            status = mLifecycleManagerRemoteObject->SpawnApp(appId, intent, state, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success);
 
                             if (status == Core::ERROR_NONE)
                             {
@@ -270,14 +249,8 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_GENERAL;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
 
-            string appPath = "";
             string intent = "";
-            string appConfig = "";
-            string runtimeAppId = "";
-            string runtimePath = "";
-            string runtimeConfig = "";
-            string environmentVars = "";
-            bool enableDebugger = false;
+
             string appInstanceId = "";
             bool success = true;
             Exchange::ILifecycleManager::LifecycleState state = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
@@ -288,19 +261,6 @@ namespace WPEFramework
             else
             {
                 mAdminLock.Lock();
-                if (nullptr != appManagerImplInstance)
-                {
-                    AppManagerImplementation::PackageInfo packageData;
-                    if(appManagerImplInstance->fetchPackageInfoByAppId(appId, packageData))
-                    {
-                        appPath = packageData.unpackedPath;
-                        LOGINFO("Got PackageAppInfo appPath :[%s]", appPath.c_str());
-                    }
-                    else
-                    {
-                        LOGERR("Couldn't get the package details for appId: %s", appId.c_str());
-                    }
-                }
                 /* Checking if mLifecycleManagerRemoteObject is not valid then create the object */
                 if (nullptr == mLifecycleManagerRemoteObject)
                 {
@@ -323,8 +283,7 @@ namespace WPEFramework
                         appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_PRELOAD);
                         state = Exchange::ILifecycleManager::LifecycleState::PAUSED;
                     }
-                    status = mLifecycleManagerRemoteObject->SpawnApp(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, intent, environmentVars,
-                          enableDebugger, state, runtimeConfigObject, launchArgs, appInstanceId, error, success);
+                    status = mLifecycleManagerRemoteObject->SpawnApp(appId, intent, state, runtimeConfigObject, launchArgs, appInstanceId, error, success);
                     if (status == Core::ERROR_NONE)
                     {
                         LOGINFO("Update App Info");

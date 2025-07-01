@@ -33,14 +33,7 @@ namespace WPEFramework
 	{
             ApplicationLaunchParams();
             string mAppId;
-	    string mAppPath;
-	    string mAppConfig;
-	    string mRuntimeAppId;
-	    string mRuntimePath;
-	    string mRuntimeConfig;
 	    string mLaunchIntent;
-	    string mEnvironmentVars;
-	    bool   mEnableDebugger;
 	    string mLaunchArgs;
             Exchange::ILifecycleManager::LifecycleState mTargetState;
 	    WPEFramework::Exchange::RuntimeConfig mRuntimeConfigObject;
@@ -65,7 +58,7 @@ namespace WPEFramework
 		void setState(void* state);
                 void setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState state);
                 void setStateChangeId(uint32_t id);
-                void setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject);
+                void setApplicationLaunchParams(const string& appId, const string& launchIntent, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject);
                 void setApplicationKillParams(bool force);
 
                 void* getState();

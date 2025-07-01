@@ -225,7 +225,7 @@ namespace WPEFramework
             return status;
         }
         
-        Core::hresult LifecycleManagerImplementation::SpawnApp(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const LifecycleState targetLifecycleState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success)
+        Core::hresult LifecycleManagerImplementation::SpawnApp(const string& appId, const string& launchIntent, const LifecycleState targetLifecycleState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success)
         {
 	    // Launches an app.  This will be an asynchronous call.
             // Notifies appropriate API Gateway when an app is about to be loaded
@@ -236,7 +236,7 @@ namespace WPEFramework
             if (nullptr == context)
 	    {
                 context = new ApplicationContext(appId);
-                context->setApplicationLaunchParams(appId, appPath, appConfig, runtimeAppId, runtimePath, runtimeConfig, launchIntent, environmentVars, enableDebugger, launchArgs, targetLifecycleState, runtimeConfigObject);
+                context->setApplicationLaunchParams(appId, launchIntent, launchArgs, targetLifecycleState, runtimeConfigObject);
 		mLoadedApplications.push_back(context);
                 firstLaunch = true;
 	    }
@@ -434,7 +434,7 @@ namespace WPEFramework
             activate = (closeReason == KILL_AND_ACTIVATE);		    
 
             ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
-	    status = SpawnApp(launchParams.mAppId, launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mLaunchIntent, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, activate?Exchange::ILifecycleManager::LifecycleState::ACTIVE:Exchange::ILifecycleManager::LifecycleState::PAUSED, launchParams.mRuntimeConfigObject, launchParams.mLaunchArgs, appInstanceId, errorReason, success);
+	    status = SpawnApp(launchParams.mAppId, launchParams.mLaunchIntent, activate?Exchange::ILifecycleManager::LifecycleState::ACTIVE:Exchange::ILifecycleManager::LifecycleState::PAUSED, launchParams.mRuntimeConfigObject, launchParams.mLaunchArgs, appInstanceId, errorReason, success);
 	    return status;
 	}
 
