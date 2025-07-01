@@ -318,10 +318,10 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::RateLimit(const string &downloadId, uint64_t &limit)
+    Core::hresult PackageManagerImplementation::RateLimit(const string &downloadId, const uint64_t &limit)
     {
         Core::hresult result = Core::ERROR_NONE;
-        LOGTRACE("'%s' limit=%ld", downloadId.c_str(), limit);
+        LOGDBG("'%s' limit=%ld", downloadId.c_str(), limit);
         if (mInprogressDownload.get() != nullptr) {
             if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
                 mHttpClient->setRateLimit(limit);
