@@ -259,8 +259,10 @@ namespace WPEFramework
 		    LOGINFO("-------------->topic/2806--------5");
                     sem_wait(&context->mReachedLoadingStateSemaphore);
 		}
+		LOGINFO("-------------->topic/2806--------99");
                 appInstanceId = context->getAppInstanceId();
             }
+	    LOGINFO("-------------->topic/2806--------100");
             return status;
         }
         
