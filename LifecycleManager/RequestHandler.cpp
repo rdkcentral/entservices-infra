@@ -100,6 +100,7 @@ namespace WPEFramework
 
         bool RequestHandler::launch(ApplicationContext* context, const string& launchIntent, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState, string& errorReason)
 	{
+	    LOGINFO("------------------topic/2806------------->");
             bool success = updateState(context, targetLifecycleState, errorReason);
             return success;
 	}
@@ -124,6 +125,7 @@ namespace WPEFramework
 
 	bool RequestHandler::updateState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState state, string& errorReason)
 	{
+	   LOGINFO("------------------topic/2806------------->");
            StateTransitionRequest request(context, state);
            StateTransitionHandler::getInstance()->addRequest(request); 
            return true;
