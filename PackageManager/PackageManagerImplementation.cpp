@@ -18,6 +18,7 @@
 **/
 
 #include <chrono>
+#include <inttypes.h> // Required for PRIu64
 
 #include "PackageManagerImplementation.h"
 
@@ -321,7 +322,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::RateLimit(const string &downloadId, const uint64_t &limit)
     {
         Core::hresult result = Core::ERROR_NONE;
-        LOGDBG("'%s' limit=%ld", downloadId.c_str(), limit);
+        LOGDBG("'%s' limit=%" PRIu64, downloadId.c_str(), limit);
         if (mInprogressDownload.get() != nullptr) {
             if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
                 mHttpClient->setRateLimit(limit);
