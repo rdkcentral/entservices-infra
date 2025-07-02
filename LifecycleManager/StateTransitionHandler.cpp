@@ -57,24 +57,30 @@ namespace WPEFramework
 	{
             StateHandler::initialize();
             sem_init(&gRequestSemaphore, 0, 0);
+	    std::cout<<"--------------------topic/2806----------16>";
             requestHandlerThread = std::thread([=]() {
                 bool isRunning = true;
                 gRequestMutex.lock();
                 isRunning = sRunning;
                 gRequestMutex.unlock();
+		std::cout<<"--------------------topic/2806----------17>";
                 while(isRunning)
 		{
+		    std::cout<<"--------------------topic/2806----------18>";
                     gRequestMutex.lock();
                     while (gRequests.size() > 0)
                     {
+			std::cout<<"--------------------topic/2806----------19>";
 	                std::shared_ptr<StateTransitionRequest> request = gRequests.front();
                         if (!request)
                         {
+			    std::cout<<"--------------------topic/2806----------20>";
                             gRequests.erase(gRequests.begin());
                             continue;
                         }
                         std::string errorReason;
                         bool success = StateHandler::changeState(*request, errorReason);
+			std::cout<<"--------------------topic/2806----------21>";
                         if (!success)
                         {
                             printf("MADANA ERROR IN STATE TRANSITION ... %s\n",errorReason.c_str());
@@ -83,12 +89,16 @@ namespace WPEFramework
                             break;
                         }
                         gRequests.erase(gRequests.begin());
+			std::cout<<"--------------------topic/2806----------22>";
                     }
                     gRequestMutex.unlock();
+		    std::cout<<"--------------------topic/2806----------23>";
                     sem_wait(&gRequestSemaphore);
+		    std::cout<<"--------------------topic/2806----------24>";
                     gRequestMutex.lock();
                     isRunning = sRunning;
                     gRequestMutex.unlock();
+		    std::cout<<"--------------------topic/2806----------25>";
                 }
             });
 	    return true;	
