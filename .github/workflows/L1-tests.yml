@@ -2,7 +2,7 @@ name: L1-tests
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**', topic/RDKEMW-2804 ]
+    branches: [ main, develop, 'sprint/**', 'release/**', test_topic/RDKEMW-2804 ]
   pull_request:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
 
