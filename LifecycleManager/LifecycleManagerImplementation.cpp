@@ -112,6 +112,7 @@ namespace WPEFramework
         
         void LifecycleManagerImplementation::dispatchEvent(EventNames event, const JsonValue &params)
         {
+	    LOGINFO("--------------------topic/2806--------------15");
             Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));
         }
         
