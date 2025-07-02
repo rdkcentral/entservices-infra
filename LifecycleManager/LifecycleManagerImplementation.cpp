@@ -233,10 +233,10 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext("", appId);
             bool firstLaunch = false;
-	    LOGINFO("-------------->topic/2806--------");
+	    LOGINFO("-------------->topic/2806--------1");
             if (nullptr == context)
 	    {
-		LOGINFO("-------------->topic/2806--------");
+		LOGINFO("-------------->topic/2806--------2");
                 context = new ApplicationContext(appId);
                 context->setApplicationLaunchParams(appId, launchIntent, launchArgs, targetLifecycleState, runtimeConfigObject);
 		mLoadedApplications.push_back(context);
@@ -247,15 +247,15 @@ namespace WPEFramework
             success = RequestHandler::getInstance()->launch(context, launchIntent, targetLifecycleState, errorReason);
             if (!success)
 	    {
-		LOGINFO("-------------->topic/2806--------");
+		LOGINFO("-------------->topic/2806--------3");
                 status = Core::ERROR_GENERAL;
 	    }
             else
 	    {
-		LOGINFO("-------------->topic/2806--------");
+		LOGINFO("-------------->topic/2806--------4");
                 if (firstLaunch)
 		{
-		    LOGINFO("-------------->topic/2806--------");
+		    LOGINFO("-------------->topic/2806--------5");
                     sem_wait(&context->mReachedLoadingStateSemaphore);
 		}
                 appInstanceId = context->getAppInstanceId();
