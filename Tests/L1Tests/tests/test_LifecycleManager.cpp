@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 #include <cstdio>
+#include <iostream>
 
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
