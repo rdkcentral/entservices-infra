@@ -97,6 +97,7 @@ protected:
 
     void createResources()
     {
+	std::cout<<"-----------------topic/2806-------------------198";
         // Set up mocks
         mServiceMock = new NiceMock<ServiceMock>;
         mRuntimeManagerMock = new NiceMock<RuntimeManagerMock>;
@@ -118,13 +119,16 @@ protected:
 
         // Configure the LifecycleManager
         mLifecycleManagerConfigure->Configure(mServiceMock);
+	std::cout<<"-----------------topic/2806-------------------199";
     }
 
     void releaseResources()
-    {
+    {	
+	std::cout<<"-----------------topic/2806-------------------200";
         // Clean up mocks
         if (mServiceMock != nullptr)
         {
+	    std::cout<<"-----------------topic/2806-------------------201";
             EXPECT_CALL(*mServiceMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -135,6 +139,7 @@ protected:
 
         if (mRuntimeManagerMock != nullptr)
         {
+	    std::cout<<"-----------------topic/2806-------------------202";
             EXPECT_CALL(*mRuntimeManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -145,6 +150,7 @@ protected:
 
         if (mWindowManagerMock != nullptr)
         {
+	    std::cout<<"-----------------topic/2806-------------------203";
             EXPECT_CALL(*mWindowManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -152,7 +158,9 @@ protected:
                      return 0;
                     }));
         }
+	std::cout<<"-----------------topic/2806-------------------204";
         mLifecycleManagerConfigure->Release();
+	std::cout<<"-----------------topic/2806-------------------205";
     }
 };
 
@@ -163,7 +171,7 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
     // TC-1: Spawn an app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 	
-    
+    std::cout<<"-----------------topic/2806-------------------206";
     releaseResources();
 }
 
