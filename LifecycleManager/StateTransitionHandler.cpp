@@ -22,6 +22,7 @@
 #include <thread>
 #include <mutex>
 #include <vector>
+#include <iostream>
 
 namespace WPEFramework
 {
@@ -105,7 +106,7 @@ namespace WPEFramework
 	void StateTransitionHandler::addRequest(StateTransitionRequest& request)
 	{
            //TODO: Pass contect and state as argument to function
-	   LOGINFO("--------------------topic/2806---------->");
+	   std::cout<<"--------------------topic/2806---------->";
 	   std::shared_ptr<StateTransitionRequest> stateTransitionRequest = std::make_shared<StateTransitionRequest>(request.mContext, request.mTargetState);
 	   gRequestMutex.lock();
            gRequests.push_back(stateTransitionRequest);
