@@ -2,7 +2,7 @@ name: L2-tests-OOP
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+    branches: [ main, develop, 'sprint/**', 'release/**', test_topic/RDKEMW-2804 ]
   pull_request:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
 
@@ -95,7 +95,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: topic/RDKEMW-2804
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-deviceanddisplay
