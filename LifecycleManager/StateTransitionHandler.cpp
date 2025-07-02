@@ -108,10 +108,15 @@ namespace WPEFramework
            //TODO: Pass contect and state as argument to function
 	   std::cout<<"--------------------topic/2806----------9>";
 	   std::shared_ptr<StateTransitionRequest> stateTransitionRequest = std::make_shared<StateTransitionRequest>(request.mContext, request.mTargetState);
+	   std::cout<<"--------------------topic/2806----------10>";
 	   gRequestMutex.lock();
+	   std::cout<<"--------------------topic/2806----------11>";
            gRequests.push_back(stateTransitionRequest);
+	   std::cout<<"--------------------topic/2806----------12>";
 	   gRequestMutex.unlock();
+	   std::cout<<"--------------------topic/2806----------13>";
            sem_post(&gRequestSemaphore);
+	   std::cout<<"--------------------topic/2806----------14>";
 	}
 
     } /* namespace Plugin */
