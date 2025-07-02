@@ -38,9 +38,9 @@ namespace WPEFramework
 	{
             ApplicationContext* context = getContext();
 	    printf("----------------topic/2806-----------------26-->");
-            boost::uuids::uuid tag = boost::uuids::random_generator()();
+            //boost::uuids::uuid tag = boost::uuids::random_generator()();
 	    printf("----------------topic/2806-----------------27-->");
-            std::string generatedInstanceId =  boost::uuids::to_string(tag);
+            std::string generatedInstanceId =  "123456";
 	    printf("----------------topic/2806-----------------28-->");
             context->setAppInstanceId(generatedInstanceId);
 	    printf("----------------topic/2806-----------------29-->");
