@@ -218,12 +218,15 @@ namespace WPEFramework
                 context->setLastLifecycleStateChangeTime(stateChangeTime);
                 context->setStateChangeId(sStateChangeCount);
                 sStateChangeCount++;
+		printf("------------------------>topic/2806--------------------11");
 
                 if (nullptr != eventHandler)
                 {
+		    printf("------------------------>topic/2806--------------------12");
 		    Exchange::ILifecycleManager::LifecycleState newLifecycleState = ((State*)context->getState())->getValue();
                     if (isStateTerminating)
 		    {
+			printf("------------------------>topic/2806--------------------13");
                         newLifecycleState = statePath[stateIndex];
                     }
                     JsonObject eventData;
@@ -233,9 +236,11 @@ namespace WPEFramework
                     eventData["newLifecycleState"] = (uint32_t)newLifecycleState;
                     if (newLifecycleState == Exchange::ILifecycleManager::LifecycleState::ACTIVE)
                     {
+			printf("------------------------>topic/2806--------------------14");
                         eventData["navigationIntent"] = context->getMostRecentIntent();
                     }
                     eventData["errorReason"] = errorReason;
+		    printf("------------------------>topic/2806--------------------15");
                     eventHandler->onStateChangeEvent(eventData);
                 }
                 if (isStateTerminating)
