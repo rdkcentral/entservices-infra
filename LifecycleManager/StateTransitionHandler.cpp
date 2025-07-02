@@ -106,7 +106,7 @@ namespace WPEFramework
 	void StateTransitionHandler::addRequest(StateTransitionRequest& request)
 	{
            //TODO: Pass contect and state as argument to function
-	   std::cout<<"--------------------topic/2806---------->";
+	   std::cout<<"--------------------topic/2806----------9>";
 	   std::shared_ptr<StateTransitionRequest> stateTransitionRequest = std::make_shared<StateTransitionRequest>(request.mContext, request.mTargetState);
 	   gRequestMutex.lock();
            gRequests.push_back(stateTransitionRequest);
