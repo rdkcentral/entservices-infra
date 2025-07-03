@@ -219,7 +219,6 @@ jobs:
           rdk/iarmbus/libIBus.h
           rdk/iarmbus/libIBusDaemon.h
           rdk/iarmmgrs-hal/mfrMgr.h
-          rdk/iarmmgrs-hal/pwrMgr.h
           rdk/iarmmgrs-hal/sysMgr.h
           rdk/iarmbus/iarmUtil.h
           rfcapi.h
