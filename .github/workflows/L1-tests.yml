@@ -463,6 +463,7 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_STORAGE_MANAGER=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -540,6 +541,7 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_STORAGE_MANAGER=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
@@ -554,6 +556,7 @@ jobs:
           /opt/secure/reboot
           /opt/secure/persistent
           /opt/secure/persistent/System
+          /opt/persistent/storageManager
           /opt/logs
           /lib/rdk
           /run/media/sda1/logs/PreviousLogs
