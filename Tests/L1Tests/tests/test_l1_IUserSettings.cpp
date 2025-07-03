@@ -25,12 +25,16 @@
 #include <WPEFramework/interfaces/IUserSettings.h>
 #include <WPEFramework/interfaces/Ids.h>
 #include <core/core.h>
+#include "Store2Mock.h"
 
 extern WPEFramework::Exchange::IUserSettings *InterfacePointer;
 extern WPEFramework::Exchange::IUserSettingsInspector *IUserSettingsInspectorPointer;
+extern Store2Mock* g_storeMock;
 
 using namespace WPEFramework::Exchange;
 using namespace WPEFramework;
+using ::testing::Return;
+using ::testing::_;
 
 class TestNotification : public WPEFramework::Exchange::IUserSettings::INotification {
 public:
@@ -120,6 +124,13 @@ TEST(UserSettingsTestAI, GetBlockNotRatedContentReturnsEnabledStateSuccessfully)
 */
 TEST(UserSettingsTestAI, GetCaptionsReturnsEnabledStateSuccessfully) {
     std::cout << "Entering GetCaptionsReturnsEnabledStateSuccessfully" << std::endl;
+
+    // Set up mock expectations with specific return values
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
+        .WillOnce([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
+            value = string("true"); // Set the value to "true" to make captions enabled
+            return Core::ERROR_NONE;
+        });
 
     bool enabled = false;
     Core::hresult result = InterfacePointer->GetCaptions(enabled);
@@ -309,16 +320,23 @@ TEST(UserSettingsTestAI, GetPlaybackWatershed_ReturnsErrorNone_WithValidPlayback
 * | :----: | --------- | ---------- |-------------- | ----- |
 * | 01 | Initialize preferredLanguages string and call GetPreferredAudioLanguages | preferredLanguages = "" | result = Core::ERROR_NONE, preferredLanguages = "eng" | Should Pass |
 */
-TEST(UserSettingsTestAI, ValidPreferredLanguagesString) {
-    std::cout << "Entering ValidPreferredLanguagesString test" << std::endl;
-    string preferredLanguages = "";
+TEST(UserSettingsTestAI, ValidPreferredAudioLanguagesString) {
+    std::cout << "Entering ValidPreferredAudioLanguagesString test" << std::endl;
     
+    // Set up mock to return the expected preferred audio languages
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
+        .WillOnce([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
+            value = string("eng");
+            return Core::ERROR_NONE;
+        });
+    
+    string preferredLanguages = "";
     Core::hresult result = InterfacePointer->GetPreferredAudioLanguages(preferredLanguages);
     
     EXPECT_EQ(result, Core::ERROR_NONE);
     EXPECT_EQ(preferredLanguages, "eng");
     
-    std::cout << "Exiting ValidPreferredLanguagesString test" << std::endl;
+    std::cout << "Exiting ValidPreferredAudioLanguagesString test" << std::endl;
 }
 
 /**
@@ -341,6 +359,14 @@ TEST(UserSettingsTestAI, ValidPreferredLanguagesString) {
 */
 TEST(UserSettingsTestAI, ValidPreferredLanguages) {
     std::cout << "Entering ValidPreferredLanguages test";
+    
+    // Set up mock expectation to return specific language codes
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
+        .WillOnce([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
+            value = string("eng,fra");
+            return Core::ERROR_NONE;
+        });
+    
     string preferredLanguages = "";
     
     Core::hresult result = InterfacePointer->GetPreferredCaptionsLanguages(preferredLanguages);
@@ -374,6 +400,13 @@ TEST(UserSettingsTestAI, ValidPreferredLanguages) {
 */
 TEST(UserSettingsTestAI, ValidServiceNameReturned) {
     std::cout << "Entering ValidServiceNameReturned" << std::endl;
+    
+    // Set up mock to return a valid service name
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
+        .WillOnce([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
+            value = string("CC1");
+            return Core::ERROR_NONE;
+        });
     
     string service = "";
     Core::hresult result = InterfacePointer->GetPreferredClosedCaptionService(service);
@@ -472,6 +505,13 @@ TEST(UserSettingsTestAI, ValidViewingRestrictions) {
 */
 TEST(UserSettingsTestAI, ValidGetViewingRestrictionsWindow) {
     std::cout << "Entering ValidGetViewingRestrictionsWindow" << std::endl;
+    
+    // Set up mock to return the expected viewing restrictions window value
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
+        .WillOnce([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
+            value = string("ALWAYS");
+            return Core::ERROR_NONE;
+        });
     
     string viewingRestrictionsWindow = "";
     Core::hresult result = InterfacePointer->GetViewingRestrictionsWindow(viewingRestrictionsWindow);
@@ -2412,7 +2452,12 @@ TEST(UserSettingsTestAI, SetVoiceGuidanceRate_NegativeRate) {
 TEST(UserSettingsTestAI, UnregisterWithValidNotificationObject) {
     std::cout << "Entering UnregisterWithValidNotificationObject" << std::endl;
     Exchange::IUserSettings::INotification* notification = new TestNotification();
-
+    
+    // Make sure the Register call succeeds first
+    Core::hresult registerResult = InterfacePointer->Register(notification);
+    EXPECT_EQ(registerResult, Core::ERROR_NONE);
+    
+    // Now test the Unregister call
     Core::hresult result = InterfacePointer->Unregister(notification);
 
     EXPECT_EQ(result, Core::ERROR_NONE);
@@ -2576,6 +2621,15 @@ TEST(UserSettingsInspectorTest, GetMigrationState_InvalidKey) {
 TEST(UserSettingsInspectorTest, ValidStatesArray)
 {
     std::cout << "Entering ValidStatesArray" << std::endl;
+    
+    // Mock to make sure GetMigrationStates returns valid data
+    // This is a bit more complex because we need to mock a method that returns an iterator
+    // We need to ensure GetValue returns data that our implementation can use to construct a valid state
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
+        .WillRepeatedly([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
+            value = string("true");
+            return Core::ERROR_NONE;
+        });
 
     WPEFramework::Exchange::IUserSettingsInspector::IUserSettingsMigrationStateIterator* states = nullptr;
 

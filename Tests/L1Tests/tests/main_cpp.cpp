@@ -31,6 +31,7 @@ using ::testing::_;
 
 WPEFramework::Exchange::IUserSettings *InterfacePointer = nullptr;
 WPEFramework::Exchange::IUserSettingsInspector *IUserSettingsInspectorPointer = nullptr;
+Store2Mock* g_storeMock = nullptr; // Global store mock pointer for tests to use
 
 int main(int argc, char **argv) {
     using namespace WPEFramework;
@@ -38,16 +39,17 @@ int main(int argc, char **argv) {
     
     // Create the mocks
     NiceMock<ServiceMock>* serviceMock = new NiceMock<ServiceMock>();
-    Store2Mock* storeMock = new Store2Mock();
+    g_storeMock = new NiceMock<Store2Mock>();
     
     // Set up the mock expectations
     ON_CALL(*serviceMock, QueryInterfaceByCallsign(_, _))
-        .WillByDefault(Return(storeMock));
+        .WillByDefault(Return(g_storeMock));
     
-    ON_CALL(*storeMock, GetValue(_, _, _, _, _))
+    // Set default behaviors that individual tests can override with specific expectations
+    ON_CALL(*g_storeMock, GetValue(_, _, _, _, _))
         .WillByDefault(Return(Core::ERROR_NONE));
     
-    ON_CALL(*storeMock, SetValue(_, _, _, _, _))
+    ON_CALL(*g_storeMock, SetValue(_, _, _, _, _))
         .WillByDefault(Return(Core::ERROR_NONE));
     
     // Create the implementation with mocked dependencies
