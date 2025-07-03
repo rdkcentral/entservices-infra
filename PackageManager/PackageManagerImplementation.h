@@ -63,6 +63,7 @@ namespace Plugin {
             string gatewayMetadataPath;
             string unpackedPath;
             FailReason failReason;
+            std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
         };
 
         typedef std::pair<std::string, std::string> StateKey;
@@ -239,6 +240,7 @@ namespace Plugin {
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
         std::map<StateKey, State>  mState;
+        bool cacheInitialized = false;
 
         std::string downloadDir = "/opt/CDL/";
         string configStr;
