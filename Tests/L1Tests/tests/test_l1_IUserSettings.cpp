@@ -411,11 +411,11 @@ TEST(UserSettingsTestAI, ValidPreferredLanguages) {
     std::cout << "Entering ValidPreferredLanguages test";
     
     // Set up mock expectation to return specific language codes
-    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
-        .WillOnce([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
-            value = string("eng,fra");
-            return Core::ERROR_NONE;
-        });
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, ::testing::_, _))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("eng,fra"), // Set the value output parameter
+            ::testing::Return(Core::ERROR_NONE)
+        ));
     
     string preferredLanguages = "";
     
@@ -452,11 +452,11 @@ TEST(UserSettingsTestAI, ValidServiceNameReturned) {
     std::cout << "Entering ValidServiceNameReturned" << std::endl;
     
     // Set up mock to return a valid service name
-    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
-        .WillOnce([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
-            value = string("CC1");
-            return Core::ERROR_NONE;
-        });
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, ::testing::_, _))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("CC1"),
+            ::testing::Return(Core::ERROR_NONE)
+        ));
     
     string service = "";
     Core::hresult result = InterfacePointer->GetPreferredClosedCaptionService(service);
@@ -557,11 +557,11 @@ TEST(UserSettingsTestAI, ValidGetViewingRestrictionsWindow) {
     std::cout << "Entering ValidGetViewingRestrictionsWindow" << std::endl;
     
     // Set up mock to return the expected viewing restrictions window value
-    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
-        .WillOnce([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
-            value = string("ALWAYS");
-            return Core::ERROR_NONE;
-        });
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, ::testing::_, _))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("ALWAYS"),
+            ::testing::Return(Core::ERROR_NONE)
+        ));
     
     string viewingRestrictionsWindow = "";
     Core::hresult result = InterfacePointer->GetViewingRestrictionsWindow(viewingRestrictionsWindow);
@@ -891,6 +891,10 @@ TEST(UserSettingsTestAI, EnableCaptionsSuccessfully) {
     std::cout << "Entering EnableCaptionsSuccessfully" << std::endl;
     bool enabled = true;
     
+    // Set up mock expectations
+    EXPECT_CALL(*g_storeMock, SetValue(_, _, _, ::testing::StrEq("true"), _))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
     Core::hresult result = InterfacePointer->SetCaptions(enabled);
     
     EXPECT_EQ(result, Core::ERROR_NONE);
@@ -920,6 +924,10 @@ TEST(UserSettingsTestAI, EnableCaptionsSuccessfully) {
 TEST(UserSettingsTestAI, DisableCaptionsSuccessfully) {
     std::cout << "Entering DisableCaptionsSuccessfully" << std::endl;
     bool enabled = false;
+
+    // Set up mock expectations
+    EXPECT_CALL(*g_storeMock, SetValue(_, _, _, ::testing::StrEq("false"), _))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
 
     Core::hresult result = InterfacePointer->SetCaptions(enabled);
     
@@ -2707,11 +2715,11 @@ TEST(UserSettingsInspectorTest, ValidStatesArray)
     // Mock to make sure GetMigrationStates returns valid data
     // This is a bit more complex because we need to mock a method that returns an iterator
     // We need to ensure GetValue returns data that our implementation can use to construct a valid state
-    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, _, _))
-        .WillRepeatedly([](const string&, const string&, const string&, const string&, Core::OptionalType<Core::JSON::String>& value) {
-            value = string("true");
-            return Core::ERROR_NONE;
-        });
+    EXPECT_CALL(*g_storeMock, GetValue(_, _, _, ::testing::_, _))
+        .WillRepeatedly(::testing::DoAll(
+            ::testing::SetArgReferee<3>("true"),
+            ::testing::Return(Core::ERROR_NONE)
+        ));
 
     WPEFramework::Exchange::IUserSettingsInspector::IUserSettingsMigrationStateIterator* states = nullptr;
 
