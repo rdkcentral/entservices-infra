@@ -146,6 +146,7 @@ namespace WPEFramework
         
              switch(event)
              {
+                 DEBUG_PRINTF("ERROR: RDKEMW-2806");
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
                      DEBUG_PRINTF("ERROR: RDKEMW-2806");
                      handleStateChangeEvent(obj);
@@ -624,6 +625,7 @@ namespace WPEFramework
             std::list<ApplicationContext*>::iterator iter = mLoadedApplications.end();
 	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 context = *iter;
                 if (nullptr == context)
 		{
