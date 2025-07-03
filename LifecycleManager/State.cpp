@@ -24,6 +24,10 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <cstdio>
+
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework
 {
@@ -36,12 +40,14 @@ namespace WPEFramework
 
         bool LoadingState::handle(string& errorReason)
 	{
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             ApplicationContext* context = getContext();
 
             boost::uuids::uuid tag = boost::uuids::random_generator()();
             std::string generatedInstanceId =  boost::uuids::to_string(tag);
             context->setAppInstanceId(generatedInstanceId);
             sem_post(&context->mReachedLoadingStateSemaphore);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return true;
 	}
 

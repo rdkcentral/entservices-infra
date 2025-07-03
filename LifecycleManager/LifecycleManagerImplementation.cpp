@@ -23,6 +23,10 @@
 #include <interfaces/json/JsonData_LifecycleManagerState.h>
 #include <interfaces/json/JLifecycleManagerState.h>
 #include <semaphore.h>
+#include <cstdio>
+
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework
 {
@@ -112,12 +116,14 @@ namespace WPEFramework
         
         void LifecycleManagerImplementation::dispatchEvent(EventNames event, const JsonValue &params)
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));
         }
         
         void LifecycleManagerImplementation::Dispatch(EventNames event, const JsonValue params)
         {
              JsonObject obj = params.Object();
+             DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
              //below is for ILifecycleManager notification
              string appId(obj["appId"].String());
@@ -136,15 +142,19 @@ namespace WPEFramework
         
              switch(event)
              {
+                 DEBUG_PRINTF("ERROR: RDKEMW-2806");
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
+                     DEBUG_PRINTF("ERROR: RDKEMW-2806");
                      handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
                      {
+                        DEBUG_PRINTF("ERROR: RDKEMW-2806");
                          (*index)->OnAppStateChanged(appId, (LifecycleState)newLifecycleState, errorReason);
                          ++index;
                      }
                      while (stateNotificationIndex != mLifecycleManagerStateNotification.end())
                      {
+                        DEBUG_PRINTF("ERROR: RDKEMW-2806");
                          (*stateNotificationIndex)->OnAppLifecycleStateChanged(appId, appInstanceId, (LifecycleState)oldLifecycleState, (LifecycleState)newLifecycleState, navigationIntent);
                          ++stateNotificationIndex;
                      }
@@ -159,6 +169,7 @@ namespace WPEFramework
                      LOGWARN("Event[%u] not handled", event);
                      break;
              }
+             DEBUG_PRINTF("ERROR: RDKEMW-2806");
         
              mAdminLock.Unlock();
         }
@@ -230,31 +241,39 @@ namespace WPEFramework
 	    // Launches an app.  This will be an asynchronous call.
             // Notifies appropriate API Gateway when an app is about to be loaded
             // Lifecycle manager will create the appInstanceId once the app is loaded.  Ripple is responsible for creating a token. 
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext("", appId);
             bool firstLaunch = false;
             if (nullptr == context)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 context = new ApplicationContext(appId);
                 context->setApplicationLaunchParams(appId, launchIntent, launchArgs, targetLifecycleState, runtimeConfigObject);
 		mLoadedApplications.push_back(context);
                 firstLaunch = true;
 	    }
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
             success = RequestHandler::getInstance()->launch(context, launchIntent, targetLifecycleState, errorReason);
             if (!success)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 status = Core::ERROR_GENERAL;
 	    }
             else
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 if (firstLaunch)
 		{
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     sem_wait(&context->mReachedLoadingStateSemaphore);
 		}
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 appInstanceId = context->getAppInstanceId();
             }
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return status;
         }
         
@@ -440,27 +459,34 @@ namespace WPEFramework
 
         uint32_t LifecycleManagerImplementation::Configure(PluginHost::IShell* service)
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             uint32_t result = Core::ERROR_GENERAL;
             if (service != nullptr)
             {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 mService = service;
                 mService->AddRef();
             }
             else
             {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 LOGERR("service is null \n");
                 return result;
             }
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             bool ret = initialize(service);
 	    if (ret)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 result = Core::ERROR_NONE;
 	    }
             else
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 printf("unable to configure lifecyclemanager \n");
 		fflush(stdout);
 	    }
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return result;
         }
 
@@ -504,6 +530,7 @@ namespace WPEFramework
 
         void LifecycleManagerImplementation::onStateChangeEvent(JsonObject& data)
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, data);
 	}
 
@@ -558,32 +585,39 @@ namespace WPEFramework
 
 	void LifecycleManagerImplementation::handleStateChangeEvent(const JsonObject &data)
     {
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             string appInstanceId = data["appInstanceId"];
 	    uint32_t stateInput = data["newLifecycleState"].Number();
             Exchange::ILifecycleManager::LifecycleState state = (Exchange::ILifecycleManager::LifecycleState) stateInput;
             if (state != Exchange::ILifecycleManager::LifecycleState::UNLOADED)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 return;
 	    }
             ApplicationContext* context = nullptr;
             std::list<ApplicationContext*>::iterator iter = mLoadedApplications.end();
 	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 context = *iter;
                 if (nullptr == context)
 		{
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     continue;
 		}
                 if (context->getAppInstanceId() == appInstanceId)
 	        {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	            break;	    
                 }
 	    }
 	    if ((iter != mLoadedApplications.end()) && (nullptr != context))
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 delete context;
                 mLoadedApplications.erase(iter);
 	    }
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
 
 
