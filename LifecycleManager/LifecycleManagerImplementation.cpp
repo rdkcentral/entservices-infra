@@ -119,6 +119,7 @@ namespace WPEFramework
         void LifecycleManagerImplementation::Dispatch(EventNames event, const JsonValue params)
         {
              JsonObject obj = params.Object();
+	     LOGINFO("--------------------topic/2806--------------1000");
 
              //below is for ILifecycleManager notification
              string appId(obj["appId"].String());
@@ -130,7 +131,11 @@ namespace WPEFramework
              uint32_t oldLifecycleState(obj["oldLifecycleState"].Number());
              string navigationIntent(obj["navigationIntent"].String());
 
+	     LOGINFO("--------------------topic/2806--------------1001");
+
              mAdminLock.Lock();
+
+	     LOGINFO("--------------------topic/2806--------------1002");
         
              std::list<Exchange::ILifecycleManager::INotification*>::const_iterator index(mLifecycleManagerNotification.begin());
              std::list<Exchange::ILifecycleManagerState::INotification*>::const_iterator stateNotificationIndex(mLifecycleManagerStateNotification.begin());
@@ -138,28 +143,34 @@ namespace WPEFramework
              switch(event)
              {
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
+		     LOGINFO("--------------------topic/2806--------------1003");
                      handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
                      {
+			LOGINFO("--------------------topic/2806--------------1011");
                          (*index)->OnAppStateChanged(appId, (LifecycleState)newLifecycleState, errorReason);
                          ++index;
                      }
                      while (stateNotificationIndex != mLifecycleManagerStateNotification.end())
                      {
+			 LOGINFO("--------------------topic/2806--------------1012");
                          (*stateNotificationIndex)->OnAppLifecycleStateChanged(appId, appInstanceId, (LifecycleState)oldLifecycleState, (LifecycleState)newLifecycleState, navigationIntent);
                          ++stateNotificationIndex;
                      }
                      break;
                  case LIFECYCLE_MANAGER_EVENT_RUNTIME:
+		     LOGINFO("--------------------topic/2806--------------1013");
                      handleRuntimeManagerEvent(obj);
                      break;
                  case LIFECYCLE_MANAGER_EVENT_WINDOW:
+		      LOGINFO("--------------------topic/2806--------------1014");
                       handleWindowManagerEvent(obj);
                       break;
                  default:
                      LOGWARN("Event[%u] not handled", event);
                      break;
              }
+	     LOGINFO("--------------------topic/2806--------------1015");
         
              mAdminLock.Unlock();
         }
@@ -566,32 +577,39 @@ namespace WPEFramework
 
 	void LifecycleManagerImplementation::handleStateChangeEvent(const JsonObject &data)
     {
+	    LOGINFO("--------------------topic/2806--------------1004");    
             string appInstanceId = data["appInstanceId"];
 	    uint32_t stateInput = data["newLifecycleState"].Number();
             Exchange::ILifecycleManager::LifecycleState state = (Exchange::ILifecycleManager::LifecycleState) stateInput;
             if (state != Exchange::ILifecycleManager::LifecycleState::UNLOADED)
 	    {
+		LOGINFO("--------------------topic/2806--------------1005");
                 return;
 	    }
             ApplicationContext* context = nullptr;
             std::list<ApplicationContext*>::iterator iter = mLoadedApplications.end();
 	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
 	    {
+		LOGINFO("--------------------topic/2806--------------1006");
                 context = *iter;
                 if (nullptr == context)
 		{
+		    LOGINFO("--------------------topic/2806--------------1007");
                     continue;
 		}
                 if (context->getAppInstanceId() == appInstanceId)
 	        {
+		    LOGINFO("--------------------topic/2806--------------1008");
 	            break;	    
                 }
 	    }
 	    if ((iter != mLoadedApplications.end()) && (nullptr != context))
 	    {
+		LOGINFO("--------------------topic/2806--------------1009");
                 delete context;
                 mLoadedApplications.erase(iter);
 	    }
+	    LOGINFO("--------------------topic/2806--------------1010");
     }
 
 
