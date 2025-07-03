@@ -212,13 +212,17 @@ namespace WPEFramework
                 }
                 fflush(stdout);
             }
-
+		printf("------------------------>topic/2806--------------------debug1");
                 struct timespec stateChangeTime;
+		printf("------------------------>topic/2806--------------------debug2");
                 timespec_get(&stateChangeTime, TIME_UTC);
+		printf("------------------------>topic/2806--------------------debug3");
                 context->setLastLifecycleStateChangeTime(stateChangeTime);
+		printf("------------------------>topic/2806--------------------debug4");
                 context->setStateChangeId(sStateChangeCount);
+		printf("------------------------>topic/2806--------------------debug5");
                 sStateChangeCount++;
-		printf("------------------------>topic/2806--------------------11");
+		printf("------------------------>topic/2806--------------------debug6");
 
                 if (nullptr != eventHandler)
                 {
