@@ -19,6 +19,7 @@
 
 #include "ApplicationContext.h"
 #include "State.h"
+#include <iostream>
 
 namespace WPEFramework
 {
@@ -70,6 +71,7 @@ namespace WPEFramework
 
         void ApplicationContext::setLastLifecycleStateChangeTime(timespec changeTime)
 	{
+	    printf("------------------------>topic/2806--------------------debug7");
             mLastLifecycleStateChangeTime = changeTime;
 	}
 
@@ -80,11 +82,13 @@ namespace WPEFramework
 
 	void ApplicationContext::setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState state)
 	{
+	    printf("------------------------>topic/2806--------------------debug8");
             mTargetLifecycleState = state;
         }
 
         void ApplicationContext::setStateChangeId(uint32_t id)
 	{
+	   printf("------------------------>topic/2806--------------------debug9");
             mStateChangeId = id;		
 	}
 
