@@ -113,7 +113,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: feature/RDK-yml-cleanup-TF
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
@@ -531,15 +531,9 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DCMAKE_BUILD_TYPE=Debug
           -DDS_FOUND=ON
-          -DPLUGIN_TELEMETRY=ON
-          -DPLUGIN_USBDEVICE=ON
-          -DPLUGIN_USB_MASS_STORAGE=ON
           -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
-          -DPLUGIN_OCICONTAINER=ON
-          -DPLUGIN_USERSETTINGS=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
