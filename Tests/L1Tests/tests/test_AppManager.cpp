@@ -279,10 +279,10 @@ protected:
         });
         EXPECT_CALL(*mLifecycleManagerMock, SpawnApp(APPMANAGER_APP_ID, ::testing::_, ::testing::_, ::testing::_, launchArgs, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
-        .WillOnce([&](const string& appId, const string& launchIntent, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState,
-            const Exchange::RuntimeConfig& runtimeConfigObject, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success) {
+        .WillOnce([&](const string& appId, const string& intent, const Exchange::ILifecycleManager::LifecycleState state,
+            const Exchange::RuntimeConfig& runtimeConfigObject, const string& launchArgs, string& appInstanceId, string& error, bool& success) {
             appInstanceId = APPMANAGER_APP_INSTANCE;
-            errorReason = "";
+            error = "";
             success = true;
             return Core::ERROR_NONE;
         });
@@ -645,7 +645,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailurePackageManagerObjectIsNull)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_LaunchAppUsingComRpcSuccess)
+TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
 {
     Core::hresult status;
 
@@ -672,7 +672,7 @@ TEST_F(AppManagerTest, DISABLED_LaunchAppUsingComRpcSuccess)
  * Verifying the return of the API by passing the wrong app id
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_LaunchAppUsingComRpcFailureWrongAppID)
+TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureWrongAppID)
 {
     Core::hresult status;
 
@@ -699,7 +699,7 @@ TEST_F(AppManagerTest, DISABLED_LaunchAppUsingComRpcFailureWrongAppID)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_LaunchAppUsingComRpcFailureIsAppLoadedReturnError)
+TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureIsAppLoadedReturnError)
 {
     Core::hresult status;
 
@@ -835,7 +835,7 @@ TEST_F(AppManagerTest, DISABLED_PreloadAppUsingComRpcFailureIsAppLoadedReturnErr
  * Verifying the return of the API
  * Releasing the AppManager Interface object only
  */
-TEST_F(AppManagerTest, PreloadAppUsingComRpcFailureLifecycleManagerRemoteObjectIsNull)
+TEST_F(AppManagerTest, DISABLED_PreloadAppUsingComRpcFailureLifecycleManagerRemoteObjectIsNull)
 {
     std::string error = "";
 
@@ -857,7 +857,7 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcFailureLifecycleManagerRemoteObjectI
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_CloseAppUsingComRpcSuccess)
+TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
 {
     Core::hresult status;
 
@@ -891,7 +891,7 @@ TEST_F(AppManagerTest, DISABLED_CloseAppUsingComRpcSuccess)
  * Verifying the return of the API by passing the wrong app id
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_CloseAppUsingComRpcFailureWrongAppID)
+TEST_F(AppManagerTest, CloseAppUsingComRpcFailureWrongAppID)
 {
     Core::hresult status;
 
@@ -920,7 +920,7 @@ TEST_F(AppManagerTest, DISABLED_CloseAppUsingComRpcFailureWrongAppID)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_CloseAppUsingComRpcFailureSetTargetAppStateReturnError)
+TEST_F(AppManagerTest, CloseAppUsingComRpcFailureSetTargetAppStateReturnError)
 {
     Core::hresult status;
 
@@ -974,7 +974,7 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcFailureLifecycleManagerRemoteObjectIsN
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_TerminateAppUsingComRpcSuccess)
+TEST_F(AppManagerTest, TerminateAppUsingComRpcSuccess)
 {
     Core::hresult status;
 
@@ -1144,7 +1144,7 @@ TEST_F(AppManagerTest, StopSystemAppUsingComRpcSuccess)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_KillAppUsingComRpcSuccess)
+TEST_F(AppManagerTest, KillAppUsingComRpcSuccess)
 {
     Core::hresult status;
 
@@ -1212,7 +1212,7 @@ TEST_F(AppManagerTest, KillAppUsingComRpcFailureLifecycleManagerRemoteObjectIsNu
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
- TEST_F(AppManagerTest, DISABLED_SendIntentUsingComRpcSuccess)
+ TEST_F(AppManagerTest, SendIntentUsingComRpcSuccess)
 {
     Core::hresult status;
 
@@ -1713,7 +1713,7 @@ TEST_F(AppManagerTest, GetMaxInactiveRamUsageUsingComRpcSuccess)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_updateCurrentActionUsingComRpcSuccess)
+TEST_F(AppManagerTest, updateCurrentActionUsingComRpcSuccess)
 {
     Core::hresult status;
 
@@ -1758,7 +1758,7 @@ TEST_F(AppManagerTest, updateCurrentActionUsingComRpcFailureAppIDNotExist)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, DISABLED_handleOnAppLifecycleStateChangedUsingComRpcSuccess)
+TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
 {
     Core::hresult status;
 
