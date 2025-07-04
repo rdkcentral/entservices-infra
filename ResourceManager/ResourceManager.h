@@ -58,11 +58,13 @@ namespace WPEFramework {
             static const string RESOURCE_MANAGER_METHOD_SET_AV_BLOCKED;
             static const string RESOURCE_MANAGER_METHOD_GET_BLOCKED_AV_APPLICATIONS;
             static const string RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE;
+            static const string RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE_FOR_APPS;
 
         private/*registered methods (wrappers)*/:
             //methods ("parameters" here is "params" from the curl request)
             uint32_t setAVBlockedWrapper(const JsonObject& parameters, JsonObject& response);
             uint32_t getBlockedAVApplicationsWrapper(const JsonObject& parameters, JsonObject& response);
+            uint32_t reserveTTSResourceWrapperForApps(const JsonObject& parameters, JsonObject& response);			
             uint32_t reserveTTSResourceWrapper(const JsonObject& parameters, JsonObject& response);
 
         // private/*internal methods*/: changing private to protected for testing purpose
@@ -72,6 +74,7 @@ namespace WPEFramework {
 
             bool setAVBlocked(const string& client, const bool blocked);
             bool getBlockedAVApplications(std::vector<std::string> &appsList);
+            bool reserveTTSResourceForApps(const std::vector<std::string>& clients);			
             bool reserveTTSResource(const string& client);
  
         #if defined(ENABLE_ERM) || defined(ENABLE_L1TEST) 
