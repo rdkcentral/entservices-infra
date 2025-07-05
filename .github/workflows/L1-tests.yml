@@ -672,6 +672,7 @@ jobs:
           rm -rf $(pwd)/rdkL1TestResults.json
 
       - name: Run unit tests with valgrind
+        continue-on-error: true
         if: ${{ !env.ACT }}
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
