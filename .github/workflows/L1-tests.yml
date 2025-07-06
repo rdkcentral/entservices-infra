@@ -689,6 +689,7 @@ jobs:
           --leak-check=yes
           --show-reachable=yes
           --track-fds=yes
+          --track-origins=yes
           --fair-sched=try
           RdkServicesL1Test &&
           cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithValgrind.json &&
