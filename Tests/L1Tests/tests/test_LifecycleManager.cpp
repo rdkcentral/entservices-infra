@@ -77,7 +77,7 @@ protected:
         // Initialize the parameters with default values
         appId = "com.test.app";
         launchIntent = "test.launch.intent";
-        targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+        targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::LOADING;
         launchArgs = "test.arguments";
         appInstanceId = "";
         errorReason = "";
