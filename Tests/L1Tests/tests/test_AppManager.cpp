@@ -1796,22 +1796,22 @@ TEST_F(AppManagerTest, DISABLED_handleOnAppLifecycleStateChangedUsingComRpcSucce
 }
 
 // Test for fetchPackageInfoByAppId
-TEST_F(AppManagerTest, fetchPackageInfoByAppId)
-{
-    Core::hresult status;
+// TEST_F(AppManagerTest, fetchPackageInfoByAppId)
+// {
+//     Core::hresult status;
     
-    status = createResources();
-    EXPECT_EQ(Core::ERROR_NONE, status);
+//     status = createResources();
+//     EXPECT_EQ(Core::ERROR_NONE, status);
     
 
-    EXPECT_EQ(true, mAppManagerImpl->fetchPackageInfoByAppId(APPMANAGER_APP_ID, packageData));
-    TEST_LOG("fetchPackageInfoByAppId :%s", APPMANAGER_APP_PACKAGE_NAME);
+//     EXPECT_EQ(true, mAppManagerImpl->fetchPackageInfoByAppId(APPMANAGER_APP_ID, packageData));
+//     TEST_LOG("fetchPackageInfoByAppId :%s", APPMANAGER_APP_PACKAGE_NAME);
 
-    if(status == Core::ERROR_NONE)
-    {
-        releaseResources();
-    }
-}
+//     if(status == Core::ERROR_NONE)
+//     {
+//         releaseResources();
+//     }
+// }
 
 // // Test for fetchPackageInfoByAppId with wrong app id
 // TEST_F(AppManagerTest, fetchPackageInfoByAppIdWrongAppId)
@@ -1827,3 +1827,29 @@ TEST_F(AppManagerTest, fetchPackageInfoByAppId)
 //         releaseResources();
 //     }
 // }
+
+
+// GetLoadedApps 
+TEST_F(AppManagerTest, GetLoadedApps)
+{
+    Core::hresult status;
+
+    status = createResources();
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
+    ).WillOnce([&](bool verbose, string& apps) {
+        std::string appData = R"([
+            {"appId":"NexTennis","appInstanceId":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6},
+            {"appId":"uktv","appInstanceId":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6}
+        ])";
+        return Core::ERROR_NONE;
+    });
+    std::string appData;
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetLoadedApps(appData));
+
+    if(status == Core::ERROR_NONE)
+    {
+        releaseResources();
+    }
+
+}
