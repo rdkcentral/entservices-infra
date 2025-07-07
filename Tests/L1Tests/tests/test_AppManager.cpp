@@ -1764,7 +1764,7 @@ TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-
+    TEST_LOG("handleOnAppLifecycleStateChangedUsingComRpcSuccess");
     mAppManagerImpl->handleOnAppLifecycleStateChanged(
         APPMANAGER_APP_ID,
         APPMANAGER_APP_INSTANCE,

@@ -114,7 +114,7 @@ jobs:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
           ref: topic/RDKEMW-5233
-          token: ${{ secrets.RDKCM_RDKE }}
+          #token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
         uses: actions/checkout@v3
