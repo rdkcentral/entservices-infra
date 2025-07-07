@@ -23,6 +23,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
 
 set (TEST_SRC
     tests/test_UtilsFile.cpp
@@ -135,7 +136,7 @@ add_plugin_test_ex(PLUGIN_RUNTIME_MANAGER tests/test_RunTimeManager.cpp "${RUNTI
 # PLUGIN_USERSETTINGS
 set (USERSETTINGS_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/UserSettings ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (USERSETTINGS_LIBS ${NAMESPACE}UserSettings ${NAMESPACE}UserSettingsImplementation)
-add_plugin_test_ex(PLUGIN_USERSETTINGS tests/test_UserSettings.cpp "${USERSETTINGS_INC}" "${USERSETTINGS_LIBS}")
+add_plugin_test_ex(PLUGIN_USERSETTINGS "tests/test_l1_IUserSettings.cpp;tests/main_cpp.cpp" "${USERSETTINGS_INC}" "${USERSETTINGS_LIBS}")
 
 # PLUGIN_RESOURCEMANAGER
 set (RESOURCEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/ResourceManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
@@ -143,12 +144,13 @@ add_plugin_test_ex(PLUGIN_RESOURCEMANAGER tests/test_ResourceManager.cpp "${RESO
 
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
+target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Core::${NAMESPACE}Core)
 
 if (RDK_SERVICES_L1_TEST)
    find_library(TESTMOCKLIB_LIBRARIES NAMES L1TestMocklib)
    if (TESTMOCKLIB_LIBRARIES)
        message ("Found mock libraries ${TESTMOCKLIB_LIBRARIES} library")
-       target_link_libraries(${MODULE_NAME} ${TESTMOCKLIB_LIBRARIES})
+       target_link_libraries(${MODULE_NAME} PRIVATE ${TESTMOCKLIB_LIBRARIES})
    else (TESTMOCKLIB_LIBRARIES)
        message ("Require ${TESTMOCKLIB_LIBRARIES} library")
    endif (TESTMOCKLIB_LIBRARIES)
@@ -158,7 +160,7 @@ include_directories(${TEST_INC})
 
 target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins)
 
-target_link_libraries(${MODULE_NAME} ${TEST_LIB})
+target_link_libraries(${MODULE_NAME} PRIVATE ${TEST_LIB})
 
 target_include_directories(${MODULE_NAME}
         PUBLIC

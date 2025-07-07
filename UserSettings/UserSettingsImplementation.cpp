@@ -79,6 +79,7 @@ UserSettingsImplementation::UserSettingsImplementation()
 , _storeNotification(*this)
 , _registeredEventHandlers(false)
 , _service(nullptr)
+, _refCount(0)
 {
     LOGINFO("Create UserSettingsImplementation Instance");
     UserSettingsImplementation::instance(this);
@@ -162,7 +163,14 @@ void UserSettingsImplementation::registerEventHandlers()
  */
 Core::hresult UserSettingsImplementation::Register(Exchange::IUserSettings::INotification *notification)
 {
+    std::cout << "UserSettingsImplementation l1 usersettings test Resgister called" << std::endl;
+
     _adminLock.Lock();
+
+    if (notification == nullptr) {
+        _adminLock.Unlock();
+        return Core::ERROR_INVALID_PARAMETER;
+    }
 
     // Make sure we can't register the same notification callback multiple times
     if (std::find(_userSettingNotification.begin(), _userSettingNotification.end(), notification) == _userSettingNotification.end())
@@ -177,6 +185,8 @@ Core::hresult UserSettingsImplementation::Register(Exchange::IUserSettings::INot
     }
 
     _adminLock.Unlock();
+
+    std::cout << "UserSettingsImplementation l1 usersettings test Resgister exiting" << std::endl;
 
     return Core::ERROR_NONE;
 }
@@ -468,6 +478,8 @@ void UserSettingsImplementation::ValueChanged(const Exchange::IStore2::ScopeType
 
 uint32_t UserSettingsImplementation::SetUserSettingsValue(const string& key, const string& value)
 {
+    std::cout << "UserSettingsImplementation l1 usersettings test SetUserSettingsValue called" << std::endl;
+
     uint32_t status = Core::ERROR_GENERAL;
     _adminLock.Lock();
 
@@ -481,6 +493,9 @@ uint32_t UserSettingsImplementation::SetUserSettingsValue(const string& key, con
         LOGERR("_remotStoreObject is null");
     }
     _adminLock.Unlock();
+
+    std::cout << "UserSettingsImplementation l1 usersettings test SetUserSettingsValue exiting" << std::endl;
+
     return status;
 }
 
@@ -550,10 +565,15 @@ Core::hresult UserSettingsImplementation::GetAudioDescription(bool &enabled) con
 
 Core::hresult UserSettingsImplementation::SetPreferredAudioLanguages(const string& preferredLanguages)
 {
+    std::cout << "UserSettingsImplementation l1 usersettings test SetPreferredAudioLanguages called" << std::endl;
+
     uint32_t status = Core::ERROR_GENERAL;
 
     LOGINFO("preferredLanguages: %s", preferredLanguages.c_str());
     status = SetUserSettingsValue(USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY, preferredLanguages);
+
+    std::cout << "UserSettingsImplementation l1 usersettings test SetPreferredAudioLanguages exiting" << std::endl;
+
     return status;
 }
 
@@ -650,7 +670,7 @@ Core::hresult UserSettingsImplementation::GetPreferredClosedCaptionService(strin
     return status;
 }
 
-Core::hresult UserSettingsImplementation::SetPrivacyMode(const string& privacyMode)
+uint32_t UserSettingsImplementation::SetPrivacyMode(const string& privacyMode)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -684,7 +704,7 @@ Core::hresult UserSettingsImplementation::SetPrivacyMode(const string& privacyMo
     return status;
 }
 
-Core::hresult UserSettingsImplementation::GetPrivacyMode(string &privacyMode) const
+uint32_t UserSettingsImplementation::GetPrivacyMode(string &privacyMode) const
 {
     uint32_t status = Core::ERROR_NONE;
     std::string value = "";
@@ -1133,6 +1153,18 @@ Core::hresult UserSettingsImplementation::GetMigrationStates(IUserSettingsMigrat
     _adminLock.Unlock();
 
     return status;
+}
+
+void UserSettingsImplementation::AddRef() const {
+    _refCount.fetch_add(1, std::memory_order_relaxed);
+}
+
+uint32_t UserSettingsImplementation::Release() const {
+    uint32_t count = _refCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
+    if (count == 0) {
+        delete this;
+    }
+    return count;
 }
 
 } // namespace Plugin
