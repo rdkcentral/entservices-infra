@@ -208,12 +208,6 @@ protected:
         if (mStorageManagerMock != nullptr)
         {
             TEST_LOG("Release StorageManagerMock");
-            // EXPECT_CALL(*mStorageManagerMock, Release())
-            //     .WillOnce(::testing::Invoke(
-            //     [&]() {
-            //             delete mStorageManagerMock;
-            //             return 0;
-            //         }));
             mStorageManagerMock->Release();  // IS THIS REQUIRED?
             mStorageManagerMock = nullptr;
         }
@@ -359,7 +353,6 @@ TEST_F(AppManagerTest, RegisteredMethodsUsingJsonRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getMaxHibernatedApps")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getMaxHibernatedFlashUsage")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getMaxInactiveRamUsage")));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -777,6 +770,7 @@ TEST_F(AppManagerTest, DISABLED_PreloadAppUsingComRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    TEST_LOG("PreloadAppUsingComRpcSuccess - createResources done!");
 
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
@@ -1801,3 +1795,35 @@ TEST_F(AppManagerTest, DISABLED_handleOnAppLifecycleStateChangedUsingComRpcSucce
     }
 }
 
+// Test for fetchPackageInfoByAppId
+TEST_F(AppManagerTest, fetchPackageInfoByAppId)
+{
+    Core::hresult status;
+    
+    status = createResources();
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    
+
+    EXPECT_EQ(true, mAppManagerImpl->fetchPackageInfoByAppId(APPMANAGER_APP_ID, packageData));
+    TEST_LOG("fetchPackageInfoByAppId :%s", APPMANAGER_APP_PACKAGE_NAME);
+
+    if(status == Core::ERROR_NONE)
+    {
+        releaseResources();
+    }
+}
+
+// // Test for fetchPackageInfoByAppId with wrong app id
+// TEST_F(AppManagerTest, fetchPackageInfoByAppIdWrongAppId)
+// {
+//     Core::hresult status;
+    
+//     status = createResources();
+//     EXPECT_EQ(Core::ERROR_NONE, status);
+//     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->fetchPackageInfoByAppId(APPMANAGER_WRONG_APP_ID, packageName));
+
+//     if(status == Core::ERROR_NONE)
+//     {
+//         releaseResources();
+//     }
+// }
