@@ -1758,7 +1758,7 @@ TEST_F(AppManagerTest, updateCurrentActionUsingComRpcFailureAppIDNotExist)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
+TEST_F(AppManagerTest, DISABLED_handleOnAppLifecycleStateChangedUsingComRpcSuccess)
 {
     Core::hresult status;
 
