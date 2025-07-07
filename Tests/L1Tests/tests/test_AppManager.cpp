@@ -29,6 +29,7 @@
 #include "ServiceMock.h"
 #include "LifecycleManagerMock.h"
 #include "PackageManagerMock.h"
+#include "StorageManagerMock.h"
 #include "Store2Mock.h"
 #include "COMLinkMock.h"
 #include "ThunderPortability.h"
@@ -69,6 +70,7 @@ protected:
     PackageManagerMock* mPackageManagerMock = nullptr;
     PackageInstallerMock* mPackageInstallerMock = nullptr;
     Store2Mock* mStore2Mock = nullptr;
+    StorageManagerMock* mStorageManagerMock = nullptr;
 
     Core::ProxyType<Plugin::AppManager> mAppManagerPlugin;
     Plugin::AppManagerImplementation *mAppManagerImpl;
@@ -104,6 +106,7 @@ protected:
         mLifecycleManagerStateMock = new NiceMock<LifecycleManagerStateMock>;
         mPackageManagerMock = new NiceMock<PackageManagerMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
+        mStorageManagerMock = new NiceMock<StorageManagerMock>;
         mStore2Mock = new NiceMock<Store2Mock>;
 
         TEST_LOG("In createResources!");
@@ -121,6 +124,8 @@ protected:
                     }
                 } else if (name == "org.rdk.PersistentStore") {
                    return reinterpret_cast<void*>(mStore2Mock);
+                } else if (name == "org.rdk.StorageManager") {
+                    return reinterpret_cast<void*>(mStorageManagerMock);
                 } else if (name == "org.rdk.PackageManagerRDKEMS") {
                     if (id == Exchange::IPackageHandler::ID) {
                         return reinterpret_cast<void*>(mPackageManagerMock);
@@ -145,6 +150,7 @@ protected:
         TEST_LOG("In releaseResources!");
         if (mLifecycleManagerMock != nullptr)
         {
+            TEST_LOG("Release LifecycleManagerMock");
             EXPECT_CALL(*mLifecycleManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -154,6 +160,7 @@ protected:
         }
         if (mLifecycleManagerStateMock != nullptr)
         {
+            TEST_LOG("Release LifecycleManagerStateMock");
             EXPECT_CALL(*mLifecycleManagerStateMock, Unregister(::testing::_))
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -168,6 +175,7 @@ protected:
         }
         if (mPackageManagerMock != nullptr)
         {
+            TEST_LOG("Release PackageManagerMock");
             EXPECT_CALL(*mPackageManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -177,6 +185,7 @@ protected:
         }
         if (mPackageInstallerMock != nullptr)
         {
+            TEST_LOG("Release PackageInstallerMock");
             EXPECT_CALL(*mPackageInstallerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -184,8 +193,10 @@ protected:
                      return 0;
                     }));
         }
+
         if (mStore2Mock != nullptr)
         {
+            TEST_LOG("Release Store2Mock");
             EXPECT_CALL(*mStore2Mock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -194,6 +205,18 @@ protected:
                     }));
         }
 
+        if (mStorageManagerMock != nullptr)
+        {
+            TEST_LOG("Release StorageManagerMock");
+            // EXPECT_CALL(*mStorageManagerMock, Release())
+            //     .WillOnce(::testing::Invoke(
+            //     [&]() {
+            //             delete mStorageManagerMock;
+            //             return 0;
+            //         }));
+            mStorageManagerMock->Release();  // IS THIS REQUIRED?
+            mStorageManagerMock = nullptr;
+        }
         mAppManagerPlugin->Deinitialize(mServiceMock);
         delete mServiceMock;
         mAppManagerImpl = nullptr;
