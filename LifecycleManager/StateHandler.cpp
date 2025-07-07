@@ -241,6 +241,8 @@ namespace WPEFramework
                     result = updateState(context, statePath[stateIndex], errorReason);
                 if(result)
                 {
+                    DEBUG_PRINTF("oldLifecycleState=%zu, stateIndex=%zu, statePath[stateIndex]=%zu, mStateStrings.size()=%zu", 
+             (size_t)oldLifecycleState, stateIndex, (size_t)statePath[stateIndex], mStateStrings.size());
                     printf("StateHandler::changeState: Success %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
                 }
                 else
