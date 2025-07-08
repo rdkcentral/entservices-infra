@@ -192,6 +192,9 @@ jobs:
           headers/systemservices
           headers/systemservices/proc
           headers/libusb
+          headers/Dobby
+          headers/Dobby/Public/Dobby
+          headers/Dobby/IpcService
           &&
           cd headers
           &&
@@ -245,6 +248,10 @@ jobs:
           rdk/ds/AudioStereoMode.hpp
           rdk/ds/VideoDFC.hpp
           dsRpc.h
+          Dobby/DobbyProtocol.h
+          Dobby/DobbyProxy.h
+          Dobby/Public/Dobby/IDobbyProxy.h
+          Dobby/IpcService/IpcFactory.h
           &&
           cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h .
 
@@ -420,6 +427,10 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/libusb
           -I $GITHUB_WORKSPACE/install/usr/include
           -I $GITHUB_WORKSPACE/build/mocks
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/Public/Dobby
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/IpcService
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -460,6 +471,12 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/dsError.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/dsUtl.h
           -include $GITHUB_WORKSPACE/build/mocks/secure_storage.grpc.pb.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Dobby.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Omi.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/DobbyProtocol.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/DobbyProxy.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/Public/Dobby/IDobbyProxy.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/IpcService/IpcFactory.h
           -Werror -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format=
           -DUSE_IARMBUS
           -DHAS_RBUS
@@ -485,6 +502,7 @@ jobs:
           -DPLUGIN_LIFECYCLEMANAGER=OFF
           -DPLUGIN_APPMANAGER=OFF
           -DPLUGIN_ANALYTICS=ON
+          -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_ANALYTICS_BACKEND_LIBRARY_NAME="libWPEFrameworkAnalyticsBackendMock.so"
           -DPLUGIN_ANALYTICS_EVENTS_MAP="/tmp/AnalyticsEventsMap.json"
           -DUSE_THUNDER_R4=ON

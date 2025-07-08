@@ -89,6 +89,17 @@ target_link_libraries(${MODULE_NAME}
         ${SYSTEMD_LIBRARIES}
         ${OMI_CLIENT_LIBRARIES}
 )
+
+if (RDK_SERVICE_L2_TEST)
+   find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
+   if (TESTMOCKLIB_LIBRARIES)
+       message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")
+       target_link_libraries(${MODULE_NAME} PRIVATE ${TESTMOCKLIB_LIBRARIES})
+   else (TESTMOCKLIB_LIBRARIES)
+       message ("Require ${TESTMOCKLIB_LIBRARIES} library")
+   endif (TESTMOCKLIB_LIBRARIES)
+endif (RDK_SERVICES_L2_TEST)
+
 # ${NAMESPACE}Protocols::${NAMESPACE}Protocols
 install(TARGETS ${MODULE_NAME}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
