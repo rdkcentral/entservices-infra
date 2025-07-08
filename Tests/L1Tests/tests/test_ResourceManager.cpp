@@ -129,6 +129,7 @@ TEST_F(ResourceManagerInitializedTest, RegisteredMethods)
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setAVBlocked")));
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("reserveTTSResource")));
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getBlockedAVApplications")));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("reserveTTSResourceForApps")));
 
 }
 
@@ -143,6 +144,26 @@ TEST_F(ResourceManagerInitializedTest, ReserveTTSResourceTest_1)
 
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("reserveTTSResource"),
         _T("{\"appid\":\"testApp\"}"), response));
+}
+
+TEST_F(ResourceManagerInitializedTest, ReserveTTSResourceForAppsTest_1)
+{
+
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("reserveTTSResourceForApps"),
+        _T("{\"appids\":[\"testApp1\",\"testApp2\"]}"), response));
+}
+
+TEST_F(ResourceManagerInitializedTest, ReserveTTSResourceForAppsTest_3)
+{
+    plugin->Deinitialize(&service);
+    plugin->Initialize(&service);
+
+    plugin->setDisableReserveTTS(true);
+
+    std::cout << "[TEST] tiwarisetDisableReserveTTS(true) called\n";
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("reserveTTSResourceForApps"),
+        _T("{ \"appids\": [\"testApp1\",\"testApp2\"]}"), response));
+
 }
 
 TEST_F(ResourceManagerInitializedTest, ReserveTTSResourceTest_3)
@@ -169,6 +190,16 @@ TEST_F(ResourceManagerInitializedTest, ReserveTTSResource_MissingAppId)
         _T("{ }"), response));
 }
 
+TEST_F(ResourceManagerInitializedTest, ReserveTTSResourceForApps_MissingAppIds)
+{
+    plugin->Deinitialize(&service);
+    plugin->Initialize(&service);
+
+    plugin->setDisableReserveTTS(false);
+
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("reserveTTSResourceForApps"),
+        _T("{ }"), response));
+}
 
 TEST_F(ResourceManagerInitializedTest, InformationReturnsEmptyStringTest)
 {
