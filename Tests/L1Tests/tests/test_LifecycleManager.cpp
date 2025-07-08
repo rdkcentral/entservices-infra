@@ -33,6 +33,8 @@
 #include "ThunderPortability.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
@@ -62,6 +64,7 @@ protected:
 
     LifecycleManagerTest()
     {
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementation>::Create();
         
         interface = static_cast<Exchange::ILifecycleManager*>(mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManager::ID));
@@ -69,11 +72,13 @@ protected:
 
     virtual ~LifecycleManagerTest() override
     {
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         interface->Release();
     }
 
     void SetUp() override 
     {
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         // Initialize the parameters with default values
         appId = "com.test.app";
         launchIntent = "test.launch.intent";
@@ -86,17 +91,20 @@ protected:
         runtimeConfigObject = {
             true,true,true,1024,512,"test.env.variables",1,1,1024,true,"test.dial.id","test.command","test.app.type","test.app.path","test.runtime.path","test.logfile.path",1024,"test.log.levels",true,"test.fkps.files","test.firebolt.version",true,"test.unpacked.path"
         };
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         
         ASSERT_TRUE(interface != nullptr);
     }
 
     void TearDown() override
     {
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         ASSERT_TRUE(interface != nullptr);
     }
 
     void createResources()
     {
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         // Set up mocks
         mServiceMock = new NiceMock<ServiceMock>;
         mRuntimeManagerMock = new NiceMock<RuntimeManagerMock>;
@@ -118,13 +126,16 @@ protected:
 
         // Configure the LifecycleManager
         mLifecycleManagerConfigure->Configure(mServiceMock);
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
 
     void releaseResources()
     {
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         // Clean up mocks
         if (mServiceMock != nullptr)
         {
+	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
             EXPECT_CALL(*mServiceMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -135,6 +146,7 @@ protected:
 
         if (mRuntimeManagerMock != nullptr)
         {
+	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
             EXPECT_CALL(*mRuntimeManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -145,6 +157,7 @@ protected:
 
         if (mWindowManagerMock != nullptr)
         {
+	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
             EXPECT_CALL(*mWindowManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -152,19 +165,24 @@ protected:
                      return 0;
                     }));
         }
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mLifecycleManagerConfigure->Release();
     }
 };
 
 TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 {
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     createResources();
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
     // TC-1: Spawn an app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-	
+
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");	
     
     releaseResources();
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 }
 
 TEST_F(LifecycleManagerTest, spawnApp_withInvalidParams)
