@@ -2,7 +2,7 @@ name: L2-tests-OOP
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+    branches: [ main, develop, 'sprint/**', 'release/**', RDKEMW-2804_Regression]
   pull_request:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
 
