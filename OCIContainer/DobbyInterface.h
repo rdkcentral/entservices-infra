@@ -24,7 +24,11 @@
 #include <interfaces/IOCIContainer.h>
 #include <vector>
 #include <map>
-#include <i_omi_proxy.hpp>
+#ifndef RDK_SERVICE_L2_TEST
+#include <omi_proxy.hpp>
+#else
+#include "Omi.h"
+#endif
 #include "IEventHandler.h"
 
 namespace WPEFramework
