@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.5.3 (2025-07-07)
+## 1.5.4 (2025-07-08)
+
+
+Full set of changes: [`1.5.3...1.5.4`](https://github.com/rdkcentral/entservices-infra/compare/1.5.3...1.5.4)
+
+## 1.5.3 (2025-07-08)
 
 
 Full set of changes: [`1.5.2...1.5.3`](https://github.com/rdkcentral/entservices-infra/compare/1.5.2...1.5.3)
