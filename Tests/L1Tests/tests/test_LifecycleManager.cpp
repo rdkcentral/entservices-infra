@@ -170,6 +170,10 @@ protected:
         if (mRuntimeManagerMock != nullptr)
         {
 	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+		
+	    EXPECT_CALL(*mRuntimeManagerMock, Unregister(::testing::_))
+            .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+		
             EXPECT_CALL(*mRuntimeManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -181,6 +185,10 @@ protected:
         if (mWindowManagerMock != nullptr)
         {
 	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+		
+	    EXPECT_CALL(*mWindowManagerMock, Unregister(::testing::_))
+            .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+		
             EXPECT_CALL(*mWindowManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
