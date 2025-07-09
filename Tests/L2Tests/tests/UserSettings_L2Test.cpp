@@ -470,39 +470,19 @@ uint32_t UserSettingTest::CreateUserSettingInterfaceObjectUsingComRPCConnection(
     if (!Client_UserSettings.IsValid())
     {
         TEST_LOG("Invalid Client_UserSettings");
-        return return_value;
     }
-    const int max_retries = 5;
-    int retry_count = 0;
-    
-    while (retry_count < max_retries) {
-        m_controller_usersettings = Client_UserSettings->Open<PluginHost::IShell>(
-            _T("org.rdk.UserSettings"), ~0, 3000
-        );
-
-        if (m_controller_usersettings) {
+    else
+    {
+        m_controller_usersettings = Client_UserSettings->Open<PluginHost::IShell>(_T("org.rdk.UserSettings"), ~0, 3000);
+        TEST_LOG("m_controller_usersettings pointer address: %p", m_controller_usersettings);
+        if (m_controller_usersettings)
+        {
             m_usersettingsplugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettings>();
+            TEST_LOG("m_usersettingsplugin pointer address: %p", m_usersettingsplugin);
             m_usersettings_inspe_plugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettingsInspector>();
-            
-            // Check if we got valid interfaces
-            if (m_usersettingsplugin) {
-                return_value = Core::ERROR_NONE;
-                TEST_LOG("Successfully created UserSettings interface on attempt %d", retry_count + 1);
-                break;
-            }
+            return_value = Core::ERROR_NONE;
         }
-        
-        TEST_LOG("Retrying UserSettings connection... (%d/%d)", retry_count + 1, max_retries);
-        
-        // Wait before retrying
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        retry_count++;
     }
-
-    if (return_value != Core::ERROR_NONE) {
-        TEST_LOG("Failed to create UserSettings interface after %d attempts", max_retries);
-    }
-
     return return_value;
 }
 
@@ -752,7 +732,7 @@ MATCHER_P(MatchRequestStatusDouble, expected, "")
     return expected == actual;
 
 }
-#if 0
+
 TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -1491,7 +1471,7 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
 
 }
-#endif
+
 
 /* Activating UserSettings and Persistent store plugins and UserSettings namespace has no entries in db.
    So that we can verify whether UserSettings plugin is receiving default values from PersistentStore or not*/
