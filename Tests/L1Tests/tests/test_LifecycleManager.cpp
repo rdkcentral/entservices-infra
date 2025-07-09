@@ -31,6 +31,7 @@
 #include "WindowManagerMock.h"
 #include "COMLinkMock.h"
 #include "ThunderPortability.h"
+#include "WorkerPoolImplementation.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define DEBUG_PRINTF(fmt, ...) \
@@ -61,19 +62,29 @@ protected:
     RuntimeManagerMock* mRuntimeManagerMock = nullptr;
     WindowManagerMock* mWindowManagerMock = nullptr;
     ServiceMock* mServiceMock = nullptr;
+    Core::ProxyType<WorkerPoolImplementation> workerPool;
 
     LifecycleManagerTest()
+	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
+            2, Core::Thread::DefaultStackSize(), 16))
     {
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementation>::Create();
         
         interface = static_cast<Exchange::ILifecycleManager*>(mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManager::ID));
+
+	Core::IWorkerPool::Assign(&(*workerPool));
+	workerPool->Run();
     }
 
     virtual ~LifecycleManagerTest() override
     {
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
-        interface->Release();
+
+	Core::IWorkerPool::Assign(nullptr);
+	workerPool.Release();
+
+	interface->Release();
     }
 
     void SetUp() override 
@@ -123,6 +134,18 @@ protected:
                 } 
             return nullptr;
         }));
+
+	EXPECT_CALL(*mRuntimeManagerMock, AddRef())
+            .Times(::testing::AnyNumber());
+
+	EXPECT_CALL(*mRuntimeManagerMock, Register(::testing::_))
+            .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+
+	EXPECT_CALL(*mWindowManagerMock, AddRef())
+            .Times(::testing::AnyNumber());
+
+	EXPECT_CALL(*mWindowManagerMock, Register(::testing::_))
+            .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
 
         // Configure the LifecycleManager
         mLifecycleManagerConfigure->Configure(mServiceMock);
