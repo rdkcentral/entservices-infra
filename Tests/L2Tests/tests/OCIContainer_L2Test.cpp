@@ -2333,7 +2333,7 @@ TEST_F(OCIContainer_L2Test, StopContainer_ErrorCase)
                 status = m_OCIContainerplugin->StopContainer(containerID, force, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("StopContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("StopContainer returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
@@ -2375,7 +2375,7 @@ TEST_F(OCIContainer_L2Test, PauseContainer_ErrorCase)
                 status = m_OCIContainerplugin->PauseContainer(containerID, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("PauseContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("PauseContainer returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
                 m_OCIContainerplugin->Release();
             } else {
                 TEST_LOG("m_OCIContainerplugin is NULL");
@@ -2416,7 +2416,7 @@ TEST_F(OCIContainer_L2Test, ResumeContainer_ErrorCase)
                 status = m_OCIContainerplugin->ResumeContainer(containerID, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("ResumeContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("ResumeContainer returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
@@ -2458,7 +2458,7 @@ TEST_F(OCIContainer_L2Test, HibernateContainer_ErrorCase)
                 status = m_OCIContainerplugin->HibernateContainer(containerID, options, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("HibernateContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("HibernateContainer returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
@@ -2500,7 +2500,7 @@ TEST_F(OCIContainer_L2Test, WakeupContainer_ErrorCase)
                 status = m_OCIContainerplugin->WakeupContainer(containerID, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("WakeupContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("WakeupContainer returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
@@ -2542,7 +2542,7 @@ TEST_F(OCIContainer_L2Test, ExecuteCommand_ErrorCase)
                 status = m_OCIContainerplugin->ExecuteCommand(containerID, options, command, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("ExecuteCommand returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("ExecuteCommand returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
@@ -2584,7 +2584,7 @@ TEST_F(OCIContainer_L2Test, Annotate_ErrorCase)
                 status = m_OCIContainerplugin->Annotate(containerID, key, value, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("Annotate returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("Annotate returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
@@ -2626,7 +2626,7 @@ TEST_F(OCIContainer_L2Test, RemoveAnnotation_ErrorCase)
                 status = m_OCIContainerplugin->RemoveAnnotation(containerID, key, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("RemoveAnnotation returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("RemoveAnnotation returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
@@ -2668,7 +2668,7 @@ TEST_F(OCIContainer_L2Test, Mount_ErrorCase)
                 status = m_OCIContainerplugin->Mount(containerID, source, target, type, options, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("Mount returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("Mount returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
@@ -2710,7 +2710,7 @@ TEST_F(OCIContainer_L2Test, Unmount_ErrorCase)
                 status = m_OCIContainerplugin->Unmount(containerID, target, success, errorReason);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_FALSE(success);
-                TEST_LOG("Unmount returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                TEST_LOG("Unmount returned ContainerID: %s, errorReason: %s", containerID.c_str(), errorReason.c_str());
 
                 m_OCIContainerplugin->Release();
             } else {
