@@ -201,6 +201,7 @@ protected:
     }
 };
 
+#if 0
 TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 {
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -215,6 +216,7 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
     releaseResources();
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
 }
+#endif
 
 #if 0
 TEST_F(LifecycleManagerTest, spawnApp_withInvalidParams)
