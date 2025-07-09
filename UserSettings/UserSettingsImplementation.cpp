@@ -1064,6 +1064,7 @@ Core::hresult UserSettingsImplementation::GetMigrationState(const SettingsKey ke
     {
         strkey.assign(itrInspectorMap->second);
         LOGINFO("Key [%d] is mapped to property [%s]. Fetching value...", itrInspectorMap->first, strkey.c_str());
+        LOGINFO("_remotStoreObject pointer address: %p", _remotStoreObject);
         if (nullptr != _remotStoreObject && !strkey.empty())
         {
             status = _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, strkey, value, ttl);
