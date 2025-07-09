@@ -262,6 +262,24 @@ jobs:
         if: ${{ matrix.compiler == 'gcc' && matrix.coverage == 'with-coverage' && !env.ACT }}
         run: echo "TOOLCHAIN_FILE=$GITHUB_WORKSPACE/entservices-testframework/Tests/gcc-with-coverage.cmake" >> $GITHUB_ENV
 
+      - name: Build googletest
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: >
+          cmake -G Ninja
+          -S "$GITHUB_WORKSPACE/googletest"
+          -B build/googletest
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DBUILD_TYPE=Debug
+          -DBUILD_GMOCK=ON
+          -DBUILD_SHARED_LIBS=OFF
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          &&
+          cmake --build build/googletest -j8
+          &&
+          cmake --install build/googletest
+
       - name: Build mocks
         run: >
           cmake
@@ -274,27 +292,12 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           -DL2_TEST_OOP_RPC=ON
           -DCMAKE_CXX_FLAGS="
-          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers"
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers
+          -I $GITHUB_WORKSPACE/install/usr/include"
           &&
           cmake --build build/mocks -j8
           &&
           cmake --install build/mocks
-
-      - name: Build googletest
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: >
-          cmake -G Ninja
-          -S "$GITHUB_WORKSPACE/googletest"
-          -B build/googletest
-          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
-          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          -DBUILD_TYPE=Debug
-          -DBUILD_GMOCK=ON
-          &&
-          cmake --build build/googletest -j8
-          &&
-          cmake --install build/googletest
 
       - name: Build entservices-infra
         run: >
@@ -343,26 +346,7 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsExtODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvTypes.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/videoOutputPortType.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/videoOutputPortConfig.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/videoResolution.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/sleepMode.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/frontPanelConfig.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/frontPanelTextDisplay.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/audioOutputPortType.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/frontPanelConfig.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/frontPanelTextDisplay.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/manager.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/audioOutputPortConfig.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/iarmbus/iarmUtil.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemaudioplatform.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/list.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/dsDisplay.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/AudioStereoMode.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/VideoDFC.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/dsRpc.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/dsError.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/dsUtl.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/essos-resmgr.h
           -Werror -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format=
           -DUSE_IARMBUS
           -DHAS_RBUS
