@@ -2141,3 +2141,584 @@ TEST_F(OCIContainer_L2Test, ContainerFailedEvent_JSONRPC)
     EXPECT_TRUE(signalled & ON_CONTAINER_FAILED);
     jsonrpc.Unsubscribe(EVNT_TIMEOUT, _T("onContainerFailed"));
 }
+
+/*
+ * Test case to check the error case for GetContainerState API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, GetContainerState_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    ContainerState state;
+    string errorReason;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist;
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillRepeatedly(::testing::Return(containerslist));
+
+                status = m_OCIContainerplugin->GetContainerState(containerID, state, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("GetContainerState returned state: %d, success: %d, errorReason: %s", state, success, errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for GetContainerInfo API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, GetContainerInfo_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string info, errorReason;
+    bool success = true;
+
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, getContainerInfo(91))
+                    .WillOnce(::testing::Return(""));
+
+                status = m_OCIContainerplugin->GetContainerInfo(containerID, info, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("GetContainerInfo returned info: %s, success: %d, errorReason: %s", info.c_str(), success, errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for StartContainer API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, StartContainer_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui", bundlepath = "/containers/myBundle", command = "command", westerOSSocket = "/usr/mySocket";
+    int32_t descriptor = 0;
+    string errorReason;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                EXPECT_CALL(*p_dobbyProxyMock, startContainerFromBundle(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillOnce(::testing::Return(-1));
+
+                status = m_OCIContainerplugin->StartContainer(containerID, bundlepath, command, westerOSSocket, descriptor, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("StartContainer returned descriptor: %d, errorReason: %s", descriptor, errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for StartContainerFromDobbySpec API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, StartContainerFromDobbySpecErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    Core::Sink<OCIContainerNotificationHandler> notify;
+    string containerID = "com.bskyb.epgui", dobbySpec = "/containers/dobbySpec", command = "command", westerOSSocket = "/usr/mySocket";
+    int32_t descriptor = 0;
+    string errorReason;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                EXPECT_CALL(*p_dobbyProxyMock, startContainerFromSpec(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillOnce(::testing::Return(-1));
+
+                status = m_OCIContainerplugin->StartContainerFromDobbySpec(containerID, dobbySpec, command, westerOSSocket, descriptor, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("StartContainerFromDobbySpec returned descriptor: %d, errorReason: %s", descriptor, errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for StopContainer API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, StopContainer_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    bool force = true;
+    string errorReason;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, stopContainer(91, ::testing::_))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->StopContainer(containerID, force, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("StopContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for PauseContainer and ResumeContainer APIs in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, PauseContainer_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, pauseContainer(91))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->PauseContainer(containerID, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("PauseContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for ResumeContainer API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, ResumeContainer_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, resumeContainer(91))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->ResumeContainer(containerID, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("ResumeContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for HibernateContainer and WakeupContainer APIs in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, HibernateContainer_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason, options;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, hibernateContainer(91, ::testing::_))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->HibernateContainer(containerID, options, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("HibernateContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for WakeupContainer API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, WakeupContainer_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, wakeupContainer(91))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->WakeupContainer(containerID, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("WakeupContainer returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for ExecuteCommand API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, ExecuteCommand_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason, options, command;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, execInContainer(91, ::testing::_, ::testing::_))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->ExecuteCommand(containerID, options, command, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("ExecuteCommand returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for Annotate API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, Annotate_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason, key, value;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, addAnnotation(91, ::testing::_, ::testing::_))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->Annotate(containerID, key, value, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("Annotate returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for RemoveAnnotation API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, RemoveAnnotation_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason, key;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, removeAnnotation(91, ::testing::_))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->RemoveAnnotation(containerID, key, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("RemoveAnnotation returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for Mount and Unmount APIs in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, Mount_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason, source, target, type, options;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, addContainerMount(91, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->Mount(containerID, source, target, type, options, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("Mount returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
+
+/*
+ * Test case to check the error case for Unmount API in OCIContainer plugin.
+ * Checks the success param and print the error reason.
+ */
+TEST_F(OCIContainer_L2Test, Unmount_ErrorCase)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    string containerID = "com.bskyb.epgui";
+    string errorReason, target;
+    bool success = true;
+    if (CreateOCIContainerInterfaceObject() != Core::ERROR_NONE) {
+        TEST_LOG("Invalid OCIContainer_Client");
+    } else {
+        EXPECT_TRUE(m_controller_OCIcontainer != nullptr);
+        if (m_controller_OCIcontainer) {
+            EXPECT_TRUE(m_OCIContainerplugin != nullptr);
+            if (m_OCIContainerplugin) {
+                m_OCIContainerplugin->AddRef();
+
+                std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
+                EXPECT_CALL(*p_dobbyProxyMock, listContainers())
+                    .WillOnce(::testing::Return(containerslist));
+
+                EXPECT_CALL(*p_dobbyProxyMock, removeContainerMount(91, ::testing::_))
+                    .WillOnce(::testing::Return(false));
+
+                status = m_OCIContainerplugin->Unmount(containerID, target, success, errorReason);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_FALSE(success);
+                TEST_LOG("Unmount returned ContainerID: %d, errorReason: %s", containerID.c_str(), errorReason.c_str());
+
+                m_OCIContainerplugin->Release();
+            } else {
+                TEST_LOG("m_OCIContainerplugin is NULL");
+            }
+            m_controller_OCIcontainer->Release();
+        } else {
+            TEST_LOG("m_controller_OCIcontainer is NULL");
+        }
+    }
+}
