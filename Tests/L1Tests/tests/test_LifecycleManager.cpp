@@ -140,13 +140,10 @@ protected:
           .WillRepeatedly(::testing::Invoke(
               [&](const uint32_t, const std::string& name) -> void* {
                 if (name == "org.rdk.RuntimeManager") {
-                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     return reinterpret_cast<void*>(mRuntimeManagerMock);
                 } else if (name == "org.rdk.RDKWindowManager") {
-                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                    return reinterpret_cast<void*>(mWindowManagerMock);
                 } 
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return nullptr;
         }));
 
