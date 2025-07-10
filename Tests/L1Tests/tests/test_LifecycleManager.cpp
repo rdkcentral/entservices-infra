@@ -112,12 +112,6 @@ protected:
 
     void TearDown() override
     {
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
-    ::testing::Mock::VerifyAndClearExpectations(mServiceMock);
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
-    ::testing::Mock::VerifyAndClearExpectations(mRuntimeManagerMock);
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
-    ::testing::Mock::VerifyAndClearExpectations(mWindowManagerMock);
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         ASSERT_TRUE(interface != nullptr);
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -246,6 +240,11 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     DEBUG_PRINTF("ERROR: RDKEMW-2806");	
+    ::testing::Mock::VerifyAndClearExpectations(mServiceMock);
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+    ::testing::Mock::VerifyAndClearExpectations(mRuntimeManagerMock);
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+    ::testing::Mock::VerifyAndClearExpectations(mWindowManagerMock);
     
     releaseResources();
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
