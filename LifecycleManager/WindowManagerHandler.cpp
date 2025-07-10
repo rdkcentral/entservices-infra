@@ -57,7 +57,6 @@ bool WindowManagerHandler::initialize(PluginHost::IShell* service, IEventHandler
         }
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     else
     {
         LOGERR("windowmanager is null \n");
