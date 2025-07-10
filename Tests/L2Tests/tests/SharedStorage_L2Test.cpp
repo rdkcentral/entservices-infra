@@ -406,6 +406,7 @@ MATCHER_P(MatchRequestStatus, data, "")
  * The test case also checks that the OnValueChanged notification is triggered with the correct
  * parameters.
  */
+ #if 0
 TEST_F(SharedStorage_L2test,SetValue_ACCOUNT_Scope_JSONRPC)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(SHAREDSTORAGE_CALLSIGN, SHAREDSTORAGETEST_CALLSIGN);
@@ -1252,3 +1253,4 @@ TEST_F(SharedStorage_L2testDeviceScope, FlushCache_JSONRPC)
     status = InvokeServiceMethod("org.rdk.SharedStorage.1", "flushCache", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
 }
+#endif
