@@ -186,13 +186,12 @@ protected:
         {
 	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
-            EXPECT_CALL(*mServiceMock, Release())
-                .WillOnce(::testing::Return(static_cast<uint32_t>(0)));
-
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
-
-            delete mServiceMock;
-            mServiceMock = nullptr;
+        EXPECT_CALL(*mServiceMock, Release())
+                .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mServiceMock;
+                     return 0;
+                    }));
 
             DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
@@ -205,17 +204,14 @@ protected:
 	    EXPECT_CALL(*mRuntimeManagerMock, Unregister(::testing::_))
                 .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
 
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
-		
-            EXPECT_CALL(*mRuntimeManagerMock, Release())
-                .WillOnce(::testing::Return(static_cast<uint32_t>(0)));
+        EXPECT_CALL(*mRuntimeManagerMock, Release())
+                .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mRuntimeManagerMock;
+                     return 0;
+                    }));
 
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
-
-            delete mRuntimeManagerMock;
-            mRuntimeManagerMock = nullptr;
-
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
         }
 
@@ -226,18 +222,14 @@ protected:
 	    EXPECT_CALL(*mWindowManagerMock, Unregister(::testing::_))
                 .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
 
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
-		
-            EXPECT_CALL(*mWindowManagerMock, Release())
-                .WillOnce(::testing::Return(static_cast<uint32_t>(0)));
+        EXPECT_CALL(*mWindowManagerMock, Release())
+                .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mWindowManagerMock;
+                     return 0;
+                    }));
 
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
-
-            delete mWindowManagerMock;
-            mWindowManagerMock = nullptr;
-
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
-
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
         }
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mLifecycleManagerConfigure->Release();
