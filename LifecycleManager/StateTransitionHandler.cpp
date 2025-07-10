@@ -112,6 +112,7 @@ namespace WPEFramework
 
 	void StateTransitionHandler::terminate()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             gRequestMutex.lock();
             sRunning = false;
             gRequestMutex.unlock();

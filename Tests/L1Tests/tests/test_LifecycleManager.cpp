@@ -85,6 +85,8 @@ protected:
 	workerPool.Release();
 
 	interface->Release();
+
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
 
     void SetUp() override 
@@ -102,15 +104,23 @@ protected:
         runtimeConfigObject = {
             true,true,true,1024,512,"test.env.variables",1,1,1024,true,"test.dial.id","test.command","test.app.type","test.app.path","test.runtime.path","test.logfile.path",1024,"test.log.levels",true,"test.fkps.files","test.firebolt.version",true,"test.unpacked.path"
         };
-	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         
         ASSERT_TRUE(interface != nullptr);
+
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
 
     void TearDown() override
     {
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+    ::testing::Mock::VerifyAndClearExpectations(mServiceMock);
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+    ::testing::Mock::VerifyAndClearExpectations(mRuntimeManagerMock);
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+    ::testing::Mock::VerifyAndClearExpectations(mWindowManagerMock);
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         ASSERT_TRUE(interface != nullptr);
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
 
     void createResources()
@@ -123,29 +133,45 @@ protected:
 
         mLifecycleManagerConfigure = static_cast<Exchange::IConfiguration*>(mLifecycleManagerImpl->QueryInterface(Exchange::IConfiguration::ID));
 
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
         EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Invoke(
               [&](const uint32_t, const std::string& name) -> void* {
                 if (name == "org.rdk.RuntimeManager") {
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     return reinterpret_cast<void*>(mRuntimeManagerMock);
                 } else if (name == "org.rdk.RDKWindowManager") {
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                    return reinterpret_cast<void*>(mWindowManagerMock);
                 } 
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return nullptr;
         }));
 
-	EXPECT_CALL(*mRuntimeManagerMock, AddRef())
+	//EXPECT_CALL(*mRuntimeManagerMock, AddRef())
+     //       .Times(::testing::AnyNumber());
+
+    EXPECT_CALL(*mServiceMock, AddRef())
             .Times(::testing::AnyNumber());
+
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
 	EXPECT_CALL(*mRuntimeManagerMock, Register(::testing::_))
             .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
 
-	EXPECT_CALL(*mWindowManagerMock, AddRef())
-            .Times(::testing::AnyNumber());
+    //DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
+	//EXPECT_CALL(*mWindowManagerMock, AddRef())
+     //       .Times(::testing::AnyNumber());
+
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
 	EXPECT_CALL(*mWindowManagerMock, Register(::testing::_))
             .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
         // Configure the LifecycleManager
         mLifecycleManagerConfigure->Configure(mServiceMock);
@@ -159,12 +185,17 @@ protected:
         if (mServiceMock != nullptr)
         {
 	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
             EXPECT_CALL(*mServiceMock, Release())
-                .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mServiceMock;
-                     return 0;
-                    }));
+                .WillOnce(::testing::Return(static_cast<uint32_t>(0)));
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
+            delete mServiceMock;
+            mServiceMock = nullptr;
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
         }
 
         if (mRuntimeManagerMock != nullptr)
@@ -172,14 +203,20 @@ protected:
 	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		
 	    EXPECT_CALL(*mRuntimeManagerMock, Unregister(::testing::_))
-            .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+                .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		
             EXPECT_CALL(*mRuntimeManagerMock, Release())
-                .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mRuntimeManagerMock;
-                     return 0;
-                    }));
+                .WillOnce(::testing::Return(static_cast<uint32_t>(0)));
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
+            delete mRuntimeManagerMock;
+            mRuntimeManagerMock = nullptr;
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
         }
 
         if (mWindowManagerMock != nullptr)
@@ -187,21 +224,29 @@ protected:
 	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		
 	    EXPECT_CALL(*mWindowManagerMock, Unregister(::testing::_))
-            .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+                .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		
             EXPECT_CALL(*mWindowManagerMock, Release())
-                .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mWindowManagerMock;
-                     return 0;
-                    }));
+                .WillOnce(::testing::Return(static_cast<uint32_t>(0)));
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
+            delete mWindowManagerMock;
+            mWindowManagerMock = nullptr;
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
         }
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mLifecycleManagerConfigure->Release();
+
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
     }
 };
 
-#if 0
 TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 {
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -216,7 +261,6 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
     releaseResources();
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
 }
-#endif
 
 #if 0
 TEST_F(LifecycleManagerTest, spawnApp_withInvalidParams)

@@ -19,6 +19,10 @@
 
 #include "ApplicationContext.h"
 #include "State.h"
+#include <cstdio>
+
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework
 {
@@ -30,6 +34,7 @@ namespace WPEFramework
 
         ApplicationContext::ApplicationContext (std::string appId): mAppInstanceId(""), mAppId(std::move(appId)), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mState = (void*) new UnloadedState(this);
             sem_init(&mReachedLoadingStateSemaphore, 0, 0);
             sem_init(&mAppRunningSemaphore, 0, 0);
@@ -37,6 +42,7 @@ namespace WPEFramework
             sem_init(&mFirstFrameSemaphore, 0, 0);
             sem_init(&mFirstFrameAfterResumeSemaphore, 0, 0);
             sem_init(&mAppTerminatingSemaphore, 0, 0);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
         }
 
 	ApplicationKillParams::ApplicationKillParams(): mForce(false)
@@ -47,6 +53,7 @@ namespace WPEFramework
         {
             if (nullptr != mState)
 	    {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 State* state = (State*)mState;
                 delete state;
 	    }
@@ -55,106 +62,127 @@ namespace WPEFramework
 
         void ApplicationContext::setAppInstanceId(std::string& id)
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mAppInstanceId = id;
         }
 
         void ApplicationContext::setActiveSessionId(std::string& id)
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mActiveSessionId = id;
         }
 
         void ApplicationContext::setMostRecentIntent(const std::string& intent)
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mMostRecentIntent = intent;
         }
 
         void ApplicationContext::setLastLifecycleStateChangeTime(timespec changeTime)
 	{
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mLastLifecycleStateChangeTime = changeTime;
 	}
 
         void ApplicationContext::setState(void* state)
 	{
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mState = state;
 	}
 
 	void ApplicationContext::setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState state)
 	{
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mTargetLifecycleState = state;
         }
 
         void ApplicationContext::setStateChangeId(uint32_t id)
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mStateChangeId = id;		
 	}
 
         void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& launchIntent, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject)
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mLaunchParams.mAppId = appId;
             mLaunchParams.mLaunchIntent = launchIntent;
             mLaunchParams.mLaunchArgs = launchArgs;
             mLaunchParams.mTargetState = targetState;
             mLaunchParams.mRuntimeConfigObject = runtimeConfigObject;
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	}
 
         void ApplicationContext::setApplicationKillParams(bool force)
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mKillParams.mForce = force;
         }
 
 	std::string ApplicationContext::getAppId()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mAppId;
 	}
 
 	std::string ApplicationContext::getAppInstanceId()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mAppInstanceId;
 	}
 
 	Exchange::ILifecycleManager::LifecycleState ApplicationContext::getCurrentLifecycleState()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             State* state = (State*)mState;
             return state->getValue();
 	}
 
         timespec ApplicationContext::getLastLifecycleStateChangeTime()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    return mLastLifecycleStateChangeTime;	
 	}
 
         std::string ApplicationContext::getActiveSessionId()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mActiveSessionId;
 	}
 
 	Exchange::ILifecycleManager::LifecycleState ApplicationContext::getTargetLifecycleState()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mTargetLifecycleState;
         }
 
         std::string ApplicationContext::getMostRecentIntent()
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mMostRecentIntent;
         }
 
         void* ApplicationContext::getState()
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mState;
         }
 
         uint32_t ApplicationContext::getStateChangeId()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mStateChangeId;
 	}
 
 	ApplicationLaunchParams& ApplicationContext::getApplicationLaunchParams()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mLaunchParams;
 	}
 
 	ApplicationKillParams& ApplicationContext::getApplicationKillParams()
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mKillParams;
 	}
     } /* namespace Plugin */

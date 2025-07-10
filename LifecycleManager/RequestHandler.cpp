@@ -64,6 +64,7 @@ namespace WPEFramework
 		fflush(stdout);
 		return ret;
 	    }
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mRuntimeManagerHandler = new RuntimeManagerHandler();
             ret = mRuntimeManagerHandler->initialize(service, eventHandler);
 	    if (!ret)
@@ -83,15 +84,18 @@ namespace WPEFramework
 	    }
             DEBUG_PRINTF("ERROR: RDKEMW-2806");
             StateTransitionHandler::getInstance()->initialize();
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return ret;
 	}
 
         void RequestHandler::terminate()
 	{
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
             StateTransitionHandler::getInstance()->terminate();
             mRippleHandler->terminate();
             if (mWindowManagerHandler)
             {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 mWindowManagerHandler->terminate();
                 delete mWindowManagerHandler;
 		mWindowManagerHandler = nullptr;
@@ -99,6 +103,7 @@ namespace WPEFramework
 
             if (mRuntimeManagerHandler)
             {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 mRuntimeManagerHandler->deinitialize();
                 delete mRuntimeManagerHandler;
 		mRuntimeManagerHandler = nullptr;

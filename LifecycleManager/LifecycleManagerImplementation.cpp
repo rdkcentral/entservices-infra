@@ -47,7 +47,9 @@ namespace WPEFramework
 
         bool LifecycleManagerImplementation::initialize(PluginHost::IShell* service)
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             bool ret = RequestHandler::getInstance()->initialize(service, this);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    return ret;
         }
 
@@ -55,6 +57,7 @@ namespace WPEFramework
         {
             try
             {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 RequestHandler::getInstance()->terminate();
             }
             catch(const std::exception& e)
@@ -63,6 +66,7 @@ namespace WPEFramework
             }
             if (mService != nullptr)
             {
+               DEBUG_PRINTF("ERROR: RDKEMW-2806"); 
                mService->Release();
                mService = nullptr;
             }
@@ -244,19 +248,25 @@ namespace WPEFramework
             DEBUG_PRINTF("ERROR: RDKEMW-2806");
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext("", appId);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             bool firstLaunch = false;
             if (nullptr == context)
 	    {
             DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 context = new ApplicationContext(appId);
                 context->setApplicationLaunchParams(appId, launchIntent, launchArgs, targetLifecycleState, runtimeConfigObject);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		mLoadedApplications.push_back(context);
                 firstLaunch = true;
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    }
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
             context->setTargetLifecycleState(targetLifecycleState);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             context->setMostRecentIntent(launchIntent);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             success = RequestHandler::getInstance()->launch(context, launchIntent, targetLifecycleState, errorReason);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             if (!success)
 	    {
             DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -492,24 +502,34 @@ namespace WPEFramework
 
         ApplicationContext* LifecycleManagerImplementation::getContext(const string& appInstanceId, const string& appId) const
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             ApplicationContext* context = nullptr;
             std::list<ApplicationContext*>::const_iterator iter = mLoadedApplications.end();
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 if (nullptr != *iter)
 		{
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     if ((!appInstanceId.empty()) && ((*iter)->getAppInstanceId() == appInstanceId))
                     {
+                        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		        context = *iter;
 		        break;
                     }
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		    else if ((!appId.empty()) && ((*iter)->getAppId() == appId))
                     {
+                        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		        context = *iter;
 		        break;
                     }
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		}
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");b
 	    }
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    return context;
 	}
 
