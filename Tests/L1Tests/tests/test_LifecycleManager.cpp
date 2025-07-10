@@ -181,6 +181,7 @@ protected:
                 .WillOnce(::testing::Invoke(
                 [&]() {
                      delete mServiceMock;
+		     mServiceMock = nullptr;
                      return 0;
                     }));
 
@@ -199,6 +200,7 @@ protected:
                 .WillOnce(::testing::Invoke(
                 [&]() {
                      delete mRuntimeManagerMock;
+		     mRuntimeManagerMock = nullptr;
                      return 0;
                     }));
 
@@ -217,6 +219,7 @@ protected:
                 .WillOnce(::testing::Invoke(
                 [&]() {
                      delete mWindowManagerMock;
+		     mWindowManagerMock = nullptr;
                      return 0;
                     }));
 
