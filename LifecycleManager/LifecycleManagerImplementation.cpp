@@ -146,7 +146,6 @@ namespace WPEFramework
         
              switch(event)
              {
-                 DEBUG_PRINTF("ERROR: RDKEMW-2806");
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
                      DEBUG_PRINTF("ERROR: RDKEMW-2806");
                      handleStateChangeEvent(obj);
