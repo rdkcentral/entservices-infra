@@ -406,7 +406,7 @@ MATCHER_P(MatchRequestStatus, data, "")
  * The test case also checks that the OnValueChanged notification is triggered with the correct
  * parameters.
  */
- #if 0
+
 TEST_F(SharedStorage_L2test,SetValue_ACCOUNT_Scope_JSONRPC)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(SHAREDSTORAGE_CALLSIGN, SHAREDSTORAGETEST_CALLSIGN);
@@ -647,7 +647,7 @@ TEST_F(SharedStorage_L2testDeviceScope, deleteNamespace_DEVICE_Scope_JSONRPC)
 TEST_F(SharedStorage_L2test, SetValue_ACCOUNT_Scope_COMRPC)
 {
     uint32_t signalled = SHARED_STORAGE_STATUS_INVALID;
-    Core::Sink<SharedStorageNotificationHandler> notify;
+    auto notify = std::make_unique<Core::Sink<SharedStorageNotificationHandler>>();
     uint32_t status = Core::ERROR_GENERAL;
     const auto kKey = "key1";
     const auto kValue = "value1";
@@ -663,7 +663,7 @@ TEST_F(SharedStorage_L2test, SetValue_ACCOUNT_Scope_COMRPC)
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
                 m_sharedstorageplugin->AddRef();
-                m_sharedstorageplugin->Register(&notify);
+                m_sharedstorageplugin->Register(notify.get());
 
                 EXPECT_CALL(*GetMock(), UpdateValue(::testing::_, ::testing::_, ::testing::_))
                     .WillOnce(testing::Invoke([](::grpc::ServerContext*,
@@ -680,10 +680,10 @@ TEST_F(SharedStorage_L2test, SetValue_ACCOUNT_Scope_COMRPC)
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_TRUE(result.success);
 
-                signalled = notify.WaitForRequestStatus(EVNT_TIMEOUT, SHARED_STORAGE_ON_VALUE_CHANGED);
+                signalled = notify->WaitForRequestStatus(EVNT_TIMEOUT, SHARED_STORAGE_ON_VALUE_CHANGED);
                 EXPECT_TRUE(signalled & SHARED_STORAGE_ON_VALUE_CHANGED);
 
-                m_sharedstorageplugin->Unregister(&notify);
+                m_sharedstorageplugin->Unregister(notify.get());
                 m_sharedstorageplugin->Release();
             } else {
                 TEST_LOG("m_sharedstorageplugin is NULL");
@@ -844,7 +844,7 @@ TEST_F(SharedStorage_L2test, DeleteNamespace_ACCOUNT_Scope_COMRPC)
 TEST_F(SharedStorage_L2testDeviceScope, SetValue_DEVICE_Scope_COMRPC)
 {
     uint32_t signalled = SHARED_STORAGE_STATUS_INVALID;
-    Core::Sink<SharedStorageNotificationHandler> notify;
+    auto notify = std::make_unique<Core::Sink<SharedStorageNotificationHandler>>();
     uint32_t status = Core::ERROR_GENERAL;
     int interface = 0; // 0 for ISharedStorage
     const auto kKey = "key1";
@@ -861,16 +861,16 @@ TEST_F(SharedStorage_L2testDeviceScope, SetValue_DEVICE_Scope_COMRPC)
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
                 m_sharedstorageplugin->AddRef();
-                m_sharedstorageplugin->Register(&notify);
+                m_sharedstorageplugin->Register(notify.get());
 
                 status = m_sharedstorageplugin->SetValue(ScopeType::DEVICE, kAppId, kKey, kValue, kTtl, result);
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 EXPECT_TRUE(result.success);
 
-                signalled = notify.WaitForRequestStatus(EVNT_TIMEOUT, SHARED_STORAGE_ON_VALUE_CHANGED);
+                signalled = notify->WaitForRequestStatus(EVNT_TIMEOUT, SHARED_STORAGE_ON_VALUE_CHANGED);
                 EXPECT_TRUE(signalled & SHARED_STORAGE_ON_VALUE_CHANGED);
 
-                m_sharedstorageplugin->Unregister(&notify);
+                m_sharedstorageplugin->Unregister(notify.get());
                 m_sharedstorageplugin->Release();
             } else {
                 TEST_LOG("m_sharedstorageplugin is NULL");
@@ -1253,4 +1253,3 @@ TEST_F(SharedStorage_L2testDeviceScope, FlushCache_JSONRPC)
     status = InvokeServiceMethod("org.rdk.SharedStorage.1", "flushCache", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
 }
-#endif
