@@ -61,6 +61,7 @@ bool RuntimeManagerHandler::initialize(PluginHost::IShell* service, IEventHandle
         }
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     else
     {
         LOGERR("runtimemanager is null \n");

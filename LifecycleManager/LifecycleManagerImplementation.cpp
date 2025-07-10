@@ -520,6 +520,7 @@ namespace WPEFramework
             DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 if (nullptr != *iter)
 		{
             DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -529,14 +530,18 @@ namespace WPEFramework
 		        context = *iter;
 		        break;
                     }
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		    else if ((!appId.empty()) && ((*iter)->getAppId() == appId))
                     {
                         DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		        context = *iter;
 		        break;
                     }
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		}
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");b
 	    }
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    return context;
 	}
 
