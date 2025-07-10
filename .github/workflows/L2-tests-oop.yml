@@ -36,10 +36,6 @@ jobs:
           python-version: '3.x'
       - run: pip install jsonref
 
-      - name: ACK External Trigger
-        run: |
-           echo "Message: HELLO KK External Trigger Recieved for L2-oop Tests"
-
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
@@ -563,7 +559,7 @@ jobs:
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           RdkServicesL2Test &&
-          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithoutValgrind.json &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Run unit tests with valgrind
@@ -579,7 +575,7 @@ jobs:
           --track-fds=yes
           --fair-sched=try
           RdkServicesL2Test &&
-          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithValgrind.json &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
           
       - name: Generate coverage
