@@ -1163,7 +1163,8 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "getPlaybackWatershed", result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
-
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     TEST_LOG("Testing BlockNotRatedContent Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onBlockNotRatedContentChanged"),
@@ -1191,6 +1192,8 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "getBlockNotRatedContent", result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     TEST_LOG("Testing PinOnPurchase Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1220,6 +1223,8 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
     TEST_LOG("Testing HighContrastSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onHighContrastChanged"),
@@ -1248,6 +1253,8 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
     TEST_LOG("Testing VoiceGuidanceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceChanged"),
@@ -1275,6 +1282,8 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidance", result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     TEST_LOG("Testing VoiceGuidanceRateSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
