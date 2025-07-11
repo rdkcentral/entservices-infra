@@ -1,4 +1,4 @@
-name: L1-tests-in
+name: L1-tests
 
 on:
   workflow_call:
@@ -14,7 +14,7 @@ env:
   AUTOMATICS_PASSCODE: ${{ secrets. AUTOMATICS_PASSCODE}}
 
 jobs:
-  L1-tests-in:
+  L1-tests:
     name: Build and run unit tests
     runs-on: ubuntu-22.04
     strategy:
@@ -65,10 +65,6 @@ jobs:
         with:
           python-version: '3.x'
       - run: pip install jsonref
-
-      - name: ACK External Trigger
-        run: |
-           echo "Message: HELLO KK External Trigger Recieved for L1 Tests"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
