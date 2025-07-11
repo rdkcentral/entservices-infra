@@ -560,7 +560,7 @@ void UserSettingTest::onPreferredClosedCaptionServiceChanged(const string servic
     m_condition_variable.notify_one();
 }
 
-void UserSettingTest::onPinControlChanged(bool pinControl)
+void UserSettingTest::onPinControlChanged(const bool pinControl)
 {
     TEST_LOG("OnPinControlChanged event triggered ***\n");
     std::unique_lock<std::mutex> lock(m_mutex);
