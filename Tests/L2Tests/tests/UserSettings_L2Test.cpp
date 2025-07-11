@@ -82,7 +82,7 @@ class AsyncHandlerMock_UserSetting
         MOCK_METHOD(void, onPinOnPurchaseChanged, (const bool pinOnPurchase));
         MOCK_METHOD(void, onHighContrastChanged, (const bool enabled));
         MOCK_METHOD(void, onVoiceGuidanceChanged, (const bool enabled));
-        MOCK_METHOD(void, onVoiceGuidanceRateChanged, (const bool rate));
+        MOCK_METHOD(void, onVoiceGuidanceRateChanged, (const double rate));
         MOCK_METHOD(void, onVoiceGuidanceHintsChanged, (const bool hints));
         MOCK_METHOD(void, onContentPinChanged, (const string& contentPin));
 };
