@@ -36,10 +36,6 @@ jobs:
           python-version: '3.x'
       - run: pip install jsonref
 
-      - name: ACK External Trigger
-        run: |
-           echo "Message: HELLO KK External Trigger Recieved for L2 Tests"
-
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
