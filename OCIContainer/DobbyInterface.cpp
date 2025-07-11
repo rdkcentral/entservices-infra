@@ -23,11 +23,7 @@
 
 #include <Dobby/DobbyProxy.h>
 #include <Dobby/IpcService/IpcFactory.h>
-#ifndef RDK_SERVICE_L2_TEST
 #include <omi_proxy.hpp>
-#else
-#include "Omi.h"
-#endif
 #include "UtilsJsonRpc.h"
 
 namespace WPEFramework
