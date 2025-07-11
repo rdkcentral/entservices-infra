@@ -22,7 +22,7 @@
 #include <gmock/gmock.h>
 #include <stdio.h>
 
-#include "IUserSettings.h"
+#include <WPEFramework/interfaces/IUserSettings.h>
 
 using namespace WPEFramework::Exchange; 
 

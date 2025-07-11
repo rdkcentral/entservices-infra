@@ -17,7 +17,7 @@
 * limitations under the License.
 */
 
-#include "IUserSettings.h"
+#include <WPEFramework/interfaces/IUserSettings.h>
 
 IUserSettings *InterfacePointer = nullptr;
 IUserSettingsInspector *IUserSettingsInspectorPointer = nullptr;
