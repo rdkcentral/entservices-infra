@@ -58,7 +58,7 @@ namespace WPEFramework
                 //}
 		
 		mNativeJSRenderer->run();
-		
+		setenv("JSRUNTIME_MODULES_PATH","/home/root/modules/",1);
 		printf("After launch application execution ... \n"); fflush(stdout);
 		mNativeJSRenderer.reset();
 
