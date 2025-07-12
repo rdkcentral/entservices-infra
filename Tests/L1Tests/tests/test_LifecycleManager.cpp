@@ -98,7 +98,7 @@ protected:
 
     LifecycleManagerTest()
 	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
-            3, Core::Thread::DefaultStackSize(), 16))
+            4, Core::Thread::DefaultStackSize(), 16))
     {
         mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementation>::Create();
         
