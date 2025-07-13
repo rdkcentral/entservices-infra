@@ -118,7 +118,7 @@ namespace WPEFramework
             gRequestMutex.lock();
             sRunning = false;
             gRequestMutex.unlock();
-            sem_post(&gRequestSemaphore);
+            sem_destroy(&gRequestSemaphore);
             requestHandlerThread.join();
 	    DEBUG_PRINTF("StateTransitionHandler terminates");
 	}
