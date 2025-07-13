@@ -60,7 +60,9 @@ namespace WPEFramework
 	{
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
             StateHandler::initialize();
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
             sem_init(&gRequestSemaphore, 0, 0);
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
             requestHandlerThread = std::thread([=]() {
                 DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 bool isRunning = true;
