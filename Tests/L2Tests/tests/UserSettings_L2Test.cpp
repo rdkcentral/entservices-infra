@@ -923,6 +923,52 @@ TEST_F(UserSettingTest, LiveWatershed)
     paramsMigrationState.Clear();
 }
 
+TEST_F(UserSettingTest, onVoiceGuidanceChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+    bool hints = true;
+    JsonObject result_json;
+    Core::JSON::Boolean result_bool;
+    JsonObject paramsMigrationState;
+
+    TEST_LOG("Testing VoiceGuidanceHintsSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onVoiceGuidanceHintsChanged"),
+                                       [this, &async_handler](const JsonObject& parameters) {
+                                           bool hints = parameters["hints"].Boolean();
+                                           async_handler.onVoiceGuidanceHintsChanged(hints);
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceHintsChanged(MatchRequestStatusBool(hints)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceHintsChanged));
+
+    JsonObject paramsVoiceGuidanceHints;
+    paramsVoiceGuidanceHints["hints"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceHints", paramsVoiceGuidanceHints, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceHintsChanged);
+    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceHintsChanged);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceHintsChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidanceHints", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE_HINTS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
 TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
 {
 
@@ -945,7 +991,7 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     string preferredService = "CC3";
     string viewingRestrictions = "ALWAYS";
     string contentPin = "1234";
-    double rate = 2;
+    double rate = 1;
 
     Core::JSON::String result_string;
     Core::JSON::Boolean result_bool;
@@ -1363,34 +1409,6 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_EQ(result_double.Value(), rate);
 
-    TEST_LOG("Testing VoiceGuidanceHintsSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onVoiceGuidanceHintsChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool hints = parameters["hints"].Boolean();
-                                           async_handler.onVoiceGuidanceHintsChanged(hints);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onVoiceGuidanceHintsChanged(MatchRequestStatusBool(hints)))
-    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceHintsChanged));
-
-    JsonObject paramsVoiceGuidanceHints;
-    paramsVoiceGuidanceHints["hints"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceHints", paramsVoiceGuidanceHints, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceHintsChanged);
-    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceHintsChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceHintsChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidanceHints", result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
-
     TEST_LOG("Testing SetContentPin and GetContentPin methods");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onContentPinChanged"),
@@ -1503,12 +1521,6 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     paramsMigrationState.Clear();
 
     paramsMigrationState["key"] = "VOICE_GUIDANCE_RATE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VOICE_GUIDANCE_HINTS";
     status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_FALSE(result_bool.Value());
