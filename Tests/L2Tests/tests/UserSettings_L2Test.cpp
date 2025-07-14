@@ -923,7 +923,7 @@ TEST_F(UserSettingTest, onLiveWatershed_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onVoiceGuidanceChanged_event)
+TEST_F(UserSettingTest, onVoiceGuidanceHintsChanged_event)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1310,25 +1310,11 @@ TEST_F(UserSettingTest, onViewingRestrictionsChanged_event)
     uint32_t status = Core::ERROR_GENERAL;
     uint32_t signalled = UserSettings_StateInvalid;
 
-    bool enabled = true;
-    bool pinControl = true;
-    bool liveWatershed = true;
-    bool playbackWatershed = true;
-    bool blockNotRatedContent = true;
-    bool pinOnPurchase = true;
-    bool hints = true;
-
-    string preferredLanguages = "en";
-    string presentationLanguage = "fra";
-    string preferredCaptionsLanguages = "en,es";
-    string preferredService = "CC3";
     string viewingRestrictions = "ALWAYS";
-    string contentPin = "1234";
-    double rate = 1;
+
 
     Core::JSON::String result_string;
     Core::JSON::Boolean result_bool;
-    Core::JSON::Double result_double;
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
@@ -1708,7 +1694,7 @@ TEST_F(UserSettingTest, onContentPinChanged_event)
     uint32_t status = Core::ERROR_GENERAL;
     uint32_t signalled = UserSettings_StateInvalid;
 
-    string viewingRestrictions = "ALWAYS";
+    string contentPin = "1234";
 
     Core::JSON::String result_string;
     Core::JSON::Boolean result_bool;
