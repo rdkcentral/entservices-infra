@@ -217,7 +217,7 @@ namespace Plugin {
         Exchange::IStorageManager* mStorageManagerRemoteObject;
         PluginHost::IShell* mCurrentservice;
         Core::Sink<PackageManagerNotification> mPackageManagerNotification;
-        Core::hresult fetchInstalledPackages(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
+        Core::hresult fetchAppPackageList(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         void checkIsInstalled(const std::string& appId, bool& installed, const std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         Core::hresult packageLock(const string& appId, PackageInfo &packageData, Exchange::IPackageHandler::LockReason lockReason);
         Core::hresult packageUnLock(const string& appId);
