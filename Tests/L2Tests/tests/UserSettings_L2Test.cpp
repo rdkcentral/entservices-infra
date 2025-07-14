@@ -876,7 +876,7 @@ TEST_F(UserSettingTest, getMigrationStatecase)
     EXPECT_EQ(status, Core::ERROR_NONE);
 }
 
-TEST_F(UserSettingTest, LiveWatershed)
+TEST_F(UserSettingTest, onLiveWatershed_event)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -969,36 +969,18 @@ TEST_F(UserSettingTest, onVoiceGuidanceChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
+TEST_F(UserSettingTest, onAudioDescriptionChanged_event)
 {
 
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
     uint32_t signalled = UserSettings_StateInvalid;
-
     bool enabled = true;
-    bool pinControl = true;
-    bool liveWatershed = true;
-    bool playbackWatershed = true;
-    bool blockNotRatedContent = true;
-    bool pinOnPurchase = true;
-    bool hints = true;
-
-    string preferredLanguages = "en";
-    string presentationLanguage = "fra";
-    string preferredCaptionsLanguages = "en,es";
-    string preferredService = "CC3";
-    string viewingRestrictions = "ALWAYS";
-    string contentPin = "1234";
-    double rate = 1;
-
-    Core::JSON::String result_string;
-    Core::JSON::Boolean result_bool;
-    Core::JSON::Double result_double;
     JsonObject result_json;
+    Core::JSON::Boolean result_bool;
     JsonObject paramsMigrationState;
-    
+
     TEST_LOG("Testing AudioDescriptionSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onAudioDescriptionChanged"),
@@ -1027,6 +1009,28 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
+    paramsMigrationState["key"] = "AUDIO_DESCRIPTION";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onPreferredAudioLanguagesChanged_event)
+{
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string preferredLanguages = "en";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
     TEST_LOG("Testing PreferredAudioLanguagesSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredAudioLanguagesChanged"),
@@ -1051,6 +1055,31 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "getPreferredAudioLanguages", result_string);
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), preferredLanguages);
+
+    TEST_LOG("Testing getMigrationState after migrating properties");
+
+    paramsMigrationState["key"] = "PREFERRED_AUDIO_LANGUAGES";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+}
+
+TEST_F(UserSettingTest, onPresentationLanguageChanged_event)
+{
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string presentationLanguage = "fra";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
 
     TEST_LOG("Testing PresentationLanguageSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1077,6 +1106,26 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), presentationLanguage);
 
+    paramsMigrationState["key"] = "PRESENTATION_LANGUAGE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onCaptionsChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool enabled = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
     TEST_LOG("Testing SetCaptionsSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onCaptionsChanged"),
@@ -1101,6 +1150,30 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "getCaptions", result_bool);
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "CAPTIONS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+}
+
+TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChanged_event)
+{
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string preferredLanguages = "en";
+    string preferredCaptionsLanguages = "en,es";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
 
     TEST_LOG("Testing SetPreferredCaptionsLanguagesSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1127,6 +1200,28 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), preferredCaptionsLanguages);
 
+    paramsMigrationState["key"] = "PREFERRED_CAPTIONS_LANGUAGES";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChanged_event)
+{
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string preferredService = "CC3";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
     TEST_LOG("Testing SetPreferredClosedCaptionServiceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredClosedCaptionServiceChanged"),
@@ -1152,6 +1247,26 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), preferredService);
 
+    paramsMigrationState["key"] = "PREFERRED_CLOSED_CAPTION_SERVICE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onPinControlChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool pinControl = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+    
     TEST_LOG("Testing PinControl Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPinControlChanged"),
@@ -1180,6 +1295,43 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
+    paramsMigrationState["key"] = "PIN_CONTROL";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onViewingRestrictionsChanged_event)
+{
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool enabled = true;
+    bool pinControl = true;
+    bool liveWatershed = true;
+    bool playbackWatershed = true;
+    bool blockNotRatedContent = true;
+    bool pinOnPurchase = true;
+    bool hints = true;
+
+    string preferredLanguages = "en";
+    string presentationLanguage = "fra";
+    string preferredCaptionsLanguages = "en,es";
+    string preferredService = "CC3";
+    string viewingRestrictions = "ALWAYS";
+    string contentPin = "1234";
+    double rate = 1;
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    Core::JSON::Double result_double;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
     string viewRes = "{\"restrictions\": [{\"scheme\": \"US_TV\", \"restrict\": [\"TV-Y7/FV\"]}, {\"scheme\": \"MPAA\", \"restrict\": []}]}";
     TEST_LOG("Testing SetViewingRestrictions Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1206,7 +1358,27 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), viewRes);
 
+    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onViewingRestrictionsWindowChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
     string viewResWindow = "ALWAYS";
+
     TEST_LOG("Testing SetViewingRestrictionsWindow Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsWindowChanged"),
@@ -1231,6 +1403,26 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "getViewingRestrictionsWindow", result_string);
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), viewResWindow);
+
+    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS_WINDOW";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onPlaybackWatershedChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool playbackWatershed = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
 
     TEST_LOG("Testing PlaybackWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1259,8 +1451,28 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "getPlaybackWatershed", result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
-    
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    paramsMigrationState["key"] = "PLAYBACK_WATERSHED";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onBlockNotRatedContentChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool blockNotRatedContent = true;
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
     TEST_LOG("Testing BlockNotRatedContent Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onBlockNotRatedContentChanged"),
@@ -1289,7 +1501,25 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    paramsMigrationState["key"] = "BLOCK_NOT_RATED_CONTENT";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onPinOnPurchaseChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool pinOnPurchase = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
 
     TEST_LOG("Testing PinOnPurchase Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1319,7 +1549,25 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    paramsMigrationState["key"] = "PIN_ON_PURCHASE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onHighContrastChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool enabled = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
 
     TEST_LOG("Testing HighContrastSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1349,7 +1597,25 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    paramsMigrationState["key"] = "HIGH_CONTRAST";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onVoiceGuidanceChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool enabled = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
 
     TEST_LOG("Testing VoiceGuidanceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1379,7 +1645,26 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    paramsMigrationState["key"] = "VOICE_GUIDANCE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onVoiceGuidanceRateChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    double rate = 1;
+
+    Core::JSON::Boolean result_bool;
+    Core::JSON::Double result_double;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
 
     TEST_LOG("Testing VoiceGuidanceRateSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1409,6 +1694,27 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_EQ(result_double.Value(), rate);
 
+    paramsMigrationState["key"] = "VOICE_GUIDANCE_RATE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, onContentPinChanged_event)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string viewingRestrictions = "ALWAYS";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
     TEST_LOG("Testing SetContentPin and GetContentPin methods");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onContentPinChanged"),
@@ -1434,98 +1740,6 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), contentPin);
 
-    TEST_LOG("Testing getMigrationState after migrating properties");
-
-    paramsMigrationState["key"] = "PREFERRED_AUDIO_LANGUAGES";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "AUDIO_DESCRIPTION";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "CAPTIONS";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PREFERRED_CAPTIONS_LANGUAGES";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PREFERRED_CLOSED_CAPTION_SERVICE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PRESENTATION_LANGUAGE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "HIGH_CONTRAST";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PIN_CONTROL";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS_WINDOW";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PLAYBACK_WATERSHED";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "BLOCK_NOT_RATED_CONTENT";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PIN_ON_PURCHASE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VOICE_GUIDANCE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VOICE_GUIDANCE_RATE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
     paramsMigrationState["key"] = "CONTENT_PIN";
     status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
@@ -1536,7 +1750,6 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
 
 }
-
 
 /* Activating UserSettings and Persistent store plugins and UserSettings namespace has no entries in db.
    So that we can verify whether UserSettings plugin is receiving default values from PersistentStore or not*/
