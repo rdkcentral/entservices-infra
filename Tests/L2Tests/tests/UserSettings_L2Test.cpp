@@ -733,7 +733,7 @@ MATCHER_P(MatchRequestStatusDouble, expected, "")
 
 }
 
-TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
+TEST_F(UserSettingTest, getMigrationStatecase)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -874,7 +874,85 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
 
     status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationStates", paramsMigrationState, result_json);
     EXPECT_EQ(status, Core::ERROR_NONE);
+}
 
+TEST_F(UserSettingTest, LiveWatershed)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    bool liveWatershed = true;
+    bool playbackWatershed = true;
+    JsonObject paramsMigrationState;
+
+    TEST_LOG("Testing LiveWatershed Success");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onLiveWatershedChanged"),
+                                       [this, &async_handler](const JsonObject& parameters) {
+                                           bool liveWatershed = parameters["liveWatershed"].Boolean();
+                                           async_handler.onLiveWatershedChanged(liveWatershed);
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onLiveWatershedChanged(MatchRequestStatusBool(liveWatershed)))
+    .WillOnce(Invoke(this, &UserSettingTest::onLiveWatershedChanged));
+
+    JsonObject paramsLiveWatershed;
+    paramsLiveWatershed["liveWatershed"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setLiveWatershed", paramsLiveWatershed, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onLiveWatershedChanged);
+    EXPECT_TRUE(signalled & UserSettings_onLiveWatershedChanged);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onLiveWatershedChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getLiveWatershed", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "LIVE_WATERSHED";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+}
+
+TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
+{
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool enabled = true;
+    bool pinControl = true;
+    bool liveWatershed = true;
+    bool playbackWatershed = true;
+    bool blockNotRatedContent = true;
+    bool pinOnPurchase = true;
+    bool hints = true;
+
+    string preferredLanguages = "en";
+    string presentationLanguage = "fra";
+    string preferredCaptionsLanguages = "en,es";
+    string preferredService = "CC3";
+    string viewingRestrictions = "ALWAYS";
+    string contentPin = "1234";
+    double rate = 2;
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    Core::JSON::Double result_double;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+    
     TEST_LOG("Testing AudioDescriptionSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onAudioDescriptionChanged"),
@@ -1107,34 +1185,6 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "getViewingRestrictionsWindow", result_string);
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), viewResWindow);
-
-    TEST_LOG("Testing LiveWatershed Success");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onLiveWatershedChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool liveWatershed = parameters["liveWatershed"].Boolean();
-                                           async_handler.onLiveWatershedChanged(liveWatershed);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onLiveWatershedChanged(MatchRequestStatusBool(liveWatershed)))
-    .WillOnce(Invoke(this, &UserSettingTest::onLiveWatershedChanged));
-
-    JsonObject paramsLiveWatershed;
-    paramsLiveWatershed["liveWatershed"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setLiveWatershed", paramsLiveWatershed, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onLiveWatershedChanged);
-    EXPECT_TRUE(signalled & UserSettings_onLiveWatershedChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onLiveWatershedChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getLiveWatershed", result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
 
     TEST_LOG("Testing PlaybackWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1423,12 +1473,6 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     paramsMigrationState.Clear();
 
     paramsMigrationState["key"] = "VIEWING_RESTRICTIONS_WINDOW";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "LIVE_WATERSHED";
     status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_FALSE(result_bool.Value());
