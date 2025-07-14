@@ -130,7 +130,7 @@ namespace WPEFramework
                DEBUG_PRINTF("ERROR: RDKEMW-2806");
             }
             sem_destroy(&gRequestSemaphore);
-            gRequest.clear();
+            gRequests.clear();
             mInstance = nullptr;
 	        DEBUG_PRINTF("StateTransitionHandler terminates");
 	}
