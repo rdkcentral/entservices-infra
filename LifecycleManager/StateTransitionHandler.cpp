@@ -125,14 +125,9 @@ namespace WPEFramework
             gRequestMutex.unlock();
             DEBUG_PRINTF("ERROR: RDKEMW-2806");
             sem_post(&gRequestSemaphore);
-            if(requestHandlerThread.joinable()) {
-               requestHandlerThread.join();
-               DEBUG_PRINTF("ERROR: RDKEMW-2806");
-            }
-            sem_destroy(&gRequestSemaphore);
-            gRequests.clear();
-            mInstance = nullptr;
-	        DEBUG_PRINTF("StateTransitionHandler terminates");
+	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+	    requestHandlerThread.join();
+	    DEBUG_PRINTF("StateTransitionHandler terminates");
 	}
 
 	void StateTransitionHandler::addRequest(StateTransitionRequest& request)
