@@ -670,7 +670,7 @@ jobs:
       
       - name: Run unit tests with gdb
         if: ${{ !env.ACT }}
-        run: >
+        run: |
          set -x
          PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
