@@ -2,7 +2,7 @@ name: L2-tests
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**', feature/Usersettings_L2 ]
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
   pull_request:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
 
