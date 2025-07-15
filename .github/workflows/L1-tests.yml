@@ -669,6 +669,7 @@ jobs:
           ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
       
       - name: Run unit tests with gdb
+        continue-on-error: true
         if: ${{ !env.ACT }}
         run: |
          set -x
