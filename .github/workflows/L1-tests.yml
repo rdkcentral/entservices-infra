@@ -678,7 +678,7 @@ jobs:
          pid=$!
          sleep 600
          gdb -batch -ex "thread apply all bt" -p $pid > gdb_log.txt 2>&1
-         kill $pid
+         kill $pid || true
 
       - name: Run unit tests with valgrind
         continue-on-error: true
