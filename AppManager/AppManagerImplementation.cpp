@@ -811,7 +811,7 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
     if (nullptr != mLifecycleInterfaceConnector)
     {
         status = packageLock(appId, packageData, lockReason);
-        WPEFramework::Exchange::RuntimeConfig& runtimeConfig = packageData.configMetadata;
+        WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
         runtimeConfig.unpackedPath = packageData.unpackedPath;
         getCustomValues(runtimeConfig);
 
