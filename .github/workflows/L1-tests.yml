@@ -677,7 +677,7 @@ jobs:
          GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
          $GITHUB_WORKSPACE/install/usr/bin/RdkServicesL1Test &
          type gdb
-         gdb -batch -ex "thread apply all bt" -p $pid > gdb_log.txt 2>&1 || true
+         gdb -batch -ex "run" -ex "thread apply all bt" --args $GITHUB_WORKSPACE/install/usr/bin/RdkServicesL1Test > gdb_log.txt 2>&1 || true
         timeout-minutes: 5
 
       - name: Run unit tests with valgrind
