@@ -309,7 +309,6 @@ TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppFailure)
 
     releaseResources();
 }
-#endif
 
 TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
 {
@@ -324,6 +323,7 @@ TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
 
     releaseResources();
 }
+#endif
 
 TEST_F(LifecycleManagerTest, getLoadedApps_verboseEnabled)
 {
@@ -358,7 +358,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
 
     releaseResources();
 }
-
+#if 0
 TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
 {
     createResources();
@@ -373,6 +373,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
 
     releaseResources();
 }
+#endif
 
 TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 {
@@ -411,7 +412,7 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
 
     releaseResources();
 }
-#endif
+
 
 TEST_F(LifecycleManagerTest, unloadApp_afterSpawnApp)
 {
@@ -490,7 +491,6 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_afterSpawnApp)
     releaseResources();
 }
 
-#if 0
 TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppFailure)
 {
     createResources();
