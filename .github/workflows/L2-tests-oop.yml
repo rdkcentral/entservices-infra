@@ -38,7 +38,7 @@ jobs:
 
       - name: ACK External Trigger
         run: |
-           echo "Message: External Trigger Received for L2 Tests"
+           echo "Message: External Trigger Received for L2-OOP Tests"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
