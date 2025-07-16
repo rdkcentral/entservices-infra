@@ -66,6 +66,10 @@ jobs:
           python-version: '3.x'
       - run: pip install jsonref
 
+      - name: ACK External Trigger
+        run: |
+           echo "Message: External Trigger Received for L2 Tests"
+
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
@@ -113,7 +117,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: feature/RDKEMW-3513-yml_1
+          ref: develop
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra

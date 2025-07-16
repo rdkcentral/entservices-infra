@@ -36,6 +36,10 @@ jobs:
           python-version: '3.x'
       - run: pip install jsonref
 
+      - name: ACK External Trigger
+        run: |
+           echo "Message: External Trigger Received for L2 Tests"
+
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
@@ -95,7 +99,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: feature/RDKEMW-3513-yml_1
+          ref: develop
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-deviceanddisplay
@@ -559,7 +563,7 @@ jobs:
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           RdkServicesL2Test &&
-          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithValgrind.json &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithoutValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Run unit tests with valgrind
@@ -615,7 +619,7 @@ jobs:
           path: |
             coverage/
             valgrind_log
-            rdkL2TestResultsWithoutValgrind.json
-            rdkL2TestResultsWithValgrind.json
+            rdkL2TestOOPResultsWithoutValgrind.json
+            rdkL2TestOOPResultsWithValgrind.json
           if-no-files-found: warn
 
