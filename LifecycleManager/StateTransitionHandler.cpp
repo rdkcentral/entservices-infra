@@ -58,7 +58,9 @@ namespace WPEFramework
 
         bool StateTransitionHandler::initialize()
 	{
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
+	DEBUG_PRINTF("ERROR: RDKEMW-2806");
+	sRunning = true;
+        DEBUG_PRINTF("sRunning set to %d in initialize", sRunning);
             StateHandler::initialize();
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
             sem_init(&gRequestSemaphore, 0, 0);
