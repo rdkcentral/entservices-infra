@@ -69,8 +69,11 @@ namespace WPEFramework
             requestHandlerThread = std::thread([=]() {
                 DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 bool isRunning = true;
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 gRequestMutex.lock();
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 isRunning = sRunning;
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 gRequestMutex.unlock();
                 DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 while(isRunning)
