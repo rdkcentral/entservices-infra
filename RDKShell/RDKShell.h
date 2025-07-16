@@ -466,6 +466,22 @@ namespace WPEFramework {
                 std::vector<ICapture::IStore *>mCaptureStorers;
             };
 
+            class TaskQueue {
+            public:
+                using Task = std::function<void(void)>;
+            public:
+                TaskQueue() = default;
+                ~TaskQueue() = default;
+                TaskQueue(const TaskQueue&) = delete;
+                TaskQueue& operator=(const TaskQueue&) = delete;
+
+                void push(Task task);
+                bool pop(Task& outTask);
+            private:
+                std::queue<Task> mQueue;
+                std::mutex mMutex;
+            };
+
         private/*members*/:
             bool mRemoteShell;
             bool mEnableUserInactivityNotification;
@@ -480,6 +496,7 @@ namespace WPEFramework {
             bool mEnableEasterEggs;
             ScreenCapture mScreenCapture;
             bool mErmEnabled;
+            TaskQueue mTaskQueue;
 #ifdef ENABLE_RIALTO_FEATURE
         std::shared_ptr<RialtoConnector>  rialtoConnector;
 #endif //ENABLE_RIALTO_FEATURE
