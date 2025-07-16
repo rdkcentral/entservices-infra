@@ -876,7 +876,7 @@ TEST_F(UserSettingTest, getMigrationStatecase)
     EXPECT_EQ(status, Core::ERROR_NONE);
 }
 
-TEST_F(UserSettingTest, onLiveWatershed_event)
+TEST_F(UserSettingTest, onLiveWatershedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -923,7 +923,7 @@ TEST_F(UserSettingTest, onLiveWatershed_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onVoiceGuidanceHintsChanged_event)
+TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -969,7 +969,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onAudioDescriptionChanged_event)
+TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
 {
 
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -1016,7 +1016,7 @@ TEST_F(UserSettingTest, onAudioDescriptionChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onPreferredAudioLanguagesChanged_event)
+TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
 {
 
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -1066,7 +1066,7 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChanged_event)
 
 }
 
-TEST_F(UserSettingTest, onPresentationLanguageChanged_event)
+TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
 {
 
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -1113,7 +1113,7 @@ TEST_F(UserSettingTest, onPresentationLanguageChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onCaptionsChanged_event)
+TEST_F(UserSettingTest, onCaptionsChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1159,7 +1159,7 @@ TEST_F(UserSettingTest, onCaptionsChanged_event)
 
 }
 
-TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChanged_event)
+TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
 {
 
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -1207,7 +1207,7 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChanged_event)
+TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
 {
 
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -1254,7 +1254,7 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onPinControlChanged_event)
+TEST_F(UserSettingTest, onPinControlChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1302,7 +1302,7 @@ TEST_F(UserSettingTest, onPinControlChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onViewingRestrictionsChanged_event)
+TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
 {
 
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
@@ -1351,7 +1351,7 @@ TEST_F(UserSettingTest, onViewingRestrictionsChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onViewingRestrictionsWindowChanged_event)
+TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1397,7 +1397,7 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onPlaybackWatershedChanged_event)
+TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1445,7 +1445,7 @@ TEST_F(UserSettingTest, onPlaybackWatershedChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onBlockNotRatedContentChanged_event)
+TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1494,7 +1494,7 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onPinOnPurchaseChanged_event)
+TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1542,7 +1542,7 @@ TEST_F(UserSettingTest, onPinOnPurchaseChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onHighContrastChanged_event)
+TEST_F(UserSettingTest, onHighContrastChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1590,7 +1590,7 @@ TEST_F(UserSettingTest, onHighContrastChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onVoiceGuidanceChanged_event)
+TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1638,7 +1638,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onVoiceGuidanceRateChanged_event)
+TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -1687,7 +1687,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChanged_event)
     paramsMigrationState.Clear();
 }
 
-TEST_F(UserSettingTest, onContentPinChanged_event)
+TEST_F(UserSettingTest, onContentPinChangedEvent)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
