@@ -419,8 +419,6 @@ TEST_F(LifecycleManagerTest, unloadApp_afterSpawnApp)
 {
     createResources();
 
-    appInstanceId = "test.app.instance";
-
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     // TC-18: Unload the app after spawning
