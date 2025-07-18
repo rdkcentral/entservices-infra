@@ -315,22 +315,34 @@ namespace WPEFramework
             // Begins a graceful shutdown of the app.  Moves the app through the lifecycle states till it ultimately ends in app container being terminated.
             // This is an asynchronous call, clients should use the onAppStateChange event to determine when the app is actually terminated.
             // This moves an app to the unloaded state
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             Core::hresult status = Core::ERROR_NONE;
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             ApplicationContext* context = getContext(appInstanceId, "");
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             if (nullptr == context)
 	    {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 status = Core::ERROR_GENERAL;
                 success = false;
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 return status;
 	    }
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             context->setApplicationKillParams(false);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
             success = RequestHandler::getInstance()->terminate(context, false, errorReason);
+
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             if (!success)
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");       
                 status = Core::ERROR_GENERAL;
 	    }
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return status;
         }
         

@@ -92,6 +92,7 @@ namespace WPEFramework
 	{
                 DEBUG_PRINTF("ERROR: RDKEMW-2806");
             StateTransitionHandler::getInstance()->terminate();
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mRippleHandler->terminate();
             if (mWindowManagerHandler)
             {
