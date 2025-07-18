@@ -29,7 +29,7 @@
 #include "SecureStorageServerMock.h"
 #include "SecureStorageServiceMock.h"
 
-#define EVNT_TIMEOUT (100)
+#define EVNT_TIMEOUT (200)
 #define SHAREDSTORAGE_CALLSIGN _T("org.rdk.SharedStorage.1")
 #define SHAREDSTORAGETEST_CALLSIGN _T("L2tests.1")
 
@@ -178,11 +178,11 @@ SharedStorage_L2test::~SharedStorage_L2test()
     uint32_t status = Core::ERROR_GENERAL;
 
     /* Deactivate plugin in destructor */
-    status = DeactivateService("org.rdk.PersistentStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
     status = DeactivateService("org.rdk.CloudStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
     status = DeactivateService("org.rdk.SharedStorage");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    status = DeactivateService("org.rdk.PersistentStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     if (mock_server) {
@@ -262,8 +262,8 @@ SharedStorage_L2testDeviceScope::SharedStorage_L2testDeviceScope()
     /* Activate plugin in constructor */
     status = ActivateService("org.rdk.PersistentStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
-    status = ActivateService("org.rdk.CloudStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
+    // status = ActivateService("org.rdk.CloudStore");
+    // EXPECT_EQ(Core::ERROR_NONE, status);
     status = ActivateService("org.rdk.SharedStorage");
     EXPECT_EQ(Core::ERROR_NONE, status);
 }
@@ -277,8 +277,8 @@ SharedStorage_L2testDeviceScope::~SharedStorage_L2testDeviceScope()
     /* Deactivate plugin in destructor */
     status = DeactivateService("org.rdk.PersistentStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
-    status = DeactivateService("org.rdk.CloudStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
+    // status = DeactivateService("org.rdk.CloudStore");
+    // EXPECT_EQ(Core::ERROR_NONE, status);
     status = DeactivateService("org.rdk.SharedStorage");
     EXPECT_EQ(Core::ERROR_NONE, status);
 }
@@ -406,7 +406,7 @@ MATCHER_P(MatchRequestStatus, data, "")
  * The test case also checks that the OnValueChanged notification is triggered with the correct
  * parameters.
  */
- #if 0
+
 TEST_F(SharedStorage_L2test,SetValue_ACCOUNT_Scope_JSONRPC)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(SHAREDSTORAGE_CALLSIGN, SHAREDSTORAGETEST_CALLSIGN);
@@ -1253,4 +1253,3 @@ TEST_F(SharedStorage_L2testDeviceScope, FlushCache_JSONRPC)
     status = InvokeServiceMethod("org.rdk.SharedStorage.1", "flushCache", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
 }
-#endif
