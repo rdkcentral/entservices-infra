@@ -690,7 +690,7 @@ jobs:
           RdkServicesL1Test &&
           cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL1TestResults.json
-        timeout-minutes: 5
+        timeout-minutes: 3
 
       - name: Generate coverage
         if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
