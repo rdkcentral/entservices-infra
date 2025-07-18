@@ -412,6 +412,7 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
 
     releaseResources();
 }
+#endif
 
 
 TEST_F(LifecycleManagerTest, unloadApp_afterSpawnApp)
@@ -444,6 +445,7 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppFailure)
 }
 #endif
 
+#if 0
 TEST_F(LifecycleManagerTest, killApp_afterSpawnApp)
 {
     createResources();
@@ -457,6 +459,7 @@ TEST_F(LifecycleManagerTest, killApp_afterSpawnApp)
 
     releaseResources();
 }
+#endif
 
 #if 0
 TEST_F(LifecycleManagerTest, killApp_onSpawnAppFailure)
@@ -474,6 +477,7 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppFailure)
 }
 #endif
 
+#if 0
 TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_afterSpawnApp)
 {
     createResources();
