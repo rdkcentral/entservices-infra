@@ -48,8 +48,6 @@ class LifecycleManagerTest : public ::testing::Test {
 protected:
     string appId;
     string launchIntent;
-    string environmentVars;
-    bool enableDebugger;
     Exchange::ILifecycleManager::LifecycleState targetLifecycleState;
     Exchange::RuntimeConfig runtimeConfigObject;
     string launchArgs;
@@ -415,11 +413,11 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
 #endif
 
 
-TEST_F(LifecycleManagerTest, unloadApp_afterSpawnApp)
+TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
 {
     createResources();
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    appInstanceId = "test.app.instance";
 
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
@@ -443,21 +441,17 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppFailure)
 }
 #endif
 
-#if 0
-TEST_F(LifecycleManagerTest, killApp_afterSpawnApp)
+TEST_F(LifecycleManagerTest, killApp_withValidParams)
 {
     createResources();
 
     appInstanceId = "test.app.instance";
-
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     // TC-20: Kill the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->KillApp(appInstanceId, errorReason, success));
 
     releaseResources();
 }
-#endif
 
 #if 0
 TEST_F(LifecycleManagerTest, killApp_onSpawnAppFailure)
@@ -475,15 +469,12 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppFailure)
 }
 #endif
 
-#if 0
-TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_afterSpawnApp)
+TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_withValidParams)
 {
     createResources();
 
     appInstanceId = "test.app.instance";
     string intent = "test.intent";
-
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     // TC-22: Send intent to the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));
@@ -493,6 +484,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_afterSpawnApp)
     releaseResources();
 }
 
+#if 0
 TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppFailure)
 {
     createResources();
