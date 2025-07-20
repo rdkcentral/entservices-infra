@@ -668,39 +668,31 @@ jobs:
           &&
           ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
       
-      - name: Run unit tests with gdb
-        continue-on-error: true
-        if: ${{ !env.ACT }}
-        run: |
-         set -x
-         PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
-         LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
-         GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
-         type gdb
-         gdb -batch -ex "run" -ex "thread apply all bt" --args $GITHUB_WORKSPACE/install/usr/bin/RdkServicesL1Test > gdb_log.txt 2>&1 || true
-        timeout-minutes: 3
+      - name: Run unit tests without valgrind
+        run: >
+          PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
+          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
+          GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
+          RdkServicesL1Test &&
+          cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithoutValgrind.json &&
+          rm -rf $(pwd)/rdkL1TestResults.json
 
       - name: Run unit tests with valgrind
-        continue-on-error: true
         if: ${{ !env.ACT }}
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
           valgrind
-          --tool=helgrind
-          --leak-check=full
           --tool=memcheck
           --log-file=valgrind_log
           --leak-check=yes
           --show-reachable=yes
           --track-fds=yes
-          --track-origins=yes
           --fair-sched=try
           RdkServicesL1Test &&
           cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL1TestResults.json
-        timeout-minutes: 3
 
       - name: Generate coverage
         if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
