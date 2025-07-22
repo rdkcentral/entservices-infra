@@ -457,7 +457,6 @@ TEST_F(USBDeviceTest, devicePluggedInAndPluggedOut)
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, return_value);
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -576,7 +575,6 @@ TEST_F(USBDeviceTest, getDeviceListUsingWithSingleMassStorageUSBComRpcConnection
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, return_value);
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -789,7 +787,6 @@ TEST_F(USBDeviceTest, getDeviceListUsingWithMultipleMassStorageUSBComRpcConnecti
             {
                 std::string message;
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -1050,7 +1047,6 @@ TEST_F(USBDeviceTest, bindDriverComRpcConnectionSuccessCase)
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, return_value);
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -1263,7 +1259,6 @@ TEST_F(USBDeviceTest, unbindDriverComRpcConnectionSuccessCase)
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, return_value);
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -1468,7 +1463,6 @@ TEST_F(USBDeviceTest, getDeviceInfoComRpcConnectionSuccessCase)
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, return_value);
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
                 Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1,LIBUSB_CLASS_MASS_STORAGE);
                 libusb_device dev = {0};
@@ -1726,7 +1720,6 @@ TEST_F(USBDeviceTest, getDeviceInfoComRpcConnectionSuccessCase_ascii)
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, return_value);
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
                 Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1,LIBUSB_CLASS_MASS_STORAGE);
                 libusb_device dev = {0};
@@ -1975,7 +1968,6 @@ TEST_F(USBDeviceTest, getDeviceInfoComRpcConnection_libusb_strerror)
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, return_value);
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
                 Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1,LIBUSB_CLASS_MASS_STORAGE);
                 libusb_device dev = {0};
@@ -2201,7 +2193,6 @@ TEST_F(USBDeviceTest, getDeviceInfoComRpcConnection_InterfaceDescriptor)
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, return_value);
 
-                m_usbdeviceplugin->AddRef();
                 m_usbdeviceplugin->Register(&notification);
                 Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1,LIBUSB_CLASS_PER_INTERFACE);
                 ON_CALL(*p_libUSBApiImplMock, libusb_get_config_descriptor(::testing::_, ::testing::_, ::testing::_))
