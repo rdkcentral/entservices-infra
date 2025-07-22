@@ -87,7 +87,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: feature/RDKEMW-3513-yml
+          ref: develop
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
