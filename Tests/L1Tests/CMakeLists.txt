@@ -173,6 +173,8 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
         )
 
+target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
+
 #install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
 
