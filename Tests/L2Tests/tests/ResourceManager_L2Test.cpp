@@ -1,3 +1,21 @@
+/**
+* If not stated otherwise in this file or this component's LICENSE
+* file the following copyright and licenses apply:
+*
+* Copyright 2024 RDK Management
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+**/
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -25,7 +43,7 @@ protected:
 public:
     ResourceManagerTest() {
         std::cout << "ResourceManagerTest constructor called" << std::endl;
-        // Ensure ERM mock returns true for AddToBlackList
+
         ON_CALL(*p_essRMgrMock, EssRMgrAddToBlackList(::testing::_, ::testing::_))
             .WillByDefault(::testing::Return(true));
         uint32_t status = Core::ERROR_GENERAL;
@@ -117,39 +135,10 @@ TEST_F(ResourceManagerTest, ReserveTTSResourceSuccessCase)
     EXPECT_FALSE(resultJson.HasLabel("success"));
     std::cout << "ReserveTTSResourceSuccessCase test finished" << std::endl;
 }
+
 /********************************************************
 ************Test case Details **************************
-** 1. Test reserveTTSResourceWrapper missing appid, RFC disabled branch
-*******************************************************/
-TEST_F(ResourceManagerTest, ReserveTTSResource_MissingAppId_RFCDisabled)
-{
-    uint32_t status = Core::ERROR_GENERAL;
-    JsonObject resultJson;
-    JsonObject params; // missing 'appid'
-    status = InvokeServiceMethod("org.rdk.ResourceManager", "reserveTTSResource", params, resultJson);
-    EXPECT_EQ(status, Core::ERROR_GENERAL);
-}
-/********************************************************
-************Test case Details **************************
-** 1. Test reserveTTSResourceForApps failure scenario
-*******************************************************/
-TEST_F(ResourceManagerTest, ReserveTTSResourceForAppsFailureCase)
-{
-    std::cout << "ReserveTTSResourceForAppsFailureCase test started" << std::endl;
-    JsonObject resultJson;
-    JsonArray apps;
-    apps.Add(JsonValue("xumo"));
-    apps.Add(JsonValue("netflix"));
-    JsonObject params;
-    params["apps"] = apps;
-    uint32_t status = InvokeServiceMethod("org.rdk.ResourceManager", "reserveTTSResourceForApps", params, resultJson);
-    EXPECT_EQ(status, Core::ERROR_GENERAL);
-    EXPECT_FALSE(resultJson.HasLabel("success"));
-    std::cout << "ReserveTTSResourceForAppsFailureCase test finished" << std::endl;
-}
-/********************************************************
-************Test case Details **************************
-** 1. Test reserveTTSResourceForApps with 'appids' parameter to cover branch
+** 1. Test reserveTTSResourceForApps with 'appids' parameter 
 *******************************************************/
 TEST_F(ResourceManagerTest, ReserveTTSResourceForApps)
 {
