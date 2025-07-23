@@ -94,7 +94,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-deviceanddisplay
           path: entservices-deviceanddisplay
-          branch: develop
+          branch: feature/RDKEMW-3513-yml
          
       - name: Checkout entservices-testframework
         uses: actions/checkout@v3
