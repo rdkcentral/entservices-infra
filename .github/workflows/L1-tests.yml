@@ -468,6 +468,7 @@ jobs:
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -546,6 +547,7 @@ jobs:
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
