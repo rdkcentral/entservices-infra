@@ -26,6 +26,7 @@
 
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
+#include "State.h"
 #include "ServiceMock.h"
 #include "RuntimeManagerMock.h"
 #include "WindowManagerMock.h"
@@ -419,6 +420,9 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
 
     //appInstanceId = "test.app.instance";
 
+    Plugin::State state;
+    Plugin::ApplicationContext *context = state.getContext();
+
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -440,7 +444,7 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
 
-    post_mAppRunningsem();
+    post_mAppRunningsem(context);
 
     releaseResources();
 }

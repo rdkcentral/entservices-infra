@@ -30,7 +30,7 @@
     std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 #ifdef UNIT_TEST
-void post_mAppRunningsem() {
+void post_mAppRunningsem(ApplicationContext* context) {
     sem_post(&context->mAppRunningSemaphore);
 }
 #endif
