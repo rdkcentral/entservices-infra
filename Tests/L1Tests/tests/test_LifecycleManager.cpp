@@ -39,7 +39,7 @@
     std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 #ifdef UNIT_TEST
-void post_mAppRunningsem();
+void post_mAppRunningsem(Plugin::ApplicationContext *context);
 #endif
 
 using ::testing::NiceMock;
@@ -420,8 +420,7 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
 
     //appInstanceId = "test.app.instance";
 
-    Plugin::State state;
-    Plugin::ApplicationContext *context = state.getContext();
+    Plugin::ApplicationContext *context = Plugin::State::getContext();
 
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
