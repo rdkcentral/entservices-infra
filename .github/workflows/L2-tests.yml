@@ -87,21 +87,21 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: feature/RDKEMW-3513-yml
+          ref: develop
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
         with:
           repository: rdkcentral/entservices-deviceanddisplay
           path: entservices-deviceanddisplay
-          branch: feature/RDKEMW-3513-yml
+          branch: develop
          
       - name: Checkout entservices-testframework
         uses: actions/checkout@v3
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: feature/RDKEMW-3513-yml_1
+          ref: develop
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout googletest
