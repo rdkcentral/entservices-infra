@@ -37,6 +37,10 @@
 #define DEBUG_PRINTF(fmt, ...) \
     std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
+#ifdef UNIT_TEST
+void post_mAppRunningsem();
+#endif
+
 using ::testing::NiceMock;
 using namespace WPEFramework;
 
@@ -435,6 +439,8 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
 
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
+
+    post_mAppRunningsem();
 
     releaseResources();
 }
