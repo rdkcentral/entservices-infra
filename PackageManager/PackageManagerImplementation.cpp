@@ -780,6 +780,20 @@ namespace Plugin {
         if (!list.ToString(jsonstr)) {
             LOGERR("Failed to  stringify JsonArray");
         }
+        else
+        {
+            // Remove escaped characters from jsonstr
+            // This is a workaround for the issue where the JSON string contains escaped characters like \/
+            size_t pos = 0;
+            LOGINFO("shreyas Initial JSON with escapes: %s", jsonstr.c_str());
+            while ((pos = jsonstr.find("\\/", pos)) != std::string::npos)
+            {
+                jsonstr.replace(pos, 2, "/");
+                ++pos;
+            }
+            LOGINFO("shreyas Final JSON without escapes: %s", jsonstr.c_str());
+        }
+        LOGINFO("shreyas NotifyDownloadStatus: %s", jsonstr.c_str());
 
         mAdminLock.Lock();
         for (auto notification: mDownloaderNotifications) {
