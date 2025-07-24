@@ -24,6 +24,7 @@
 #include <mutex>
 #include <thread>
 #include <fstream>
+#include <future>
 #include <set>
 #include <sstream>
 #include <condition_variable>
@@ -305,6 +306,23 @@ static bool waitForHibernateUnblocked(int timeoutMs)
 
 namespace WPEFramework {
     namespace Plugin {
+
+        void RDKShell::TaskQueue::push(RDKShell::TaskQueue::Task task)
+        {
+            std::lock_guard<std::mutex> lg(mMutex);
+            mQueue.push(task);
+        }
+
+        bool RDKShell::TaskQueue::pop(RDKShell::TaskQueue::Task& outTask)
+        {
+            std::lock_guard<std::mutex> lg(mMutex);
+            if(mQueue.empty()) {
+                return false;
+            }
+            outTask = mQueue.front();
+            mQueue.pop();
+            return true;
+        }
 
         namespace {
             static Plugin::Metadata<Plugin::RDKShell> metadata(
@@ -1426,7 +1444,8 @@ namespace WPEFramework {
                 mLastWakeupKeyTimestamp(0),
                 mEnableEasterEggs(true),
                 mScreenCapture(this),
-                mErmEnabled(false)
+                mErmEnabled(false),
+                mTaskQueue()
         {
             LOGINFO("ctor");
             RDKShell::_instance = this;
@@ -1789,6 +1808,12 @@ namespace WPEFramework {
                   }
                   RdkShell::update();
                   isRunning = sRunning;
+
+                  TaskQueue::Task task;
+                  while(mTaskQueue.pop(task)){
+                    task();
+                  }
+
                   gRdkShellMutex.unlock();
                   double frameTime = (int)RdkShell::microseconds() - (int)startFrameTime;
                   if (frameTime < maxSleepTime)
@@ -7000,15 +7025,21 @@ namespace WPEFramework {
 
         bool RDKShell::injectKey(const uint32_t& keyCode, const JsonArray& modifiers)
         {
-            bool ret = false;
             uint32_t flags = 0;
             for (int i=0; i<modifiers.Length(); i++) {
               flags |= getKeyFlag(modifiers[i].String());
             }
-            gRdkShellMutex.lock();
-            ret = CompositorController::injectKey(keyCode, flags);
-            gRdkShellMutex.unlock();
-            return ret;
+
+            std::promise<bool> promise;
+            auto promisePtr = std::make_shared<std::promise<bool>>(std::move(promise));
+            auto result = promisePtr->get_future();
+
+            mTaskQueue.push([keyCode, flags, promisePtr](){
+                bool status = CompositorController::injectKey(keyCode, flags);
+                promisePtr->set_value(status);
+            });
+
+            return result.get();
         }
 
         bool RDKShell::generateKey(const string& client, const JsonArray& keyInputs)
