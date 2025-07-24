@@ -38,12 +38,12 @@
 #define DEBUG_PRINTF(fmt, ...) \
     std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
+using ::testing::NiceMock;
+using namespace WPEFramework;
+
 #ifdef UNIT_TEST
 void post_mAppRunningsem(Plugin::ApplicationContext *context);
 #endif
-
-using ::testing::NiceMock;
-using namespace WPEFramework;
 
 class LifecycleManagerTest : public ::testing::Test {
 protected:
@@ -420,8 +420,6 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
 
     //appInstanceId = "test.app.instance";
 
-    Plugin::ApplicationContext *context = Plugin::State::getContext();
-
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -439,6 +437,8 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
     #endif
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    Plugin::ApplicationContext *context = Plugin::getContext("", appId);
 
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
