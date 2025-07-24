@@ -236,7 +236,7 @@ OCIContainer_L2Test::~OCIContainer_L2Test()
     status = DeactivateService("org.rdk.OCIContainer");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
-    sleep(3); // Added sleep due to failures while activating/deactivating the plugin
+    sleep(2); // Added sleep due to failures while activating/deactivating the plugin
 }
 
 uint32_t OCIContainer_L2Test::CreateOCIContainerInterfaceObject()
