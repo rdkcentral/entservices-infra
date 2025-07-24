@@ -36,6 +36,8 @@
 #include "Module.h"
 #include "WorkerPoolImplementation.h"
 #include "WrapsMock.h"
+#include "FactoriesImplementation.h"
+
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
@@ -75,6 +77,8 @@ protected:
     StorageManagerMock* mStorageManagerMock = nullptr;
     WrapsImplMock *p_wrapsImplMock   = nullptr;
     Core::JSONRPC::Message message;
+    FactoriesImplementation factoriesImplementation;
+    PLUGINHOST_DISPATCHER *dispatcher;
 
 
     Core::ProxyType<Plugin::AppManager> plugin;
@@ -118,6 +122,10 @@ protected:
         p_wrapsImplMock  = new NiceMock <WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
 
+        PluginHost::IFactories::Assign(&factoriesImplementation);
+        dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
+        plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
+        dispatcher->Activate(mServiceMock);
         TEST_LOG("In createResources!");
         EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
           .Times(::testing::AnyNumber())
@@ -158,7 +166,7 @@ protected:
                     mLifecycleManagerStateNotification_cb = notification;
                     return Core::ERROR_NONE;
                 }));
-
+        
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mAppManagerImpl = Plugin::AppManagerImplementation::getInstance();
         TEST_LOG("createResources - All done!");
@@ -190,7 +198,7 @@ protected:
         }
 
         // Let background threads settle to avoid async crashes
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         TEST_LOG("In releaseResources!");
         if (mLifecycleManagerMock != nullptr)
@@ -253,7 +261,6 @@ protected:
 
         if (mStorageManagerMock != nullptr)
         {
-            TEST_LOG("Release StorageManagerMock");
             EXPECT_CALL(*mStorageManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
@@ -261,6 +268,8 @@ protected:
                      return 0;
             })); 
         }
+        dispatcher->Deactivate();
+        dispatcher->Release();
 
         plugin->Deinitialize(mServiceMock);
         delete mServiceMock;
@@ -321,7 +330,6 @@ protected:
         TEST_LOG("LaunchAppPreRequisite with state: %d", state);
         EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
         .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-            TEST_LOG("Mocking ListPackages call");
             auto mockIterator = FillPackageIterator(); // Fill the package Info
             packages = mockIterator;
             return Core::ERROR_NONE;
@@ -436,9 +444,7 @@ TEST_F(AppManagerTest, GetInstalledAppsUsingComRpcSuccess)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetInstalledApps(apps));
-    TEST_LOG("GetInstalledApps :%s", apps.c_str());
     jsonStr = GetPackageInfoInJSON();
-    TEST_LOG("jsonStr :%s", jsonStr.c_str());
     EXPECT_STREQ(jsonStr.c_str(), apps.c_str());
 
     if(status == Core::ERROR_NONE)
@@ -519,7 +525,7 @@ TEST_F(AppManagerTest, GetInstalledAppsUsingComRpcFailurePackageListEmpty)
     });
 
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->GetInstalledApps(apps));
-    TEST_LOG("GetInstalledApps :%s", apps.c_str());
+    EXPECT_EQ(apps, "");
 
     if(status == Core::ERROR_NONE)
     {
@@ -552,7 +558,7 @@ TEST_F(AppManagerTest, GetInstalledAppsUsingComRpcFailureListPackagesReturnError
     });
 
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->GetInstalledApps(apps));
-    TEST_LOG("GetInstalledApps :%s", apps.c_str());
+    EXPECT_EQ(apps, "");
 
     if(status == Core::ERROR_NONE)
     {
@@ -612,7 +618,7 @@ TEST_F(AppManagerTest, IsInstalledUsingJSONRpcSuccess)
     });
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("isInstalled"), request, mJsonRpcResponse));
-    TEST_LOG(" mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
+    EXPECT_STREQ("true", mJsonRpcResponse.c_str());
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -780,14 +786,40 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
-    appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
+    appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
+    Core::Event onAppLifecycleStateChanged(false, true);
 
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                std::string text;
+                EXPECT_TRUE(json->ToString(text));
+                const std::string expectedJson =  "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLifecycleStateChanged\",\"params\":{\"appId\":\"com.test.app\",\"appInstanceId\":\"testAppInstance\",\"newState\":\"APP_STATE_ACTIVE\",\"oldState\":\"APP_STATE_PAUSED\",\"errorReason\":\"APP_ERROR_NONE\"}}";
+                EXPECT_EQ(text, expectedJson);
+                onAppLifecycleStateChanged.SetEvent();
+
+                return Core::ERROR_NONE;
+            }));
+
+    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-
+    ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
+    << "LifecycleManagerState notification callback is not registered";
+    mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
+        APPMANAGER_APP_ID,
+        APPMANAGER_APP_INSTANCE,
+        Exchange::ILifecycleManager::LifecycleState::PAUSED,  // Old state
+        Exchange::ILifecycleManager::LifecycleState::ACTIVE,     // New state
+        "start"
+    );
+    EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -816,23 +848,9 @@ TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
         .Times(1)
         .WillOnce(::testing::Invoke(
             [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                TEST_LOG("submit onAppLifecycleStateChanged:");
                 std::string text;
                 EXPECT_TRUE(json->ToString(text));
-                TEST_LOG("onAppLifecycleStateChanged: %s", text.c_str());
-
-                const std::string expectedJson = R"({
-                    "jsonrpc":"2.0",
-                    "method":"org.rdk.AppManager.onAppLifecycleStateChanged",
-                    "params": {
-                        "appId":)" + std::string(APPMANAGER_APP_ID) + R"(,
-                        "appInstanceId":")" + std::string(APPMANAGER_APP_INSTANCE) + R"(",
-                        "newState": "ACTIVE", // I will update this later
-                        "oldState": "PAUSED", // I will update this later
-                        "intent": "start"
-                    }
-                })";
-
+                const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLifecycleStateChanged\",\"params\":{\"appId\":\"com.test.app\",\"appInstanceId\":\"testAppInstance\",\"newState\":\"APP_STATE_ACTIVE\",\"oldState\":\"APP_STATE_PAUSED\",\"errorReason\":\"APP_ERROR_NONE\"}}";
                 EXPECT_EQ(text, expectedJson);
                 onAppLifecycleStateChanged.SetEvent();
 
@@ -856,10 +874,7 @@ TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,     // New state
         "start"
     );
-    TEST_LOG("VEKSHA");
-    // EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock());
-    EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock(1000));
-    TEST_LOG("mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
+    EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock());
     EVENT_UNSUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     if (status == Core::ERROR_NONE) {
         releaseResources();
@@ -895,8 +910,9 @@ TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
             // Simulate success
             return 0;
     });
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
 
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1075,15 +1091,12 @@ TEST_F(AppManagerTest, PreloadAppUsingJSONRpcSuccess)
 {
     Core::hresult status;
     std::string error = "";
-
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
-
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("preloadApp"), request, mJsonRpcResponse));
-    TEST_LOG(" mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
 
     if(status == Core::ERROR_NONE)
     {
@@ -1195,10 +1208,34 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
     appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
+    Core::Event onAppLifecycleStateChanged(false, true);
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                std::string text;
+                EXPECT_TRUE(json->ToString(text));
+                const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLifecycleStateChanged\",\"params\":{\"appId\":\"com.test.app\",\"appInstanceId\":\"testAppInstance\",\"newState\":\"APP_STATE_PAUSED\",\"oldState\":\"APP_STATE_ACTIVE\",\"errorReason\":\"APP_ERROR_NONE\"}}";
+                EXPECT_EQ(text, expectedJson);
+                onAppLifecycleStateChanged.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+    
+    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->CloseApp(APPMANAGER_APP_ID));
-
+    ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
+    << "LifecycleManagerState notification callback is not registered";
+    mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
+        APPMANAGER_APP_ID,
+        APPMANAGER_APP_INSTANCE,
+        Exchange::ILifecycleManager::LifecycleState::ACTIVE,  // Old state
+        Exchange::ILifecycleManager::LifecycleState::PAUSED,     // New state
+        ""
+    );
+    EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1221,17 +1258,40 @@ TEST_F(AppManagerTest, CloseAppUsingJSONRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-
+    Core::Event onAppLifecycleStateChanged(false, true);
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
     appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\"}";
+
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                std::string text;
+                EXPECT_TRUE(json->ToString(text));
+                const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLifecycleStateChanged\",\"params\":{\"appId\":\"com.test.app\",\"appInstanceId\":\"testAppInstance\",\"newState\":\"APP_STATE_PAUSED\",\"oldState\":\"APP_STATE_ACTIVE\",\"errorReason\":\"APP_ERROR_NONE\"}}";
+                EXPECT_EQ(text, expectedJson);
+                onAppLifecycleStateChanged.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+    
+    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("closeApp"), request, mJsonRpcResponse));
-    TEST_LOG(" mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
-
+    ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
+    << "LifecycleManagerState notification callback is not registered";
+    mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
+        APPMANAGER_APP_ID,
+        APPMANAGER_APP_INSTANCE,
+        Exchange::ILifecycleManager::LifecycleState::ACTIVE,  // Old state
+        Exchange::ILifecycleManager::LifecycleState::PAUSED,     // New state
+        ""
+    );
+    EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1259,6 +1319,7 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuspendedStateSuccess)
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
     appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
+
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, struct stat* info) {
@@ -1272,6 +1333,7 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuspendedStateSuccess)
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->CloseApp(APPMANAGER_APP_ID));
+
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1417,8 +1479,6 @@ TEST_F(AppManagerTest, TerminateAppUsingJSONRpcSuccess)
 
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("terminateApp"), request, mJsonRpcResponse));
-    TEST_LOG(" mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1919,7 +1979,6 @@ TEST_F(AppManagerTest, GetAppMetadataUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetAppMetadata(APPMANAGER_APP_ID, dummymetaData, dummyResult));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1943,7 +2002,6 @@ TEST_F(AppManagerTest, GetAppMetadataUsingJSONRpcSuccess)
 
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\", \"metadata\": \"" + dummymetaData + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getAppMetadata"), request, mJsonRpcResponse));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1973,7 +2031,6 @@ TEST_F(AppManagerTest, GetAppPropertyUsingComRpcSuccess)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetAppProperty(APPMANAGER_APP_ID, key, value));
-    TEST_LOG("GetAppProperty :%s %s", value.c_str(), PERSISTENT_STORE_VALUE);
     EXPECT_STREQ(value.c_str(), PERSISTENT_STORE_VALUE);
 
     if(status == Core::ERROR_NONE)
@@ -2005,6 +2062,7 @@ TEST_F(AppManagerTest, GetAppPropertyUsingJSONRpcSuccess)
         return Core::ERROR_NONE;
     });
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getAppProperty"), request, mJsonRpcResponse));
+    EXPECT_STREQ(mJsonRpcResponse.c_str(), (std::string("\"") + PERSISTENT_STORE_VALUE + "\"").c_str());
 
     if(status == Core::ERROR_NONE)
     {
@@ -2027,7 +2085,6 @@ TEST_F(AppManagerTest, GetAppPropertyUsingComRpcFailureEmptyAppID)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->GetAppProperty(APPMANAGER_EMPTY_APP_ID, key, value));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2048,9 +2105,7 @@ TEST_F(AppManagerTest, GetAppPropertyUsingComRpcFailureEmptyKey)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->GetAppProperty(APPMANAGER_APP_ID, key, value));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2078,7 +2133,6 @@ TEST_F(AppManagerTest, GetAppPropertyUsingComRpcFailureGetAppPropertyReturnError
         return Core::ERROR_GENERAL;
     });
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->GetAppProperty(APPMANAGER_APP_ID, key, value));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2101,7 +2155,6 @@ TEST_F(AppManagerTest, GetAppPropertyUsingComRpcFailureLifecycleManagerRemoteObj
     createAppManagerImpl();
 
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->GetAppProperty(APPMANAGER_APP_ID, key, value));
-
     releaseAppManagerImpl();
 }
 
@@ -2127,7 +2180,6 @@ TEST_F(AppManagerTest, SetAppPropertyUsingComRpcSuccess)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->SetAppProperty(APPMANAGER_APP_ID, key, value));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2156,7 +2208,6 @@ TEST_F(AppManagerTest, SetAppPropertyUsingJSONRpcSuccess)
         return Core::ERROR_NONE;
     });
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("setAppProperty"), request, mJsonRpcResponse));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2179,7 +2230,6 @@ TEST_F(AppManagerTest, SetAppPropertyUsingComRpcFailureEmptyAppID)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->SetAppProperty(APPMANAGER_EMPTY_APP_ID, key, value));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2202,7 +2252,6 @@ TEST_F(AppManagerTest, SetAppPropertyUsingComRpcFailureEmptyKey)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->SetAppProperty(APPMANAGER_APP_ID, key, value));
-
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2272,7 +2321,7 @@ TEST_F(AppManagerTest, GetMaxRunningAppUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetMaxRunningApps(maxRunningApps));
-
+    EXPECT_EQ(maxRunningApps, -1);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2294,7 +2343,7 @@ TEST_F(AppManagerTest, GetMaxRunningAppUsingJSONRpcSuccess)
 
     std::string request = "{}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getMaxRunningApps"), request, mJsonRpcResponse));
-    TEST_LOG(" mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
+    EXPECT_EQ(mJsonRpcResponse, "-1");
 
     if(status == Core::ERROR_NONE)
     {
@@ -2318,7 +2367,7 @@ TEST_F(AppManagerTest, GetMaxHibernatedAppsUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetMaxHibernatedApps(maxHibernatedApps));
-
+    EXPECT_EQ(maxHibernatedApps, -1);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2340,7 +2389,7 @@ TEST_F(AppManagerTest, GetMaxHibernatedAppsUsingJSONRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, status);
     std::string request = "{}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getMaxHibernatedApps"), request, mJsonRpcResponse));
-    TEST_LOG(" mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
+    EXPECT_EQ(mJsonRpcResponse, "-1");
 
     if(status == Core::ERROR_NONE)
     {
@@ -2364,7 +2413,7 @@ TEST_F(AppManagerTest, GetMaxHibernatedFlashUsageUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetMaxHibernatedFlashUsage(maxHibernatedFlashUsage));
-
+    EXPECT_EQ(maxHibernatedFlashUsage, -1);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2387,8 +2436,7 @@ TEST_F(AppManagerTest, GetMaxHibernatedFlashUsageUsingJSONRpcSuccess)
 
     std::string request = "{}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getMaxHibernatedFlashUsage"), request, mJsonRpcResponse));
-    TEST_LOG(" mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
-
+    EXPECT_EQ(std::stoi(mJsonRpcResponse), -1);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2411,7 +2459,7 @@ TEST_F(AppManagerTest, GetMaxInactiveRamUsageUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetMaxInactiveRamUsage(maxInactiveRamUsage));
-
+    EXPECT_EQ(maxInactiveRamUsage, -1);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2434,7 +2482,7 @@ TEST_F(AppManagerTest, GetMaxInactiveRamUsageUsingJSONRpcSuccess)
 
     std::string request = "{}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getMaxInactiveRamUsage"), request, mJsonRpcResponse));
-    TEST_LOG(" mJsonRpcResponse: %s", mJsonRpcResponse.c_str());
+    EXPECT_EQ(std::stoi(mJsonRpcResponse), -1);
 
     if(status == Core::ERROR_NONE)
     {
@@ -2465,7 +2513,7 @@ TEST_F(AppManagerTest, updateCurrentActionUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
 
     mAppManagerImpl->updateCurrentAction(APPMANAGER_APP_ID, Plugin::AppManagerImplementation::CurrentAction::APP_ACTION_LAUNCH);
-
+    
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
