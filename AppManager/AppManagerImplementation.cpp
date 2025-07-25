@@ -17,6 +17,7 @@
 * limitations under the License.
 */
 
+
 #include <iomanip>      /* for std::setw, std::setfill */
 #include "AppManagerImplementation.h"
 
@@ -129,7 +130,6 @@ void AppManagerImplementation::dispatchEvent(EventNames event, const JsonObject 
 void AppManagerImplementation::Dispatch(EventNames event, const JsonObject params)
 {
     LOGINFO("AppManagerImplementation::Dispatch event %d", static_cast<int>(event));
-    LOGINFO("DISPATCH CALLED FROM THREAD %d", Core::IWorkerPool::Instance().CurrentThreadId());
     switch(event)
     {
         case APP_EVENT_LIFECYCLE_STATE_CHANGED:
