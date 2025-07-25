@@ -195,6 +195,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
                 mAdminLock.Lock();
                 for (auto& notification : mAppManagerNotification)
                 {
+                    LOGINFO("VEEKSHA Notify OnAppInstalled/OnAppUninstalled for appId %s, installStatus %s",)
                     if (installStatus == "INSTALLED")
                     {
                         LOGINFO("VEEKSHA OnAppInstalled appId %s", appId.c_str());
