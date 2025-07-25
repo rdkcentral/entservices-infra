@@ -551,7 +551,7 @@ namespace WPEFramework
 
         void LifecycleManagerImplementation::onRippleEvent(string name, JsonObject& data)
 	{
-            //mLifecycleManager->dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, JsonValue(minutes));
+            dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, data);
 	}
 
         void LifecycleManagerImplementation::onStateChangeEvent(JsonObject& data)

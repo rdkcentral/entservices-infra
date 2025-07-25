@@ -437,7 +437,7 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
     #endif
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-    
+
     Plugin::LifecycleManagerImplementation LifecycleManagerImpl;
     Plugin::ApplicationContext *context = LifecycleManagerImpl.getContext("", appId);
 
