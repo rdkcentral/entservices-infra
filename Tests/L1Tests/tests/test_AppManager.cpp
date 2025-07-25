@@ -2712,7 +2712,7 @@ TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
     EXPECT_EQ(Core::ERROR_NONE, status);
     uint32_t signalled = AppManager_StateInvalid;
     ExpectedAppLifecycleEvent expectedEvent;
-    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appId = "YouTube";
     expectedEvent.version = "100.1.30+rialto";
     Core::Sink<NotificationHandler> notification;
     mAppManagerImpl->Register(&notification);
