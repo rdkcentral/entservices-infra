@@ -197,6 +197,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
                 {
                     if (installStatus == "INSTALLED")
                     {
+                        LOGINFO("VEEKSHA OnAppInstalled appId %s", appId.c_str());
                         version = params.HasLabel("version") ? params["version"].String() : "";
                         if (version.empty())
                         {
