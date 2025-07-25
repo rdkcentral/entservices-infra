@@ -184,7 +184,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
             string installStatus = "";
             /* Check if 'packageId' exists and is not empty */
             appId = params.HasLabel("packageId") ? params["packageId"].String() : "";
-            TEST_LOG("VEEKSHA APP_EVENT_INSTALLATION_STATUS event received for appId %s", appId.c_str());
+            LOGINFO("VEEKSHA APP_EVENT_INSTALLATION_STATUS event received for appId %s", appId.c_str());
             if (appId.empty())
             {
                 LOGERR("appId is missing or empty");

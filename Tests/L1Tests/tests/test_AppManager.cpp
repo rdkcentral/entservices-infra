@@ -2748,8 +2748,8 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
     ExpectedAppLifecycleEvent expectedEvent;
     expectedEvent.appId = "YouTube";
     expectedEvent.appInstanceId = "12345678-1234-1234-1234-123456789012";
-    expectedEvent.oldState = Exchange::ILifecycleManager::LifecycleState::SUSPENDED;  // Old state
-    expectedEvent.newState =Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::SUSPENDED;  // Old state
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::ACTIVE;
     expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
     uint32_t signalled = AppManager_StateInvalid;
     Core::Sink<NotificationHandler> notification;
