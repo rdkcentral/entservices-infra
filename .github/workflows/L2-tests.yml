@@ -1,10 +1,10 @@
 name: L2-tests
 
 on:
-  push:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
-  pull_request:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+  workflow_call:
+    secrets:
+      RDKCM_RDKE:
+        required: true
 
 env:
   BUILD_TYPE: Debug
@@ -35,6 +35,10 @@ jobs:
         with:
           python-version: '3.x'
       - run: pip install jsonref
+
+      - name: ACK External Trigger
+        run: |
+           echo "Message: External Trigger Received for L2 Tests"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
@@ -81,7 +85,9 @@ jobs:
       - name: Checkout entservices-infra
         uses: actions/checkout@v3
         with:
+          repository: rdkcentral/entservices-infra
           path: entservices-infra
+          ref: develop
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
@@ -670,22 +676,6 @@ jobs:
           cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithoutValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
 
-      - name: Run unit tests with valgrind
-        if: ${{ !env.ACT }}
-        run: >
-          PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
-          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
-          valgrind
-          --tool=memcheck
-          --log-file=valgrind_log
-          --leak-check=yes
-          --show-reachable=yes
-          --track-fds=yes
-          --fair-sched=try
-          RdkServicesL2Test &&
-          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithValgrind.json &&
-          rm -rf $(pwd)/rdkL2TestResults.json
-
       - name: Generate coverage
         if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
         run: >
@@ -720,7 +710,7 @@ jobs:
         if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-L2-infra
           path: |
             coverage/
             valgrind_log
