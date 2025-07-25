@@ -191,6 +191,7 @@ protected:
 
     void releaseResources()
     {
+        TEST_LOG("In releaseResources!");
         if (mLifecycleManagerStateMock != nullptr && mLifecycleManagerStateNotification_cb != nullptr)
         {
             TEST_LOG("Unregister LifecycleManagerStateNotification");
@@ -200,7 +201,7 @@ protected:
                 }));
             mLifecycleManagerStateNotification_cb = nullptr;
         }
-
+        TEST_LOG("Unregister PackageManagerNotification");
         if (mPackageInstallerMock != nullptr && mPackageManagerNotification_cb != nullptr)
         {
             TEST_LOG("Unregister PackageManagerNotification");
@@ -224,6 +225,7 @@ protected:
                      return 0;
                     }));
         }
+        TEST_LOG("mLifecycleManagerStateMock");
         if (mLifecycleManagerStateMock != nullptr)
         {
             EXPECT_CALL(*mLifecycleManagerStateMock, Unregister(::testing::_))
@@ -238,6 +240,7 @@ protected:
                      return 0;
                     }));
         }
+        TEST_LOG("mPackageManagerMock");
         if (mPackageManagerMock != nullptr)
         {
             EXPECT_CALL(*mPackageManagerMock, Release())
@@ -247,6 +250,7 @@ protected:
                      return 0;
                     }));
         }
+        TEST_LOG("mPackageInstallerMock");
         if (mPackageInstallerMock != nullptr)
         {
             EXPECT_CALL(*mPackageInstallerMock, Release())
@@ -256,6 +260,7 @@ protected:
                      return 0;
                     }));
         }
+        TEST_LOG("mStore2Mock");
         if (mStore2Mock != nullptr)
         {
             EXPECT_CALL(*mStore2Mock, Release())
@@ -2685,18 +2690,22 @@ TEST_F(AppManagerTest, GetLoadedAppsCOMRPCSuccess)
  */
 TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
 {
+    TEST_LOG("OnAppInstallationStatusChangedSuccess 1");
     Core::hresult status;
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    
+    TEST_LOG("OnAppInstallationStatusChangedSuccess 2");
     // Simulate the callback
     ASSERT_NE(mPackageManagerNotification_cb, nullptr) << "PackageManager notification callback is not registered";
     mPackageManagerNotification_cb->OnAppInstallationStatus(TEST_JSON_INSTALLED_PACKAGE);
+    TEST_LOG("OnAppInstallationStatusChangedSuccess 3");
     if(status == Core::ERROR_NONE)
     {
+        TEST_LOG("OnAppInstallationStatusChangedSuccess 4");
         releaseResources();
     }
+    TEST_LOG("OnAppInstallationStatusChangedSuccess 5");
 }
 
 /* * Test Case for OnApplicationStateChangedSuccess
@@ -2708,10 +2717,11 @@ TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
 TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
 {
     Core::hresult status;
+    TEST_LOG("OnApplicationStateChangedSuccess 0");
     status = createResources();
     // Set expectation on the CORRECT Register method
-
     EXPECT_EQ(Core::ERROR_NONE, status);
+    TEST_LOG("OnApplicationStateChangedSuccess 1");
     ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
         << "LifecycleManagerState notification callback is not registered";
     
@@ -2722,6 +2732,7 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,     // New state
         "start"
     );
+    TEST_LOG("OnApplicationStateChangedSuccess 2");
     
     if(status == Core::ERROR_NONE) {
         releaseResources();
