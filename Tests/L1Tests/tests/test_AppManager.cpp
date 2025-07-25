@@ -41,6 +41,7 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
+#define TIMEOUT   (1000)
 #define APPMANAGER_APP_ID           "com.test.app"
 #define APPMANAGER_EMPTY_APP_ID     ""
 #define APPMANAGER_APP_VERSION      "1.2.8"
@@ -60,6 +61,18 @@
 #define APPMANAGER_INSTALLSTATUS_UNINSTALLED    "UNINSTALLED"
 #define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","state":"INSTALLED"}])"
 
+typedef enum : uint32_t {
+    AppManager_StateInvalid = 0x00000000,
+    AppManager_onAppLifecycleStateChanged = 0x00000001
+} AppManagerL1test_async_events_t;
+
+struct ExpectedAppLifecycleEvent {
+    std::string appId;
+    std::string appInstanceId;
+    Exchange::IAppManager::AppLifecycleState newState;
+    Exchange::IAppManager::AppLifecycleState oldState;
+    Exchange::IAppManager::AppErrorReason errorReason;
+};
 using ::testing::NiceMock;
 using namespace WPEFramework;
 
@@ -79,14 +92,15 @@ protected:
     Core::JSONRPC::Message message;
     FactoriesImplementation factoriesImplementation;
     PLUGINHOST_DISPATCHER *dispatcher;
+    
 
 
     Core::ProxyType<Plugin::AppManager> plugin;
     Plugin::AppManagerImplementation *mAppManagerImpl;
     Exchange::IPackageInstaller::INotification* mPackageManagerNotification_cb = nullptr;
     Exchange::ILifecycleManagerState::INotification* mLifecycleManagerStateNotification_cb = nullptr;
-    Exchange::IAppManager::INotification* mAppManagerNotification = nullptr;
-    
+    Exchange::IAppManager::INotification* mAppManagerNotification_cb = nullptr;
+
     Core::ProxyType<WorkerPoolImplementation> workerPool;
     Core::JSONRPC::Handler& mJsonRpcHandler;
     DECL_CORE_JSONRPC_CONX connection;
@@ -198,7 +212,7 @@ protected:
         }
 
         // Let background threads settle to avoid async crashes
-        //std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         TEST_LOG("In releaseResources!");
         if (mLifecycleManagerMock != nullptr)
@@ -377,6 +391,63 @@ protected:
         });
     }
 };
+
+class NotificationHandler : public Exchange::IAppManager::INotification {
+    private:
+
+        BEGIN_INTERFACE_MAP(Notification)
+        INTERFACE_ENTRY(Exchange::IAppManager::INotification)
+        END_INTERFACE_MAP
+
+    public:
+        /** @brief Mutex */
+        std::mutex m_mutex;
+
+        /** @brief Condition variable */
+        std::condition_variable m_condition_variable;
+
+        /** @brief Event signalled flag */
+        uint32_t m_event_signalled = AppManager_StateInvalid;
+
+        ExpectedAppLifecycleEvent m_expectedEvent;
+        NotificationHandler(){}
+        ~NotificationHandler(){}
+        void SetExpectedAppLifecycleEvent(const ExpectedAppLifecycleEvent& expectedEvent)
+        {
+            m_expectedEvent = expectedEvent;
+        }
+
+        void OnAppLifecycleStateChanged(const string& appId, const string& appInstanceId, const Exchange::IAppManager::AppLifecycleState newState, const Exchange::IAppManager::AppLifecycleState oldState, const Exchange::IAppManager::AppErrorReason errorReason)
+        {
+            m_event_signalled |= AppManager_onAppLifecycleStateChanged;
+            EXPECT_EQ(m_expectedEvent.appId, appId);
+            EXPECT_EQ(m_expectedEvent.appInstanceId, appInstanceId);
+            EXPECT_EQ(m_expectedEvent.newState, newState);
+            EXPECT_EQ(m_expectedEvent.oldState, oldState);
+            EXPECT_EQ(m_expectedEvent.errorReason, errorReason);
+
+            m_condition_variable.notify_one();
+        }
+
+        uint32_t WaitForRequestStatus(uint32_t timeout_ms, AppManagerL1test_async_events_t expected_status)
+        {
+            uint32_t signalled = AppManager_StateInvalid;
+            std::unique_lock<std::mutex> lock(m_mutex);
+            auto now = std::chrono::steady_clock::now();
+            auto timeout = std::chrono::milliseconds(timeout_ms);
+            while (!(expected_status & m_event_signalled))
+            {
+              if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
+              {
+                 TEST_LOG("Timeout waiting for request status event");
+                 break;
+              }
+            }
+            signalled = m_event_signalled;
+            m_event_signalled = AppManager_StateInvalid;  // reset for next use
+            return signalled;
+        }
+    };
 
 /*******************************************************************************************************************
  * Test Case for RegisteredMethodsUsingJsonRpcSuccess
@@ -783,34 +854,26 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailurePackageManagerObjectIsNull)
 TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
 {
     Core::hresult status;
-
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    
+    ExpectedAppLifecycleEvent expectedEvent;
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+    Core::Sink<NotificationHandler> notification;
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
+    uint32_t signalled = AppManager_StateInvalid;
     appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
-    Core::Event onAppLifecycleStateChanged(false, true);
-
-    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
-        .Times(1)
-        .WillOnce(::testing::Invoke(
-            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                std::string text;
-                EXPECT_TRUE(json->ToString(text));
-                const std::string expectedJson =  "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLifecycleStateChanged\",\"params\":{\"appId\":\"com.test.app\",\"appInstanceId\":\"testAppInstance\",\"newState\":\"APP_STATE_ACTIVE\",\"oldState\":\"APP_STATE_PAUSED\",\"errorReason\":\"APP_ERROR_NONE\"}}";
-                EXPECT_EQ(text, expectedJson);
-                onAppLifecycleStateChanged.SetEvent();
-
-                return Core::ERROR_NONE;
-            }));
-
-    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
+    
+    /* Register the notification handler */
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedAppLifecycleEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
-    << "LifecycleManagerState notification callback is not registered";
     mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
         APPMANAGER_APP_ID,
         APPMANAGER_APP_INSTANCE,
@@ -818,8 +881,10 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,     // New state
         "start"
     );
-    EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock());
-    EVENT_UNSUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
+    mAppManagerImpl->Unregister(&notification);
+
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1203,39 +1268,35 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
     Core::hresult status;
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-
+    ExpectedAppLifecycleEvent expectedEvent;
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+    Core::Sink<NotificationHandler> notification;
+    uint32_t signalled = AppManager_StateInvalid;
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
     appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
-    Core::Event onAppLifecycleStateChanged(false, true);
-    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
-        .Times(1)
-        .WillOnce(::testing::Invoke(
-            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                std::string text;
-                EXPECT_TRUE(json->ToString(text));
-                const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLifecycleStateChanged\",\"params\":{\"appId\":\"com.test.app\",\"appInstanceId\":\"testAppInstance\",\"newState\":\"APP_STATE_PAUSED\",\"oldState\":\"APP_STATE_ACTIVE\",\"errorReason\":\"APP_ERROR_NONE\"}}";
-                EXPECT_EQ(text, expectedJson);
-                onAppLifecycleStateChanged.SetEvent();
-                return Core::ERROR_NONE;
-            }));
-    
-    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
+
+    /* Register the notification handler */
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedAppLifecycleEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->CloseApp(APPMANAGER_APP_ID));
-    ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
-    << "LifecycleManagerState notification callback is not registered";
     mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
         APPMANAGER_APP_ID,
         APPMANAGER_APP_INSTANCE,
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,  // Old state
         Exchange::ILifecycleManager::LifecycleState::PAUSED,     // New state
-        ""
-    );
-    EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock());
-    EVENT_UNSUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
+        "");
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
+    mAppManagerImpl->Unregister(&notification);
+
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
