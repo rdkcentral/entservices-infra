@@ -2712,7 +2712,6 @@ TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
     expectedEvent.version = "100.1.30+rialto";
     Core::Sink<NotificationHandler> notification;
     mAppManagerImpl->Register(&notification);
-    ASSERT_NE(notification, nullptr) << "Notification callback is not registered";
     notification.SetExpectedEvent(expectedEvent);
 
     TEST_LOG("VFVFVFVFVFVFVFV OnAppInstallationStatusChangedSuccess 2");
@@ -2754,7 +2753,6 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
     uint32_t signalled = AppManager_StateInvalid;
     Core::Sink<NotificationHandler> notification;
     mAppManagerImpl->Register(&notification);
-    ASSERT_NE(notification, nullptr) << "Notification callback is not registered";
     notification.SetExpectedEvent(expectedEvent);
 
     TEST_LOG("OnApplicationStateChangedSuccess 1");
@@ -2805,7 +2803,6 @@ TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
     /* Notification registration*/
     Core::Sink<NotificationHandler> notification;
     mAppManagerImpl->Register(&notification);
-    ASSERT_NE(notification, nullptr) << "Notification callback is not registered";
     notification.SetExpectedEvent(expectedEvent);
     TEST_LOG("handleOnAppLifecycleStateChangedUsingComRpcSuccess2");
     mAppManagerImpl->handleOnAppLifecycleStateChanged(
