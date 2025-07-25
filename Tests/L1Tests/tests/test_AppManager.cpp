@@ -442,8 +442,8 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
         {
             TEST_LOG("OnAppInstalled event triggered for appId: %s, version: %s", appId.c_str(), version.c_str());
             std::unique_lock<std::mutex> lock(m_mutex);
-            EXPECT_EQ(m_expectedEvent.appId, appId);
-            EXPECT_EQ(m_expectedEvent.version, version);
+            EXPECT_STREQ(m_expectedEvent.appId.c_str(), appId.c_str());
+            EXPECT_STREQ(m_expectedEvent.version.c_str(), version.c_str());
             m_event_signalled |= AppManager_onAppInstalled;
 
             m_condition_variable.notify_one();
@@ -2748,16 +2748,9 @@ TEST_F(AppManagerTest, OnApplicationLifecycleStateChangedSuccess)
     TEST_LOG("OnApplicationLifecycleStateChangedSuccess 0");
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    // ExpectedAppLifecycleEvent expectedEvent;
-    // expectedEvent.appId = "YouTube";
-    // expectedEvent.appInstanceId = "12345678-1234-1234-1234-123456789012";
-    // expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;  // Old state
-    // expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;  // New state
-    // expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
     uint32_t signalled = AppManager_StateInvalid;
     Core::Sink<NotificationHandler> notification;
     mAppManagerImpl->Register(&notification);
-    // notification.SetExpectedEvent(expectedEvent);
 
     TEST_LOG("OnApplicationStateChangedSuccess 1");
     ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
@@ -2770,7 +2763,7 @@ TEST_F(AppManagerTest, OnApplicationLifecycleStateChangedSuccess)
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,     // New state
         "start"
     );
-    
+    /* Ensure that the OnAppLifecycleStateChanged callback is not called/invoked */
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
     EXPECT_FALSE(signalled & AppManager_onAppLifecycleStateChanged);
 
