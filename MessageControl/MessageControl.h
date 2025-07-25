@@ -412,21 +412,21 @@ namespace Plugin {
             }
         }
 
-        uint32_t Enable(const messagetype type, const string& category, const string& module, const bool enabled) override
+        Core::hresult Enable(const MessageType type, const string& category, const string& module, const bool enabled) override
         {
             _client.Enable({static_cast<Core::Messaging::Metadata::type>(type), category, module}, enabled);
 
             return (Core::ERROR_NONE);
         }
 
-        uint32_t Controls(Exchange::IMessageControl::IControlIterator*& controls) const override
+        Core::hresult Controls(Exchange::IMessageControl::IControlIterator*& controls) const override
         {
             std::list<Exchange::IMessageControl::Control> list;
             Messaging::MessageUnit::Iterator index;
             _client.Controls(index);
 
             while (index.Next() == true) {
-                list.push_back( { static_cast<messagetype>(index.Type()), index.Category(), index.Module(), index.Enabled() } );
+                list.push_back( { static_cast<MessageType>(index.Type()), index.Category(), index.Module(), index.Enabled() } );
             }
 
             using Implementation = RPC::IteratorType<Exchange::IMessageControl::IControlIterator>;
