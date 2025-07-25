@@ -1,10 +1,10 @@
 name: L2-tests-OOP
 
 on:
-  push:
-    branches: [ main, develop, 'sprint/**', 'release/**', topic/RDKEMW-5644 ]
-  pull_request:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+  workflow_call:
+    secrets:
+      RDKCM_RDKE:
+        required: true
 
 env:
   BUILD_TYPE: Debug
@@ -35,6 +35,10 @@ jobs:
         with:
           python-version: '3.x'
       - run: pip install jsonref
+
+      - name: ACK External Trigger
+        run: |
+           echo "Message: External Trigger Received for L2-OOP Tests"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
@@ -101,13 +105,16 @@ jobs:
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
         with:
+          repository: rdkcentral/entservices-deviceanddisplay
           path: entservices-deviceanddisplay
           ref: develop
 
       - name: Checkout entservices-infra
         uses: actions/checkout@v3
         with:
+          repository: rdkcentral/entservices-infra
           path: entservices-infra
+          ref: develop
 
       - name: Apply  ThunderTools
         run: |
@@ -556,7 +563,7 @@ jobs:
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           RdkServicesL2Test &&
-          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithoutValgrind.json &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithoutValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Run unit tests with valgrind
@@ -572,7 +579,7 @@ jobs:
           --track-fds=yes
           --fair-sched=try
           RdkServicesL2Test &&
-          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithValgrind.json &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
           
       - name: Generate coverage
@@ -608,11 +615,11 @@ jobs:
         if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-L2-oop-infra
           path: |
             coverage/
             valgrind_log
-            rdkL2TestResultsWithoutValgrind.json
-            rdkL2TestResultsWithValgrind.json
+            rdkL2TestOOPResultsWithoutValgrind.json
+            rdkL2TestOOPResultsWithValgrind.json
           if-no-files-found: warn
 
