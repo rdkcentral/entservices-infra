@@ -125,7 +125,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: topic/RDKEMW-5644
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
