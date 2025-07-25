@@ -63,12 +63,14 @@
 
 typedef enum : uint32_t {
     AppManager_StateInvalid = 0x00000000,
-    AppManager_onAppLifecycleStateChanged = 0x00000001
+    AppManager_onAppLifecycleStateChanged = 0x00000001,
+    AppManager_onAppInstalled = 0x00000002
 } AppManagerL1test_async_events_t;
 
 struct ExpectedAppLifecycleEvent {
     std::string appId;
     std::string appInstanceId;
+    std::string version;
     Exchange::IAppManager::AppLifecycleState newState;
     Exchange::IAppManager::AppLifecycleState oldState;
     Exchange::IAppManager::AppErrorReason errorReason;
@@ -430,6 +432,15 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
             EXPECT_EQ(m_expectedEvent.newState, newState);
             EXPECT_EQ(m_expectedEvent.oldState, oldState);
             EXPECT_EQ(m_expectedEvent.errorReason, errorReason);
+
+            m_condition_variable.notify_one();
+        }
+
+        void OnAppInstalled(const string& appId, const string& version)
+        {
+            TEST_LOG("OnAppInstalled event triggered for appId: %s, version: %s", appId.c_str(), version.c_str());
+            std::unique_lock<std::mutex> lock(m_mutex);
+            m_event_signalled |= AppManager_onAppInstalled;
 
             m_condition_variable.notify_one();
         }
@@ -2695,11 +2706,28 @@ TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    TEST_LOG("OnAppInstallationStatusChangedSuccess 2");
+    uint32_t signalled = AppManager_StateInvalid;
+    ExpectedAppLifecycleEvent expectedEvent;
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+    Core::Sink<NotificationHandler> notification;
+    mAppManagerImpl->Register(&notification);
+    ASSERT_NE(notification, nullptr) << "Notification callback is not registered";
+    notification.SetExpectedEvent(expectedEvent);
+
+    TEST_LOG("VFVFVFVFVFVFVFV OnAppInstallationStatusChangedSuccess 2");
     // Simulate the callback
     ASSERT_NE(mPackageManagerNotification_cb, nullptr) << "PackageManager notification callback is not registered";
     mPackageManagerNotification_cb->OnAppInstallationStatus(TEST_JSON_INSTALLED_PACKAGE);
     TEST_LOG("OnAppInstallationStatusChangedSuccess 3");
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppInstalled);
+    EXPECT_EQ(signalled & AppManager_onAppInstalled);
+
+    mAppManagerImpl->Unregister(&notification);
+    TEST_LOG("OnAppInstallationStatusChangedSuccess 4");
     if(status == Core::ERROR_NONE)
     {
         TEST_LOG("OnAppInstallationStatusChangedSuccess 4");
@@ -2719,8 +2747,19 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
     Core::hresult status;
     TEST_LOG("OnApplicationStateChangedSuccess 0");
     status = createResources();
-    // Set expectation on the CORRECT Register method
     EXPECT_EQ(Core::ERROR_NONE, status);
+    ExpectedAppLifecycleEvent expectedEvent;
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
+    mAppManagerImpl->Register(&notification);
+    ASSERT_NE(notification, nullptr) << "Notification callback is not registered";
+    notification.SetExpectedEvent(expectedEvent);
+
     TEST_LOG("OnApplicationStateChangedSuccess 1");
     ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
         << "LifecycleManagerState notification callback is not registered";
@@ -2732,6 +2771,12 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,     // New state
         "start"
     );
+    
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_EQ(signalled & AppManager_onAppLifecycleStateChanged);
+
+    mAppManagerImpl->Unregister(&notification);
+
     TEST_LOG("OnApplicationStateChangedSuccess 2");
     
     if(status == Core::ERROR_NONE) {
@@ -2752,6 +2797,19 @@ TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    uint32_t signalled = AppManager_StateInvalid;
+    ExpectedAppLifecycleEvent expectedEvent;
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+
+    /* Notification registration*/
+    Core::Sink<NotificationHandler> notification;
+    mAppManagerImpl->Register(&notification);
+    ASSERT_NE(notification, nullptr) << "Notification callback is not registered";
+    notification.SetExpectedEvent(expectedEvent);
     TEST_LOG("handleOnAppLifecycleStateChangedUsingComRpcSuccess2");
     mAppManagerImpl->handleOnAppLifecycleStateChanged(
         APPMANAGER_APP_ID,
@@ -2759,6 +2817,11 @@ TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
         Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN,
         Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
         Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_EQ(signalled & AppManager_onAppLifecycleStateChanged);
+
+    mAppManagerImpl->Unregister(&notification);
     TEST_LOG("handleOnAppLifecycleStateChangedUsingComRpcSuccess3");
     if(status == Core::ERROR_NONE)
     {

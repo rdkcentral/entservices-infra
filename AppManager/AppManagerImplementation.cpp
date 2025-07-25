@@ -129,6 +129,7 @@ void AppManagerImplementation::dispatchEvent(EventNames event, const JsonObject 
 void AppManagerImplementation::Dispatch(EventNames event, const JsonObject params)
 {
     LOGINFO("AppManagerImplementation::Dispatch event %d", static_cast<int>(event));
+    LOGINFO("DISPATCH CALLED FROM THREAD %d", Core::IWorkerPool::Instance().CurrentThreadId());
     switch(event)
     {
         case APP_EVENT_LIFECYCLE_STATE_CHANGED:
@@ -183,6 +184,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
             string installStatus = "";
             /* Check if 'packageId' exists and is not empty */
             appId = params.HasLabel("packageId") ? params["packageId"].String() : "";
+            TEST_LOG("VEEKSHA APP_EVENT_INSTALLATION_STATUS event received for appId %s", appId.c_str());
             if (appId.empty())
             {
                 LOGERR("appId is missing or empty");
