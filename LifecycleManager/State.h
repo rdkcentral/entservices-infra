@@ -117,5 +117,9 @@ namespace WPEFramework
                 ~TerminatingState() {}
                 bool handle(string& errorReason);
         };
+
+#ifdef UNIT_TEST      
+        void post_mAppRunningsem();
+#endif
     } /* namespace Plugin */
 } /* namespace WPEFramework */
