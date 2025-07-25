@@ -217,11 +217,12 @@ namespace WPEFramework
             }
             return success;
         }
-    }
-} /* namespace WPEFramework */
 
 #ifdef UNIT_TEST
-void post_mAppRunningsem(WPEFramework::Plugin::ApplicationContext* context) {
-    sem_post(&context->mAppRunningSemaphore);
-}
+        void post_mAppRunningsem() {
+            ApplicationContext* context = getContext();
+            sem_post(&context->mAppRunningSemaphore);
+    }
 #endif
+    }
+} /* namespace WPEFramework */

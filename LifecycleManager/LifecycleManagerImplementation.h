@@ -146,15 +146,9 @@ namespace WPEFramework
                 void handleRuntimeManagerEvent(const JsonObject &data);
                 void handleStateChangeEvent(const JsonObject &data);
                 void handleWindowManagerEvent(const JsonObject &data);
+                ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
 
                 friend class Job;
-                
-#ifdef UNIT_TEST
-        public:
-#else
-        private:
-#endif
-        ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */
