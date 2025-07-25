@@ -217,6 +217,8 @@ namespace WPEFramework
                             {
                                 appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_LAUNCH);
                                 state = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+                                string source = "";
+                                appManagerImplInstance->handleOnAppLaunchRequest(appId, intent, source);
                             }
                             LOGINFO("spawnApp called ,state %u",state);
                             status = mLifecycleManagerRemoteObject->SpawnApp(appId, intent, state, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success);
@@ -749,6 +751,11 @@ End:
                         }
                         break;
                     }
+                }
+
+                if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
+                {
+                    appManagerImplInstance->handleOnAppUnloaded(appId, appInstanceId);
                 }
 
                 if (it != appManagerImplInstance->mAppInfo.end())
