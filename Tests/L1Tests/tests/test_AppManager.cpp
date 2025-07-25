@@ -212,7 +212,7 @@ protected:
         }
 
         // Let background threads settle to avoid async crashes
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         TEST_LOG("In releaseResources!");
         if (mLifecycleManagerMock != nullptr)
@@ -868,7 +868,7 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
     uint32_t signalled = AppManager_StateInvalid;
     appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
-    
+
     /* Register the notification handler */
     mAppManagerImpl->Register(&notification);
     notification.SetExpectedAppLifecycleEvent(expectedEvent);
@@ -2736,20 +2736,22 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
  */
 TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
 {
+    TEST_LOG("handleOnAppLifecycleStateChangedUsingComRpcSuccess1");
     Core::hresult status;
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-
+    TEST_LOG("handleOnAppLifecycleStateChangedUsingComRpcSuccess2");
     mAppManagerImpl->handleOnAppLifecycleStateChanged(
         APPMANAGER_APP_ID,
         APPMANAGER_APP_INSTANCE,
         Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN,
         Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
         Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
-
+    TEST_LOG("handleOnAppLifecycleStateChangedUsingComRpcSuccess3");
     if(status == Core::ERROR_NONE)
     {
+        TEST_LOG("handleOnAppLifecycleStateChangedUsingComRpcSuccess4");
         releaseResources();
     }
 }
