@@ -441,8 +441,6 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
 
-    Plugin::post_mAppRunningsem();
-
     releaseResources();
 }
 
