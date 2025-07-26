@@ -53,10 +53,12 @@ namespace WPEFramework
 
         bool InitializingState::handle(string& errorReason)
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
             bool ret = false;
 	    if (nullptr != runtimeManagerHandler)
 	    {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 ApplicationContext* context = getContext();
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
                 ret = runtimeManagerHandler->run(context->getAppId(), context->getAppInstanceId(), launchParams.mLaunchArgs, launchParams.mTargetState, launchParams.mRuntimeConfigObject, errorReason);
@@ -64,27 +66,34 @@ namespace WPEFramework
 		fflush(stdout);
                 ret = true;
                 sem_wait(&context->mAppRunningSemaphore);
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
 #ifdef UNIT_TEST
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 post_mAppRunningsem(); 
 #endif
 	    }
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return ret;
         }
 
 #ifdef UNIT_TEST
         void InitializingState::post_mAppRunningsem() 
         {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             ApplicationContext* context = getContext();
             sem_post(&context->mAppRunningSemaphore);
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
         }
 #endif
 
         bool PausedState::handle(string& errorReason)
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    bool ret = false;
             ApplicationContext* context = getContext();
             if (Exchange::ILifecycleManager::LifecycleState::INITIALIZING == context->getCurrentLifecycleState())
 	    {
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 //TODO : Remove wait for now
                 //sem_wait(&context->mAppReadySemaphore);
                 ret = true;

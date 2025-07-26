@@ -73,6 +73,7 @@ namespace WPEFramework
             switch (lifeCycleState)
             {
 	        case Exchange::ILifecycleManager::LifecycleState::UNLOADED:
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     state = new UnloadedState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::LOADING:
@@ -80,21 +81,27 @@ namespace WPEFramework
                     state = new LoadingState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::INITIALIZING:
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     state = new InitializingState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::PAUSED:
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     state = new PausedState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::ACTIVE:
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     state = new ActiveState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::SUSPENDED:
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     state = new SuspendedState(context);
                     break;
 	        case Exchange::ILifecycleManager::LifecycleState::HIBERNATED:
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     state = new HibernatedState(context);
                     break;
     	        case Exchange::ILifecycleManager::LifecycleState::TERMINATING:
+                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     state = new TerminatingState(context);
                     break;
                 default:
