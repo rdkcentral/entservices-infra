@@ -64,9 +64,20 @@ namespace WPEFramework
 		fflush(stdout);
                 ret = true;
                 sem_wait(&context->mAppRunningSemaphore);
+#ifdef UNIT_TEST
+                post_mAppRunningsem(); 
+#endif
 	    }
             return ret;
         }
+
+#ifdef UNIT_TEST
+        void InitializingState::post_mAppRunningsem() 
+        {
+            ApplicationContext* context = getContext();
+            sem_post(&context->mAppRunningSemaphore);
+        }
+#endif
 
         bool PausedState::handle(string& errorReason)
 	{
@@ -210,12 +221,5 @@ namespace WPEFramework
             }
             return success;
         }
-
-#ifdef UNIT_TEST
-        void post_mAppRunningsem() {
-            ApplicationContext* context = getContext();
-            sem_post(&context->mAppRunningSemaphore);
-    }
-#endif
     }
 } /* namespace WPEFramework */
