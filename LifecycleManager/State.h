@@ -76,10 +76,6 @@ namespace WPEFramework
                 InitializingState(ApplicationContext* context): State(context, Exchange::ILifecycleManager::LifecycleState::INITIALIZING) {}
                 ~InitializingState() {}
                 bool handle(string& errorReason);
-#ifdef UNIT_TEST 
-            public:     
-                void post_mAppRunningsem();
-#endif
         };
 
         class PausedState : public State
