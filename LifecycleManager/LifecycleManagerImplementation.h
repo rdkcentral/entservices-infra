@@ -153,8 +153,8 @@ namespace WPEFramework
         public:
 #else
         private:
-                ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
 #endif
-            };
+                ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
+        };
     } /* namespace Plugin */
 } /* namespace WPEFramework */

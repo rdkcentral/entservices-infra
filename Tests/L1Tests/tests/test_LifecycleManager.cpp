@@ -45,7 +45,7 @@ using namespace WPEFramework;
 namespace Plugin {
 class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
     public:
-        ApplicationContext* getContextImpl(const string& appInstanceId, const std::string& appId) {
+        ApplicationContext* getContextImpl(const string& appInstanceId, const std::string& appId) const {
             return LifecycleManagerImplementation::getContext(appInstanceId, appId);
         }
 };
