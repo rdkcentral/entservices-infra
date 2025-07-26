@@ -23,6 +23,10 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <cstdio>
+
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework
 {
@@ -49,6 +53,7 @@ namespace WPEFramework
 
         bool RequestHandler::initialize(PluginHost::IShell* service, IEventHandler* eventHandler)
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    bool ret = false;
 	    mEventHandler = eventHandler;	
             mRippleHandler = new RippleHandler();
@@ -59,6 +64,7 @@ namespace WPEFramework
 		fflush(stdout);
 		return ret;
 	    }
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mRuntimeManagerHandler = new RuntimeManagerHandler();
             ret = mRuntimeManagerHandler->initialize(service, eventHandler);
 	    if (!ret)
@@ -67,6 +73,7 @@ namespace WPEFramework
 		fflush(stdout);
 		return ret;
 	    }
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mWindowManagerHandler = new WindowManagerHandler();
             ret = mWindowManagerHandler->initialize(service, eventHandler);
 	    if (!ret)
@@ -75,16 +82,21 @@ namespace WPEFramework
 		fflush(stdout);
 		return ret;
 	    }
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             StateTransitionHandler::getInstance()->initialize();
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return ret;
 	}
 
         void RequestHandler::terminate()
 	{
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
             StateTransitionHandler::getInstance()->terminate();
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             mRippleHandler->terminate();
             if (mWindowManagerHandler)
             {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 mWindowManagerHandler->terminate();
                 delete mWindowManagerHandler;
 		mWindowManagerHandler = nullptr;
@@ -92,6 +104,7 @@ namespace WPEFramework
 
             if (mRuntimeManagerHandler)
             {
+                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 mRuntimeManagerHandler->deinitialize();
                 delete mRuntimeManagerHandler;
 		mRuntimeManagerHandler = nullptr;
@@ -100,6 +113,7 @@ namespace WPEFramework
 
         bool RequestHandler::launch(ApplicationContext* context, const string& launchIntent, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState, string& errorReason)
 	{
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             bool success = updateState(context, targetLifecycleState, errorReason);
             return success;
 	}
@@ -124,6 +138,7 @@ namespace WPEFramework
 
 	bool RequestHandler::updateState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState state, string& errorReason)
 	{
+           DEBUG_PRINTF("ERROR: RDKEMW-2806");
            StateTransitionRequest request(context, state);
            StateTransitionHandler::getInstance()->addRequest(request); 
            return true;
@@ -141,6 +156,7 @@ namespace WPEFramework
 
         IEventHandler* RequestHandler::getEventHandler()
 	{
+            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return mEventHandler;
 	}
 

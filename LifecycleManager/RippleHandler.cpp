@@ -20,6 +20,10 @@
 #include "RippleHandler.h"
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
+#include <cstdio>
+
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define FIREBOLT_ENDPOINT "ws://127.0.0.1:3474/jsonrpc"
 
@@ -39,22 +43,28 @@ RippleHandler::~RippleHandler()
 
 bool RippleHandler::initialize(IEventHandler* eventHandler)
 {
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     mEventHandler = eventHandler;	
     mWSEndPoint = new WebSocketEndPoint();
     mWSEndPoint->initialize();
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     return true;
 }
 
 void RippleHandler::terminate()
 {
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     mEventHandler = nullptr;
     if (nullptr != mWSEndPoint)
     {
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mWSEndPoint->deinitialize();
         delete mWSEndPoint;
     }
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     mWSEndPoint = nullptr;
     mRippleConnectionId = -1;
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 }
 
 bool RippleHandler::sendIntent(std::string& appId, const std::string& intent, std::string& errorReason)

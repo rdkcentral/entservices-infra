@@ -117,7 +117,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: topic/RDKEMW-2806
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
@@ -473,9 +473,8 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
-          -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -553,9 +552,8 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
-          -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
@@ -646,22 +644,22 @@ jobs:
           ls -l /dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
           &&
           ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
-
+      
       - name: Run unit tests without valgrind
-        run: >
-          PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
-          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
-          GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
+        run: |
+          export PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
+          export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
+          export GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
           RdkServicesL1Test &&
           cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithoutValgrind.json &&
           rm -rf $(pwd)/rdkL1TestResults.json
 
       - name: Run unit tests with valgrind
         if: ${{ !env.ACT }}
-        run: >
-          PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
-          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
-          GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
+        run: |
+          export PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
+          export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
+          export GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
           valgrind
           --tool=memcheck
           --log-file=valgrind_log
@@ -699,13 +697,13 @@ jobs:
           filtered_coverage.info
 
       - name: Upload artifacts
-        if: ${{ !env.ACT }}
+        if: ${{ !env.ACT }} && always()
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-L1-infra
           path: |
-            coverage/
-            valgrind_log
-            rdkL1TestResultsWithoutValgrind.json
-            rdkL1TestResultsWithValgrind.json
+           coverage/
+           valgrind_log
+           rdkL1TestResultsWithoutValgrind.json
+           rdkL1TestResultsWithValgrind.json
           if-no-files-found: warn
