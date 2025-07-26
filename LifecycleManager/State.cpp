@@ -67,10 +67,6 @@ namespace WPEFramework
                 ret = true;
                 sem_wait(&context->mAppRunningSemaphore);
                 DEBUG_PRINTF("ERROR: RDKEMW-2806");
-#ifdef UNIT_TEST
-                DEBUG_PRINTF("ERROR: RDKEMW-2806");
-                post_mAppRunningsem(); 
-#endif
 	    }
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return ret;

@@ -41,10 +41,6 @@
 using ::testing::NiceMock;
 using namespace WPEFramework;
 
-#ifdef UNIT_TEST
-void post_mAppRunningsem(Plugin::ApplicationContext *context);
-#endif
-
 class LifecycleManagerTest : public ::testing::Test {
 protected:
     string appId;
@@ -440,6 +436,10 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
 
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
+    
+    Plugin::State *state = new Plugin::InitializingState(new Plugin::ApplicationContext(appId));
+    state->post_mAppRunningsem();
+    delete state;
 
     releaseResources();
 }
