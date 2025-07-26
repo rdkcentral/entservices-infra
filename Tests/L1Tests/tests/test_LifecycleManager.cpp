@@ -27,6 +27,7 @@
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
 #include "State.h"
+#include "LifecycleManagerMock.h"
 #include "ServiceMock.h"
 #include "RuntimeManagerMock.h"
 #include "WindowManagerMock.h"
@@ -41,6 +42,15 @@
 using ::testing::NiceMock;
 using namespace WPEFramework;
 
+namespace Plugin {
+class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
+    public:
+        ApplicationContext* getContextImpl(const string& appInstanceId, const std::string& appId) {
+            return LifecycleManagerImplementation::getContext(appInstanceId, appId);
+        }
+};
+} // namespace Plugin
+
 class LifecycleManagerTest : public ::testing::Test {
 protected:
     string appId;
@@ -54,6 +64,7 @@ protected:
     Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::IConfiguration* mLifecycleManagerConfigure = nullptr;
+    LifecycleManagerMock* mLifecycleManagerMock = nullptr;
     RuntimeManagerMock* mRuntimeManagerMock = nullptr;
     WindowManagerMock* mWindowManagerMock = nullptr;
     ServiceMock* mServiceMock = nullptr;
@@ -117,6 +128,7 @@ protected:
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         // Set up mocks
         mServiceMock = new NiceMock<ServiceMock>;
+        mLifecycleManagerMock = new NiceMock<LifecycleManagerMock>;
         mRuntimeManagerMock = new NiceMock<RuntimeManagerMock>;
         mWindowManagerMock = new NiceMock<WindowManagerMock>;
 
@@ -139,7 +151,14 @@ protected:
 	//EXPECT_CALL(*mRuntimeManagerMock, AddRef())
      //       .Times(::testing::AnyNumber());
 
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
     EXPECT_CALL(*mServiceMock, AddRef())
+            .Times(::testing::AnyNumber());
+
+    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
+    EXPECT_CALL(*mLifecycleManagerMock, AddRef())
             .Times(::testing::AnyNumber());
 
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -220,6 +239,22 @@ protected:
 
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
         }
+
+        if (mLifecycleManagerMock != nullptr)
+        {
+	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
+        EXPECT_CALL(*mLifecycleManagerMock, Release())
+                .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mLifecycleManagerMock;
+		             mLifecycleManagerMock = nullptr;
+                     return 0;
+                    }));
+
+        DEBUG_PRINTF("ERROR: RDKEMW-2806");
+        }
+
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mLifecycleManagerConfigure->Release();
 
@@ -437,9 +472,9 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
     
-    Plugin::InitializingState *state = new Plugin::InitializingState(new Plugin::ApplicationContext(appId));
-    state->post_mAppRunningsem();
-    delete state;
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+    sem_post(&context->mAppRunningSemaphore);
 
     releaseResources();
 }

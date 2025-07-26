@@ -72,16 +72,6 @@ namespace WPEFramework
             return ret;
         }
 
-#ifdef UNIT_TEST
-        void InitializingState::post_mAppRunningsem() 
-        {
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
-            ApplicationContext* context = getContext();
-            sem_post(&context->mAppRunningSemaphore);
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
-        }
-#endif
-
         bool PausedState::handle(string& errorReason)
 	{
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
