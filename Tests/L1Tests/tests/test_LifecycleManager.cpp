@@ -42,14 +42,16 @@
 using ::testing::NiceMock;
 using namespace WPEFramework;
 
+namespace WPEFramework {
 namespace Plugin {
 class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
     public:
-        ApplicationContext* getContextImpl(const string& appInstanceId, const std::string& appId) const {
+        ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const {
             return LifecycleManagerImplementation::getContext(appInstanceId, appId);
         }
 };
 } // namespace Plugin
+} // namespace WPEFramework
 
 class LifecycleManagerTest : public ::testing::Test {
 protected:
