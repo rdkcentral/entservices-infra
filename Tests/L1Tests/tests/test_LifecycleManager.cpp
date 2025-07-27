@@ -46,6 +46,8 @@ namespace WPEFramework {
 namespace Plugin {
 class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
     public:
+        MOCK_METHOD(void, AddRef, (), (const, override));
+        MOCK_METHOD(uint32_t, Release, (), (const, override));
         ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const {
             return LifecycleManagerImplementation::getContext(appInstanceId, appId);
         }
