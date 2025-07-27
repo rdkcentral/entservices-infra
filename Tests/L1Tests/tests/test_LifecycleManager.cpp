@@ -473,11 +473,12 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
     
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
     sem_post(&context->mAppRunningSemaphore);
 
     releaseResources();
