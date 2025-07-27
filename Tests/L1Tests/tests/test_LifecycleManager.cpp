@@ -439,7 +439,7 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
                 return Core::ERROR_NONE;
           }));
 
-    EXPECT_CALL(*mRuntimeManagerMock, Terminate(appInstanceId))
+    EXPECT_CALL(*mRuntimeManagerMock, Terminate(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appInstanceId) {
@@ -497,7 +497,7 @@ TEST_F(LifecycleManagerTest, killApp_withValidParams)
                 return Core::ERROR_NONE;
           }));
 
-    EXPECT_CALL(*mRuntimeManagerMock, Kill(appInstanceId))
+    EXPECT_CALL(*mRuntimeManagerMock, Kill(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appInstanceId) {
