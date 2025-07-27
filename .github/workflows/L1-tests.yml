@@ -2,7 +2,7 @@ name: L1-tests
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+    branches: [ main, develop, 'sprint/**', 'release/**', 'topic/RDKEMW-2806' ]
   pull_request:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
 
@@ -701,4 +701,3 @@ jobs:
            rdkL1TestResultsWithoutValgrind.json
            rdkL1TestResultsWithValgrind.json
           if-no-files-found: warn
-
