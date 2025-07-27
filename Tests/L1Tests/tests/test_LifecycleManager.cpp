@@ -27,7 +27,6 @@
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
 #include "State.h"
-#include "PortabilityMock.h"
 #include "ServiceMock.h"
 #include "RuntimeManagerMock.h"
 #include "WindowManagerMock.h"
@@ -68,7 +67,6 @@ protected:
     Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::IConfiguration* mLifecycleManagerConfigure = nullptr;
-    PortabilityMock* mPortabilityMock = nullptr;
     RuntimeManagerMock* mRuntimeManagerMock = nullptr;
     WindowManagerMock* mWindowManagerMock = nullptr;
     ServiceMock* mServiceMock = nullptr;
@@ -132,7 +130,6 @@ protected:
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         // Set up mocks
         mServiceMock = new NiceMock<ServiceMock>;
-        mPortabilityMock = new NiceMock<PortabilityMock>;
         mRuntimeManagerMock = new NiceMock<RuntimeManagerMock>;
         mWindowManagerMock = new NiceMock<WindowManagerMock>;
 
@@ -158,11 +155,6 @@ protected:
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
     EXPECT_CALL(*mServiceMock, AddRef())
-            .Times(::testing::AnyNumber());
-
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
-
-    EXPECT_CALL(*mPortabilityMock, AddRef())
             .Times(::testing::AnyNumber());
 
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -238,21 +230,6 @@ protected:
                 [&]() {
                      delete mWindowManagerMock;
 		     mWindowManagerMock = nullptr;
-                     return 0;
-                    }));
-
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
-        }
-
-        if (mPortabilityMock != nullptr)
-        {
-	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
-
-        EXPECT_CALL(*mPortabilityMock, Release())
-                .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mPortabilityMock;
-		             mPortabilityMock = nullptr;
                      return 0;
                     }));
 
@@ -462,6 +439,13 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
                 return Core::ERROR_NONE;
           }));
 
+    EXPECT_CALL(*mRuntimeManagerMock, Terminate(appInstanceId))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appInstanceId) {
+                return Core::ERROR_NONE;
+          }));
+
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
@@ -472,22 +456,15 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
 
     sem_post(&context->mAppRunningSemaphore);
 
-    #if 0
-    EXPECT_CALL(*mRuntimeManagerMock, Resume(appInstanceId))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const string& appInstanceId) {
-                return Core::ERROR_NONE;
-          }));
-    
+    sem_post(&context->mAppTerminatingSemaphore);
 
+    #if 0
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
-
     #endif
-
+    
     releaseResources();
 }
 
@@ -520,19 +497,31 @@ TEST_F(LifecycleManagerTest, killApp_withValidParams)
                 return Core::ERROR_NONE;
           }));
 
-    #if 0
-    EXPECT_CALL(*mRuntimeManagerMock, Resume(appInstanceId))
+    EXPECT_CALL(*mRuntimeManagerMock, Kill(appInstanceId))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appInstanceId) {
                 return Core::ERROR_NONE;
           }));
-    #endif
 
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.KillApp(appInstanceId, errorReason, success));
+
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_post(&context->mAppRunningSemaphore);
+
+    sem_post(&context->mAppTerminatingSemaphore);
+
+    #if 0
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    // TC-20: Kill the app after spawning
-    EXPECT_EQ(Core::ERROR_NONE, interface->KillApp(appInstanceId, errorReason, success));
+    // TC-18: Unload the app after spawning
+    EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
+    #endif
 
     releaseResources();
 }
@@ -559,22 +548,6 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_withValidParams)
 
     //appInstanceId = "test.app.instance";
     string intent = "test.intent";
-
-    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
-                return Core::ERROR_NONE;
-          }));
-
-    #if 0
-    EXPECT_CALL(*mRuntimeManagerMock, Resume(appInstanceId))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const string& appInstanceId) {
-                return Core::ERROR_NONE;
-          }));
-    #endif
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
