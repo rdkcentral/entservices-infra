@@ -27,7 +27,7 @@
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
 #include "State.h"
-#include "LifecycleManagerMock.h"
+#include "PortabilityMock.h"
 #include "ServiceMock.h"
 #include "RuntimeManagerMock.h"
 #include "WindowManagerMock.h"
@@ -66,7 +66,7 @@ protected:
     Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::IConfiguration* mLifecycleManagerConfigure = nullptr;
-    LifecycleManagerMock* mLifecycleManagerMock = nullptr;
+    PortabilityMock* mPortabilityMock = nullptr;
     RuntimeManagerMock* mRuntimeManagerMock = nullptr;
     WindowManagerMock* mWindowManagerMock = nullptr;
     ServiceMock* mServiceMock = nullptr;
@@ -130,7 +130,7 @@ protected:
 	DEBUG_PRINTF("ERROR: RDKEMW-2806");
         // Set up mocks
         mServiceMock = new NiceMock<ServiceMock>;
-        mLifecycleManagerMock = new NiceMock<LifecycleManagerMock>;
+        mPortabilityMock = new NiceMock<PortabilityMock>;
         mRuntimeManagerMock = new NiceMock<RuntimeManagerMock>;
         mWindowManagerMock = new NiceMock<WindowManagerMock>;
 
@@ -160,7 +160,7 @@ protected:
 
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
-    EXPECT_CALL(*mLifecycleManagerMock, AddRef())
+    EXPECT_CALL(*mPortabilityMock, AddRef())
             .Times(::testing::AnyNumber());
 
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -242,15 +242,15 @@ protected:
         DEBUG_PRINTF("ERROR: RDKEMW-2806");
         }
 
-        if (mLifecycleManagerMock != nullptr)
+        if (mPortabilityMock != nullptr)
         {
 	    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
-        EXPECT_CALL(*mLifecycleManagerMock, Release())
+        EXPECT_CALL(*mPortabilityMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                     delete mLifecycleManagerMock;
-		             mLifecycleManagerMock = nullptr;
+                     delete mPortabilityMock;
+		             mPortabilityMock = nullptr;
                      return 0;
                     }));
 
