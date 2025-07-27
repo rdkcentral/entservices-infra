@@ -462,6 +462,16 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
                 return Core::ERROR_NONE;
           }));
 
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.UnloadApp(appInstanceId, errorReason, success));
+
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_post(&context->mAppRunningSemaphore);
+
     #if 0
     EXPECT_CALL(*mRuntimeManagerMock, Resume(appInstanceId))
         .Times(::testing::AnyNumber())
@@ -469,17 +479,14 @@ TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
             [&](const string& appInstanceId) {
                 return Core::ERROR_NONE;
           }));
-    #endif
+    
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
-
     // TC-18: Unload the app after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
-    
-    sem_post(&context->mAppRunningSemaphore);
+
+    #endif
 
     releaseResources();
 }
