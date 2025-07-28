@@ -87,7 +87,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: feature/test
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
@@ -560,6 +560,7 @@ jobs:
           -DPLUGIN_AVOUTPUT=OFF
           -DAVOUTPUT_TV=OFF
           -DPLUGIN_STORAGE_MANAGER=ON
+          -DPLUGIN_OCICONTAINER=ON
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
