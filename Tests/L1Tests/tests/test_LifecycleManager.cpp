@@ -62,14 +62,14 @@ struct INotificationTest : public ILifecycleManager::INotification {
     MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
     MOCK_METHOD(void, AddRef, (), (const, override));
     MOCK_METHOD(uint32_t, Release, (), (const, override));
-    MOCK_METHOD(uint32_t, QueryInterface, (const uint32_t interfaceNumber), (override));
+    MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 
 struct IStateNotificationTest : public ILifecycleManagerState::INotification {
     MOCK_METHOD(void, OnAppLifecycleStateChanged, (const std::string& appId, const std::string& appInstanceId, ILifecycleManager::LifecycleState oldState, ILifecycleManager::LifecycleState newState,  const std::string& navigationIntent), (override));
     MOCK_METHOD(void, AddRef, (), (const, override));
     MOCK_METHOD(uint32_t, Release, (), (const, override));
-    MOCK_METHOD(uint32_t, QueryInterface, (const uint32_t interfaceNumber), (override));
+    MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 } // namespace Exchange
 } // namespace WPEFramework
