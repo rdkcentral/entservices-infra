@@ -352,7 +352,7 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
 
     Exchange::ILifecycleManagerState::INotification* notification = new Exchange::IStateNotificationTest();
 
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Unregister(notification));
+    EXPECT_EQ(Core::ERROR_GENERAL, stateInterface->Unregister(notification));
 
     delete notification;
     notification = nullptr;
@@ -425,7 +425,7 @@ TEST_F(LifecycleManagerTest, appready_oninvalidAppId)
 {
     createResources();
     
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->AppReady(""));
+    EXPECT_EQ(Core::ERROR_GENERAL, stateInterface->AppReady(""));
 
     releaseResources();
 }
@@ -506,7 +506,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
     // TC-12: Check that no apps are loaded
     EXPECT_EQ(Core::ERROR_NONE, interface->GetLoadedApps(verbose, apps));
 
-    EXPECT_EQ(apps, "");
+    EXPECT_EQ(apps, "[]");
 
     releaseResources();
 }
@@ -658,9 +658,31 @@ TEST_F(LifecycleManagerTest, closeApp_onUserExit)
 {
     createResources();
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
 
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
+    EXPECT_CALL(*mRuntimeManagerMock, Kill(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appInstanceId) {
+                return Core::ERROR_NONE;
+          }));
+
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
+
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_post(&context->mAppRunningSemaphore);
+
+    sem_post(&context->mAppTerminatingSemaphore);
 
     releaseResources();
 }
@@ -669,9 +691,31 @@ TEST_F(LifecycleManagerTest, closeApp_onError)
 {
     createResources();
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mRuntimeManagerMock, Kill(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appInstanceId) {
+                return Core::ERROR_NONE;
+          }));
+
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
+
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_post(&context->mAppRunningSemaphore);
+
+    sem_post(&context->mAppTerminatingSemaphore);
 
     releaseResources();
 }
@@ -680,9 +724,33 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 {
     createResources();
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mRuntimeManagerMock, Kill(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appInstanceId) {
+                return Core::ERROR_NONE;
+          }));
+
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
+
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_post(&context->mAppRunningSemaphore);
+
+    sem_post(&context->mAppTerminatingSemaphore);
+
+    sem_post(&context->mAppRunningSemaphore);
 
     releaseResources();
 }
@@ -691,9 +759,42 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 {
     createResources();
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mRuntimeManagerMock, Kill(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appInstanceId) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mWindowManagerMock, RenderReady(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& client, bool &status) {
+                return Core::ERROR_NONE;
+          }));
+
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
+
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_post(&context->mAppRunningSemaphore);
+
+    sem_post(&context->mAppTerminatingSemaphore);
+
+    sem_post(&context->mAppRunningSemaphore);
+
+    sem_post(&context->mFirstFrameSemaphore);
 
     releaseResources();
 }
