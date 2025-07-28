@@ -94,14 +94,13 @@ protected:
     Core::JSONRPC::Message message;
     FactoriesImplementation factoriesImplementation;
     PLUGINHOST_DISPATCHER *dispatcher;
-    
 
 
     Core::ProxyType<Plugin::AppManager> plugin;
     Plugin::AppManagerImplementation *mAppManagerImpl;
     Exchange::IPackageInstaller::INotification* mPackageManagerNotification_cb = nullptr;
     Exchange::ILifecycleManagerState::INotification* mLifecycleManagerStateNotification_cb = nullptr;
-    Exchange::IAppManager::INotification* mAppManagerNotification_cb = nullptr;
+    Exchange::IAppManager::INotification* mAppManagerNotification = nullptr;
 
     Core::ProxyType<WorkerPoolImplementation> workerPool;
     Core::JSONRPC::Handler& mJsonRpcHandler;
@@ -182,7 +181,7 @@ protected:
                     mLifecycleManagerStateNotification_cb = notification;
                     return Core::ERROR_NONE;
                 }));
-        
+
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mAppManagerImpl = Plugin::AppManagerImplementation::getInstance();
         TEST_LOG("createResources - All done!");
@@ -194,19 +193,17 @@ protected:
     void releaseResources()
     {
         TEST_LOG("In releaseResources!");
+
         if (mLifecycleManagerStateMock != nullptr && mLifecycleManagerStateNotification_cb != nullptr)
         {
-            TEST_LOG("Unregister LifecycleManagerStateNotification");
             ON_CALL(*mLifecycleManagerStateMock, Unregister(::testing::_))
                 .WillByDefault(::testing::Invoke([&]() {
                     return 0;
                 }));
             mLifecycleManagerStateNotification_cb = nullptr;
         }
-        TEST_LOG("Unregister PackageManagerNotification");
         if (mPackageInstallerMock != nullptr && mPackageManagerNotification_cb != nullptr)
         {
-            TEST_LOG("Unregister PackageManagerNotification");
             ON_CALL(*mPackageInstallerMock, Unregister(::testing::_))
                 .WillByDefault(::testing::Invoke([&]() {
                     return 0;
@@ -214,10 +211,6 @@ protected:
             mPackageManagerNotification_cb = nullptr;
         }
 
-        // Let background threads settle to avoid async crashes
-        //std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-        TEST_LOG("In releaseResources!");
         if (mLifecycleManagerMock != nullptr)
         {
             EXPECT_CALL(*mLifecycleManagerMock, Release())
@@ -227,7 +220,6 @@ protected:
                      return 0;
                     }));
         }
-        TEST_LOG("mLifecycleManagerStateMock");
         if (mLifecycleManagerStateMock != nullptr)
         {
             EXPECT_CALL(*mLifecycleManagerStateMock, Unregister(::testing::_))
@@ -242,7 +234,6 @@ protected:
                      return 0;
                     }));
         }
-        TEST_LOG("mPackageManagerMock");
         if (mPackageManagerMock != nullptr)
         {
             EXPECT_CALL(*mPackageManagerMock, Release())
@@ -252,7 +243,6 @@ protected:
                      return 0;
                     }));
         }
-        TEST_LOG("mPackageInstallerMock");
         if (mPackageInstallerMock != nullptr)
         {
             EXPECT_CALL(*mPackageInstallerMock, Release())
@@ -262,7 +252,6 @@ protected:
                      return 0;
                     }));
         }
-        TEST_LOG("mStore2Mock");
         if (mStore2Mock != nullptr)
         {
             EXPECT_CALL(*mStore2Mock, Release())
@@ -426,8 +415,6 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
 
         void OnAppLifecycleStateChanged(const string& appId, const string& appInstanceId, const Exchange::IAppManager::AppLifecycleState newState, const Exchange::IAppManager::AppLifecycleState oldState, const Exchange::IAppManager::AppErrorReason errorReason)
         {
-            TEST_LOG("OnAppLifecycleStateChanged event triggered for appId: %s, appInstanceId: %s, newState: %d, oldState: %d, errorReason: %d",
-            appId.c_str(), appInstanceId.c_str(), static_cast<int>(newState), static_cast<int>(oldState), static_cast<int>(errorReason));
             m_event_signalled |= AppManager_onAppLifecycleStateChanged;
             EXPECT_EQ(m_expectedEvent.appId, appId);
             EXPECT_EQ(m_expectedEvent.appInstanceId, appInstanceId);
@@ -440,7 +427,6 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
 
         void OnAppInstalled(const string& appId, const string& version)
         {
-            TEST_LOG("OnAppInstalled event triggered for appId: %s, version: %s", appId.c_str(), version.c_str());
             std::unique_lock<std::mutex> lock(m_mutex);
             EXPECT_STREQ(m_expectedEvent.appId.c_str(), appId.c_str());
             EXPECT_STREQ(m_expectedEvent.version.c_str(), version.c_str());
@@ -766,7 +752,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailurePackageListEmpty)
     // When package list is empty
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
     .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-        //auto mockIterator = FillPackageIterator(); // Fill the package Info
+        auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = nullptr;
         return Core::ERROR_NONE;
     });
@@ -997,7 +983,7 @@ TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    
+
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1357,7 +1343,7 @@ TEST_F(AppManagerTest, CloseAppUsingJSONRpcSuccess)
                 onAppLifecycleStateChanged.SetEvent();
                 return Core::ERROR_NONE;
             }));
-    
+
     EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
@@ -2594,7 +2580,7 @@ TEST_F(AppManagerTest, updateCurrentActionUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
 
     mAppManagerImpl->updateCurrentAction(APPMANAGER_APP_ID, Plugin::AppManagerImplementation::CurrentAction::APP_ACTION_LAUNCH);
-    
+
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2706,6 +2692,7 @@ TEST_F(AppManagerTest, GetLoadedAppsCOMRPCSuccess)
 TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
 {
     Core::hresult status;
+
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
     uint32_t signalled = AppManager_StateInvalid;
@@ -2735,7 +2722,7 @@ TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, OnApplicationLifecycleStateChangedSuccess)
+TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
 {
     Core::hresult status;
     status = createResources();
@@ -2758,7 +2745,7 @@ TEST_F(AppManagerTest, OnApplicationLifecycleStateChangedSuccess)
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
     EXPECT_FALSE(signalled & AppManager_onAppLifecycleStateChanged);
 
-    mAppManagerImpl->Unregister(&notification);    
+    mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE) {
         releaseResources();
     }

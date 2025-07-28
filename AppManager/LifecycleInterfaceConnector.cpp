@@ -706,15 +706,13 @@ End:
                 LOGINFO("Skipping notification: new or old app state is UNKNOWN");
                 return;
             }
-            LOGINFO("appId: %s, appInstanceId: %s, oldState: %u, newState: %u, navigationIntent: %s",
-                    appId.c_str(), appInstanceId.c_str(), oldState, newState, navigationIntent.c_str());
+
             if(nullptr != appManagerImplInstance)
             {
                 Core::SafeSyncType<Core::CriticalSection> lock(mAdminLock);
                 std::map<std::string, AppManagerImplementation::AppInfo>::iterator it;
                 for (it = appManagerImplInstance->mAppInfo.begin(); it != appManagerImplInstance->mAppInfo.end(); ++it)
                 {
-                    LOGINFO("Checking appId: %s, appInstanceId: %s", it->first.c_str(), it->second.appInstanceId.c_str());
                     if((it->first.compare(appId) == 0) && (it->second.appInstanceId.compare(appInstanceId) == 0))
                     {
                         it->second.appOldState = oldAppState;
@@ -752,7 +750,7 @@ End:
                         break;
                     }
                 }
-                LOGINFO("AppInfo found for appId: %s, appInstanceId: %s", appId.c_str(), appInstanceId.c_str());
+
                 if (it != appManagerImplInstance->mAppInfo.end())
                 {
                     shouldNotify = ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_LOADING) ||
@@ -767,8 +765,6 @@ End:
                         appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
                     }
                 }
-                LOGINFO("OnAppLifecycleStateChanged event processed for appId: %s, appInstanceId: %s, oldState: %u, newState: %u",
-                        appId.c_str(), appInstanceId.c_str(), oldState, newState);
             }
         }
 
@@ -787,23 +783,6 @@ End:
             else
                 return it->second.appInstanceId;
         }
-
-        /* RemoveApp
-         * This function is commented out as it is not used in the current implementation.
-         * If needed, it can be uncommented and used to remove app information from the AppManager.
-        void LifecycleInterfaceConnector::RemoveApp(const string& appId)
-        {
-            AppManagerImplementation* appManagerImpl = AppManagerImplementation::getInstance();
-            if (!appManagerImpl)
-                return;
-
-            auto it = appManagerImpl->mAppInfo.find(appId);
-            if (it != appManagerImpl->mAppInfo.end())
-                appManagerImpl->mAppInfo.erase(it);
-            else
-                LOGERR("AppInfo for appId '%s' not found", appId.c_str());
-        }
-        */
 
         bool LifecycleInterfaceConnector::fileExists(const char* pFileName)
         {

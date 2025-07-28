@@ -17,7 +17,6 @@
 * limitations under the License.
 */
 
-
 #include <iomanip>      /* for std::setw, std::setfill */
 #include "AppManagerImplementation.h"
 
@@ -123,18 +122,15 @@ Core::hresult AppManagerImplementation::Unregister(Exchange::IAppManager::INotif
 
 void AppManagerImplementation::dispatchEvent(EventNames event, const JsonObject &params)
 {
-    LOGINFO("VEEKSHA AppManagerImplementation::dispatchEvent event %d", static_cast<int>(event));
     Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));
 }
 
 void AppManagerImplementation::Dispatch(EventNames event, const JsonObject params)
 {
-    LOGINFO("AppManagerImplementation::Dispatch event %d", static_cast<int>(event));
     switch(event)
     {
         case APP_EVENT_LIFECYCLE_STATE_CHANGED:
         {
-            LOGINFO("VEEKSHA APP_EVENT_LIFECYCLE_STATE_CHANGED event received");
             string appId = "";
             string appInstanceId = "";
             AppLifecycleState newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
@@ -169,8 +165,6 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
                 mAdminLock.Lock();
                 for (auto& notification : mAppManagerNotification)
                 {
-                    LOGINFO("VEEKSHA Notify AppLifecycleStateChanged for appId %s, appInstanceId %s, newState %d, oldState %d, errorReason %d",
-                        appId.c_str(), appInstanceId.c_str(), static_cast<int>(newState), static_cast<int>(oldState), static_cast<int>(errorReason));
                     notification->OnAppLifecycleStateChanged(appId, appInstanceId, newState, oldState, errorReason);
                 }
                 mAdminLock.Unlock();
@@ -184,7 +178,6 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
             string installStatus = "";
             /* Check if 'packageId' exists and is not empty */
             appId = params.HasLabel("packageId") ? params["packageId"].String() : "";
-            LOGINFO("VEEKSHA APP_EVENT_INSTALLATION_STATUS event received for appId %s", appId.c_str());
             if (appId.empty())
             {
                 LOGERR("appId is missing or empty");
@@ -195,10 +188,8 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
                 mAdminLock.Lock();
                 for (auto& notification : mAppManagerNotification)
                 {
-                    LOGINFO("VEEKSHA Notify OnAppInstalled/OnAppUninstalled for appId %s, installStatus %s", appId.c_str(), installStatus.c_str());
                     if (installStatus == "INSTALLED")
                     {
-                        LOGINFO("VEEKSHA OnAppInstalled appId %s", appId.c_str());
                         version = params.HasLabel("version") ? params["version"].String() : "";
                         if (version.empty())
                         {
@@ -474,30 +465,6 @@ bool AppManagerImplementation::createOrUpdatePackageInfoByAppId(const string& ap
 
     return result;
 }
-
-/* * Fetch package information by appId
- * This function is commented out as it is not used in the current implementation.
- * If needed, it can be uncommented and used to fetch package information for a given appId.
-
-bool AppManagerImplementation::fetchPackageInfoByAppId(const string& appId, PackageInfo &packageData)
-{
-        bool result = false;
-        auto it = mAppInfo.find(appId);
-        if (it != mAppInfo.end())
-        {
-            packageData.version           = it->second.packageInfo.version;
-            packageData.lockId            = it->second.packageInfo.lockId;
-            packageData.unpackedPath      = it->second.packageInfo.unpackedPath;
-            packageData.configMetadata    = it->second.packageInfo.configMetadata;
-            packageData.appMetadata       = it->second.packageInfo.appMetadata;
-            LOGINFO("Fetching package entry updated for appId: %s " \
-                    "version: %s lockId: %d unpackedPath: %s appMetadata: %s",
-                    appId.c_str(), packageData.version.c_str(), packageData.lockId, packageData.unpackedPath.c_str(), packageData.appMetadata.c_str());
-            result = true;
-        }
-        return result;
-}
-*/
 
 bool AppManagerImplementation::removeAppInfoByAppId(const string &appId)
 {
@@ -825,7 +792,7 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
     if (nullptr != mLifecycleInterfaceConnector)
     {
         status = packageLock(appId, packageData, lockReason);
-        WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
+        WPEFramework::Exchange::RuntimeConfig& runtimeConfig = packageData.configMetadata;
         runtimeConfig.unpackedPath = packageData.unpackedPath;
         getCustomValues(runtimeConfig);
 
