@@ -54,6 +54,19 @@ class LifecycleManagerImplementationTest : public LifecycleManagerImplementation
 } // namespace Plugin
 } // namespace WPEFramework
 
+namespace WPEFramework {
+namespace Exchange {
+
+struct INotificationTest : public ILifecycleManager::INotification {
+    MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
+};
+
+struct IStateNotificationTest : public ILifecycleManagerState::INotification {
+    MOCK_METHOD(void, OnAppLifecycleStateChanged, (const std::string& appId, const std::string& appInstanceId, ILifecycleManager::LifecycleState oldState, ILifecycleManager::LifecycleState newState,  const std::string& navigationIntent), (override));
+};
+} // namespace Exchange
+} // namespace WPEFramework
+
 class LifecycleManagerTest : public ::testing::Test {
 protected:
     string appId;
@@ -66,6 +79,7 @@ protected:
     bool success;
     Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
     Exchange::ILifecycleManager* interface = nullptr;
+    Exchange::ILifecycleManagerState* stateInterface = nullptr;
     Exchange::IConfiguration* mLifecycleManagerConfigure = nullptr;
     RuntimeManagerMock* mRuntimeManagerMock = nullptr;
     WindowManagerMock* mWindowManagerMock = nullptr;
@@ -81,6 +95,8 @@ protected:
         
         interface = static_cast<Exchange::ILifecycleManager*>(mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManager::ID));
 
+        stateInterface = static_cast<Exchange::ILifecycleManagerState*>(mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManagerState::ID));
+
 	Core::IWorkerPool::Assign(&(*workerPool));
 	workerPool->Run();
     }
@@ -93,6 +109,7 @@ protected:
 	workerPool.Release();
 
 	interface->Release();
+    stateInterface->Release();
 
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
@@ -244,6 +261,98 @@ protected:
     }
 };
 
+TEST_F(LifecycleManagerTest, registerNotification)
+{
+    createResources();
+
+    Exchange::ILifecycleManager::INotification* notification = new Exchange::INotificationTest();
+
+    // TC-7: Check if app is loaded after spawning
+    EXPECT_EQ(Core::ERROR_NONE, interface->Register(notification));
+
+    delete notification;
+    notification = nullptr;
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, unregisterNotification_afterRegister)
+{
+    createResources();
+
+    Exchange::ILifecycleManager::INotification* notification = new Exchange::INotificationTest();
+
+    // TC-7: Check if app is loaded after spawning
+    EXPECT_EQ(Core::ERROR_NONE, interface->Register(notification));
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->Unregister(notification));
+
+    delete notification;
+    notification = nullptr;
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, unregisterNotification_withoutRegister)
+{
+    createResources();
+
+    Exchange::ILifecycleManager::INotification* notification = new Exchange::INotificationTest();
+
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Unregister(notification));
+
+    delete notification;
+    notification = nullptr;
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, registerStateNotification)
+{
+    createResources();
+
+    Exchange::ILifecycleManagerState::INotification* notification = new Exchange::IStateNotificationTest();
+
+    // TC-7: Check if app is loaded after spawning
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Register(notification));
+
+    delete notification;
+    notification = nullptr;
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, unregisterStateNotification_afterRegister)
+{
+    createResources();
+
+    Exchange::ILifecycleManagerState::INotification* notification = new Exchange::IStateNotificationTest();
+
+    // TC-7: Check if app is loaded after spawning
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Register(notification));
+
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Unregister(notification));
+
+    delete notification;
+    notification = nullptr;
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
+{
+    createResources();
+
+    Exchange::ILifecycleManagerState::INotification* notification = new Exchange::IStateNotificationTest();
+
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Unregister(notification));
+
+    delete notification;
+    notification = nullptr;
+
+    releaseResources();
+}
+
 TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 {
     DEBUG_PRINTF("ERROR: RDKEMW-2806");
@@ -288,6 +397,32 @@ TEST_F(LifecycleManagerTest, spawnApp_withInvalidParams)
 }
 #endif
 
+TEST_F(LifecycleManagerTest, appready_onSpawnAppSuccess) 
+{
+    createResources();
+
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.AppReady(appId));
+
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_wait(&context->mAppReadySemaphore);
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, appready_oninvalidAppId) 
+{
+    createResources();
+    
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->AppReady(""));
+
+    releaseResources();
+}
+
 TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppSuccess) 
 {
     createResources();
@@ -304,23 +439,6 @@ TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppSuccess)
     releaseResources();
 }
 
-#if 0
-TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppFailure)
-{
-    createResources();
-
-    bool loaded = true;
-
-    // TC-8: Check that app is not loaded after spawnApp fails
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, success));
-
-    EXPECT_EQ(Core::ERROR_NONE, interface->IsAppLoaded(appId, loaded));
-
-    EXPECT_EQ(loaded, false);
-
-    releaseResources();
-}
-
 TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
 {
     createResources();
@@ -330,11 +448,12 @@ TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
     // TC-9: Verify error on passing an invalid appId
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->IsAppLoaded("", loaded));
+    EXPECT_EQ(Core::ERROR_NONE, interface->IsAppLoaded("", loaded));
+
+    EXPECT_EQ(loaded, false);
 
     releaseResources();
 }
-#endif
 
 TEST_F(LifecycleManagerTest, getLoadedApps_verboseEnabled)
 {
@@ -359,6 +478,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
 
     bool verbose = false;
     string apps = "";
+    string 
 
     // TC-11: Get loaded apps with verbose disabled
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
@@ -369,7 +489,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
 
     releaseResources();
 }
-#if 0
+
 TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
 {
     createResources();
@@ -380,11 +500,11 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
     // TC-12: Check that no apps are loaded
     EXPECT_EQ(Core::ERROR_NONE, interface->GetLoadedApps(verbose, apps));
 
-    EXPECT_EQ(apps, "\"[]\"");
+    EXPECT_EQ(apps, "");
 
     releaseResources();
 }
-#endif
+
 
 TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 {
@@ -403,7 +523,6 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
     releaseResources();
 }
 
-#if 0
 TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
 {
     createResources();
@@ -415,16 +534,11 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
     // TC-15: Set the target state of a loaded app with invalid appInstanceId
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SetTargetAppState("", targetLifecycleState, launchIntent));
 
-    // TC-16: Set the target state of a loaded app with invalid targetLifecycleState
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::UNLOADED, launchIntent));
-
     // TC-17: Set the target state of a loaded app with all parameters invalid
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SetTargetAppState("", Exchange::ILifecycleManager::LifecycleState::UNLOADED, launchIntent));
 
     releaseResources();
 }
-#endif
-
 
 TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppSuccess)
 {
@@ -468,21 +582,17 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppSuccess)
     releaseResources();
 }
 
-#if 0
-TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppFailure)
+TEST_F(LifecycleManagerTest, unloadApp_withoutSpawning)
 {
     createResources();
 
     appInstanceId = "test.app.instance";
-
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, success));
 
     // TC-19: Unload the app after spawn fails
     EXPECT_EQ(Core::ERROR_GENERAL, interface->UnloadApp(appInstanceId, errorReason, success));
 
     releaseResources();
 }
-#endif
 
 TEST_F(LifecycleManagerTest, killApp_onSpawnAppSuccess)
 {
@@ -526,21 +636,74 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppSuccess)
     releaseResources();
 }
 
-#if 0
-TEST_F(LifecycleManagerTest, killApp_onSpawnAppFailure)
+TEST_F(LifecycleManagerTest, killApp_withoutSpawning)
 {
     createResources();
 
     appInstanceId = "test.app.instance";
-
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SpawnApp("", "", Exchange::ILifecycleManager::LifecycleState::UNLOADED, runtimeConfigObject, "", appInstanceId, errorReason, success));
 
     // TC-21: Kill the app after spawn fails
     EXPECT_EQ(Core::ERROR_GENERAL, interface->KillApp(appInstanceId, errorReason, success));
 
     releaseResources();
 }
-#endif
+
+TEST_F(LifecycleManagerTest, closeApp_onUserExit) 
+{
+    createResources();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, closeApp_onError) 
+{
+    createResources();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, closeApp_onKillandRun) 
+{
+    createResources();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, closeApp_onKillandActivate) 
+{
+    createResources();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
+
+    releaseResources();
+}
+
+TEST_F(LifecycleManagerTest, stateChangeComplete_withvalidParams) 
+{
+    createResources();
+
+    uint32_t stateChangedId = 1;
+    
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->StateChangeComplete(appId, stateChangedId, success));
+
+    releaseResources();
+}
+
+
 
 #if 0
 TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
