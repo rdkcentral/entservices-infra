@@ -1760,7 +1760,6 @@ TEST_F(UserSettingTest, VerifyDefaultValues)
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if (m_usersettingsplugin)
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
 
                 /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
@@ -2176,10 +2175,7 @@ TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if ((m_usersettingsplugin!= nullptr) && (m_usersettings_inspe_plugin!= nullptr))
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
-                m_usersettings_inspe_plugin->AddRef();
-
                 bool requiresMigration;
                 Exchange::IUserSettingsInspector::IUserSettingsMigrationStateIterator *states;
 
@@ -2946,7 +2942,6 @@ TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if (m_usersettingsplugin)
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
 
                 TEST_LOG("Setting and Getting AudioDescription Values");
@@ -3068,7 +3063,6 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if (m_usersettingsplugin)
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
 
                 TEST_LOG("Setting and Getting AudioDescription Values");
@@ -3157,7 +3151,6 @@ TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivating
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if (m_usersettingsplugin)
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
 
                 TEST_LOG("Setting and Getting AudioDescription Values");
