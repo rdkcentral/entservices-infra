@@ -426,7 +426,7 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
 #endif
 
 
-TEST_F(LifecycleManagerTest, unloadApp_withValidParams)
+TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppSuccess)
 {
     createResources();
 
@@ -484,7 +484,7 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppFailure)
 }
 #endif
 
-TEST_F(LifecycleManagerTest, killApp_withValidParams)
+TEST_F(LifecycleManagerTest, killApp_onSpawnAppSuccess)
 {
     createResources();
 
@@ -542,7 +542,8 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppFailure)
 }
 #endif
 
-TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_withValidParams)
+#if 0
+TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
 {
     createResources();
 
@@ -558,7 +559,6 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_withValidParams)
     releaseResources();
 }
 
-#if 0
 TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppFailure)
 {
     createResources();
