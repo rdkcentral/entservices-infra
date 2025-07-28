@@ -1,4 +1,4 @@
-ame: Component Release
+name: Component Release
 
 on:
   pull_request:
