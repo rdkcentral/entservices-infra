@@ -43,7 +43,7 @@ jobs:
       - name: ACK External Trigger
         run: |
            echo "Message: External Trigger Received for L2 Tests"
-           echo "Branch: ${{ inputs.caller_branch || github.ref_name }}"
+           echo "Branch: ${{ inputs.caller_branch || github.head_ref || github.ref_name }}"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
@@ -92,7 +92,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: ${{ inputs.caller_branch || github.ref_name }}
+          ref: ${{ inputs.caller_branch || github.head_ref || github.ref_name }}
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
