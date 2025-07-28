@@ -2,6 +2,10 @@ name: L1-tests
 
 on:
   workflow_call:
+    inputs:
+      caller_branch:
+        required: false
+        type: string
     secrets:
       RDKCM_RDKE:
         required: true
@@ -69,6 +73,7 @@ jobs:
       - name: ACK External Trigger
         run: |
            echo "Message: External Trigger Received for L1 Tests"
+           echo "Branch: ${{ inputs.caller_branch || github.ref_name }}"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
@@ -125,7 +130,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: ${{ inputs.caller_branch || github.ref_name }}
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
