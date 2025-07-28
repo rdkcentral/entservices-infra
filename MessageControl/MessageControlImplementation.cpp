@@ -148,14 +148,14 @@ namespace Plugin {
             return (Core::ERROR_NONE);
         }
 
-        uint32_t Enable(const messagetype type, const string& category, const string& module, const bool enabled) override
+        Core::hresult Enable(const MessageType type, const string& category, const string& module, const bool enabled) override
         {
             _client.Enable({static_cast<Core::Messaging::Metadata::type>(type), category, module}, enabled);
 
             return (Core::ERROR_NONE);
         }
 
-        uint32_t Controls(Exchange::IMessageControl::IControlIterator*& controls) const override
+        Core::hresult Controls(Exchange::IMessageControl::IControlIterator*& controls) const override
         {
             std::list<Exchange::IMessageControl::Control> list;
             Messaging::MessageUnit::Iterator index;
@@ -163,7 +163,7 @@ namespace Plugin {
             _client.Controls(index);
 
             while (index.Next() == true) {
-                list.push_back( { static_cast<messagetype>(index.Type()), index.Category(), index.Module(), index.Enabled() } );
+                list.push_back( { static_cast<MessageType>(index.Type()), index.Category(), index.Module(), index.Enabled() } );
             }
 
             using Implementation = RPC::IteratorType<Exchange::IMessageControl::IControlIterator>;
@@ -187,7 +187,7 @@ namespace Plugin {
                 ASSERT(_callback != nullptr);
 
                 // Turn data into piecies to trasfer over the wire
-                _callback->Message(static_cast<Exchange::IMessageControl::messagetype>(info.Type()), info.Module(), info.Category(), info.FileName(), info.LineNumber(), info.ClassName(), info.TimeStamp(), message->Data());
+                _callback->Message(static_cast<Exchange::IMessageControl::MessageType>(info.Type()), info.Module(), info.Category(), info.FileName(), info.LineNumber(), info.ClassName(), info.TimeStamp(), message->Data());
             });
         }
 
