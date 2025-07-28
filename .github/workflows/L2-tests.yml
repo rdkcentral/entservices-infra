@@ -92,7 +92,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: ${{ inputs.caller_branch || github.head_ref || github.ref_name }}
+          ref: ${{ inputs.caller_branch || github.head_ref || github.ref_name || 'develop' }}
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
