@@ -19,11 +19,13 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+
       - name: Install git-flow and auto-changelog
         run: |
           sudo apt-get update
           sudo apt-get install -y git-flow
           npm install -g auto-changelog
+
       - name: Clone the project and start release
         run: |
           set -e
@@ -32,6 +34,7 @@ jobs:
           git fetch --all
           git checkout main || git checkout -b main origin/main
           git checkout develop || git checkout -b develop origin/develop
+
           git config gitflow.branch.master main
           git config gitflow.branch.develop develop
           git config gitflow.prefix.feature feature/
@@ -40,6 +43,7 @@ jobs:
           git config gitflow.prefix.hotfix hotfix/
           git config gitflow.prefix.support support/
           git config gitflow.prefix.versiontag ''
+
           echo "git config completed"
           # Extract version from PR description
           PR_DESC="${{ github.event.pull_request.body }}"
@@ -47,6 +51,7 @@ jobs:
           VERSION_FROM_PR=$(echo "$PR_DESC" | grep -oiP 'version\s*:\s*\K[0-9]+\.[0-9]+\.[0-9]+(?=)' || true)
           
           echo "Extracted version from PR: $VERSION_FROM_PR"
+
           # Get top tag from CHANGELOG.md
           TOP_TAG=$(grep -m 1 -oP '^#### \[\K[^\]]+' CHANGELOG.md)
           if [[ -z "$VERSION_FROM_PR" ]]; then
