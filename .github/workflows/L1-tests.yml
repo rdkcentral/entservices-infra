@@ -131,7 +131,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: ${{ inputs.caller_branch || github.head_ref || github.ref_name || develop }}
+          ref: ${{ inputs.caller_branch || github.head_ref || github.ref_name || 'develop' }}
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
