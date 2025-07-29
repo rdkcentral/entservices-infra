@@ -421,6 +421,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/libusb
           -I $GITHUB_WORKSPACE/install/usr/include
           -I $GITHUB_WORKSPACE/build/mocks
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/Public/Dobby
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/IpcService
