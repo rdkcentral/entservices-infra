@@ -3,9 +3,9 @@ name: L2-tests
 on:
   workflow_call:
     inputs:
-      caller_branch:
-        description: "The branch name to checkout for the entservices-infra repository."
-        required: false
+      caller_source:
+        description: "Specifies the source type (e.g., local or test framework) for the workflow."
+        required: true
         type: string
     secrets:
       RDKCM_RDKE:
@@ -44,7 +44,7 @@ jobs:
       - name: ACK External Trigger
         run: |
            echo "Message: External Trigger Received for L2 Tests"
-           echo "Branch: ${{ inputs.caller_branch || github.head_ref || github.ref_name }}"
+           echo "Branch: ${{ inputs.caller_source }}"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
@@ -89,11 +89,18 @@ jobs:
           ref: R4.4.3
 
       - name: Checkout entservices-infra
+        if: ${{ inputs.caller_source == 'local' }}
+        uses: actions/checkout@v3
+        with:
+          path: entservices-infra
+
+      - name: Checkout entservices-infra-testframework
+        if: ${{ inputs.caller_source == 'testframework' }}
         uses: actions/checkout@v3
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: ${{ inputs.caller_branch || github.head_ref || github.ref_name || 'develop' }}
+          ref: develop
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
