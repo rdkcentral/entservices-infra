@@ -77,19 +77,15 @@ namespace WPEFramework
                 RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
 	        if (nullptr != runtimeManagerHandler)
 	        {
-                    ApplicationContext* context = getContext();
-                    ret = runtimeManagerHandler->resume(context->getAppInstanceId(), errorReason);
-                    if (true == ret)
-		    {
-                        WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
-	                if (nullptr != windowManagerHandler)
-	                {
-                            ApplicationContext* context = getContext();
-                            Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), true);
-                            printf("enabled display in window manager [%d] \n", retValue);
-			     fflush(stdout);
-                        }
-		    }
+                    //ret = runtimeManagerHandler->resume(context->getAppInstanceId(), errorReason);
+                    WindowManagerHandler *windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
+                    if (nullptr != windowManagerHandler)
+                    {
+                        ApplicationContext *context = getContext();
+                        Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), true);
+                        printf("enabled display in window manager [%d] \n", retValue);
+                        fflush(stdout);
+                    }
                    ret = true;
                    //TODO: Error cases
 	        }
@@ -144,19 +140,16 @@ namespace WPEFramework
 	        }
                 else
 	        {
-                    ret = runtimeManagerHandler->suspend(context->getAppInstanceId(), errorReason);
-                    if (true == ret)
-		    {
-                        WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
-	                if (nullptr != windowManagerHandler)
-	                {
-                            ApplicationContext* context = getContext();
-	                    Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), false);
-                            printf("disabled display in window manager [%d] \n", retValue);
-			     fflush(stdout);
-                            ret = true;
-                        }
-		    }
+                    //ret = runtimeManagerHandler->suspend(context->getAppInstanceId(), errorReason);
+                    WindowManagerHandler *windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
+                    if (nullptr != windowManagerHandler)
+                    {
+                        ApplicationContext *context = getContext();
+                        Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), false);
+                        printf("disabled display in window manager [%d] \n", retValue);
+                        fflush(stdout);
+                        ret = true;
+                    }
                    //TODO: Handle error cases
                 }
 	    }
