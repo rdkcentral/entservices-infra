@@ -338,6 +338,7 @@ protected:
     {
         const std::string launchArgs = APPMANAGER_APP_LAUNCHARGS;
         TEST_LOG("LaunchAppPreRequisite with state: %d", state);
+
         EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
         .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
             auto mockIterator = FillPackageIterator(); // Fill the package Info
@@ -853,8 +854,14 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailurePackageManagerObjectIsNull)
  * Setting Mock for Lock() to simulate lockId and unpacked path
  * Setting Mock for IsAppLoaded() to simulate the package is loaded or not
  * Setting Mock for SetTargetAppState() to simulate setting the state
- * Setting Mock for SpawnApp() to simulate spawning a app and gettign the appinstance id
+ * Setting Mock for SpawnApp() to simulate spawning a app and getting the app instance id
  * Verifying the return of the API
+ * Setting Mock for OnAppLifecycleStateChanged() to simulate the app lifecycle state change
+ * Registering the notification handler to receive the app lifecycle state change event
+ * Simulating the app lifecycle state change event by calling OnAppLifecycleStateChanged() with expected parameters
+ * Waiting for the notification handler to receive the event and verifying the received event
+ * Verifying the received event matches the expected event
+ * Unregistering the notification handler
  * Releasing the AppManager interface and all related test resources
  */
 TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
@@ -905,6 +912,12 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
  * Setting Mock for SetTargetAppState() to simulate setting the state
  * Setting Mock for SpawnApp() to simulate spawning a app and gettign the appinstance id
  * Verifying the return of the API
+ * Setting Mock for OnAppLifecycleStateChanged() to simulate the app lifecycle state change
+ * Registering the notification handler to receive the app lifecycle state change event
+ * Simulating the app lifecycle state change event by calling OnAppLifecycleStateChanged() with expected parameters
+ * Waiting for the notification handler to receive the event and verifying the received event
+ * Verifying the received event matches the expected event
+ * Unregistering the notification handler
  * Releasing the AppManager interface and all related test resources
  */
 TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
@@ -1267,6 +1280,12 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcFailureLifecycleManagerRemoteObjectI
  * Setting Mock for SetTargetAppState() to simulate setting the state
  * Setting Mock for SpawnApp() to simulate spawning a app and gettign the appinstance id
  * Verifying the return of the API
+ * Setting Mock for OnAppLifecycleStateChanged() to simulate the app lifecycle state change
+ * Registering the notification handler to receive the app lifecycle state change event
+ * Simulating the app lifecycle state change event by calling OnAppLifecycleStateChanged() with expected parameters
+ * Waiting for the notification handler to receive the event and verifying the received event
+ * Verifying the received event matches the expected event
+ * Unregistering the notification handler
  * Releasing the AppManager interface and all related test resources
  */
 TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
@@ -1317,6 +1336,12 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
  * Setting Mock for SetTargetAppState() to simulate setting the state
  * Setting Mock for SpawnApp() to simulate spawning a app and gettign the appinstance id
  * Verifying the return of the API
+ * Setting Mock for OnAppLifecycleStateChanged() to simulate the app lifecycle state change
+ * Registering the notification handler to receive the app lifecycle state change event
+ * Simulating the app lifecycle state change event by calling OnAppLifecycleStateChanged() with expected parameters
+ * Waiting for the notification handler to receive the event and verifying the received event
+ * Verifying the received event matches the expected event
+ * Unregistering the notification handler
  * Releasing the AppManager interface and all related test resources
  */
 TEST_F(AppManagerTest, CloseAppUsingJSONRpcSuccess)
@@ -2684,9 +2709,12 @@ TEST_F(AppManagerTest, GetLoadedAppsCOMRPCSuccess)
 }
 
 /* * Test Case for OnAppInstallationStatusChangedSuccess
- * Setting up AppManager/LifecycleManager/LifecycleManagerState/PersistentStore/PackageManagerRDKEMS Plugin and creating required COM-RPC resources
+ * Setting up AppManager/LifecycleManager/LifecycleManagerState/PackageManagerRDKEMS Plugin and creating required COM-RPC resources
+ * Registering the notification handler to receive the app installation status change event.
  * Simulating the callback for app installation status change
+ * Wait for the notification to be signalled
  * Verifying the return of the API
+ * Unregistering the notification
  * Releasing the AppManager interface and all related test resources
  */
 TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
@@ -2717,9 +2745,12 @@ TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
 }
 
 /* * Test Case for OnApplicationStateChangedSuccess
- * Setting up AppManager/LifecycleManager/LifecycleManagerState/PersistentStore/PackageManagerRDKEMS Plugin and creating required COM-RPC resources
+ * Setting up AppManager/LifecycleManager/LifecycleManagerState Plugin and creating required COM-RPC resources
+ * Registering the notification handler to receive the application state change event.
  * Simulating the callback for application state change
- * Verifying the return of the API
+ * Wait for the notification to be signalled
+ * Verifying the return of the API, ensuring that the OnAppLifecycleStateChanged callback is not called/invoked
+ * Unregistering the notification
  * Releasing the AppManager interface and all related test resources
  */
 TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
@@ -2737,8 +2768,8 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
     mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
         "YouTube",
         "12345678-1234-1234-1234-123456789012",
-        Exchange::ILifecycleManager::LifecycleState::SUSPENDED,  // Old state
-        Exchange::ILifecycleManager::LifecycleState::ACTIVE,     // New state
+        Exchange::ILifecycleManager::LifecycleState::ACTIVE,  // Old state
+        Exchange::ILifecycleManager::LifecycleState::SUSPENDED,     // New state
         "start"
     );
     /* Ensure that the OnAppLifecycleStateChanged callback is not called/invoked */
@@ -2753,8 +2784,12 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
 
 /*
  * Test Case for handleOnAppLifecycleStateChangedUsingComRpcSuccess
- * Setting up AppManager/LifecycleManager/LifecycleManagerState/PersistentStore/PackageManagerRDKEMS Plugin and creating required COM-RPC resources
+ * Setting up AppManager/LifecycleManager/LifecycleManagerState Plugin and creating required COM-RPC Mock resources
+ * Registering the notification handler to receive the app lifecycle state change event.
+ * Simulating the callback for application lifecycle state change
+ * Wait for the notification to be signalled
  * Verifying the return of the API
+ * Unregistering the notification
  * Releasing the AppManager interface and all related test resources
  */
 TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
