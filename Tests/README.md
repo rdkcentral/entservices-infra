@@ -29,6 +29,8 @@ example: curl -SL https://raw.githubusercontent.com/nektos/act/master/install.sh
 
 5. Run L1, L2, L2-oop test
 example: ./bin/act -W .github/workflows/tests-trigger.yml -s GITHUB_TOKEN=<your access token>
+
+NOTE: By default test-trigger.yml will trigger all tests(L1, L2 and etc) parallely, if you want any one test alone to be triggered/verified then remove the other trigger rules from the tests-trigger.yml
 ```
 # testframework Repo Handling
 tf-trigger.yml file of testframework repo will get loaded into github action whenever there is a pull or push happens. This file in-turn triggers all individual repos L1, L2, L2-oop tests. testframework repo test can run only in github workflow.

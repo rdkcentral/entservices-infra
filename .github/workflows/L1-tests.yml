@@ -74,7 +74,7 @@ jobs:
       - name: ACK External Trigger
         run: |
            echo "Message: External Trigger Received for L1 Tests"
-           echo "Branch: ${{ inputs.caller_source }}"
+           echo "Trigger Source: ${{ inputs.caller_source }}"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
