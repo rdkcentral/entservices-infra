@@ -30,6 +30,10 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(PackageManagerImplementation, 1, 0);
 
+    #define CHECK_CACHE() { if ((packageImpl.get() == nullptr) || (!cacheInitialized)) { \
+        return Core::ERROR_UNAVAILABLE; \
+    }}
+
     PackageManagerImplementation::PackageManagerImplementation()
         : mDownloaderNotifications()
         , mInstallNotifications()
@@ -138,18 +142,7 @@ namespace Plugin {
                 LOGDBG("created dir '%s'", downloadDir.c_str());
             }
 
-            #ifdef USE_LIBPACKAGE
-            packageImpl = packagemanager::IPackageImpl::instance();
-            #endif
-
-            InitializeState();
-            PluginHost::ISubSystem* subSystem = service->SubSystems();
-            if (subSystem != nullptr) {
-                LOGDBG("ISubSystem::INTERNET is %s", subSystem->IsActive(PluginHost::ISubSystem::INTERNET)? "Active" : "Inactive");
-                LOGDBG("ISubSystem::INSTALLATION is %s", subSystem->IsActive(PluginHost::ISubSystem::INSTALLATION)? "Active" : "Inactive");
-            }
             mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
-
         } else {
             LOGERR("service is null \n");
         }
@@ -200,10 +193,11 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        std::lock_guard<std::mutex> lock(mMutex);
+        if (!mCurrentservice->SubSystems()->IsActive(PluginHost::ISubSystem::INTERNET)) {
+            return Core::ERROR_UNAVAILABLE;
+        }
 
-        // XXX: Check Network here ???
-        // Utils::isPluginActivated(NETWORK_PLUGIN_CALLSIGN)
+        std::lock_guard<std::mutex> lock(mMutex);
 
         DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
         std::string filename = downloadDir + "package" + di->GetId();
@@ -342,14 +336,16 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_GENERAL;
 
         LOGDBG("Installing '%s' ver:'%s' fileLocator: '%s'", packageId.c_str(), version.c_str(), fileLocator.c_str());
+        CHECK_CACHE()
         if (fileLocator.empty()) {
             return Core::ERROR_INVALID_SIGNATURE;
         }
 
+
         packagemanager::NameValues keyValues;
         struct IPackageInstaller::KeyValue kv;
         while (additionalMetadata->Next(kv) == true) {
-            LOGTRACE("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
+            LOGDBG("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
             keyValues.push_back(std::make_pair(kv.name, kv.value));
         }
 
@@ -397,7 +393,7 @@ namespace Plugin {
                 NotifyInstallStatus(packageId, version, state);
             }
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
         }
 
         return result;
@@ -409,6 +405,7 @@ namespace Plugin {
         string version = GetVersion(packageId);
 
         LOGDBG("Uninstalling id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
+        CHECK_CACHE()
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
@@ -440,7 +437,7 @@ namespace Plugin {
                 }
             }
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
         }
 
         return result;
@@ -448,6 +445,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages)
     {
+        CHECK_CACHE()
         LOGTRACE("entry");
         Core::hresult result = Core::ERROR_NONE;
         std::list<Exchange::IPackageInstaller::Package> packageList;
@@ -470,6 +468,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig)
     {
+        CHECK_CACHE()
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
@@ -488,6 +487,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version,
         Exchange::IPackageInstaller::InstallState &installState)
     {
+        CHECK_CACHE()
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
@@ -496,7 +496,8 @@ namespace Plugin {
             auto &state = it->second;
             installState = state.installState;
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
+            result = Core::ERROR_GENERAL;
         }
 
         return result;
@@ -547,6 +548,7 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
+        CHECK_CACHE()
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
@@ -567,17 +569,14 @@ namespace Plugin {
                 if (pmResult == packagemanager::SUCCESS) {
                     lockId = ++state.mLockCount;
 
-                    std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
+                    state.additionalLocks.clear();
                     for (packagemanager::NameValue nv : locks) {
                         Exchange::IPackageHandler::AdditionalLock lock;
                         lock.packageId = nv.first;
                         lock.version = nv.second;
-                        additionalLocks.emplace_back(lock);
+                        state.additionalLocks.emplace_back(lock);
                     }
-
-                    appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLocks);
-
-                    LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
+                    LOGDBG("Locked id: %s ver: %s additionalLocks=%zu", packageId.c_str(), version.c_str(), state.additionalLocks.size());
                 } else {
                     LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
                     result = Core::ERROR_GENERAL;
@@ -587,19 +586,20 @@ namespace Plugin {
             if (result == Core::ERROR_NONE) {
                 getRuntimeConfig(state.runtimeConfig, runtimeConfig);
                 unpackedPath = state.unpackedPath;
+                appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(state.additionalLocks);
             }
             #endif
 
             LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
         }
 
         return result;
     }
 
-    // XXX: right way to do this is via copy ctor, when we move Thunder 5.2 and have commone struct RuntimeConfig
+    // XXX: right way to do this is via copy ctor, when we move to Thunder 5.2 and have commone struct RuntimeConfig
     void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig)
     {
         runtimeConfig.dial = config.dial;
@@ -607,6 +607,7 @@ namespace Plugin {
         runtimeConfig.thunder = config.thunder;
         runtimeConfig.systemMemoryLimit = config.systemMemoryLimit;
         runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
+        runtimeConfig.envVariables = config.envVariables;
 
         runtimeConfig.userId = config.userId;
         runtimeConfig.groupId = config.groupId;
@@ -626,6 +627,12 @@ namespace Plugin {
         runtimeConfig.thunder = config.thunder;
         runtimeConfig.systemMemoryLimit = config.systemMemoryLimit;
         runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
+
+        JsonArray vars = JsonArray();
+        for (auto str: config.envVars) {
+            vars.Add(str);
+        }
+        vars.ToString(runtimeConfig.envVariables);
 
         runtimeConfig.userId = config.userId;
         runtimeConfig.groupId = config.groupId;
@@ -650,6 +657,7 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
+        CHECK_CACHE()
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
@@ -670,7 +678,7 @@ namespace Plugin {
             #endif
             LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
         }
 
@@ -680,6 +688,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
         string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked)
     {
+        CHECK_CACHE()
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -691,7 +700,7 @@ namespace Plugin {
             locked = (state.mLockCount > 0);
             LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
         }
         return result;
@@ -700,11 +709,17 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
+        PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
+        if (subSystem != nullptr) {
+            subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
+        }
+
         #ifdef USE_LIBPACKAGE
+        packageImpl = packagemanager::IPackageImpl::instance();
+
         packagemanager::ConfigMetadataArray aConfigMetadata;
-        /*packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);*/
-        /*LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);*/
-        packageImpl->Initialize(configStr, aConfigMetadata);
+        packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+        LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
         for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
             StateKey key = it->first;
             State state(it->second);
@@ -712,11 +727,17 @@ namespace Plugin {
             mState.insert( { key, state } );
         }
         #endif
+
+        if (subSystem != nullptr) {
+            subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
+        }
+        cacheInitialized = true;
         LOGDBG("exit");
     }
 
     void PackageManagerImplementation::downloader(int n)
     {
+        InitializeState();
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
