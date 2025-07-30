@@ -34,8 +34,12 @@ add_definitions( -DRDK )
 pkg_search_module(OMI_CLIENT "omiclientlib")
 
 if(NOT OMI_CLIENT_FOUND)
-    set(OMI_CLIENT_INCLUDE_DIRS stubs)
-    message("Using stubs for omiclientlib")
+    if(NOT RDK_SERVICE_L2_TEST)
+        set(OMI_CLIENT_INCLUDE_DIRS stubs)
+        message("Using stubs for omiclientlib")
+    else()
+        message("RDK_SERVICE_L2_TEST is enabled, not using stubs for omiclientlib")
+    endif()
 endif()
 
 add_definitions(-DOCICONTAINER_API_VERSION_NUMBER_MAJOR=1)
@@ -89,6 +93,20 @@ target_link_libraries(${MODULE_NAME}
         ${SYSTEMD_LIBRARIES}
         ${OMI_CLIENT_LIBRARIES}
 )
+
+if (RDK_SERVICE_L2_TEST)
+   find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
+   if (TESTMOCKLIB_LIBRARIES)
+       message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")
+       target_link_libraries(${MODULE_NAME} PRIVATE ${TESTMOCKLIB_LIBRARIES})
+       target_include_directories(${MODULE_NAME} PRIVATE 
+       ${CMAKE_SOURCE_DIR}/../../entservices-infra/entservices-testframework/Tests/mocks
+       )
+   else (TESTMOCKLIB_LIBRARIES)
+       message ("Require ${TESTMOCKLIB_LIBRARIES} library")
+   endif (TESTMOCKLIB_LIBRARIES)
+endif (RDK_SERVICE_L2_TEST)
+
 # ${NAMESPACE}Protocols::${NAMESPACE}Protocols
 install(TARGETS ${MODULE_NAME}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)

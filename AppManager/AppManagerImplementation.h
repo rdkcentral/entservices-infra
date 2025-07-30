@@ -106,7 +106,9 @@ namespace Plugin {
         enum EventNames {
             APP_EVENT_UNKNOWN = 0,
             APP_EVENT_LIFECYCLE_STATE_CHANGED,
-            APP_EVENT_INSTALLATION_STATUS
+            APP_EVENT_INSTALLATION_STATUS,
+            APP_EVENT_LAUNCH_REQUEST,
+            APP_EVENT_UNLOADED
         };
 
         private:
@@ -195,6 +197,8 @@ namespace Plugin {
         bool fetchPackageInfoByAppId(const string& appId, PackageInfo &packageData);
         void handleOnAppLifecycleStateChanged(const string& appId, const string& appInstanceId, const Exchange::IAppManager::AppLifecycleState newState,
                                         const Exchange::IAppManager::AppLifecycleState oldState, const Exchange::IAppManager::AppErrorReason errorReason);
+        void handleOnAppUnloaded(const string& appId, const string& appInstanceId);
+        void handleOnAppLaunchRequest(const string& appId, const string& intent, const string& source);
 
         // IConfiguration methods
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -217,7 +221,7 @@ namespace Plugin {
         Exchange::IStorageManager* mStorageManagerRemoteObject;
         PluginHost::IShell* mCurrentservice;
         Core::Sink<PackageManagerNotification> mPackageManagerNotification;
-        Core::hresult fetchInstalledPackages(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
+        Core::hresult fetchAppPackageList(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         void checkIsInstalled(const std::string& appId, bool& installed, const std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         Core::hresult packageLock(const string& appId, PackageInfo &packageData, Exchange::IPackageHandler::LockReason lockReason);
         Core::hresult packageUnLock(const string& appId);

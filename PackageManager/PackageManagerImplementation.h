@@ -135,7 +135,7 @@ namespace Plugin {
         Core::hresult Delete(const string &fileLocator) override;
         Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::Percent &percent);
         Core::hresult GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB);
-        Core::hresult RateLimit(const string &downloadId, uint64_t &limit);
+        Core::hresult RateLimit(const string &downloadId, const uint64_t &limit);
 
         Core::hresult Register(Exchange::IPackageDownloader::INotification* notification) override;
         Core::hresult Unregister(Exchange::IPackageDownloader::INotification* notification) override;
@@ -235,7 +235,7 @@ namespace Plugin {
         std::condition_variable cv;
         std::unique_ptr<std::thread> mDownloadThreadPtr;
         bool done = false;
-        DownloadInfoPtr mInprogressDowload;
+        DownloadInfoPtr mInprogressDownload;
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;

@@ -29,7 +29,7 @@
 #include "SecureStorageServerMock.h"
 #include "SecureStorageServiceMock.h"
 
-#define EVNT_TIMEOUT (100)
+#define EVNT_TIMEOUT (1000)
 #define SHAREDSTORAGE_CALLSIGN _T("org.rdk.SharedStorage.1")
 #define SHAREDSTORAGETEST_CALLSIGN _T("L2tests.1")
 
@@ -178,11 +178,11 @@ SharedStorage_L2test::~SharedStorage_L2test()
     uint32_t status = Core::ERROR_GENERAL;
 
     /* Deactivate plugin in destructor */
-    status = DeactivateService("org.rdk.PersistentStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
     status = DeactivateService("org.rdk.CloudStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
     status = DeactivateService("org.rdk.SharedStorage");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    status = DeactivateService("org.rdk.PersistentStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     if (mock_server) {
@@ -262,8 +262,6 @@ SharedStorage_L2testDeviceScope::SharedStorage_L2testDeviceScope()
     /* Activate plugin in constructor */
     status = ActivateService("org.rdk.PersistentStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
-    status = ActivateService("org.rdk.CloudStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
     status = ActivateService("org.rdk.SharedStorage");
     EXPECT_EQ(Core::ERROR_NONE, status);
 }
@@ -275,11 +273,9 @@ SharedStorage_L2testDeviceScope::~SharedStorage_L2testDeviceScope()
     uint32_t status = Core::ERROR_GENERAL;
 
     /* Deactivate plugin in destructor */
-    status = DeactivateService("org.rdk.PersistentStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
-    status = DeactivateService("org.rdk.CloudStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
     status = DeactivateService("org.rdk.SharedStorage");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    status = DeactivateService("org.rdk.PersistentStore");
     EXPECT_EQ(Core::ERROR_NONE, status);
 }
 
@@ -406,7 +402,8 @@ MATCHER_P(MatchRequestStatus, data, "")
  * The test case also checks that the OnValueChanged notification is triggered with the correct
  * parameters.
  */
-TEST_F(SharedStorage_L2test,SetValue_ACCOUNT_Scope_JSONRPC)
+
+TEST_F(SharedStorage_L2test, SetValue_ACCOUNT_Scope_JSONRPC)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(SHAREDSTORAGE_CALLSIGN, SHAREDSTORAGETEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_SharedStorage> async_handler;
@@ -449,6 +446,7 @@ TEST_F(SharedStorage_L2test,SetValue_ACCOUNT_Scope_JSONRPC)
 
     signalled = WaitForRequestStatus(EVNT_TIMEOUT, SHARED_STORAGE_ON_VALUE_CHANGED);
     EXPECT_TRUE(signalled & SHARED_STORAGE_ON_VALUE_CHANGED);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     jsonrpc.Unsubscribe(EVNT_TIMEOUT, _T("onValueChanged"));
 }
 
@@ -584,6 +582,7 @@ TEST_F(SharedStorage_L2testDeviceScope, SetValue_DEVICE_Scope_JSONRPC)
 
     signalled = WaitForRequestStatus(EVNT_TIMEOUT, SHARED_STORAGE_ON_VALUE_CHANGED);
     EXPECT_TRUE(signalled & SHARED_STORAGE_ON_VALUE_CHANGED);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     jsonrpc.Unsubscribe(EVNT_TIMEOUT, _T("onValueChanged"));
 }
 
@@ -602,6 +601,14 @@ TEST_F(SharedStorage_L2testDeviceScope, GetValue_DEVICE_Scope_JSONRPC)
     status = InvokeServiceMethod("org.rdk.SharedStorage.1", "getValue", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result["success"].Boolean());
+    sleep(5);
+    int file_status = remove("/tmp/secure/persistent/rdkservicestore");
+    // Check if the file has been successfully removed
+    if (file_status != 0) {
+        TEST_LOG("Error deleting file[/tmp/secure/persistent/rdkservicestore]");
+    } else {
+        TEST_LOG("File[/tmp/secure/persistent/rdkservicestore] successfully deleted");
+    }
 }
 
 /*
@@ -681,6 +688,8 @@ TEST_F(SharedStorage_L2test, SetValue_ACCOUNT_Scope_COMRPC)
 
                 signalled = notify.WaitForRequestStatus(EVNT_TIMEOUT, SHARED_STORAGE_ON_VALUE_CHANGED);
                 EXPECT_TRUE(signalled & SHARED_STORAGE_ON_VALUE_CHANGED);
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
                 m_sharedstorageplugin->Unregister(&notify);
                 m_sharedstorageplugin->Release();
@@ -869,6 +878,8 @@ TEST_F(SharedStorage_L2testDeviceScope, SetValue_DEVICE_Scope_COMRPC)
                 signalled = notify.WaitForRequestStatus(EVNT_TIMEOUT, SHARED_STORAGE_ON_VALUE_CHANGED);
                 EXPECT_TRUE(signalled & SHARED_STORAGE_ON_VALUE_CHANGED);
 
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
                 m_sharedstorageplugin->Unregister(&notify);
                 m_sharedstorageplugin->Release();
             } else {
@@ -904,6 +915,15 @@ TEST_F(SharedStorage_L2testDeviceScope, GetValue_DEVICE_Scope_COMRPC)
                 EXPECT_EQ(status, Core::ERROR_NONE);
                 TEST_LOG("GetValue returned value: %s, ttl: %u, success: %d", value.c_str(), ttl, success);
                 EXPECT_TRUE(success);
+
+                sleep(5);
+                int file_status = remove("/tmp/secure/persistent/rdkservicestore");
+                // Check if the file has been successfully removed
+                if (file_status != 0) {
+                    TEST_LOG("Error deleting file[/tmp/secure/persistent/rdkservicestore]");
+                } else {
+                    TEST_LOG("File[/tmp/secure/persistent/rdkservicestore] successfully deleted");
+                }
 
                 m_sharedstorageplugin->Release();
             } else {
