@@ -1041,20 +1041,33 @@ Core::hresult AppManagerImplementation::fetchAppPackageList(std::vector<WPEFrame
     ASSERT (nullptr != mPackageManagerInstallerObject);
     if (mPackageManagerInstallerObject != nullptr)
     {
-        Exchange::IPackageInstaller::IPackageIterator* packages = nullptr;
-
-        if (mPackageManagerInstallerObject->ListPackages(packages) != Core::ERROR_NONE || packages == nullptr)
+        std::string packagesJson;
+        if (mPackageManagerInstallerObject->ListPackages(packagesJson) != Core::ERROR_NONE || packagesJson.empty())
         {
-            LOGERR("ListPackage is returning Error or Packages is nullptr");
+            LOGERR("ListPackages is returning Error or packagesJson is empty");
             goto End;
         }
 
-        WPEFramework::Exchange::IPackageInstaller::Package package;
-        while (packages->Next(package)) {
-            packageList.push_back(package);
+        JsonObject rootObj;
+        if (rootObj.FromString(packagesJson) && rootObj.HasLabel("packages"))
+        {
+            JsonArray packageArray = rootObj["packages"].Array();
+            for (size_t i = 0; i < packageArray.Length(); ++i)
+            {
+                JsonObject packageObj = packageArray[i].Object();
+                WPEFramework::Exchange::IPackageInstaller::Package package;
+                package.packageId = packageObj["packageId"].String();
+                package.version = packageObj["version"].String();
+                package.state = static_cast<Exchange::IPackageInstaller::InstallState>(packageObj["state"].Number());
+                package.sizeKb = packageObj["sizeKb"].Number();
+                packageList.push_back(package);
+            }
+            status = Core::ERROR_NONE;
         }
-        status = Core::ERROR_NONE;
-        packages->Release();
+        else
+        {
+            LOGERR("Failed to parse packagesJson");
+        }
     }
     else
     {

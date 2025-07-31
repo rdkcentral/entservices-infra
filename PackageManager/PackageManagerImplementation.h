@@ -146,7 +146,7 @@ namespace Plugin {
         // IPackageInstaller methods
         Core::hresult Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) override;
         Core::hresult Uninstall(const string &packageId, string &errorReason ) override;
-        Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
+        Core::hresult ListPackages(string& packagesJson);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
         Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::InstallState &state) override;
 

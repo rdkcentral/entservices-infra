@@ -443,23 +443,30 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages)
+    Core::hresult PackageManagerImplementation::ListPackages(string& packagesJson)
     {
         CHECK_CACHE()
         LOGTRACE("entry");
         Core::hresult result = Core::ERROR_NONE;
-        std::list<Exchange::IPackageInstaller::Package> packageList;
+        JsonArray packageList;
 
         for (auto const& [key, state] : mState) {
-            Exchange::IPackageInstaller::Package package;
-            package.packageId = key.first.c_str();
-            package.version = key.second.c_str();
-            package.state = state.installState;
-            package.sizeKb = state.runtimeConfig.dataImageSize;
-            packageList.emplace_back(package);
+            JsonObject package;
+            package["packageId"] = key.first.c_str();
+            package["version"] = key.second.c_str();
+            package["state"] = static_cast<int>(state.installState);
+            package["stateName"] = getInstallState(state.installState); // for readability
+            package["sizeKb"] = state.runtimeConfig.dataImageSize;
+            packageList.Add(package);
         }
 
-        packages = (Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList));
+        JsonObject root;
+        root["packages"] = packageList;
+
+        if (!root.ToString(packagesJson)) {
+            LOGERR("Failed to stringify package list to JSON");
+            result = Core::ERROR_GENERAL;
+        }
 
         LOGTRACE("exit");
 
