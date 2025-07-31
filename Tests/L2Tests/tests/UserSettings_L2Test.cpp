@@ -55,9 +55,9 @@ typedef enum : uint32_t {
     UserSettings_onPinOnPurchaseChanged = 0x0000000d,
     UserSettings_onHighContrastChanged = 0x0000000e,
     UserSettings_onVoiceGuidanceChanged = 0x0000000f,
-    UserSettings_onVoiceGuidanceRateChanged = 0x00000011,
-    UserSettings_onVoiceGuidanceHintsChanged = 0x00000012,
-    UserSettings_onContentPinChanged = 0x00000013,
+    UserSettings_onVoiceGuidanceRateChanged = 0x00000010,
+    UserSettings_onVoiceGuidanceHintsChanged = 0x00000011,
+    UserSettings_onContentPinChanged = 0x00000012,
     UserSettings_StateInvalid = 0x00000000
 }UserSettingsL2test_async_events_t;
 
