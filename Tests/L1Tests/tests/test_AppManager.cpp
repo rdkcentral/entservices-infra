@@ -1025,7 +1025,7 @@ TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
 
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::SUSPENDED);
+    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, struct stat* info) {
             // Simulate a successful stat call
@@ -1495,10 +1495,10 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuspendedStateSuccess)
 
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
-    appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
+    appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
 
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::SUSPENDED);
+    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, struct stat* info) {
             // Simulate a successful stat call
