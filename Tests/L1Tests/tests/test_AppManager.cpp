@@ -2768,8 +2768,8 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
     mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
         "YouTube",
         "12345678-1234-1234-1234-123456789012",
-        Exchange::ILifecycleManager::LifecycleState::ACTIVE,  // Old state
-        Exchange::ILifecycleManager::LifecycleState::SUSPENDED,     // New state
+        Exchange::ILifecycleManager::LifecycleState::ACTIVE,      // Old state
+        Exchange::ILifecycleManager::LifecycleState::SUSPENDED,   // New state
         "start"
     );
     /* Ensure that the OnAppLifecycleStateChanged callback is not called/invoked */
