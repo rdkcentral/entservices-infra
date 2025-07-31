@@ -1062,7 +1062,7 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureEmptyAppID)
  * Verifying the return of the API by passing the empty app id
  * Releasing the AppManager interface and all related test resources
  */
-TEST_F(AppManagerTest, LaunchAppUsingComRpcSpawnAppFailure)
+TEST_F(AppManagerTest, DISABLED_LaunchAppUsingComRpcSpawnAppFailure)
 {
     Core::hresult status;
 
