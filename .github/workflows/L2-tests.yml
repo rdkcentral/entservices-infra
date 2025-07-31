@@ -100,7 +100,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: topic/RDKEMW-5644
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
