@@ -892,8 +892,14 @@ TEST_F(UserSettingTest, onLiveWatershedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onLiveWatershedChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool liveWatershed = parameters["liveWatershed"].Boolean();
-                                           async_handler.onLiveWatershedChanged(liveWatershed);
+                                           TEST_LOG("Event: onLiveWatershedChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("liveWatershed")) {
+                                               bool liveWatershed = parameters["liveWatershed"].Boolean();
+                                               TEST_LOG("liveWatershed received: %s", liveWatershed ? "true" : "false");
+                                               async_handler.onLiveWatershedChanged(liveWatershed);
+                                           } else {
+                                               TEST_LOG("Error: 'liveWatershed' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -938,8 +944,14 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceHintsChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool hints = parameters["hints"].Boolean();
-                                           async_handler.onVoiceGuidanceHintsChanged(hints);
+                                           TEST_LOG("Event: onVoiceGuidanceHintsChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("hints")) {
+                                               bool hints = parameters["hints"].Boolean();
+                                               TEST_LOG("hints received: %s", hints ? "true" : "false");
+                                               async_handler.onVoiceGuidanceHintsChanged(hints);
+                                           } else {
+                                               TEST_LOG("Error: 'hints' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -985,8 +997,14 @@ TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onAudioDescriptionChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool enabled = parameters["enabled"].Boolean();
-                                           async_handler.onAudioDescriptionChanged(enabled);
+                                           TEST_LOG("Event: onAudioDescriptionChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("enabled")) {
+                                               bool enabled = parameters["enabled"].Boolean();
+                                               TEST_LOG("enabled received: %s", enabled ? "true" : "false");
+                                               async_handler.onAudioDescriptionChanged(enabled);
+                                           } else {
+                                               TEST_LOG("Error: 'enabled' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1036,9 +1054,15 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredAudioLanguagesChanged"),
                                            [&async_handler](const JsonObject& parameters) {
-                                           string preferredLanguages = parameters["preferredLanguages"].String();
-                                           async_handler.onPreferredAudioLanguagesChanged(preferredLanguages);
-                                       });
+                                               TEST_LOG("Event: onPreferredAudioLanguagesChanged, Parameters: %s", parameters.String().c_str());
+                                               if (parameters.HasLabel("preferredLanguages")) {
+                                                   string preferredLanguages = parameters["preferredLanguages"].String();
+                                                   TEST_LOG("preferredLanguages received: %s", preferredLanguages.c_str());
+                                                   async_handler.onPreferredAudioLanguagesChanged(preferredLanguages);
+                                               } else {
+                                                   TEST_LOG("Error: 'preferredLanguages' parameter not found in event");
+                                               }
+                                           });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     JsonObject paramsAudioLanguage;
@@ -1086,9 +1110,15 @@ TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPresentationLanguageChanged"),
                                            [&async_handler](const JsonObject& parameters) {
-                                           string presentationLanguage = parameters["presentationLanguage"].String();
-                                           async_handler.onPresentationLanguageChanged(presentationLanguage);
-                                       });
+                                               TEST_LOG("Event: onPresentationLanguageChanged, Parameters: %s", parameters.String().c_str());
+                                               if (parameters.HasLabel("presentationLanguage")) {
+                                                   string presentationLanguage = parameters["presentationLanguage"].String();
+                                                   TEST_LOG("presentationLanguage received: %s", presentationLanguage.c_str());
+                                                   async_handler.onPresentationLanguageChanged(presentationLanguage);
+                                               } else {
+                                                   TEST_LOG("Error: 'presentationLanguage' parameter not found in event");
+                                               }
+                                           });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     JsonObject paramsPresLanguage;
@@ -1131,8 +1161,14 @@ TEST_F(UserSettingTest, onCaptionsChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onCaptionsChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool enabled = parameters["enabled"].Boolean();
-                                           async_handler.onCaptionsChanged(enabled);
+                                           TEST_LOG("Event: onCaptionsChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("enabled")) {
+                                               bool enabled = parameters["enabled"].Boolean();
+                                               TEST_LOG("enabled received: %s", enabled ? "true" : "false");
+                                               async_handler.onCaptionsChanged(enabled);
+                                           } else {
+                                               TEST_LOG("Error: 'enabled' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1180,9 +1216,15 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredCaptionsLanguagesChanged"),
                                            [&async_handler](const JsonObject& parameters) {
-                                           string preferredCaptionsLanguages = parameters["preferredLanguages"].String();
-                                           async_handler.onPreferredCaptionsLanguagesChanged(preferredCaptionsLanguages);
-                                       });
+                                               TEST_LOG("Event: onPreferredCaptionsLanguagesChanged, Parameters: %s", parameters.String().c_str());
+                                               if (parameters.HasLabel("preferredLanguages")) {
+                                                   string preferredCaptionsLanguages = parameters["preferredLanguages"].String();
+                                                   TEST_LOG("preferredLanguages received: %s", preferredCaptionsLanguages.c_str());
+                                                   async_handler.onPreferredCaptionsLanguagesChanged(preferredCaptionsLanguages);
+                                               } else {
+                                                   TEST_LOG("Error: 'preferredLanguages' parameter not found in event");
+                                               }
+                                           });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     JsonObject paramsPrefLang;
@@ -1227,9 +1269,15 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredClosedCaptionServiceChanged"),
                                            [&async_handler](const JsonObject& parameters) {
-                                           string preferredService = parameters["service"].String();
-                                           async_handler.onPreferredClosedCaptionServiceChanged(preferredService);
-                                       });
+                                               TEST_LOG("Event: onPreferredClosedCaptionServiceChanged, Parameters: %s", parameters.String().c_str());
+                                               if (parameters.HasLabel("service")) {
+                                                   string preferredService = parameters["service"].String();
+                                                   TEST_LOG("service received: %s", preferredService.c_str());
+                                                   async_handler.onPreferredClosedCaptionServiceChanged(preferredService);
+                                               } else {
+                                                   TEST_LOG("Error: 'service' parameter not found in event");
+                                               }
+                                           });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     JsonObject paramspreferredService;
@@ -1272,8 +1320,14 @@ TEST_F(UserSettingTest, onPinControlChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPinControlChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool pinControl = parameters["pinControl"].Boolean();
-                                           async_handler.onPinControlChanged(pinControl);
+                                           TEST_LOG("Event: onPinControlChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("pinControl")) {
+                                               bool pinControl = parameters["pinControl"].Boolean();
+                                               TEST_LOG("pinControl received: %s", pinControl ? "true" : "false");
+                                               async_handler.onPinControlChanged(pinControl);
+                                           } else {
+                                               TEST_LOG("Error: 'pinControl' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1324,9 +1378,15 @@ TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsChanged"),
                                            [&async_handler](const JsonObject& parameters) {
-                                           string viewRes = parameters["viewingRestrictions"].String();
-                                           async_handler.onViewingRestrictionsChanged(viewRes);
-                                       });
+                                               TEST_LOG("Event: onViewingRestrictionsChanged, Parameters: %s", parameters.String().c_str());
+                                               if (parameters.HasLabel("viewingRestrictions")) {
+                                                   string viewRes = parameters["viewingRestrictions"].String();
+                                                   TEST_LOG("viewingRestrictions received: %s", viewRes.c_str());
+                                                   async_handler.onViewingRestrictionsChanged(viewRes);
+                                               } else {
+                                                   TEST_LOG("Error: 'viewingRestrictions' parameter not found in event");
+                                               }
+                                           });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     JsonObject paramsViewRestrictions;
@@ -1370,9 +1430,15 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsWindowChanged"),
                                            [&async_handler](const JsonObject& parameters) {
-                                           string viewResWindow = parameters["viewingRestrictionsWindow"].String();
-                                           async_handler.onViewingRestrictionsWindowChanged(viewResWindow);
-                                       });
+                                               TEST_LOG("Event: onViewingRestrictionsWindowChanged, Parameters: %s", parameters.String().c_str());
+                                               if (parameters.HasLabel("viewingRestrictionsWindow")) {
+                                                   string viewResWindow = parameters["viewingRestrictionsWindow"].String();
+                                                   TEST_LOG("viewingRestrictionsWindow received: %s", viewResWindow.c_str());
+                                                   async_handler.onViewingRestrictionsWindowChanged(viewResWindow);
+                                               } else {
+                                                   TEST_LOG("Error: 'viewingRestrictionsWindow' parameter not found in event");
+                                               }
+                                           });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     JsonObject paramsViewResWindow;
@@ -1415,8 +1481,14 @@ TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPlaybackWatershedChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool playbackWatershed = parameters["playbackWatershed"].Boolean();
-                                           async_handler.onPlaybackWatershedChanged(playbackWatershed);
+                                           TEST_LOG("Event: onPlaybackWatershedChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("playbackWatershed")) {
+                                               bool playbackWatershed = parameters["playbackWatershed"].Boolean();
+                                               TEST_LOG("playbackWatershed received: %s", playbackWatershed ? "true" : "false");
+                                               async_handler.onPlaybackWatershedChanged(playbackWatershed);
+                                           } else {
+                                               TEST_LOG("Error: 'playbackWatershed' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1464,8 +1536,14 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onBlockNotRatedContentChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool blockNotRatedContent = parameters["blockNotRatedContent"].Boolean();
-                                           async_handler.onBlockNotRatedContentChanged(blockNotRatedContent);
+                                           TEST_LOG("Event: onBlockNotRatedContentChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("blockNotRatedContent")) {
+                                               bool blockNotRatedContent = parameters["blockNotRatedContent"].Boolean();
+                                               TEST_LOG("blockNotRatedContent received: %s", blockNotRatedContent ? "true" : "false");
+                                               async_handler.onBlockNotRatedContentChanged(blockNotRatedContent);
+                                           } else {
+                                               TEST_LOG("Error: 'blockNotRatedContent' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1512,8 +1590,14 @@ TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPinOnPurchaseChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool pinOnPurchase = parameters["pinOnPurchase"].Boolean();
-                                           async_handler.onPinOnPurchaseChanged(pinOnPurchase);
+                                           TEST_LOG("Event: onPinOnPurchaseChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("pinOnPurchase")) {
+                                               bool pinOnPurchase = parameters["pinOnPurchase"].Boolean();
+                                               TEST_LOG("pinOnPurchase received: %s", pinOnPurchase ? "true" : "false");
+                                               async_handler.onPinOnPurchaseChanged(pinOnPurchase);
+                                           } else {
+                                               TEST_LOG("Error: 'pinOnPurchase' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1560,8 +1644,14 @@ TEST_F(UserSettingTest, onHighContrastChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onHighContrastChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool enabled = parameters["enabled"].Boolean();
-                                           async_handler.onHighContrastChanged(enabled);
+                                           TEST_LOG("Event: onHighContrastChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("enabled")) {
+                                               bool enabled = parameters["enabled"].Boolean();
+                                               TEST_LOG("enabled received: %s", enabled ? "true" : "false");
+                                               async_handler.onHighContrastChanged(enabled);
+                                           } else {
+                                               TEST_LOG("Error: 'enabled' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1608,8 +1698,14 @@ TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           bool enabled = parameters["enabled"].Boolean();
-                                           async_handler.onVoiceGuidanceChanged(enabled);
+                                           TEST_LOG("Event: onVoiceGuidanceChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("enabled")) {
+                                               bool enabled = parameters["enabled"].Boolean();
+                                               TEST_LOG("enabled received: %s", enabled ? "true" : "false");
+                                               async_handler.onVoiceGuidanceChanged(enabled);
+                                           } else {
+                                               TEST_LOG("Error: 'enabled' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1657,8 +1753,14 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceRateChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
-                                           double rate = parameters["rate"].Double();
-                                           async_handler.onVoiceGuidanceRateChanged(rate);
+                                           TEST_LOG("Event: onVoiceGuidanceRateChanged, Parameters: %s", parameters.String().c_str());
+                                           if (parameters.HasLabel("rate")) {
+                                               double rate = parameters["rate"].Double();
+                                               TEST_LOG("rate received: %f", rate);
+                                               async_handler.onVoiceGuidanceRateChanged(rate);
+                                           } else {
+                                               TEST_LOG("Error: 'rate' parameter not found in event");
+                                           }
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1706,9 +1808,15 @@ TEST_F(UserSettingTest, onContentPinChangedEvent)
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onContentPinChanged"),
                                            [&async_handler](const JsonObject& parameters) {
-                                           string contentPin = parameters["contentPin"].String();
-                                           async_handler.onContentPinChanged(contentPin);
-                                       });
+                                               TEST_LOG("Event: onContentPinChanged, Parameters: %s", parameters.String().c_str());
+                                               if (parameters.HasLabel("contentPin")) {
+                                                   string contentPin = parameters["contentPin"].String();
+                                                   TEST_LOG("contentPin received: %s", contentPin.c_str());
+                                                   async_handler.onContentPinChanged(contentPin);
+                                               } else {
+                                                   TEST_LOG("Error: 'contentPin' parameter not found in event");
+                                               }
+                                           });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     JsonObject paramsContentPin;
