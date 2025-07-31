@@ -1115,7 +1115,7 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSpawnAppFailure)
 
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
     // Verify that the notification handler received the expected event
-    uint32_t signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
 
     mAppManagerImpl->Unregister(&notification);
