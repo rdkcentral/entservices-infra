@@ -127,7 +127,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: topic/RDKEMW-5644
+          ref: develop
 
       - name: Apply  ThunderTools
         run: |
