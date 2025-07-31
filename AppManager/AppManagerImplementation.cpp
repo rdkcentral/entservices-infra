@@ -234,6 +234,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
                 mAdminLock.Lock();
                 for (auto& notification : mAppManagerNotification)
                 {
+                    LOGINFO("veeksha OnAppLaunchRequest appId %s intent %s source %s", appId.c_str(), intent.c_str(), source.c_str());
                     notification->OnAppLaunchRequest(appId, intent, source);
                 }
                 mAdminLock.Unlock();
@@ -261,6 +262,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
                 mAdminLock.Lock();
                 for (auto& notification : mAppManagerNotification)
                 {
+                    LOGINFO("veeksha OnAppUnloaded appId %s appInstanceId %s", appId.c_str(), appInstanceId.c_str());
                     notification->OnAppUnloaded(appId, appInstanceId);
                 }
                 mAdminLock.Unlock();

@@ -408,7 +408,7 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
         std::condition_variable m_condition_variable;
 
         /** @brief Event signalled flag */
-        uint32_t m_event_signalled = AppManager_StateInvalid;
+        uint32_t m_event_uint32_t signalled = AppManager_StateInvalid;
 
         ExpectedAppLifecycleEvent m_expectedEvent;
         NotificationHandler(){}
@@ -442,6 +442,7 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
 
         void OnAppLaunchRequest(const string& appId, const string& appInstanceId)
         {
+            TEST_LOG("VEEKSHA ENTERED OnAppLaunchRequest with appId: %s, appInstanceId: %s source: %s", appId.c_str(), appInstanceId.c_str(), source.c_str());
             std::unique_lock<std::mutex> lock(m_mutex);
             EXPECT_STREQ(m_expectedEvent.appId.c_str(), appId.c_str());
             EXPECT_STREQ(m_expectedEvent.intent.c_str(), intent.c_str());
@@ -476,7 +477,7 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
               }
             }
             signalled = m_event_signalled;
-            m_event_signalled = AppManager_StateInvalid;  // reset for next use
+            m_event_uint32_t signalled = AppManager_StateInvalid;  // reset for next use
             return signalled;
         }
     };
@@ -1097,7 +1098,7 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSpawnAppFailure)
     expectedEvent.appId = APPMANAGER_APP_ID;
     expectedEvent.intent = APPMANAGER_APP_INTENT;
     expectedEvent.source = "";
-    signalled = AppManager_StateInvalid;
+    uint32_t signalled = AppManager_StateInvalid;
     Core::Sink<NotificationHandler> notification;
 
     mAppManagerImpl->Register(&notification);
@@ -1113,8 +1114,6 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSpawnAppFailure)
     });
 
     EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    // Simulate the app launch request event
-    mAppManagerImpl->OnAppLaunchRequest(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, "");
     // Verify that the notification handler received the expected event
     uint32_t signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
@@ -1342,9 +1341,8 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
     expectedEvent.intent = APPMANAGER_APP_INTENT;
     expectedEvent.source = "";
     expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
-    signalled = AppManager_StateInvalid;
-    Core::Sink<NotificationHandler> notification;
     uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
     appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
@@ -1355,11 +1353,7 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
     notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
+
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
 
@@ -1411,7 +1405,6 @@ TEST_F(AppManagerTest, CloseAppUsingJSONRpcSuccess)
     expectedEvent.appId = APPMANAGER_APP_ID;
     expectedEvent.intent = APPMANAGER_APP_INTENT;
     expectedEvent.source = "";
-    signalled = AppManager_StateInvalid;
 
     mAppManagerImpl->Register(&notification);
     expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
@@ -1442,11 +1435,6 @@ TEST_F(AppManagerTest, CloseAppUsingJSONRpcSuccess)
     notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
 
@@ -1538,11 +1526,6 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcFailureWrongAppID)
     mAppManagerImpl->Register(&notification);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
 
@@ -1582,11 +1565,6 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcFailureSetTargetAppStateReturnError)
     mAppManagerImpl->Register(&notification);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
 
@@ -1652,11 +1630,6 @@ TEST_F(AppManagerTest, TerminateAppUsingComRpcSuccess)
     notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
     UnloadAppAndUnlock();
@@ -1700,11 +1673,6 @@ TEST_F(AppManagerTest, TerminateAppUsingJSONRpcSuccess)
     notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
     UnloadAppAndUnlock();
@@ -1931,11 +1899,6 @@ TEST_F(AppManagerTest, KillAppUsingComRpcSuccess)
     notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
     UnloadAppAndUnlock();
@@ -1978,11 +1941,6 @@ TEST_F(AppManagerTest, KillAppUsingJSONRpcSuccess)
     notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
     UnloadAppAndUnlock();
@@ -2090,11 +2048,6 @@ TEST_F(AppManagerTest, KillAppUsingComRpcFailureLifecycleManagerRemoteObjectIsNu
 
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
 
@@ -2136,11 +2089,7 @@ TEST_F(AppManagerTest, SendIntentUsingJSONRpcSuccess)
     notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    mLifecycleManagerStateNotification_cb->OnAppLaunchRequest(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INTENT,
-        ""
-    );
+
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
 
