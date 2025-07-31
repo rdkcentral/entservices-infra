@@ -208,12 +208,21 @@ protected:
         mLifecycleManagerConfigure->Release();
 
         // Ensure all mocks are cleaned up properly
-        delete mServiceMock;
-        delete mRuntimeManagerMock;
-        delete mWindowManagerMock;
-        mServiceMock = nullptr;
-        mRuntimeManagerMock = nullptr;
-        mWindowManagerMock = nullptr;
+
+        if (mServiceMock != nullptr) {
+           delete mServiceMock;
+           mServiceMock = nullptr;
+        }   
+
+        if (mRuntimeManagerMock != nullptr) {
+           delete mRuntimeManagerMock;
+           mRuntimeManagerMock = nullptr;
+        }
+
+        if (mWindowManagerMock != nullptr) {
+            delete mWindowManagerMock;
+            mWindowManagerMock = nullptr;
+        }
 	
         ASSERT_TRUE(interface != nullptr);
     }
