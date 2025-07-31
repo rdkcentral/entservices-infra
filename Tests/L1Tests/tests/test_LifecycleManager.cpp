@@ -38,11 +38,12 @@
 
 namespace WPEFramework {
 namespace Plugin {
-class LifecycleManagerImplementationTest {
+class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
     public:
-       LifecycleManagerImplementation mLifecycleManagerImplTest;
-       ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) {
-            return mLifecycleManagerImplTest.getContext(appInstanceId, appId);
+        MOCK_METHOD(void, AddRef, (), (const, override));
+        MOCK_METHOD(uint32_t, Release, (), (const, override));
+        ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const {
+            return LifecycleManagerImplementation::getContext(appInstanceId, appId);
         }
 };
 } // namespace Plugin
@@ -366,14 +367,14 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 
 TEST_F(LifecycleManagerTest, appready_onSpawnAppSuccess) 
 {
-    Plugin::LifecycleManagerImplementationTest obj;
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
 	// TC-8: Check if app is ready after spawning
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.AppReady(appId));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.AppReady(appId));
 
-    Plugin::ApplicationContext* context = obj.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
     sem_wait(&context->mAppReadySemaphore);    
 }
@@ -573,14 +574,14 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppSuccess)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest obj;
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
 	// TC-18: Unload the app after spawning
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.UnloadApp(appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.UnloadApp(appInstanceId, errorReason, success));
 
-    Plugin::ApplicationContext* context = obj.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
@@ -632,14 +633,14 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppSuccess)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest obj;
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
 	// TC-20: Kill the app after spawning
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.KillApp(appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.KillApp(appInstanceId, errorReason, success));
 
-    Plugin::ApplicationContext* context = obj.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
@@ -691,14 +692,14 @@ TEST_F(LifecycleManagerTest, closeApp_onUserExit)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest obj;
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
 	// TC-22: User exits the app after spawning 
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
 
-    Plugin::ApplicationContext* context = obj.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
@@ -733,14 +734,14 @@ TEST_F(LifecycleManagerTest, closeApp_onError)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest obj;
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
 	// TC-23: Error after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
 
-    Plugin::ApplicationContext* context = obj.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
@@ -775,14 +776,14 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest obj;
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
 	// TC-24: Kill and run after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
 
-    Plugin::ApplicationContext* context = obj.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
@@ -826,14 +827,14 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest obj;
+    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
 	// TC-25: Kill and activate after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, obj.mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
+    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
 
-    Plugin::ApplicationContext* context = obj.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
@@ -881,5 +882,3 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
     // TC-27: Send intent to the app after spawning
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));   
 }
-
-
