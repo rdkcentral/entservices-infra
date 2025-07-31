@@ -1495,10 +1495,10 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuspendedStateSuccess)
 
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
-    appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
+    appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
 
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
+    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::SUSPENDED);
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, struct stat* info) {
             // Simulate a successful stat call
@@ -2800,9 +2800,26 @@ TEST_F(AppManagerTest, updateCurrentActionUsingComRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    Core::Event onAppLaunchRequest(false, true);
 
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+    .Times(1)
+    .WillOnce(::testing::Invoke(
+        [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+            std::string text;
+            EXPECT_TRUE(json->ToString(text));
+            TEST_LOG("VEEKSHA - updateCurrentActionUsingComRpcSuccess - JSON-RPC response: %s", text.c_str());
+            const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLaunchRequest\",\"params\":{\"appId\":\"com.test.app\",\"intent\":\"test.intent\",\"source\":\"\"}}";
+            EXPECT_EQ(text, expectedJson);
+            onAppLaunchRequest.SetEvent();
+            return Core::ERROR_NONE;
+        }
+    ));
+    EVENT_SUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    EXPECT_EQ(Core::ERROR_NONE, onAppLaunchRequest.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
 
     mAppManagerImpl->updateCurrentAction(APPMANAGER_APP_ID, Plugin::AppManagerImplementation::CurrentAction::APP_ACTION_LAUNCH);
 
