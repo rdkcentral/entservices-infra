@@ -408,7 +408,7 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
         std::condition_variable m_condition_variable;
 
         /** @brief Event signalled flag */
-        uint32_t m_event_uint32_t signalled = AppManager_StateInvalid;
+        uint32_t m_event_signalled = AppManager_StateInvalid;
 
         ExpectedAppLifecycleEvent m_expectedEvent;
         NotificationHandler(){}
@@ -477,7 +477,7 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
               }
             }
             signalled = m_event_signalled;
-            m_event_uint32_t signalled = AppManager_StateInvalid;  // reset for next use
+            m_event_signalled = AppManager_StateInvalid; // reset for next use
             return signalled;
         }
     };
