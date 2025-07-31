@@ -1077,7 +1077,7 @@ Core::hresult AppManagerImplementation::fetchAppPackageList(std::vector<WPEFrame
                 package.packageId = packageObj["packageId"].String();
                 package.version = packageObj["version"].String();
                 package.state = static_cast<Exchange::IPackageInstaller::InstallState>(packageObj["state"].Number());
-                package.sizeKb = static_cast<uint64_t>(packageObj["sizeKb"].Number());
+                package.sizeKb = packageObj["sizeKb"].Number();
                 packageList.push_back(package);
             }
             status = Core::ERROR_NONE;

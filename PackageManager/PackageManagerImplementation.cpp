@@ -454,7 +454,8 @@ namespace Plugin {
             JsonObject package;
             package["packageId"] = key.first.c_str();
             package["version"] = key.second.c_str();
-            package["state"] = state.installState;
+            package["state"] = static_cast<int>(state.installState);
+            package["stateName"] = getInstallState(state.installState); // for readability
             package["sizeKb"] = state.runtimeConfig.dataImageSize;
             packageList.Add(package);
         }
