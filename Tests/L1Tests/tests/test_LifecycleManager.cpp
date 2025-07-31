@@ -210,17 +210,17 @@ protected:
         // Ensure all mocks are cleaned up properly
 
         if (mServiceMock != nullptr) {
-           delete mServiceMock;
+           mServiceMock->Release();
            mServiceMock = nullptr;
         }   
 
         if (mRuntimeManagerMock != nullptr) {
-           delete mRuntimeManagerMock;
+           mRuntimeManagerMock->Release();
            mRuntimeManagerMock = nullptr;
         }
 
         if (mWindowManagerMock != nullptr) {
-            delete mWindowManagerMock;
+            mWindowManagerMock->Release();
             mWindowManagerMock = nullptr;
         }
 	
