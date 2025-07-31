@@ -1009,7 +1009,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
                 return Core::ERROR_NONE;
           }));
 
-    targetLifecycleState = Exchange::ILifecycleManagerState::LifecycleState::INITIALIZING;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
@@ -1054,7 +1054,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
                 return Core::ERROR_NONE;
           }));
 
-    targetLifecycleState = Exchange::ILifecycleManagerState::LifecycleState::INITIALIZING;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
@@ -1100,7 +1100,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
                 return Core::ERROR_NONE;
           }));
 
-    targetLifecycleState = Exchange::ILifecycleManagerState::LifecycleState::INITIALIZING;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
@@ -1144,7 +1144,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
                 return Core::ERROR_NONE;
           }));
 
-    targetLifecycleState = Exchange::ILifecycleManagerState::LifecycleState::INITIALIZING;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
@@ -1194,7 +1194,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
                 return Core::ERROR_NONE;
           }));  
 
-    targetLifecycleState = Exchange::ILifecycleManagerState::LifecycleState::ACTIVE;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
@@ -1244,7 +1244,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
                 return Core::ERROR_NONE;
           }));  
 
-    targetLifecycleState = Exchange::ILifecycleManagerState::LifecycleState::ACTIVE;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
@@ -1294,7 +1294,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
                 return Core::ERROR_NONE;
           }));  
 
-    targetLifecycleState = Exchange::ILifecycleManagerState::LifecycleState::ACTIVE;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
