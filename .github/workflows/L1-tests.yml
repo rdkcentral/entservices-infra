@@ -691,7 +691,7 @@ jobs:
           filtered_coverage.info
 
       - name: Upload artifacts
-        if: ${{ !env.ACT }} && always()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
