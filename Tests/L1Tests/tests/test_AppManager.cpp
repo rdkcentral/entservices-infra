@@ -442,7 +442,6 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
 
         void OnAppLaunchRequest(const string& appId, const string& intent, const string& source)
         {
-            TEST_LOG("VEEKSHA ENTERED OnAppLaunchRequest with appId: %s, intent: %s, source: %s", appId.c_str(), intent.c_str(), source.c_str());
             std::unique_lock<std::mutex> lock(m_mutex);
             EXPECT_STREQ(m_expectedEvent.appId.c_str(), appId.c_str());
             EXPECT_STREQ(m_expectedEvent.intent.c_str(), intent.c_str());
@@ -901,6 +900,8 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
     expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
     expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+    expectedEvent.intent = APPMANAGER_APP_INTENT;
+    expectedEvent.source = "";
     Core::Sink<NotificationHandler> notification;
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
@@ -913,6 +914,10 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
     notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
+    EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
+    /* Reset the signalled flag for next use */
+    signalled = AppManager_StateInvalid;
     mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
         APPMANAGER_APP_ID,
         APPMANAGER_APP_INSTANCE,
@@ -949,10 +954,12 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSuccess)
 TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
 {
     Core::hresult status;
-
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    Core::Event onAppLifecycleStateChanged(false, true);
+    Core::Event onAppLaunchRequest(false, true);
+    std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) +
+                          "\", \"intent\": \"" + std::string(APPMANAGER_APP_INTENT) +
+                          "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
 
     EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
         .Times(1)
@@ -960,23 +967,33 @@ TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
             [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
                 std::string text;
                 EXPECT_TRUE(json->ToString(text));
-                const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLifecycleStateChanged\",\"params\":{\"appId\":\"com.test.app\",\"appInstanceId\":\"testAppInstance\",\"newState\":\"APP_STATE_ACTIVE\",\"oldState\":\"APP_STATE_PAUSED\",\"errorReason\":\"APP_ERROR_NONE\"}}";
+                const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLaunchRequest\",\"params\":{\"appId\":\"com.test.app\",\"intent\":\"test.intent\",\"source\":\"\"}}";
                 EXPECT_EQ(text, expectedJson);
-                onAppLifecycleStateChanged.SetEvent();
-
+                onAppLaunchRequest.SetEvent();
                 return Core::ERROR_NONE;
             }));
-
-    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
-
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
-    std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) +
-                          "\", \"intent\": \"" + std::string(APPMANAGER_APP_INTENT) +
-                          "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
-
+    EVENT_SUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("launchApp"), request, mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, onAppLaunchRequest.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
+
+    Core::Event onAppLifecycleStateChanged(false, true);
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+    .Times(1)
+    .WillOnce(::testing::Invoke(
+        [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+            std::string text;
+            EXPECT_TRUE(json->ToString(text));
+            const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLifecycleStateChanged\",\"params\":{\"appId\":\"com.test.app\",\"appInstanceId\":\"testAppInstance\",\"newState\":\"APP_STATE_ACTIVE\",\"oldState\":\"APP_STATE_PAUSED\",\"errorReason\":\"APP_ERROR_NONE\"}}";
+            EXPECT_EQ(text, expectedJson);
+            onAppLifecycleStateChanged.SetEvent();
+
+            return Core::ERROR_NONE;
+        }));
     ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
         << "LifecycleManagerState notification callback is not registered";
+    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
     mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
         APPMANAGER_APP_ID,
         APPMANAGER_APP_INSTANCE,
@@ -990,8 +1007,6 @@ TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
         releaseResources();
     }
 }
-
-
 
 /* * Test Case for LaunchAppUsingCOMRPCSuspendedSuccess
  * Setting up AppManager/LifecycleManager/LifecycleManagerState/PersistentStore/PackageManagerRDKEMS Plugin and creating required JSON-RPC resources
@@ -1398,23 +1413,39 @@ TEST_F(AppManagerTest, CloseAppUsingJSONRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    Core::Event onAppLifecycleStateChanged(false, true);
-    Core::Sink<NotificationHandler> notification;
-    uint32_t signalled = AppManager_StateInvalid;
-    ExpectedAppLifecycleEvent expectedEvent;
-    expectedEvent.appId = APPMANAGER_APP_ID;
-    expectedEvent.intent = APPMANAGER_APP_INTENT;
-    expectedEvent.source = "";
+    Core::Event onAppLaunchRequest(false, true);
 
-    mAppManagerImpl->Register(&notification);
-    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
     appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
-    std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\"}";
+    std::string requestClose = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\"}";
+    std::string requestLaunch = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) +
+                          "\", \"intent\": \"" + std::string(APPMANAGER_APP_INTENT) +
+                          "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
 
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                std::string text;
+                EXPECT_TRUE(json->ToString(text));
+                const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLaunchRequest\",\"params\":{\"appId\":\"com.test.app\",\"intent\":\"test.intent\",\"source\":\"\"}}";
+                EXPECT_EQ(text, expectedJson);
+                onAppLaunchRequest.SetEvent();
+                return Core::ERROR_NONE;
+            }));
 
+    EVENT_SUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
+    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("launchApp"), requestLaunch, mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, onAppLaunchRequest.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
+    
+    // Simulate the app lifecycle state change event
+    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("closeApp"), requestClose, mJsonRpcResponse));
+    Core::Event onAppLifecycleStateChanged(false, true);
     EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
         .Times(1)
         .WillOnce(::testing::Invoke(
@@ -1426,19 +1457,7 @@ TEST_F(AppManagerTest, CloseAppUsingJSONRpcSuccess)
                 onAppLifecycleStateChanged.SetEvent();
                 return Core::ERROR_NONE;
             }));
-
-    EVENT_SUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
-
-    /* Register the notification handler */
-    mAppManagerImpl->Register(&notification);
-    notification.SetExpectedEvent(expectedEvent);
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
-    EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
-
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("closeApp"), request, mJsonRpcResponse));
+    
     ASSERT_NE(mLifecycleManagerStateNotification_cb, nullptr)
     << "LifecycleManagerState notification callback is not registered";
     mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
@@ -1450,7 +1469,7 @@ TEST_F(AppManagerTest, CloseAppUsingJSONRpcSuccess)
     );
     EXPECT_EQ(Core::ERROR_NONE, onAppLifecycleStateChanged.Lock());
     EVENT_UNSUBSCRIBE(0, _T("onAppLifecycleStateChanged"), _T("org.rdk.AppManager"), message);
-    mAppManagerImpl->Unregister(&notification);
+
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1476,10 +1495,10 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuspendedStateSuccess)
 
     Plugin::AppManagerImplementation::AppInfo appInfo;
     appInfo.appInstanceId = APPMANAGER_APP_INSTANCE;
-    appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
+    appInfo.appNewState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
     mAppManagerImpl->mAppInfo[APPMANAGER_APP_ID] = appInfo;
 
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::SUSPENDED);
+    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, struct stat* info) {
             // Simulate a successful stat call
@@ -1524,6 +1543,7 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcFailureWrongAppID)
     expectedEvent.source = "";
 
     mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
@@ -1563,6 +1583,7 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcFailureSetTargetAppStateReturnError)
     expectedEvent.source = "";
 
     mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
@@ -1662,25 +1683,32 @@ TEST_F(AppManagerTest, TerminateAppUsingJSONRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    Core::Sink<NotificationHandler> notification;
-    uint32_t signalled = AppManager_StateInvalid;
-    ExpectedAppLifecycleEvent expectedEvent;
-    expectedEvent.appId = APPMANAGER_APP_ID;
-    expectedEvent.intent = APPMANAGER_APP_INTENT;
-    expectedEvent.source = "";
-
-    mAppManagerImpl->Register(&notification);
-    notification.SetExpectedEvent(expectedEvent);
+    Core::Event onAppLaunchRequest(false, true);
+    std::string requestLaunch = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) +
+                        "\", \"intent\": \"" + std::string(APPMANAGER_APP_INTENT) +
+                        "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+    .Times(1)
+    .WillOnce(::testing::Invoke(
+        [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+            std::string text;
+            EXPECT_TRUE(json->ToString(text));
+            const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLaunchRequest\",\"params\":{\"appId\":\"com.test.app\",\"intent\":\"test.intent\",\"source\":\"\"}}";
+            EXPECT_EQ(text, expectedJson);
+            onAppLaunchRequest.SetEvent();
+            return Core::ERROR_NONE;
+        }
+    ));
+    EVENT_SUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
-    EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("launchApp"), requestLaunch, mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, onAppLaunchRequest.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
     UnloadAppAndUnlock();
 
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("terminateApp"), request, mJsonRpcResponse));
 
-    mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -1930,25 +1958,33 @@ TEST_F(AppManagerTest, KillAppUsingJSONRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    Core::Sink<NotificationHandler> notification;
-    uint32_t signalled = AppManager_StateInvalid;
-    ExpectedAppLifecycleEvent expectedEvent;
-    expectedEvent.appId = APPMANAGER_APP_ID;
-    expectedEvent.intent = APPMANAGER_APP_INTENT;
-    expectedEvent.source = "";
-
-    mAppManagerImpl->Register(&notification);
-    notification.SetExpectedEvent(expectedEvent);
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
-    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
-    EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
-    UnloadAppAndUnlock();
-
+    Core::Event onAppLaunchRequest(false, true);
+    std::string requestLaunch = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) +
+                          "\", \"intent\": \"" + std::string(APPMANAGER_APP_INTENT) +
+                          "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\"}";
+
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+    .Times(1)
+    .WillOnce(::testing::Invoke(
+        [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+            std::string text;
+            EXPECT_TRUE(json->ToString(text));
+            const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLaunchRequest\",\"params\":{\"appId\":\"com.test.app\",\"intent\":\"test.intent\",\"source\":\"\"}}";
+            EXPECT_EQ(text, expectedJson);
+            onAppLaunchRequest.SetEvent();
+            return Core::ERROR_NONE;
+        }
+    ));
+
+    EVENT_SUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
+    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("launchApp"), requestLaunch, mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, onAppLaunchRequest.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
+    
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("killApp"), request, mJsonRpcResponse));
 
-    mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -2078,25 +2114,33 @@ TEST_F(AppManagerTest, SendIntentUsingJSONRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
-    Core::Sink<NotificationHandler> notification;
-    uint32_t signalled = AppManager_StateInvalid;
-    ExpectedAppLifecycleEvent expectedEvent;
-    expectedEvent.appId = APPMANAGER_APP_ID;
-    expectedEvent.intent = APPMANAGER_APP_INTENT;
-    expectedEvent.source = "";
+    Core::Event onAppLaunchRequest(false, true);
+    std::string requestLaunch = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) +
+                          "\", \"intent\": \"" + std::string(APPMANAGER_APP_INTENT) +
+                          "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
+    std::string requestintent = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\", \"intent\": \"" + std::string(APPMANAGER_APP_INTENT) + "\"}";
 
-    mAppManagerImpl->Register(&notification);
-    notification.SetExpectedEvent(expectedEvent);
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+    .Times(1)
+    .WillOnce(::testing::Invoke(
+        [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+            std::string text;
+            EXPECT_TRUE(json->ToString(text));
+            const std::string expectedJson = "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.AppManager.onAppLaunchRequest\",\"params\":{\"appId\":\"com.test.app\",\"intent\":\"test.intent\",\"source\":\"\"}}";
+            EXPECT_EQ(text, expectedJson);
+            onAppLaunchRequest.SetEvent();
+            return Core::ERROR_NONE;
+        }
+    ));
+
+    EVENT_SUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("launchApp"), requestLaunch, mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, onAppLaunchRequest.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppLaunchRequest"), _T("org.rdk.AppManager"), message);
+    
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("sendIntent"), requestintent, mJsonRpcResponse));
 
-    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
-    EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
-
-    std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\", \"intent\": \"" + std::string(APPMANAGER_APP_INTENT) + "\"}";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("sendIntent"), request, mJsonRpcResponse));
-
-    mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
