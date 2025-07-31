@@ -440,9 +440,9 @@ class NotificationHandler : public Exchange::IAppManager::INotification {
             m_condition_variable.notify_one();
         }
 
-        void OnAppLaunchRequest(const string& appId, const string& appInstanceId)
+        void OnAppLaunchRequest(const string& appId, const string& intent, const string& source)
         {
-            TEST_LOG("VEEKSHA ENTERED OnAppLaunchRequest with appId: %s, appInstanceId: %s source: %s", appId.c_str(), appInstanceId.c_str(), source.c_str());
+            TEST_LOG("VEEKSHA ENTERED OnAppLaunchRequest with appId: %s, intent: %s, source: %s", appId.c_str(), intent.c_str(), source.c_str());
             std::unique_lock<std::mutex> lock(m_mutex);
             EXPECT_STREQ(m_expectedEvent.appId.c_str(), appId.c_str());
             EXPECT_STREQ(m_expectedEvent.intent.c_str(), intent.c_str());
