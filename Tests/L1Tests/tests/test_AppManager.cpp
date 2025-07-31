@@ -2981,3 +2981,29 @@ TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
         releaseResources();
     }
 }
+
+TEST_F(AppManagerTest, handleOnAppUnloadedUsingComRpcSuccess)
+{
+    Core::hresult status;
+    status = createResources();
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    uint32_t signalled = AppManager_StateInvalid;
+    ExpectedAppLifecycleEvent expectedEvent;
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+
+    /* Notification registration*/
+    Core::Sink<NotificationHandler> notification;
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
+    mAppManagerImpl->handleOnAppUnloaded(APPMANAGER_APP_ID, APPMANAGER_APP_INSTANCE);
+
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppUnloaded);
+    EXPECT_TRUE(signalled & AppManager_onAppUnloaded);
+
+    mAppManagerImpl->Unregister(&notification);
+    if(status == Core::ERROR_NONE)
+    {
+        releaseResources();
+    }
+}
