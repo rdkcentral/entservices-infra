@@ -2957,6 +2957,9 @@ TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
     ExpectedAppLifecycleEvent expectedEvent;
     expectedEvent.appId = APPMANAGER_APP_ID;
     expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
 
     /* Notification registration*/
     Core::Sink<NotificationHandler> notification;
@@ -2969,8 +2972,8 @@ TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
         Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
         Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
 
-    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppUnloaded);
-    EXPECT_TRUE(signalled & AppManager_onAppUnloaded);
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
     mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
@@ -2978,4 +2981,3 @@ TEST_F(AppManagerTest, handleOnAppLifecycleStateChangedUsingComRpcSuccess)
         releaseResources();
     }
 }
-
