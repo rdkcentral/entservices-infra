@@ -1067,9 +1067,10 @@ Core::hresult AppManagerImplementation::fetchAppPackageList(std::vector<WPEFrame
             goto End;
         }
 
-        JsonArray packageArray;
-        if (packageArray.FromString(packagesJson))
+        JsonObject rootObj;
+        if (rootObj.FromString(packagesJson) && rootObj.HasLabel("packages"))
         {
+            JsonArray packageArray = rootObj["packages"].Array();
             for (size_t i = 0; i < packageArray.Length(); ++i)
             {
                 JsonObject packageObj = packageArray[i].Object();

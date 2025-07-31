@@ -460,7 +460,10 @@ namespace Plugin {
             packageList.Add(package);
         }
 
-        if (!packageList.ToString(packagesJson)) {
+        JsonObject root;
+        root["packages"] = packageList;
+
+        if (!root.ToString(packagesJson)) {
             LOGERR("Failed to stringify package list to JSON");
             result = Core::ERROR_GENERAL;
         }
