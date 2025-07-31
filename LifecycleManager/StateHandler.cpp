@@ -203,11 +203,13 @@ namespace WPEFramework
                 if (!isStateTerminating)
 		{
                     result = updateState(context, statePath[stateIndex], errorReason);
-                printf("StateHandler::changeState: %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
-                if (!result)
+                if(result)
                 {
-                    printf("StateHandler::changeState: Failed to change state to %s\n", mStateStrings[statePath[stateIndex]].c_str());
-                    printf("errorReason %s", errorReason.c_str());
+                    printf("StateHandler::changeState: Success %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                }
+                else
+                {
+                    printf("StateHandler::changeState: Failed to change state from %s to %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
                     break;
                 }
                 fflush(stdout);
@@ -241,11 +243,13 @@ namespace WPEFramework
                 if (isStateTerminating)
             {
                 result = updateState(context, statePath[stateIndex], errorReason);
-                printf("StateHandler::changeState: %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
-                if (!result)
+                if(result)
                 {
-                    printf("StateHandler::changeState: Failed to change state to %s\n", mStateStrings[statePath[stateIndex]].c_str());
-                    printf("errorReason %s", errorReason.c_str());
+                    printf("StateHandler::changeState:Terminating: Success %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                }
+                else
+                {
+                    printf("StateHandler::changeState:Terminating: Failed to change state from %s to %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
                     break;
                 }
                 fflush(stdout);
