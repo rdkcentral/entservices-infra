@@ -649,7 +649,7 @@ jobs:
           rm -rf $(pwd)/rdkL1TestResults.json
 
       - name: Run unit tests with valgrind
-        if: ${{ !env.ACT }}
+        if: ${{ !env.ACT }} 
         run: |
           export PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
@@ -666,7 +666,7 @@ jobs:
           rm -rf $(pwd)/rdkL1TestResults.json
 
       - name: Generate coverage
-        if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
+        if: always()
         run: >
           cp $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/.lcovrc_l1 ~/.lcovrc
           &&
