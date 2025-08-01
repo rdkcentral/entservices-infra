@@ -935,7 +935,7 @@ TEST_F(UserSettingTest, onLiveWatershedEvent)
     TEST_LOG("Testing LiveWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onLiveWatershedChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool liveWatershed = parameters["liveWatershed"].Boolean();
                                            TEST_LOG("onLiveWatershedChanged callback triggered with value: %d", liveWatershed);
                                            async_handler.onLiveWatershedChanged(liveWatershed);
@@ -988,7 +988,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
     TEST_LOG("Testing VoiceGuidanceHintsSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceHintsChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool hints = parameters["hints"].Boolean();
                                            TEST_LOG("onVoiceGuidanceHintsChanged callback triggered with value: %d", hints);
                                            async_handler.onVoiceGuidanceHintsChanged(hints);
@@ -1042,7 +1042,7 @@ TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
     TEST_LOG("Testing AudioDescriptionSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onAudioDescriptionChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool enabled = parameters["enabled"].Boolean();
                                            TEST_LOG("onAudioDescriptionChanged callback triggered with value: %d", enabled);
                                            async_handler.onAudioDescriptionChanged(enabled);
@@ -1099,7 +1099,7 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
     TEST_LOG("Testing PreferredAudioLanguagesSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredAudioLanguagesChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
+                                           [&async_handler,&wg](const JsonObject& parameters) {
                                            string preferredLanguages = parameters["preferredLanguages"].String();
                                            TEST_LOG("onPreferredAudioLanguagesChanged callback triggered with value: %s", preferredLanguages.c_str());
                                            async_handler.onPreferredAudioLanguagesChanged(preferredLanguages);
@@ -1156,7 +1156,7 @@ TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
     TEST_LOG("Testing PresentationLanguageSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPresentationLanguageChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
+                                           [&async_handler,&wg](const JsonObject& parameters) {
                                            string presentationLanguage = parameters["presentationLanguage"].String();
                                            TEST_LOG("onPresentationLanguageChanged callback triggered with value: %s", presentationLanguage.c_str());
                                            async_handler.onPresentationLanguageChanged(presentationLanguage);
@@ -1208,7 +1208,7 @@ TEST_F(UserSettingTest, onCaptionsChangedEvent)
     TEST_LOG("Testing SetCaptionsSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onCaptionsChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool enabled = parameters["enabled"].Boolean();
                                            TEST_LOG("onCaptionsChanged callback triggered with value: %d", enabled);
                                            async_handler.onCaptionsChanged(enabled);
@@ -1264,7 +1264,7 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
     TEST_LOG("Testing SetPreferredCaptionsLanguagesSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredCaptionsLanguagesChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
+                                           [&async_handler,&wg](const JsonObject& parameters) {
                                            string preferredCaptionsLanguages = parameters["preferredLanguages"].String();
                                            TEST_LOG("onPreferredCaptionsLanguagesChanged callback triggered with value: %s", preferredCaptionsLanguages.c_str());
                                            async_handler.onPreferredCaptionsLanguagesChanged(preferredCaptionsLanguages);
@@ -1318,7 +1318,7 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
     TEST_LOG("Testing SetPreferredClosedCaptionServiceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredClosedCaptionServiceChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
+                                           [&async_handler,&wg](const JsonObject& parameters) {
                                            string preferredService = parameters["service"].String();
                                            TEST_LOG("onPreferredClosedCaptionServiceChanged callback triggered with value: %s", preferredService.c_str());
                                            async_handler.onPreferredClosedCaptionServiceChanged(preferredService);
@@ -1370,7 +1370,7 @@ TEST_F(UserSettingTest, onPinControlChangedEvent)
     TEST_LOG("Testing PinControl Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPinControlChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool pinControl = parameters["pinControl"].Boolean();
                                            TEST_LOG("onPinControlChanged callback triggered with value: %d", pinControl);
                                            async_handler.onPinControlChanged(pinControl);
@@ -1430,7 +1430,7 @@ TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
     TEST_LOG("Testing SetViewingRestrictions Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
+                                           [&async_handler,&wg](const JsonObject& parameters) {
                                            string viewRes = parameters["viewingRestrictions"].String();
                                            TEST_LOG("onViewingRestrictionsChanged callback triggered with value: %s", viewRes.c_str());
                                            async_handler.onViewingRestrictionsChanged(viewRes);
@@ -1483,7 +1483,7 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
     TEST_LOG("Testing SetViewingRestrictionsWindow Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsWindowChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
+                                           [&async_handler,&wg](const JsonObject& parameters) {
                                            string viewResWindow = parameters["viewingRestrictionsWindow"].String();
                                            TEST_LOG("onViewingRestrictionsWindowChanged callback triggered with value: %s", viewResWindow.c_str());
                                            async_handler.onViewingRestrictionsWindowChanged(viewResWindow);
@@ -1535,7 +1535,7 @@ TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
     TEST_LOG("Testing PlaybackWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPlaybackWatershedChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool playbackWatershed = parameters["playbackWatershed"].Boolean();
                                            TEST_LOG("onPlaybackWatershedChanged callback triggered with value: %d", playbackWatershed);
                                            async_handler.onPlaybackWatershedChanged(playbackWatershed);
@@ -1591,7 +1591,7 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
     TEST_LOG("Testing BlockNotRatedContent Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onBlockNotRatedContentChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool blockNotRatedContent = parameters["blockNotRatedContent"].Boolean();
                                            TEST_LOG("onBlockNotRatedContentChanged callback triggered with value: %d", blockNotRatedContent);
                                            async_handler.onBlockNotRatedContentChanged(blockNotRatedContent);
@@ -1646,7 +1646,7 @@ TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
     TEST_LOG("Testing PinOnPurchase Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPinOnPurchaseChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool pinOnPurchase = parameters["pinOnPurchase"].Boolean();
                                            TEST_LOG("onPinOnPurchaseChanged callback triggered with value: %d", pinOnPurchase);
                                            async_handler.onPinOnPurchaseChanged(pinOnPurchase);
@@ -1701,7 +1701,7 @@ TEST_F(UserSettingTest, onHighContrastChangedEvent)
     TEST_LOG("Testing HighContrastSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onHighContrastChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool enabled = parameters["enabled"].Boolean();
                                            TEST_LOG("onHighContrastChanged callback triggered with value: %d", enabled);
                                            async_handler.onHighContrastChanged(enabled);
@@ -1756,7 +1756,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
     TEST_LOG("Testing VoiceGuidanceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool enabled = parameters["enabled"].Boolean();
                                            TEST_LOG("onVoiceGuidanceChanged callback triggered with value: %d", enabled);
                                            async_handler.onVoiceGuidanceChanged(enabled);
@@ -1812,7 +1812,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
     TEST_LOG("Testing VoiceGuidanceRateSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceRateChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            double rate = parameters["rate"].Double();
                                            TEST_LOG("onVoiceGuidanceRateChanged callback triggered with value: %f", rate);
                                            async_handler.onVoiceGuidanceRateChanged(rate);
@@ -1868,7 +1868,7 @@ TEST_F(UserSettingTest, onContentPinChangedEvent)
     TEST_LOG("Testing SetContentPin and GetContentPin methods");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onContentPinChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
+                                           [&async_handler,&wg](const JsonObject& parameters) {
                                            string contentPin = parameters["contentPin"].String();
                                            TEST_LOG("onContentPinChanged callback triggered with value: %s", contentPin.c_str());
                                            async_handler.onContentPinChanged(contentPin);
