@@ -40,8 +40,8 @@ class JQWrapper {
     }
 
     void test() {
-        string jq_rule = "{ DialApp, WanLanAccess }";
-        string json = R"({"DialApp": "0", "Suspendable": "1", "Hibernatable": "1", "WanLanAccess": "1"})";
+        string jq_rule = "{ first }";
+        string json = R"({"first": "Suresh", "last": "Kumar"})";
 
         string result = compile(jq_rule, json);
         printf("jq output: %s\n", result.c_str());

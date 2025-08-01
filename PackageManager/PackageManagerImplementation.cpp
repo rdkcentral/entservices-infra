@@ -48,9 +48,9 @@ namespace Plugin {
 
         // Define the rule, build time or runtime
         string jq_rule = "{ DialApp, WanLanAccess }";
-        string json = R"({"DialApp": "0", "Suspendable": "1", "Hibernatable": "1", "WanLanAccess": "1"})";
+        string caps_json = R"({"DialApp": "0", "Suspendable": "1", "Hibernatable": "1", "WanLanAccess": "1"})";
         JQWrapper jq;
-        string result = jq.compile(jq_rule, json);
+        string result = jq.compile(jq_rule, caps_json);
         printf("jq output: %s\n", result.c_str());
     }
 
