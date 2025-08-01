@@ -888,9 +888,6 @@ TEST_F(UserSettingTest, onLiveWatershedEvent)
     bool playbackWatershed = true;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onLiveWatershedChanged(MatchRequestStatusBool(liveWatershed)))
-    .WillOnce(Invoke(this, &UserSettingTest::onLiveWatershedChanged));
-
     TEST_LOG("Testing LiveWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onLiveWatershedChanged"),
@@ -899,6 +896,9 @@ TEST_F(UserSettingTest, onLiveWatershedEvent)
                                            async_handler.onLiveWatershedChanged(liveWatershed);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onLiveWatershedChanged(MatchRequestStatusBool(liveWatershed)))
+    .WillOnce(Invoke(this, &UserSettingTest::onLiveWatershedChanged));
 
     JsonObject paramsLiveWatershed;
     paramsLiveWatershed["liveWatershed"] = true;
@@ -934,9 +934,6 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
     Core::JSON::Boolean result_bool;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onVoiceGuidanceHintsChanged(MatchRequestStatusBool(hints)))
-    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceHintsChanged));
-
     TEST_LOG("Testing VoiceGuidanceHintsSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceHintsChanged"),
@@ -945,6 +942,9 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
                                            async_handler.onVoiceGuidanceHintsChanged(hints);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceHintsChanged(MatchRequestStatusBool(hints)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceHintsChanged));
 
     JsonObject paramsVoiceGuidanceHints;
     paramsVoiceGuidanceHints["hints"] = true;
@@ -981,9 +981,6 @@ TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
     Core::JSON::Boolean result_bool;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onAudioDescriptionChanged(MatchRequestStatusBool(enabled)))
-    .WillOnce(Invoke(this, &UserSettingTest::onAudioDescriptionChanged));
-
     TEST_LOG("Testing AudioDescriptionSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onAudioDescriptionChanged"),
@@ -992,6 +989,9 @@ TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
                                            async_handler.onAudioDescriptionChanged(enabled);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onAudioDescriptionChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onAudioDescriptionChanged));
 
     JsonObject paramsAudioDes;
     paramsAudioDes["enabled"] = true;
@@ -1031,9 +1031,6 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onPreferredAudioLanguagesChanged(MatchRequestStatusString(preferredLanguages)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPreferredAudioLanguagesChanged));
-
     TEST_LOG("Testing PreferredAudioLanguagesSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredAudioLanguagesChanged"),
@@ -1042,6 +1039,9 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
                                            async_handler.onPreferredAudioLanguagesChanged(preferredLanguages);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPreferredAudioLanguagesChanged(MatchRequestStatusString(preferredLanguages)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPreferredAudioLanguagesChanged));
 
     JsonObject paramsAudioLanguage;
     paramsAudioLanguage["preferredLanguages"] = preferredLanguages;
@@ -1081,9 +1081,6 @@ TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onPresentationLanguageChanged(MatchRequestStatusString(presentationLanguage)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPresentationLanguageChanged));
-
     TEST_LOG("Testing PresentationLanguageSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPresentationLanguageChanged"),
@@ -1092,6 +1089,9 @@ TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
                                            async_handler.onPresentationLanguageChanged(presentationLanguage);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPresentationLanguageChanged(MatchRequestStatusString(presentationLanguage)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPresentationLanguageChanged));
 
     JsonObject paramsPresLanguage;
     paramsPresLanguage["presentationLanguage"] = presentationLanguage;
@@ -1126,9 +1126,6 @@ TEST_F(UserSettingTest, onCaptionsChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-   EXPECT_CALL(async_handler, onCaptionsChanged(MatchRequestStatusBool(enabled)))
-    .WillOnce(Invoke(this, &UserSettingTest::onCaptionsChanged));
-
     TEST_LOG("Testing SetCaptionsSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onCaptionsChanged"),
@@ -1137,6 +1134,9 @@ TEST_F(UserSettingTest, onCaptionsChangedEvent)
                                            async_handler.onCaptionsChanged(enabled);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onCaptionsChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onCaptionsChanged));
 
     JsonObject paramsCaptions;
     paramsCaptions["enabled"] = true;
@@ -1175,9 +1175,6 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onPreferredCaptionsLanguagesChanged(MatchRequestStatusString(preferredCaptionsLanguages)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPreferredCaptionsLanguagesChanged));
-
     TEST_LOG("Testing SetPreferredCaptionsLanguagesSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredCaptionsLanguagesChanged"),
@@ -1186,6 +1183,9 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
                                            async_handler.onPreferredCaptionsLanguagesChanged(preferredCaptionsLanguages);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPreferredCaptionsLanguagesChanged(MatchRequestStatusString(preferredCaptionsLanguages)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPreferredCaptionsLanguagesChanged));
 
     JsonObject paramsPrefLang;
     paramsPrefLang["preferredLanguages"] = preferredCaptionsLanguages;
@@ -1222,9 +1222,6 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onPreferredClosedCaptionServiceChanged(MatchRequestStatusString(preferredService)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPreferredClosedCaptionServiceChanged));
-
     TEST_LOG("Testing SetPreferredClosedCaptionServiceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredClosedCaptionServiceChanged"),
@@ -1233,6 +1230,9 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
                                            async_handler.onPreferredClosedCaptionServiceChanged(preferredService);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPreferredClosedCaptionServiceChanged(MatchRequestStatusString(preferredService)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPreferredClosedCaptionServiceChanged));
 
     JsonObject paramspreferredService;
     paramspreferredService["service"] = preferredService;
@@ -1266,9 +1266,6 @@ TEST_F(UserSettingTest, onPinControlChangedEvent)
     Core::JSON::Boolean result_bool;
     JsonObject result_json;
     JsonObject paramsMigrationState;
-
-    EXPECT_CALL(async_handler, onPinControlChanged(MatchRequestStatusBool(pinControl)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPinControlChanged));
     
     TEST_LOG("Testing PinControl Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1278,6 +1275,9 @@ TEST_F(UserSettingTest, onPinControlChangedEvent)
                                            async_handler.onPinControlChanged(pinControl);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPinControlChanged(MatchRequestStatusBool(pinControl)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPinControlChanged));
 
     JsonObject paramsPinControl;
     paramsPinControl["pinControl"] = true;
@@ -1320,9 +1320,6 @@ TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
 
     string viewRes = "{\"restrictions\": [{\"scheme\": \"US_TV\", \"restrict\": [\"TV-Y7/FV\"]}, {\"scheme\": \"MPAA\", \"restrict\": []}]}";
 
-    EXPECT_CALL(async_handler, onViewingRestrictionsChanged(MatchRequestStatusString(viewRes)))
-    .WillOnce(Invoke(this, &UserSettingTest::onViewingRestrictionsChanged));
-
     TEST_LOG("Testing SetViewingRestrictions Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsChanged"),
@@ -1331,6 +1328,9 @@ TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
                                            async_handler.onViewingRestrictionsChanged(viewRes);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onViewingRestrictionsChanged(MatchRequestStatusString(viewRes)))
+    .WillOnce(Invoke(this, &UserSettingTest::onViewingRestrictionsChanged));
 
     JsonObject paramsViewRestrictions;
     paramsViewRestrictions["viewingRestrictions"] = viewRes;
@@ -1366,9 +1366,6 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
 
     string viewResWindow = "ALWAYS";
 
-    EXPECT_CALL(async_handler, onViewingRestrictionsWindowChanged(MatchRequestStatusString(viewResWindow)))
-    .WillOnce(Invoke(this, &UserSettingTest::onViewingRestrictionsWindowChanged));
-
     TEST_LOG("Testing SetViewingRestrictionsWindow Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsWindowChanged"),
@@ -1377,6 +1374,9 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
                                            async_handler.onViewingRestrictionsWindowChanged(viewResWindow);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onViewingRestrictionsWindowChanged(MatchRequestStatusString(viewResWindow)))
+    .WillOnce(Invoke(this, &UserSettingTest::onViewingRestrictionsWindowChanged));
 
     JsonObject paramsViewResWindow;
     paramsViewResWindow["viewingRestrictionsWindow"] = viewResWindow;
@@ -1411,9 +1411,6 @@ TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onPlaybackWatershedChanged(MatchRequestStatusBool(playbackWatershed)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPlaybackWatershedChanged));
-
     TEST_LOG("Testing PlaybackWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPlaybackWatershedChanged"),
@@ -1422,6 +1419,9 @@ TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
                                            async_handler.onPlaybackWatershedChanged(playbackWatershed);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPlaybackWatershedChanged(MatchRequestStatusBool(playbackWatershed)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPlaybackWatershedChanged));
 
     JsonObject paramsPlaybackWatershed;
     paramsPlaybackWatershed["playbackWatershed"] = true;
@@ -1460,9 +1460,6 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onBlockNotRatedContentChanged(MatchRequestStatusBool(blockNotRatedContent)))
-    .WillOnce(Invoke(this, &UserSettingTest::onBlockNotRatedContentChanged));
-
     TEST_LOG("Testing BlockNotRatedContent Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onBlockNotRatedContentChanged"),
@@ -1471,6 +1468,9 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
                                            async_handler.onBlockNotRatedContentChanged(blockNotRatedContent);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onBlockNotRatedContentChanged(MatchRequestStatusBool(blockNotRatedContent)))
+    .WillOnce(Invoke(this, &UserSettingTest::onBlockNotRatedContentChanged));
 
     JsonObject paramsBlockNotRatedContent;
     paramsBlockNotRatedContent["blockNotRatedContent"] = true;
@@ -1508,9 +1508,6 @@ TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onPinOnPurchaseChanged(MatchRequestStatusBool(pinOnPurchase)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPinOnPurchaseChanged));
-
     TEST_LOG("Testing PinOnPurchase Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPinOnPurchaseChanged"),
@@ -1519,6 +1516,9 @@ TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
                                            async_handler.onPinOnPurchaseChanged(pinOnPurchase);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPinOnPurchaseChanged(MatchRequestStatusBool(pinOnPurchase)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPinOnPurchaseChanged));
 
     JsonObject paramsPinOnPurchase;
     paramsPinOnPurchase["pinOnPurchase"] = true;
@@ -1556,9 +1556,6 @@ TEST_F(UserSettingTest, onHighContrastChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onHighContrastChanged(MatchRequestStatusBool(enabled)))
-    .WillOnce(Invoke(this, &UserSettingTest::onHighContrastChanged));
-
     TEST_LOG("Testing HighContrastSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onHighContrastChanged"),
@@ -1567,6 +1564,9 @@ TEST_F(UserSettingTest, onHighContrastChangedEvent)
                                            async_handler.onHighContrastChanged(enabled);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onHighContrastChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onHighContrastChanged));
 
     JsonObject paramsHighContrast;
     paramsHighContrast["enabled"] = true;
@@ -1604,9 +1604,6 @@ TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onVoiceGuidanceChanged(MatchRequestStatusBool(enabled)))
-    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceChanged));
-
     TEST_LOG("Testing VoiceGuidanceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceChanged"),
@@ -1615,6 +1612,9 @@ TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
                                            async_handler.onVoiceGuidanceChanged(enabled);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceChanged));
 
     JsonObject paramsVoiceGuidance;
     paramsVoiceGuidance["enabled"] = true;
@@ -1653,9 +1653,6 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onVoiceGuidanceRateChanged(MatchRequestStatusDouble(rate)))
-    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceRateChanged));
-
     TEST_LOG("Testing VoiceGuidanceRateSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceRateChanged"),
@@ -1664,6 +1661,9 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
                                            async_handler.onVoiceGuidanceRateChanged(rate);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceRateChanged(MatchRequestStatusDouble(rate)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceRateChanged));
 
     JsonObject paramsVoiceGuidanceRate;
     paramsVoiceGuidanceRate["rate"] = rate;
@@ -1702,9 +1702,6 @@ TEST_F(UserSettingTest, onContentPinChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
-    EXPECT_CALL(async_handler, onContentPinChanged(MatchRequestStatusString(contentPin)))
-    .WillOnce(Invoke(this, &UserSettingTest::onContentPinChanged));
-
     TEST_LOG("Testing SetContentPin and GetContentPin methods");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onContentPinChanged"),
@@ -1713,6 +1710,9 @@ TEST_F(UserSettingTest, onContentPinChangedEvent)
                                            async_handler.onContentPinChanged(contentPin);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onContentPinChanged(MatchRequestStatusString(contentPin)))
+    .WillOnce(Invoke(this, &UserSettingTest::onContentPinChanged));
 
     JsonObject paramsContentPin;
     paramsContentPin["contentPin"] = contentPin;
