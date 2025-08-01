@@ -194,8 +194,8 @@ namespace WPEFramework
 			if (nullptr != runtimeManagerHandler)
 			{
                             string runtimeStats("");
-                            Core::hresult runtimeStatsResult = runtimeManagerHandler->getRuntimeStats(context->getAppInstanceId(), runtimeStats);
-                            if (Core::ERROR_NONE == runtimeStatsResult)
+                            bool runtimeStatsResult = runtimeManagerHandler->getRuntimeStats(context->getAppInstanceId(), runtimeStats);
+                            if (true == runtimeStatsResult)
                             {
                                 appData["runtimeStats"] = runtimeStats;
                             }
