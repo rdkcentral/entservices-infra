@@ -942,6 +942,9 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
     Core::JSON::Boolean result_bool;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing VoiceGuidanceHintsSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceHintsChanged"),
@@ -949,6 +952,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
                                            bool hints = parameters["hints"].Boolean();
                                            TEST_LOG("onVoiceGuidanceHintsChanged callback triggered with value: %d", hints);
                                            async_handler.onVoiceGuidanceHintsChanged(hints);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -959,6 +963,8 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
     paramsVoiceGuidanceHints["hints"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceHints", paramsVoiceGuidanceHints, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+     wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceHintsChanged);
     EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceHintsChanged);
@@ -990,6 +996,9 @@ TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
     Core::JSON::Boolean result_bool;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing AudioDescriptionSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onAudioDescriptionChanged"),
@@ -997,6 +1006,7 @@ TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
                                            bool enabled = parameters["enabled"].Boolean();
                                            TEST_LOG("onAudioDescriptionChanged callback triggered with value: %d", enabled);
                                            async_handler.onAudioDescriptionChanged(enabled);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1007,6 +1017,8 @@ TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
     paramsAudioDes["enabled"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setAudioDescription", paramsAudioDes, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onAudioDescriptionChanged);
     EXPECT_TRUE(signalled & UserSettings_onAudioDescriptionChanged);
@@ -1041,6 +1053,9 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing PreferredAudioLanguagesSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredAudioLanguagesChanged"),
@@ -1048,6 +1063,7 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
                                            string preferredLanguages = parameters["preferredLanguages"].String();
                                            TEST_LOG("onPreferredAudioLanguagesChanged callback triggered with value: %s", preferredLanguages.c_str());
                                            async_handler.onPreferredAudioLanguagesChanged(preferredLanguages);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1058,6 +1074,8 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
     paramsAudioLanguage["preferredLanguages"] = preferredLanguages;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredAudioLanguages", paramsAudioLanguage, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredAudioLanguagesChanged);
     EXPECT_TRUE(signalled & UserSettings_onPreferredAudioLanguagesChanged);
@@ -1092,6 +1110,9 @@ TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing PresentationLanguageSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPresentationLanguageChanged"),
@@ -1099,6 +1120,7 @@ TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
                                            string presentationLanguage = parameters["presentationLanguage"].String();
                                            TEST_LOG("onPresentationLanguageChanged callback triggered with value: %s", presentationLanguage.c_str());
                                            async_handler.onPresentationLanguageChanged(presentationLanguage);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1109,6 +1131,8 @@ TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
     paramsPresLanguage["presentationLanguage"] = presentationLanguage;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setPresentationLanguage", paramsPresLanguage, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+     wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPresentationLanguageChanged);
     EXPECT_TRUE(signalled & UserSettings_onPresentationLanguageChanged);
@@ -1138,6 +1162,9 @@ TEST_F(UserSettingTest, onCaptionsChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing SetCaptionsSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onCaptionsChanged"),
@@ -1145,6 +1172,7 @@ TEST_F(UserSettingTest, onCaptionsChangedEvent)
                                            bool enabled = parameters["enabled"].Boolean();
                                            TEST_LOG("onCaptionsChanged callback triggered with value: %d", enabled);
                                            async_handler.onCaptionsChanged(enabled);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1155,6 +1183,8 @@ TEST_F(UserSettingTest, onCaptionsChangedEvent)
     paramsCaptions["enabled"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setCaptions", paramsCaptions, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onCaptionsChanged);
     EXPECT_TRUE(signalled & UserSettings_onCaptionsChanged);
@@ -1188,6 +1218,9 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing SetPreferredCaptionsLanguagesSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredCaptionsLanguagesChanged"),
@@ -1195,6 +1228,7 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
                                            string preferredCaptionsLanguages = parameters["preferredLanguages"].String();
                                            TEST_LOG("onPreferredCaptionsLanguagesChanged callback triggered with value: %s", preferredCaptionsLanguages.c_str());
                                            async_handler.onPreferredCaptionsLanguagesChanged(preferredCaptionsLanguages);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1205,6 +1239,8 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
     paramsPrefLang["preferredLanguages"] = preferredCaptionsLanguages;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredCaptionsLanguages", paramsPrefLang, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredCaptionsLanguagesChanged);
     EXPECT_TRUE(signalled & UserSettings_onPreferredCaptionsLanguagesChanged);
@@ -1236,6 +1272,9 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing SetPreferredClosedCaptionServiceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onPreferredClosedCaptionServiceChanged"),
@@ -1243,6 +1282,7 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
                                            string preferredService = parameters["service"].String();
                                            TEST_LOG("onPreferredClosedCaptionServiceChanged callback triggered with value: %s", preferredService.c_str());
                                            async_handler.onPreferredClosedCaptionServiceChanged(preferredService);
+                                            wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1253,6 +1293,8 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
     paramspreferredService["service"] = preferredService;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredClosedCaptionService", paramspreferredService, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredClosedCaptionServiceChanged);
     EXPECT_TRUE(signalled & UserSettings_onPreferredClosedCaptionServiceChanged);
@@ -1281,6 +1323,9 @@ TEST_F(UserSettingTest, onPinControlChangedEvent)
     Core::JSON::Boolean result_bool;
     JsonObject result_json;
     JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
     
     TEST_LOG("Testing PinControl Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
@@ -1289,6 +1334,7 @@ TEST_F(UserSettingTest, onPinControlChangedEvent)
                                            bool pinControl = parameters["pinControl"].Boolean();
                                            TEST_LOG("onPinControlChanged callback triggered with value: %d", pinControl);
                                            async_handler.onPinControlChanged(pinControl);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1299,6 +1345,8 @@ TEST_F(UserSettingTest, onPinControlChangedEvent)
     paramsPinControl["pinControl"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setPinControl", paramsPinControl, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPinControlChanged);
     EXPECT_TRUE(signalled & UserSettings_onPinControlChanged);
@@ -1336,6 +1384,9 @@ TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
 
     string viewRes = "{\"restrictions\": [{\"scheme\": \"US_TV\", \"restrict\": [\"TV-Y7/FV\"]}, {\"scheme\": \"MPAA\", \"restrict\": []}]}";
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing SetViewingRestrictions Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsChanged"),
@@ -1343,6 +1394,7 @@ TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
                                            string viewRes = parameters["viewingRestrictions"].String();
                                            TEST_LOG("onViewingRestrictionsChanged callback triggered with value: %s", viewRes.c_str());
                                            async_handler.onViewingRestrictionsChanged(viewRes);
+                                            wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1353,6 +1405,8 @@ TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
     paramsViewRestrictions["viewingRestrictions"] = viewRes;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setViewingRestrictions", paramsViewRestrictions, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onViewingRestrictionsChanged);
     EXPECT_TRUE(signalled & UserSettings_onViewingRestrictionsChanged);
@@ -1383,6 +1437,9 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
 
     string viewResWindow = "ALWAYS";
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing SetViewingRestrictionsWindow Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onViewingRestrictionsWindowChanged"),
@@ -1390,6 +1447,7 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
                                            string viewResWindow = parameters["viewingRestrictionsWindow"].String();
                                            TEST_LOG("onViewingRestrictionsWindowChanged callback triggered with value: %s", viewResWindow.c_str());
                                            async_handler.onViewingRestrictionsWindowChanged(viewResWindow);
+                                            wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1400,6 +1458,8 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
     paramsViewResWindow["viewingRestrictionsWindow"] = viewResWindow;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setViewingRestrictionsWindow", paramsViewResWindow, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+     wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onViewingRestrictionsWindowChanged);
     EXPECT_TRUE(signalled & UserSettings_onViewingRestrictionsWindowChanged);
@@ -1429,6 +1489,9 @@ TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing PlaybackWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPlaybackWatershedChanged"),
@@ -1436,6 +1499,7 @@ TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
                                            bool playbackWatershed = parameters["playbackWatershed"].Boolean();
                                            TEST_LOG("onPlaybackWatershedChanged callback triggered with value: %d", playbackWatershed);
                                            async_handler.onPlaybackWatershedChanged(playbackWatershed);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1446,6 +1510,8 @@ TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
     paramsPlaybackWatershed["playbackWatershed"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setPlaybackWatershed", paramsPlaybackWatershed, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPlaybackWatershedChanged);
     EXPECT_TRUE(signalled & UserSettings_onPlaybackWatershedChanged);
@@ -1479,6 +1545,9 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing BlockNotRatedContent Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onBlockNotRatedContentChanged"),
@@ -1486,6 +1555,7 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
                                            bool blockNotRatedContent = parameters["blockNotRatedContent"].Boolean();
                                            TEST_LOG("onBlockNotRatedContentChanged callback triggered with value: %d", blockNotRatedContent);
                                            async_handler.onBlockNotRatedContentChanged(blockNotRatedContent);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1496,6 +1566,8 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
     paramsBlockNotRatedContent["blockNotRatedContent"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setBlockNotRatedContent", paramsBlockNotRatedContent, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onBlockNotRatedContentChanged);
     EXPECT_TRUE(signalled & UserSettings_onBlockNotRatedContentChanged);
@@ -1528,6 +1600,9 @@ TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing PinOnPurchase Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onPinOnPurchaseChanged"),
@@ -1535,6 +1610,7 @@ TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
                                            bool pinOnPurchase = parameters["pinOnPurchase"].Boolean();
                                            TEST_LOG("onPinOnPurchaseChanged callback triggered with value: %d", pinOnPurchase);
                                            async_handler.onPinOnPurchaseChanged(pinOnPurchase);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1545,6 +1621,8 @@ TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
     paramsPinOnPurchase["pinOnPurchase"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setPinOnPurchase", paramsPinOnPurchase, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPinOnPurchaseChanged);
     EXPECT_TRUE(signalled & UserSettings_onPinOnPurchaseChanged);
@@ -1577,6 +1655,9 @@ TEST_F(UserSettingTest, onHighContrastChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing HighContrastSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onHighContrastChanged"),
@@ -1584,6 +1665,7 @@ TEST_F(UserSettingTest, onHighContrastChangedEvent)
                                            bool enabled = parameters["enabled"].Boolean();
                                            TEST_LOG("onHighContrastChanged callback triggered with value: %d", enabled);
                                            async_handler.onHighContrastChanged(enabled);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1594,6 +1676,8 @@ TEST_F(UserSettingTest, onHighContrastChangedEvent)
     paramsHighContrast["enabled"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setHighContrast", paramsHighContrast, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onHighContrastChanged);
     EXPECT_TRUE(signalled & UserSettings_onHighContrastChanged);
@@ -1626,6 +1710,9 @@ TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing VoiceGuidanceSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceChanged"),
@@ -1633,6 +1720,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
                                            bool enabled = parameters["enabled"].Boolean();
                                            TEST_LOG("onVoiceGuidanceChanged callback triggered with value: %d", enabled);
                                            async_handler.onVoiceGuidanceChanged(enabled);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1643,6 +1731,8 @@ TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
     paramsVoiceGuidance["enabled"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidance", paramsVoiceGuidance, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceChanged);
     EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceChanged);
@@ -1676,6 +1766,9 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing VoiceGuidanceRateSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceRateChanged"),
@@ -1683,6 +1776,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
                                            double rate = parameters["rate"].Double();
                                            TEST_LOG("onVoiceGuidanceRateChanged callback triggered with value: %f", rate);
                                            async_handler.onVoiceGuidanceRateChanged(rate);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1693,6 +1787,8 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
     paramsVoiceGuidanceRate["rate"] = rate;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceRate", paramsVoiceGuidanceRate, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceRateChanged);
     EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceRateChanged);
@@ -1726,6 +1822,9 @@ TEST_F(UserSettingTest, onContentPinChangedEvent)
     JsonObject result_json;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing SetContentPin and GetContentPin methods");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onContentPinChanged"),
@@ -1733,6 +1832,7 @@ TEST_F(UserSettingTest, onContentPinChangedEvent)
                                            string contentPin = parameters["contentPin"].String();
                                            TEST_LOG("onContentPinChanged callback triggered with value: %s", contentPin.c_str());
                                            async_handler.onContentPinChanged(contentPin);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1743,6 +1843,8 @@ TEST_F(UserSettingTest, onContentPinChangedEvent)
     paramsContentPin["contentPin"] = contentPin;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setContentPin", paramsContentPin, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+    wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onContentPinChanged);
     EXPECT_TRUE(signalled & UserSettings_onContentPinChanged);
