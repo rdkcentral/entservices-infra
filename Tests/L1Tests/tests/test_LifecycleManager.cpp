@@ -994,7 +994,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
  * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onTerminated along with the appInstanceId obtained
- * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data and wait for the app terminating semaphore
+ * Signal the Runtime Manager Event using handleRuntimeManagerEvent() with the data and wait for the app terminating semaphore
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
@@ -1025,7 +1025,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
     data["appInstanceId"] = appInstanceId;
 
 	// TC-28: Signal the Runtime Manager Event - onTerminated 
-    mLifecycleManagerImplTest.onRuntimeManagerEvent(data);
+    mLifecycleManagerImplTest.handleRuntimeManagerEvent(data);
 
     sem_wait(&context->mAppTerminatingSemaphore);    
 
@@ -1039,7 +1039,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
  * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onStateChanged along with the state as RUNNING and appInstanceId obtained 
- * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data and wait for the app running semaphore
+ * Signal the Runtime Manager Event using handleRuntimeManagerEvent() with the data and wait for the app running semaphore
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
@@ -1071,7 +1071,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
     data["state"] = 2;
 
 	// TC-29: Signal the Runtime Manager Event - onStateChanged
-    mLifecycleManagerImplTest.onRuntimeManagerEvent(data);
+    mLifecycleManagerImplTest.handleRuntimeManagerEvent(data);
 
     sem_wait(&context->mAppRunningSemaphore);    
 
@@ -1085,7 +1085,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
  * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onFailure along with the error code and appInstanceId obtained 
- * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data 
+ * Signal the Runtime Manager Event using handleRuntimeManagerEvent() with the data 
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
@@ -1117,7 +1117,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
     data["errorCode"] = 1;
 
 	// TC-30: Signal the Runtime Manager Event - onFailure
-    mLifecycleManagerImplTest.onRuntimeManagerEvent(data);  
+    mLifecycleManagerImplTest.handleRuntimeManagerEvent(data);  
 
     releaseResources();
 } 
@@ -1129,7 +1129,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
  * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onStarted along with the appInstanceId obtained 
- * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data 
+ * Signal the Runtime Manager Event using handleRuntimeManagerEvent() with the data 
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
@@ -1160,7 +1160,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
     data["appInstanceId"] = appInstanceId;
 
 	// TC-31: Signal the Runtime Manager Event - onStarted
-    mLifecycleManagerImplTest.onRuntimeManagerEvent(data);
+    mLifecycleManagerImplTest.handleRuntimeManagerEvent(data);
 
     releaseResources();
 } 
@@ -1172,7 +1172,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
  * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onUserInactivity
- * Signal the Window Manager Event using onWindowManagerEvent() with the data 
+ * Signal the Window Manager Event using handleWindowManagerEvent() with the data 
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
@@ -1210,7 +1210,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
     data["name"] = "onUserInactivity";
 
 	// TC-32: Signal the Window Manager Event - onUserInactivity
-    mLifecycleManagerImplTest.onWindowManagerEvent(data);
+    mLifecycleManagerImplTest.handleWindowManagerEvent(data);
 
     releaseResources();
 } 
@@ -1222,7 +1222,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
  * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onDisconnect
- * Signal the Window Manager Event using onWindowManagerEvent() with the data 
+ * Signal the Window Manager Event using handleWindowManagerEvent() with the data 
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
@@ -1260,7 +1260,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
     data["name"] = "onDisconnect";
 
 	// TC-33: Signal the Window Manager Event - onDisconnect
-    mLifecycleManagerImplTest.onWindowManagerEvent(data);
+    mLifecycleManagerImplTest.handleWindowManagerEvent(data);
 
     releaseResources();
 } 
@@ -1272,7 +1272,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
  * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onReady along with the appInstanceId obtained
- * Signal the Window Manager Event using onWindowManagerEvent() with the data and wait for the first frame semaphore
+ * Signal the Window Manager Event using handleWindowManagerEvent() with the data and wait for the first frame semaphore
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
@@ -1311,7 +1311,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
     data["appInstanceId"] = appInstanceId;
 
 	// TC-34: Signal the Window Manager Event - onReady
-    mLifecycleManagerImplTest.onWindowManagerEvent(data);
+    mLifecycleManagerImplTest.handleWindowManagerEvent(data);
 
     sem_wait(&context->mFirstFrameSemaphore); 
 
