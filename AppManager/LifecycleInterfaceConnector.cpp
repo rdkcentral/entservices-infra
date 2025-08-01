@@ -791,19 +791,6 @@ End:
                 return it->second.appInstanceId;
         }
 
-        void LifecycleInterfaceConnector::RemoveApp(const string& appId)
-        {
-            AppManagerImplementation* appManagerImpl = AppManagerImplementation::getInstance();
-            if (!appManagerImpl)
-                return;
-
-            auto it = appManagerImpl->mAppInfo.find(appId);
-            if (it != appManagerImpl->mAppInfo.end())
-                appManagerImpl->mAppInfo.erase(it);
-            else
-                LOGERR("AppInfo for appId '%s' not found", appId.c_str());
-        }
-
         bool LifecycleInterfaceConnector::fileExists(const char* pFileName)
         {
             bool isRegular = false;
