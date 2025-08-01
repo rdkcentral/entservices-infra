@@ -863,7 +863,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
+        .WillOnce(::testing::Invoke(
             [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
                 return Core::ERROR_NONE;
           }));
@@ -914,7 +914,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
+        .WillOnce(::testing::Invoke(
             [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
                 return Core::ERROR_NONE;
           }));
