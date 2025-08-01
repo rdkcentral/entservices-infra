@@ -46,6 +46,7 @@ namespace Plugin {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
         mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
 
+        // Define the rule, build time or runtime
         string jq_rule = "{ DialApp, WanLanAccess }";
         string json = R"({"DialApp": "0", "Suspendable": "1", "Hibernatable": "1", "WanLanAccess": "1"})";
         JQWrapper jq;

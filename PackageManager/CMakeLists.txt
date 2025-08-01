@@ -38,6 +38,13 @@ find_package( Curl REQUIRED)
 if (CURL_FOUND)
     message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
 endif()
+find_package( jq )
+if (JQ_FOUND)
+    message ("Yay, Found jq lib=${JQ_LIBRARY}")
+else()
+    set(JQ_LIBRARY "${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/lib/libjq.so")
+    message ("jq NOT Found.  lib=${JQ_LIBRARY}")
+endif()
 
 add_library(${MODULE_NAME} SHARED
     PackageManager.cpp
@@ -60,6 +67,7 @@ target_link_libraries(${MODULE_NAME} PRIVATE
     ${NAMESPACE}Plugins::${NAMESPACE}Plugins
     ${CURL_LIBRARY}
     ${LIB_PACKAGE_LIBRARY}
+    ${JQ_LIBRARY}
     )
 
 install(TARGETS ${MODULE_NAME}
