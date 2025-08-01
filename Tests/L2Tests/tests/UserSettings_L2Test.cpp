@@ -26,6 +26,7 @@
 #include <fstream>
 #include <interfaces/IStore2.h>
 #include <interfaces/IUserSettings.h>
+#include "WaitGroup.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
@@ -888,6 +889,9 @@ TEST_F(UserSettingTest, onLiveWatershedEvent)
     bool playbackWatershed = true;
     JsonObject paramsMigrationState;
 
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing LiveWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onLiveWatershedChanged"),
@@ -895,6 +899,7 @@ TEST_F(UserSettingTest, onLiveWatershedEvent)
                                            bool liveWatershed = parameters["liveWatershed"].Boolean();
                                            TEST_LOG("onLiveWatershedChanged callback triggered with value: %d", liveWatershed);
                                            async_handler.onLiveWatershedChanged(liveWatershed);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -905,6 +910,8 @@ TEST_F(UserSettingTest, onLiveWatershedEvent)
     paramsLiveWatershed["liveWatershed"] = true;
     status = InvokeServiceMethod("org.rdk.UserSettings", "setLiveWatershed", paramsLiveWatershed, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
+
+     wg.Wait();
 
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onLiveWatershedChanged);
     EXPECT_TRUE(signalled & UserSettings_onLiveWatershedChanged);
