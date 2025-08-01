@@ -62,6 +62,7 @@ AppManagerImplementation::~AppManagerImplementation()
     }
     releasePersistentStoreRemoteStoreObject();
     releasePackageManagerObject();
+    releaseStorageManagerRemoteObject();
     if (nullptr != mCurrentservice)
     {
        mCurrentservice->Release();
@@ -575,26 +576,6 @@ bool AppManagerImplementation::createOrUpdatePackageInfoByAppId(const string& ap
     }
 
     return result;
-}
-
-
-bool AppManagerImplementation::fetchPackageInfoByAppId(const string& appId, PackageInfo &packageData)
-{
-        bool result = false;
-        auto it = mAppInfo.find(appId);
-        if (it != mAppInfo.end())
-        {
-            packageData.version           = it->second.packageInfo.version;
-            packageData.lockId            = it->second.packageInfo.lockId;
-            packageData.unpackedPath      = it->second.packageInfo.unpackedPath;
-            packageData.configMetadata    = it->second.packageInfo.configMetadata;
-            packageData.appMetadata       = it->second.packageInfo.appMetadata;
-            LOGINFO("Fetching package entry updated for appId: %s " \
-                    "version: %s lockId: %d unpackedPath: %s appMetadata: %s",
-                    appId.c_str(), packageData.version.c_str(), packageData.lockId, packageData.unpackedPath.c_str(), packageData.appMetadata.c_str());
-            result = true;
-        }
-        return result;
 }
 
 bool AppManagerImplementation::removeAppInfoByAppId(const string &appId)
