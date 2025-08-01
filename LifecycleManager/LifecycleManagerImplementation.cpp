@@ -152,13 +152,19 @@ namespace WPEFramework
                      while (index != mLifecycleManagerNotification.end())
                      {
                         DEBUG_PRINTF("ERROR: RDKEMW-2806");
+                        if(*index) 
+                        {
                          (*index)->OnAppStateChanged(appId, (LifecycleState)newLifecycleState, errorReason);
+                        }
                          ++index;
                      }
                      while (stateNotificationIndex != mLifecycleManagerStateNotification.end())
                      {
                         DEBUG_PRINTF("ERROR: RDKEMW-2806");
+                        if(*stateNotificationIndex)
+                        {
                          (*stateNotificationIndex)->OnAppLifecycleStateChanged(appId, appInstanceId, (LifecycleState)oldLifecycleState, (LifecycleState)newLifecycleState, navigationIntent);
+                        }
                          ++stateNotificationIndex;
                      }
                      break;
