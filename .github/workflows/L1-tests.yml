@@ -698,6 +698,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
-          path: valgrind_log
+          path: |
+           coverage/
+           valgrind_log
+           rdkL1TestResultsWithoutValgrind.json
+           rdkL1TestResultsWithValgrind.json
           if-no-files-found: warn
 
