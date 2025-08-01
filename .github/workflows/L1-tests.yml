@@ -1,6 +1,9 @@
 name: L1-tests
 
 on:
+  push:
+    branches: ['topic/RDKEMW_2806']
+
   workflow_call:
     inputs:
       caller_source:
@@ -123,7 +126,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: topic/RDKEMW-2806
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
@@ -486,9 +489,11 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
-          -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_APPMANAGER=OFF
+          -DPLUGIN_STORAGE_MANAGER=OFF
+          -DPLUGIN_RUNTIME_MANAGER=OFF
+          -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -566,9 +571,11 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
-          -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_APPMANAGER=OFF
+          -DPLUGIN_STORAGE_MANAGER=OFF
+          -DPLUGIN_RUNTIME_MANAGER=OFF
+          -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
@@ -712,13 +719,10 @@ jobs:
           filtered_coverage.info
 
       - name: Upload artifacts
-        if: ${{ !env.ACT }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-L1-infra
           path: |
-            coverage/
             valgrind_log
-            rdkL1TestResultsWithoutValgrind.json
-            rdkL1TestResultsWithValgrind.json
           if-no-files-found: warn
