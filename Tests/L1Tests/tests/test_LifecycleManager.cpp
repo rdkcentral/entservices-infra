@@ -889,9 +889,6 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
     sem_post(&context->mAppTerminatingSemaphore);
 
     sem_post(&context->mAppRunningSemaphore);  
-
-    delete context;
-    context = nullptr;
     
     releaseResources();
 }
@@ -949,9 +946,6 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
     sem_post(&context->mAppRunningSemaphore);
 
     sem_post(&context->mFirstFrameSemaphore);
-
-    delete context;
-    context = nullptr;
 
     releaseResources();
 }
