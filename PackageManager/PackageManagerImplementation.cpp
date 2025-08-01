@@ -20,6 +20,8 @@
 #include <chrono>
 #include <inttypes.h> // Required for PRIu64
 
+#include "JQWrapper.h"
+
 #include "PackageManagerImplementation.h"
 
 /* Until we don't get it from Package configuration, use size as 1MB */
@@ -43,6 +45,12 @@ namespace Plugin {
     {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
         mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
+
+        string jq_rule = "{ DialApp, WanLanAccess }";
+        string json = R"({"DialApp": "0", "Suspendable": "1", "Hibernatable": "1", "WanLanAccess": "1"})";
+        JQWrapper jq;
+        string result = jq.compile(jq_rule, json);
+        printf("jq output: %s\n", result.c_str());
     }
 
     PackageManagerImplementation::~PackageManagerImplementation()
