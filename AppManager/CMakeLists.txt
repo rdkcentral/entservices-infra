@@ -71,7 +71,9 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
 set(APP_MANAGER_INCLUDES $ENV{APP_MANAGER_INCLUDES})
 separate_arguments(APP_MANAGER_INCLUDES)
 include_directories(BEFORE ${APP_MANAGER_INCLUDES})
-
+if (RDK_SERVICES_L1_TEST)
+	target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
+endif (RDK_SERVICES_L1_TEST)
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
     CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_APP_MANAGER_EXTRA_LIBRARIES})
 
