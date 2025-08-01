@@ -893,6 +893,7 @@ TEST_F(UserSettingTest, onLiveWatershedEvent)
                                        _T("onLiveWatershedChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool liveWatershed = parameters["liveWatershed"].Boolean();
+                                           TEST_LOG("onLiveWatershedChanged callback triggered with value: %d", liveWatershed);
                                            async_handler.onLiveWatershedChanged(liveWatershed);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -939,6 +940,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
                                        _T("onVoiceGuidanceHintsChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool hints = parameters["hints"].Boolean();
+                                           TEST_LOG("onVoiceGuidanceHintsChanged callback triggered with value: %d", hints);
                                            async_handler.onVoiceGuidanceHintsChanged(hints);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -986,6 +988,7 @@ TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
                                        _T("onAudioDescriptionChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool enabled = parameters["enabled"].Boolean();
+                                           TEST_LOG("onAudioDescriptionChanged callback triggered with value: %d", enabled);
                                            async_handler.onAudioDescriptionChanged(enabled);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1036,6 +1039,7 @@ TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
                                            _T("onPreferredAudioLanguagesChanged"),
                                            [&async_handler](const JsonObject& parameters) {
                                            string preferredLanguages = parameters["preferredLanguages"].String();
+                                           TEST_LOG("onPreferredAudioLanguagesChanged callback triggered with value: %s", preferredLanguages.c_str());
                                            async_handler.onPreferredAudioLanguagesChanged(preferredLanguages);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1086,6 +1090,7 @@ TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
                                            _T("onPresentationLanguageChanged"),
                                            [&async_handler](const JsonObject& parameters) {
                                            string presentationLanguage = parameters["presentationLanguage"].String();
+                                           TEST_LOG("onPresentationLanguageChanged callback triggered with value: %s", presentationLanguage.c_str());
                                            async_handler.onPresentationLanguageChanged(presentationLanguage);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1131,6 +1136,7 @@ TEST_F(UserSettingTest, onCaptionsChangedEvent)
                                        _T("onCaptionsChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool enabled = parameters["enabled"].Boolean();
+                                           TEST_LOG("onCaptionsChanged callback triggered with value: %d", enabled);
                                            async_handler.onCaptionsChanged(enabled);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1180,6 +1186,7 @@ TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
                                            _T("onPreferredCaptionsLanguagesChanged"),
                                            [&async_handler](const JsonObject& parameters) {
                                            string preferredCaptionsLanguages = parameters["preferredLanguages"].String();
+                                           TEST_LOG("onPreferredCaptionsLanguagesChanged callback triggered with value: %s", preferredCaptionsLanguages.c_str());
                                            async_handler.onPreferredCaptionsLanguagesChanged(preferredCaptionsLanguages);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1227,6 +1234,7 @@ TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
                                            _T("onPreferredClosedCaptionServiceChanged"),
                                            [&async_handler](const JsonObject& parameters) {
                                            string preferredService = parameters["service"].String();
+                                           TEST_LOG("onPreferredClosedCaptionServiceChanged callback triggered with value: %s", preferredService.c_str());
                                            async_handler.onPreferredClosedCaptionServiceChanged(preferredService);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1272,6 +1280,7 @@ TEST_F(UserSettingTest, onPinControlChangedEvent)
                                        _T("onPinControlChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool pinControl = parameters["pinControl"].Boolean();
+                                           TEST_LOG("onPinControlChanged callback triggered with value: %d", pinControl);
                                            async_handler.onPinControlChanged(pinControl);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1325,6 +1334,7 @@ TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
                                            _T("onViewingRestrictionsChanged"),
                                            [&async_handler](const JsonObject& parameters) {
                                            string viewRes = parameters["viewingRestrictions"].String();
+                                           TEST_LOG("onViewingRestrictionsChanged callback triggered with value: %s", viewRes.c_str());
                                            async_handler.onViewingRestrictionsChanged(viewRes);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1371,6 +1381,7 @@ TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
                                            _T("onViewingRestrictionsWindowChanged"),
                                            [&async_handler](const JsonObject& parameters) {
                                            string viewResWindow = parameters["viewingRestrictionsWindow"].String();
+                                           TEST_LOG("onViewingRestrictionsWindowChanged callback triggered with value: %s", viewResWindow.c_str());
                                            async_handler.onViewingRestrictionsWindowChanged(viewResWindow);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1416,6 +1427,7 @@ TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
                                        _T("onPlaybackWatershedChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool playbackWatershed = parameters["playbackWatershed"].Boolean();
+                                           TEST_LOG("onPlaybackWatershedChanged callback triggered with value: %d", playbackWatershed);
                                            async_handler.onPlaybackWatershedChanged(playbackWatershed);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1465,6 +1477,7 @@ TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
                                        _T("onBlockNotRatedContentChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool blockNotRatedContent = parameters["blockNotRatedContent"].Boolean();
+                                           TEST_LOG("onBlockNotRatedContentChanged callback triggered with value: %d", blockNotRatedContent);
                                            async_handler.onBlockNotRatedContentChanged(blockNotRatedContent);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1513,6 +1526,7 @@ TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
                                        _T("onPinOnPurchaseChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool pinOnPurchase = parameters["pinOnPurchase"].Boolean();
+                                           TEST_LOG("onPinOnPurchaseChanged callback triggered with value: %d", pinOnPurchase);
                                            async_handler.onPinOnPurchaseChanged(pinOnPurchase);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1561,6 +1575,7 @@ TEST_F(UserSettingTest, onHighContrastChangedEvent)
                                        _T("onHighContrastChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool enabled = parameters["enabled"].Boolean();
+                                           TEST_LOG("onHighContrastChanged callback triggered with value: %d", enabled);
                                            async_handler.onHighContrastChanged(enabled);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1609,6 +1624,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
                                        _T("onVoiceGuidanceChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            bool enabled = parameters["enabled"].Boolean();
+                                           TEST_LOG("onVoiceGuidanceChanged callback triggered with value: %d", enabled);
                                            async_handler.onVoiceGuidanceChanged(enabled);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1658,6 +1674,7 @@ TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
                                        _T("onVoiceGuidanceRateChanged"),
                                        [this, &async_handler](const JsonObject& parameters) {
                                            double rate = parameters["rate"].Double();
+                                           TEST_LOG("onVoiceGuidanceRateChanged callback triggered with value: %f", rate);
                                            async_handler.onVoiceGuidanceRateChanged(rate);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
@@ -1707,6 +1724,7 @@ TEST_F(UserSettingTest, onContentPinChangedEvent)
                                            _T("onContentPinChanged"),
                                            [&async_handler](const JsonObject& parameters) {
                                            string contentPin = parameters["contentPin"].String();
+                                           TEST_LOG("onContentPinChanged callback triggered with value: %s", contentPin.c_str());
                                            async_handler.onContentPinChanged(contentPin);
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
