@@ -991,7 +991,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING
+ * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onTerminated along with the appInstanceId obtained
  * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data and wait for the app terminating semaphore
@@ -1002,18 +1002,29 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
 {
     createResources();
 
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
 
+    sem_post(&context->mAppRunningSemaphore); 
+
     JsonObject data;
 
     data["name"] = "onTerminated";
     data["appInstanceId"] = appInstanceId;
 
-	// TC-28: Signal the Runtime Manager Event - onTerminated
+	// TC-28: Signal the Runtime Manager Event - onTerminated 
     mLifecycleManagerImplTest.onRuntimeManagerEvent(data);
 
     sem_wait(&context->mAppTerminatingSemaphore);    
@@ -1025,7 +1036,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING
+ * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onStateChanged along with the state as RUNNING and appInstanceId obtained 
  * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data and wait for the app running semaphore
@@ -1036,11 +1047,22 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 {
     createResources();
 
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+
+    sem_post(&context->mAppRunningSemaphore); 
  
     JsonObject data;
 
@@ -1060,7 +1082,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING
+ * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onFailure along with the error code and appInstanceId obtained 
  * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data 
@@ -1071,11 +1093,22 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
 {
     createResources();
 
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+
+    sem_post(&context->mAppRunningSemaphore); 
 
     JsonObject data;
 
@@ -1093,7 +1126,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING
+ * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onStarted along with the appInstanceId obtained 
  * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data 
@@ -1104,11 +1137,22 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
 {
     createResources();
 
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+
+    sem_post(&context->mAppRunningSemaphore); 
 
     JsonObject data;
 
@@ -1125,7 +1169,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING
+ * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onUserInactivity
  * Signal the Window Manager Event using onWindowManagerEvent() with the data 
@@ -1136,11 +1180,30 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
 {
     createResources();
 
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mWindowManagerMock, RenderReady(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& client, bool &status) {
+                return Core::ERROR_NONE;
+          }));  
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+
+    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mFirstFrameSemaphore); 
 
     JsonObject data;
 
@@ -1156,7 +1219,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING
+ * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onDisconnect
  * Signal the Window Manager Event using onWindowManagerEvent() with the data 
@@ -1167,11 +1230,30 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
 {
     createResources();
 
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mWindowManagerMock, RenderReady(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& client, bool &status) {
+                return Core::ERROR_NONE;
+          }));  
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+
+    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mFirstFrameSemaphore); 
 
     JsonObject data;
 
@@ -1187,7 +1269,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING
+ * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Populate the data by setting the event name as onReady along with the appInstanceId obtained
  * Signal the Window Manager Event using onWindowManagerEvent() with the data and wait for the first frame semaphore
@@ -1198,11 +1280,30 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
 {
     createResources();
 
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mWindowManagerMock, RenderReady(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& client, bool &status) {
+                return Core::ERROR_NONE;
+          }));  
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+
     Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
 
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+
+    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mFirstFrameSemaphore); 
 
     JsonObject data;
 
