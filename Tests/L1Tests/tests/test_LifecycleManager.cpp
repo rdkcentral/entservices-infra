@@ -54,7 +54,6 @@ class LifecycleManagerImplementationTest : public LifecycleManagerImplementation
 };
 } // namespace Plugin
 
-#if 0
 namespace Exchange {
 
 struct INotificationTest : public ILifecycleManager::INotification {
@@ -71,8 +70,6 @@ struct IStateNotificationTest : public ILifecycleManagerState::INotification {
     MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 } // namespace Exchange
-#endif
-
 } // namespace WPEFramework
 
 
@@ -220,32 +217,7 @@ protected:
     }
 };
 
-/* Test Case for Registering Notification
- * 
- * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create a mock notification instance and initialize it using the INotificationTest struct
- * Register the notification with the Lifecycle Manager interface
- * Verify successful registration of notification by asserting that Register() returns Core::ERROR_NONE
- * Release the Lifecycle Manager interface object and clean-up related test resources
- */
-
- #if 0
-TEST_F(LifecycleManagerTest, registerNotification)
-{
-    createResources();
-
-    Exchange::ILifecycleManager::INotification* notification = new Exchange::INotificationTest();
-
-    // TC-1: Check if the notification is registered
-    EXPECT_EQ(Core::ERROR_NONE, interface->Register(notification));
-
-    delete notification;
-    notification = nullptr;
-
-    releaseResources();
-}
-
-/* Test Case for Unregistering Notification after registering
+/* Test Case for Registering and Unregistering Notification
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Create a mock notification instance and initialize it using the INotificationTest struct
@@ -297,31 +269,7 @@ TEST_F(LifecycleManagerTest, unregisterNotification_withoutRegister)
     releaseResources();
 }
 
-/* Test Case for Registering State Notification
- * 
- * Set up Lifecycle Manager state interface, configurations, required COM-RPC resources, mocks and expectations
- * Create a mock state notification instance and initialize it using the IStateNotificationTest struct
- * Register the state notification with the Lifecycle Manager state interface
- * Verify successful registration of state notification by asserting that Register() returns Core::ERROR_NONE
- * Release the Lifecycle Manager state interface object and clean-up related test resources
- */
-
-TEST_F(LifecycleManagerTest, registerStateNotification)
-{
-    createResources();
-
-    Exchange::ILifecycleManagerState::INotification* notification = new Exchange::IStateNotificationTest();
-
-    // TC-4: Check if the state notification is registered
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Register(notification));
-
-    delete notification;
-    notification = nullptr;
-
-    releaseResources();
-}
-
-/* Test Case for Unregistering State Notification after registering
+/* Test Case for Registering and Unregistering State Notification 
  * 
  * Set up Lifecycle Manager state interface, configurations, required COM-RPC resources, mocks and expectations
  * Create a mock state notification instance and initialize it using the IStateNotificationTest struct
@@ -372,7 +320,6 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
 
     releaseResources();
 }
-#endif
 
 /* Test Case for Spawning an App
  * 
@@ -887,18 +834,13 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 	// TC-24: Kill and run after spawning the app
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
 
-    Plugin::ApplicationContext* killcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_post(&killcontext->mAppRunningSemaphore);
+    sem_post(&context->mAppRunningSemaphore);
 
-    sem_post(&killcontext->mAppTerminatingSemaphore);
+    sem_post(&context->mAppTerminatingSemaphore);
 
-    Plugin::ApplicationContext* runcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
-
-    sem_post(&runcontext->mAppRunningSemaphore);
-
-    delete runcontext;
-    runcontext = nullptr;
+    sem_post(&context->mAppRunningSemaphore);
 
     releaseResources();
 }
@@ -947,20 +889,15 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 	// TC-25: Kill and activate after spawning the app
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
 
-    Plugin::ApplicationContext* killcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_post(&killcontext->mAppRunningSemaphore);
+    sem_post(&context->mAppRunningSemaphore);
 
-    sem_post(&killcontext->mAppTerminatingSemaphore);
+    sem_post(&context->mAppTerminatingSemaphore);
 
-    Plugin::ApplicationContext* activecontext = mLifecycleManagerImplTest.getContextImpl("", appId);
+    sem_post(&context->mAppRunningSemaphore);
 
-    sem_post(&activecontext->mAppRunningSemaphore);
-
-    sem_post(&activecontext->mFirstFrameSemaphore);
-
-    delete activecontext;
-    activecontext = nullptr;
+    sem_post(&context->mFirstFrameSemaphore);
 
     releaseResources();
 }
