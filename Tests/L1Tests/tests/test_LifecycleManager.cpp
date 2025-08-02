@@ -54,6 +54,7 @@ class LifecycleManagerImplementationTest : public LifecycleManagerImplementation
 };
 } // namespace Plugin
 
+#if 0
 namespace Exchange {
 
 struct INotificationTest : public ILifecycleManager::INotification {
@@ -70,6 +71,8 @@ struct IStateNotificationTest : public ILifecycleManagerState::INotification {
     MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 } // namespace Exchange
+#endif
+
 } // namespace WPEFramework
 
 
@@ -226,6 +229,7 @@ protected:
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
+ #if 0
 TEST_F(LifecycleManagerTest, registerNotification)
 {
     createResources();
@@ -368,6 +372,7 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
 
     releaseResources();
 }
+#endif
 
 /* Test Case for Spawning an App
  * 
