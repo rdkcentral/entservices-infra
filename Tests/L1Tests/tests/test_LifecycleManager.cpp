@@ -366,9 +366,6 @@ TEST_F(LifecycleManagerTest, appready_onSpawnAppSuccess)
 
     sem_wait(&context->mAppReadySemaphore);
     
-    delete context;
-    context = nullptr;
-
     releaseResources();
 }
 
