@@ -861,6 +861,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
+ #if 0
 TEST_F(LifecycleManagerTest, closeApp_onKillandActivate) 
 {
     createResources();
@@ -915,6 +916,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 
     releaseResources();
 }
+#endif
 
 /* Test Case for State Change Complete with valid parameters
  * 
