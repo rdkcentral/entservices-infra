@@ -882,14 +882,19 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 	// TC-24: Kill and run after spawning the app
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* killcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&killcontext->mAppRunningSemaphore);
 
-    sem_post(&context->mAppTerminatingSemaphore);
+    sem_post(&killcontext->mAppTerminatingSemaphore);
 
-    sem_post(&context->mAppRunningSemaphore);  
-    
+    Plugin::ApplicationContext* runcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_post(&runcontext->mAppRunningSemaphore);
+
+    delete runcontext;
+    runcontext = nullptr;
+
     releaseResources();
 }
 
@@ -937,15 +942,20 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 	// TC-25: Kill and activate after spawning the app
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* killcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&killcontext->mAppRunningSemaphore);
 
-    sem_post(&context->mAppTerminatingSemaphore);
+    sem_post(&killcontext->mAppTerminatingSemaphore);
 
-    sem_post(&context->mAppRunningSemaphore);
+    Plugin::ApplicationContext* activecontext = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_post(&context->mFirstFrameSemaphore);
+    sem_post(&activecontext->mAppRunningSemaphore);
+
+    sem_post(&activecontext->mFirstFrameSemaphore);
+
+    delete activecontext;
+    activecontext = nullptr;
 
     releaseResources();
 }
