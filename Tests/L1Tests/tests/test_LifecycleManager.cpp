@@ -897,7 +897,11 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
+    std::this_thread::sleep_for(duration);
+
     sem_post(&context->mAppRunningSemaphore);
+
+    std::this_thread::sleep_for(duration);
 
     sem_post(&context->mAppTerminatingSemaphore);
 
