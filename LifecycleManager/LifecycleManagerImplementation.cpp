@@ -140,12 +140,18 @@ namespace WPEFramework
                      handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
                      {
+                        if(*index)
+                        {
                          (*index)->OnAppStateChanged(appId, (LifecycleState)newLifecycleState, errorReason);
+                        }
                          ++index;
                      }
                      while (stateNotificationIndex != mLifecycleManagerStateNotification.end())
                      {
+                        if(*stateNotificationIndex)
+                        {
                          (*stateNotificationIndex)->OnAppLifecycleStateChanged(appId, appInstanceId, (LifecycleState)oldLifecycleState, (LifecycleState)newLifecycleState, navigationIntent);
+                        }
                          ++stateNotificationIndex;
                      }
                      break;
