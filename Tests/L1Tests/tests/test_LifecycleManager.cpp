@@ -1036,9 +1036,6 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 
     sem_wait(&context->mAppRunningSemaphore); 
     
-    delete context;
-    context = nullptr;
-
     releaseResources();
 } 
 
@@ -1083,9 +1080,6 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
 	// TC-30: Signal the Runtime Manager Event - onFailure
     mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data); 
     
-    delete context;
-    context = nullptr;
-
     releaseResources();
 } 
 
@@ -1128,9 +1122,6 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
 
 	// TC-31: Signal the Runtime Manager Event - onStarted
     mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data);
-
-    delete context;
-    context = nullptr;
 
     releaseResources();
 } 
@@ -1182,9 +1173,6 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
 	// TC-32: Signal the Window Manager Event - onUserInactivity
     mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
 
-    delete context;
-    context = nullptr;
-
     releaseResources();
 } 
 
@@ -1234,9 +1222,6 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
 
 	// TC-33: Signal the Window Manager Event - onDisconnect
     mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
-
-    delete context;
-    context = nullptr;
 
     releaseResources();
 } 
@@ -1290,9 +1275,6 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
     mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
 
     sem_wait(&context->mFirstFrameSemaphore); 
-
-    delete context;
-    context = nullptr;
 
     releaseResources();
 } 
