@@ -990,9 +990,6 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
 
     sem_wait(&context->mAppTerminatingSemaphore);    
 
-    delete context;
-    context = nullptr;
-
     releaseResources();
 } 
 
