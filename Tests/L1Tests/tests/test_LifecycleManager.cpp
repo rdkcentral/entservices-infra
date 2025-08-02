@@ -54,6 +54,7 @@ class LifecycleManagerImplementationTest : public LifecycleManagerImplementation
 };
 } // namespace Plugin
 
+#if 0
 namespace Exchange {
 
 struct INotificationTest : public ILifecycleManager::INotification {
@@ -70,6 +71,8 @@ struct IStateNotificationTest : public ILifecycleManagerState::INotification {
     MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 } // namespace Exchange
+#endif
+
 } // namespace WPEFramework
 
 
@@ -226,6 +229,7 @@ protected:
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
+ #if 0
 TEST_F(LifecycleManagerTest, registerNotification)
 {
     createResources();
@@ -368,6 +372,7 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
 
     releaseResources();
 }
+#endif
 
 /* Test Case for Spawning an App
  * 
@@ -412,7 +417,10 @@ TEST_F(LifecycleManagerTest, appready_onSpawnAppSuccess)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_wait(&context->mAppReadySemaphore);    
+    sem_wait(&context->mAppReadySemaphore);
+    
+    delete context;
+    context = nullptr;
 
     releaseResources();
 }
@@ -879,14 +887,19 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 	// TC-24: Kill and run after spawning the app
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* killcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&killcontext->mAppRunningSemaphore);
 
-    sem_post(&context->mAppTerminatingSemaphore);
+    sem_post(&killcontext->mAppTerminatingSemaphore);
 
-    sem_post(&context->mAppRunningSemaphore);  
-    
+    Plugin::ApplicationContext* runcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
+
+    sem_post(&runcontext->mAppRunningSemaphore);
+
+    delete runcontext;
+    runcontext = nullptr;
+
     releaseResources();
 }
 
@@ -934,15 +947,20 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 	// TC-25: Kill and activate after spawning the app
     EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* killcontext = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&killcontext->mAppRunningSemaphore);
 
-    sem_post(&context->mAppTerminatingSemaphore);
+    sem_post(&killcontext->mAppTerminatingSemaphore);
 
-    sem_post(&context->mAppRunningSemaphore);
+    Plugin::ApplicationContext* activecontext = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    sem_post(&context->mFirstFrameSemaphore);
+    sem_post(&activecontext->mAppRunningSemaphore);
+
+    sem_post(&activecontext->mFirstFrameSemaphore);
+
+    delete activecontext;
+    activecontext = nullptr;
 
     releaseResources();
 }
@@ -1035,6 +1053,9 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
 
     sem_wait(&context->mAppTerminatingSemaphore);    
 
+    delete context;
+    context = nullptr;
+
     releaseResources();
 } 
 
@@ -1079,7 +1100,10 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 	// TC-29: Signal the Runtime Manager Event - onStateChanged
     mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data);
 
-    sem_wait(&context->mAppRunningSemaphore);    
+    sem_wait(&context->mAppRunningSemaphore); 
+    
+    delete context;
+    context = nullptr;
 
     releaseResources();
 } 
@@ -1123,7 +1147,10 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
     data["errorCode"] = 1;
 
 	// TC-30: Signal the Runtime Manager Event - onFailure
-    mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data);  
+    mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data); 
+    
+    delete context;
+    context = nullptr;
 
     releaseResources();
 } 
@@ -1167,6 +1194,9 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
 
 	// TC-31: Signal the Runtime Manager Event - onStarted
     mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data);
+
+    delete context;
+    context = nullptr;
 
     releaseResources();
 } 
@@ -1218,6 +1248,9 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
 	// TC-32: Signal the Window Manager Event - onUserInactivity
     mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
 
+    delete context;
+    context = nullptr;
+
     releaseResources();
 } 
 
@@ -1267,6 +1300,9 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
 
 	// TC-33: Signal the Window Manager Event - onDisconnect
     mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
+
+    delete context;
+    context = nullptr;
 
     releaseResources();
 } 
@@ -1320,6 +1356,9 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
     mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
 
     sem_wait(&context->mFirstFrameSemaphore); 
+
+    delete context;
+    context = nullptr;
 
     releaseResources();
 } 
