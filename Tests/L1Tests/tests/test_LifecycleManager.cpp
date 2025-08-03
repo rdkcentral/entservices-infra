@@ -810,8 +810,6 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 {
     createResources();
 
-    const auto duration = std::chrono::milliseconds(100);
-
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -838,8 +836,6 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
     sem_post(&context->mAppRunningSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);
-
-    std::this_thread::sleep_for(duration);
 
     sem_post(&context->mAppRunningSemaphore);
 
