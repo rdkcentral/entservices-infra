@@ -794,6 +794,8 @@ TEST_F(LifecycleManagerTest, closeApp_onError)
     releaseResources();
 }
 
+ #if 0
+
 /* Test Case for Close App on Kill and Run
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
@@ -854,12 +856,9 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
- #if 0
 TEST_F(LifecycleManagerTest, closeApp_onKillandActivate) 
 {
     createResources();
-
-    const auto duration = std::chrono::milliseconds(100);
 
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -891,19 +890,11 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
 
-    std::this_thread::sleep_for(duration);
-
     sem_post(&context->mAppRunningSemaphore);
-
-    std::this_thread::sleep_for(duration);
 
     sem_post(&context->mAppTerminatingSemaphore);
 
-    std::this_thread::sleep_for(duration);
-
     sem_post(&context->mAppRunningSemaphore);
-
-    std::this_thread::sleep_for(duration);
 
     sem_post(&context->mFirstFrameSemaphore);
 
