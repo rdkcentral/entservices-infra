@@ -728,9 +728,9 @@ jobs:
         with:
           name: artifacts-L1-infra
           path: |
-            coverage/
-            valgrind_log
-            rdkL1TestResultsWithoutValgrind.json
-            rdkL1TestResultsWithValgrind.json
+           coverage/
+           valgrind_log
+           rdkL1TestResultsWithoutValgrind.json
+           rdkL1TestResultsWithValgrind.json
           if-no-files-found: warn
 
