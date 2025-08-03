@@ -20,10 +20,6 @@
 #include "WindowManagerHandler.h"
 #include <fstream>
 #include <random>
-#include <cstdio>
-
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework {
 namespace Plugin {
@@ -41,33 +37,27 @@ WindowManagerHandler::~WindowManagerHandler()
 
 bool WindowManagerHandler::initialize(PluginHost::IShell* service, IEventHandler* eventHandler)
 {
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     bool ret = false;
     mEventHandler = eventHandler;
     mWindowManager = service->QueryInterfaceByCallsign<Exchange::IRDKWindowManager>("org.rdk.RDKWindowManager");
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     if (mWindowManager != nullptr)
     {
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
         ret = true;
         Core::hresult registerResult = mWindowManager->Register(&mWindowManagerNotification);
         if (Core::ERROR_NONE != registerResult)
         {
             LOGINFO("Unable to register with windowmanager [%d] \n", registerResult);
         }
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
     else
     {
         LOGERR("windowmanager is null \n");
     }
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     return ret;
 }
 
 void WindowManagerHandler::terminate()
 {
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
     Core::hresult unregisterResult = mWindowManager->Unregister(&mWindowManagerNotification);
     if (Core::ERROR_NONE != unregisterResult)
     {

@@ -21,10 +21,6 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <cstdio>
-
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework {
 namespace Plugin {
@@ -134,7 +130,6 @@ namespace Plugin {
 
     void WebSocketEndPoint::initialize()
     {
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mEndPoint.clear_access_channels(websocketpp::log::alevel::all);
         mEndPoint.clear_error_channels(websocketpp::log::elevel::all);
 
@@ -142,12 +137,10 @@ namespace Plugin {
         mEndPoint.start_perpetual();
 
         mThread = websocketpp::lib::make_shared<websocketpp::lib::thread>(&WebSocketAsioClient::run, &mEndPoint);
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
 
     void WebSocketEndPoint::deinitialize()
     {
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
         for (connectionList::const_iterator it = mConnectionList.begin(); it != mConnectionList.end(); ++it)
 	{
             std::cout << "> Closing connection " << it->second->getIdentifier() << std::endl;
@@ -160,7 +153,6 @@ namespace Plugin {
                           << ec.message() << std::endl;
             }
         }
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mEndPoint.stop_perpetual();
         mThread->join();
     }

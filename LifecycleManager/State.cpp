@@ -24,10 +24,6 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <cstdio>
-
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework
 {
@@ -40,25 +36,21 @@ namespace WPEFramework
 
         bool LoadingState::handle(string& errorReason)
 	{
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             ApplicationContext* context = getContext();
 
             boost::uuids::uuid tag = boost::uuids::random_generator()();
             std::string generatedInstanceId =  boost::uuids::to_string(tag);
             context->setAppInstanceId(generatedInstanceId);
             sem_post(&context->mReachedLoadingStateSemaphore);
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return true;
 	}
 
         bool InitializingState::handle(string& errorReason)
         {
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
             bool ret = false;
 	    if (nullptr != runtimeManagerHandler)
 	    {
-                DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 ApplicationContext* context = getContext();
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
                 ret = runtimeManagerHandler->run(context->getAppId(), context->getAppInstanceId(), launchParams.mLaunchArgs, launchParams.mTargetState, launchParams.mRuntimeConfigObject, errorReason);
@@ -66,20 +58,16 @@ namespace WPEFramework
 		fflush(stdout);
                 ret = true;
                 sem_wait(&context->mAppRunningSemaphore);
-                DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    }
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return ret;
         }
 
         bool PausedState::handle(string& errorReason)
 	{
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    bool ret = false;
             ApplicationContext* context = getContext();
             if (Exchange::ILifecycleManager::LifecycleState::INITIALIZING == context->getCurrentLifecycleState())
 	    {
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 //TODO : Remove wait for now
                 //sem_wait(&context->mAppReadySemaphore);
                 ret = true;
