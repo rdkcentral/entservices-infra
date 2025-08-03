@@ -2,7 +2,7 @@ name: L1-tests
 
 on:
   push:
-    branches: ['topic/RDKEMW_2806_2']
+    branches: ['topic/RDKEMW-2806_2']
 
   workflow_call:
     inputs:
