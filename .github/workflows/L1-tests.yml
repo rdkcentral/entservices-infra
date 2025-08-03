@@ -128,7 +128,7 @@ jobs:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
           ref: topic/RDKEMW-2806
-          #token: ${{ secrets.RDKCM_RDKE }}
+          token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
         #if: ${{ inputs.caller_source == 'local' }}
