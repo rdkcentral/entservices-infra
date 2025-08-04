@@ -192,7 +192,7 @@ protected:
 	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
             2, Core::Thread::DefaultStackSize(), 16))
     {
-        mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementation>::Create();
+        mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementationTest>::Create();
         
         interface = static_cast<Exchange::ILifecycleManager*>(mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManager::ID));
 
