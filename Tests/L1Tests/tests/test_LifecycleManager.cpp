@@ -40,8 +40,7 @@
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (1000)
 
-typedef enum : uint32_t 
-{
+typedef enum : uint32_t {
     LifecycleManager_invalidEvent = 0,
     LifecycleManager_onStateChangeEvent,
     LifecycleManager_onRuntimeManagerEvent,
@@ -49,38 +48,34 @@ typedef enum : uint32_t
     LifecycleManager_onRippleEvent
 } LifecycleManagerTest_events_t;
 
-using ::testing::NiceMock;
-using namespace WPEFramework;
-using namespace std;
-
-class LifecycleManagerImplementationTest : public Plugin::LifecycleManagerImplementation 
-{
+namespace WPEFramework {
+namespace Plugin {
+class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
     public:
         MOCK_METHOD(void, AddRef, (), (const, override));
         MOCK_METHOD(uint32_t, Release, (), (const, override));
-        Plugin::ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const {
-            return Plugin::LifecycleManagerImplementation::getContext(appInstanceId, appId);
+        ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const 
+        {
+            return LifecycleManagerImplementation::getContext(appInstanceId, appId);
         }
-        void handleRuntimeManagerEventImpl(JsonObject& data) {
-            return Plugin::LifecycleManagerImplementation::handleRuntimeManagerEvent(data);
+        void handleRuntimeManagerEventImpl(JsonObject& data) 
+        {
+            return LifecycleManagerImplementation::handleRuntimeManagerEvent(data);
         }
-        void handleWindowManagerEventImpl(JsonObject& data) {
-            return Plugin::LifecycleManagerImplementation::handleWindowManagerEvent(data);
+        void handleWindowManagerEventImpl(JsonObject& data) 
+        {
+            return LifecycleManagerImplementation::handleWindowManagerEvent(data);
         }
 };
 
-class EventHandlerTest : public Plugin::IEventHandler 
-{
+class EventHandlerTest : public IEventHandler {
     public:
         std::string appId;
         std::string appInstanceId;
         Exchange::ILifecycleManager::LifecycleState oldLifecycleState;
         Exchange::ILifecycleManager::LifecycleState newLifecycleState;
-        Exchange::IRuntimeManager::RuntimeState state;
         std::string navigationIntent;
         std::string errorReason;
-        std::string name;
-        std::string errorCode;
 
         std::mutex m_mutex;
         std::condition_variable m_condition_variable;
@@ -144,22 +139,31 @@ class EventHandlerTest : public Plugin::IEventHandler
             return event_signal;
         }
 };
+} // namespace Plugin
 
-struct INotificationTest : public Exchange::ILifecycleManager::INotification 
+namespace Exchange {
+
+struct INotificationTest : public ILifecycleManager::INotification 
 {
-        MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, Exchange::ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
+        MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
         MOCK_METHOD(void, AddRef, (), (const, override));
         MOCK_METHOD(uint32_t, Release, (), (const, override));
         MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 
-struct IStateNotificationTest : public Exchange::ILifecycleManagerState::INotification 
+struct IStateNotificationTest : public ILifecycleManagerState::INotification 
 {
-    MOCK_METHOD(void, OnAppLifecycleStateChanged, (const std::string& appId, const std::string& appInstanceId, Exchange::ILifecycleManager::LifecycleState oldState, Exchange::ILifecycleManager::LifecycleState newState,  const std::string& navigationIntent), (override));
+    MOCK_METHOD(void, OnAppLifecycleStateChanged, (const std::string& appId, const std::string& appInstanceId, ILifecycleManager::LifecycleState oldState, ILifecycleManager::LifecycleState newState,  const std::string& navigationIntent), (override));
     MOCK_METHOD(void, AddRef, (), (const, override));
     MOCK_METHOD(uint32_t, Release, (), (const, override));
     MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
+} // namespace Exchange
+} // namespace WPEFramework
+
+using ::testing::NiceMock;
+using namespace WPEFramework;
+using namespace std;
 
 class LifecycleManagerTest : public ::testing::Test {
 protected:
