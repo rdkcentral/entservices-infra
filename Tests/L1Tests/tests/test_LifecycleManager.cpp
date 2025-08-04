@@ -49,23 +49,27 @@ typedef enum : uint32_t
     LifecycleManager_onRippleEvent
 } LifecycleManagerTest_events_t;
 
-class LifecycleManagerImplementationTest : public WPEFramework::Plugin::LifecycleManagerImplementation 
+using ::testing::NiceMock;
+using namespace WPEFramework;
+using namespace std;
+
+class LifecycleManagerImplementationTest : public Plugin::LifecycleManagerImplementation 
 {
     public:
         MOCK_METHOD(void, AddRef, (), (const, override));
         MOCK_METHOD(uint32_t, Release, (), (const, override));
-        ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const {
-            return LifecycleManagerImplementation::getContext(appInstanceId, appId);
+        Plugin::ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const {
+            return Plugin::LifecycleManagerImplementation::getContext(appInstanceId, appId);
         }
         void handleRuntimeManagerEventImpl(JsonObject& data) {
-            return LifecycleManagerImplementation::handleRuntimeManagerEvent(data);
+            return Plugin::LifecycleManagerImplementation::handleRuntimeManagerEvent(data);
         }
         void handleWindowManagerEventImpl(JsonObject& data) {
-            return LifecycleManagerImplementation::handleWindowManagerEvent(data);
+            return Plugin::LifecycleManagerImplementation::handleWindowManagerEvent(data);
         }
 };
 
-class EventHandlerTest : public WPEFramework::Plugin::IEventHandler 
+class EventHandlerTest : public Plugin::IEventHandler 
 {
     public:
         std::string appId;
@@ -117,7 +121,7 @@ class EventHandlerTest : public WPEFramework::Plugin::IEventHandler
             m_condition_variable.notify_one();
         }
 
-        void onRippleEvent(JsonObject& data) override
+        void onRippleEvent(std::string name, JsonObject& data) override
         {
             m_event_signal = LifecycleManager_onRippleEvent;
 
@@ -141,25 +145,21 @@ class EventHandlerTest : public WPEFramework::Plugin::IEventHandler
         }
 };
 
-struct INotificationTest : public WPEFramework::Exchange::ILifecycleManager::INotification 
+struct INotificationTest : public Exchange::ILifecycleManager::INotification 
 {
-        MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
+        MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, Exchange::ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
         MOCK_METHOD(void, AddRef, (), (const, override));
         MOCK_METHOD(uint32_t, Release, (), (const, override));
         MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 
-struct IStateNotificationTest : public WPEFramework::Exchange::ILifecycleManagerState::INotification 
+struct IStateNotificationTest : public Exchange::ILifecycleManagerState::INotification 
 {
-    MOCK_METHOD(void, OnAppLifecycleStateChanged, (const std::string& appId, const std::string& appInstanceId, ILifecycleManager::LifecycleState oldState, ILifecycleManager::LifecycleState newState,  const std::string& navigationIntent), (override));
+    MOCK_METHOD(void, OnAppLifecycleStateChanged, (const std::string& appId, const std::string& appInstanceId, Exchange::ILifecycleManager::LifecycleState oldState, Exchange::ILifecycleManager::LifecycleState newState,  const std::string& navigationIntent), (override));
     MOCK_METHOD(void, AddRef, (), (const, override));
     MOCK_METHOD(uint32_t, Release, (), (const, override));
     MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
-
-using ::testing::NiceMock;
-using namespace WPEFramework;
-using namespace std;
 
 class LifecycleManagerTest : public ::testing::Test {
 protected:
@@ -171,7 +171,7 @@ protected:
     string appInstanceId;
     string errorReason;
     bool success;
-    Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
+    Core::ProxyType<Plugin::LifecycleManagerImplementationTest> mLifecycleManagerImpl;
     Plugin::EventHandlerTest eventHdlTest;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::ILifecycleManagerState* stateInterface = nullptr;
