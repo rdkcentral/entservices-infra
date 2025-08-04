@@ -23,6 +23,9 @@
 #include <string>
 #include <vector>
 #include <cstdio>
+#include <mutex>
+#include <chrono>
+#include <condition_variable>
 
 #include "LifecycleManager.h"
 #include "LifecycleManagerImplementation.h"
@@ -35,9 +38,10 @@
 #include "WorkerPoolImplementation.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
-#define TIMEOUT(1000)
+#define TIMEOUT   (1000)
 
-typedef enum : uint32_t {
+typedef enum : uint32_t 
+{
     LifecycleManager_invalidEvent = 0,
     LifecycleManager_onStateChangeEvent,
     LifecycleManager_onRuntimeManagerEvent,
@@ -45,9 +49,8 @@ typedef enum : uint32_t {
     LifecycleManager_onRippleEvent
 } LifecycleManagerTest_events_t;
 
-namespace WPEFramework {
-namespace Plugin {
-class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
+class LifecycleManagerImplementationTest : public WPEFramework::Plugin::LifecycleManagerImplementation 
+{
     public:
         MOCK_METHOD(void, AddRef, (), (const, override));
         MOCK_METHOD(uint32_t, Release, (), (const, override));
@@ -62,14 +65,18 @@ class LifecycleManagerImplementationTest : public LifecycleManagerImplementation
         }
 };
 
-class EventHandlerTest : public IEventHandler {
+class EventHandlerTest : public WPEFramework::Plugin::IEventHandler 
+{
     public:
         std::string appId;
         std::string appInstanceId;
         Exchange::ILifecycleManager::LifecycleState oldLifecycleState;
         Exchange::ILifecycleManager::LifecycleState newLifecycleState;
+        Exchange::IRuntimeManager::RuntimeState state;
         std::string navigationIntent;
         std::string errorReason;
+        std::string name;
+        std::string errorCode;
 
         std::mutex m_mutex;
         std::condition_variable m_condition_variable;
@@ -88,12 +95,42 @@ class EventHandlerTest : public IEventHandler {
             m_condition_variable.notify_one();
         }
 
+        void onRuntimeManagerEvent(JsonObject& data) override
+        {
+            m_event_signal = LifecycleManager_onRuntimeManagerEvent;
+
+            EXPECT_EQ(name, data["name"].String());
+            EXPECT_EQ(appInstanceId, data["appInstanceId"].String());
+            EXPECT_EQ(state, static_cast<Exchange::IRuntimeManager::RuntimeState>(data["state"].Number()));
+            EXPECT_EQ(errorCode, data["errorReason"].String());
+
+            m_condition_variable.notify_one();
+        }
+
+        void onWindowManagerEvent(JsonObject& data) override
+        {
+            m_event_signal = LifecycleManager_onWindowManagerEvent;
+
+            EXPECT_EQ(name, data["name"].String());
+            EXPECT_EQ(appInstanceId, data["appInstanceId"].String());
+
+            m_condition_variable.notify_one();
+        }
+
+        void onRippleEvent(JsonObject& data) override
+        {
+            m_event_signal = LifecycleManager_onRippleEvent;
+
+            m_condition_variable.notify_one();
+        }
+
         uint32_t WaitForEventStatus(uint32_t timeout_ms, LifecycleManagerTest_events_t status)
         {
             uint32_t event_signal = LifecycleManager_invalidEvent;
             std::unique_lock<std::mutex> lock(m_mutex);
+            auto now = std::chrono::steady_clock::now();
             auto timeout = std::chrono::milliseconds(timeout_ms);
-              if (m_condition_variable.wait_until(lock, timeout) == std::cv_status::timeout)
+              if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
               {
                  TEST_LOG("Timeout waiting for request status event");
                  return m_event_signal == status;
@@ -103,26 +140,22 @@ class EventHandlerTest : public IEventHandler {
             return event_signal;
         }
 };
-} // namespace Plugin
 
-namespace Exchange {
-
-struct INotificationTest : public ILifecycleManager::INotification {
+struct INotificationTest : public WPEFramework::Exchange::ILifecycleManager::INotification 
+{
         MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
         MOCK_METHOD(void, AddRef, (), (const, override));
         MOCK_METHOD(uint32_t, Release, (), (const, override));
         MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 
-struct IStateNotificationTest : public ILifecycleManagerState::INotification {
+struct IStateNotificationTest : public WPEFramework::Exchange::ILifecycleManagerState::INotification 
+{
     MOCK_METHOD(void, OnAppLifecycleStateChanged, (const std::string& appId, const std::string& appInstanceId, ILifecycleManager::LifecycleState oldState, ILifecycleManager::LifecycleState newState,  const std::string& navigationIntent), (override));
     MOCK_METHOD(void, AddRef, (), (const, override));
     MOCK_METHOD(uint32_t, Release, (), (const, override));
     MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
-} // namespace Exchange
-} // namespace WPEFramework
-
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
