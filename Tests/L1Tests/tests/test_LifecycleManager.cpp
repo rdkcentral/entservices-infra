@@ -35,6 +35,15 @@
 #include "WorkerPoolImplementation.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
+#define TIMEOUT(1000)
+
+typedef enum : uint32_t {
+    LifecycleManager_invalidEvent = 0,
+    LifecycleManager_onStateChangeEvent,
+    LifecycleManager_onRuntimeManagerEvent,
+    LifecycleManager_onWindowManagerEvent,
+    LifecycleManager_onRippleEvent
+} LifecycleManagerTest_events_t;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -52,15 +61,57 @@ class LifecycleManagerImplementationTest : public LifecycleManagerImplementation
             return LifecycleManagerImplementation::handleWindowManagerEvent(data);
         }
 };
+
+class EventHandlerTest : public IEventHandler {
+    public:
+        std::string appId;
+        std::string appInstanceId;
+        Exchange::ILifecycleManager::LifecycleState oldLifecycleState;
+        Exchange::ILifecycleManager::LifecycleState newLifecycleState;
+        std::string navigationIntent;
+        std::string errorReason;
+
+        std::mutex m_mutex;
+        std::condition_variable m_condition_variable;
+        uint32_t m_event_signal = LifecycleManager_invalidEvent;
+
+        void onStateChangeEvent(JsonObject& data) override 
+        {
+            m_event_signal = LifecycleManager_onStateChangeEvent;
+
+            EXPECT_EQ(appId, data["appId"].String());
+            EXPECT_EQ(appInstanceId, data["appInstanceId"].String());
+            EXPECT_EQ(oldLifecycleState, static_cast<Exchange::ILifecycleManager::LifecycleState>(data["oldLifecycleState"].Number()));
+            EXPECT_EQ(newLifecycleState, static_cast<Exchange::ILifecycleManager::LifecycleState>(data["newLifecycleState"].Number()));
+            EXPECT_EQ(errorReason, data["errorReason"].String());
+
+            m_condition_variable.notify_one();
+        }
+
+        uint32_t WaitForEventStatus(uint32_t timeout_ms, LifecycleManagerTest_events_t status)
+        {
+            uint32_t event_signal = LifecycleManager_invalidEvent;
+            std::unique_lock<std::mutex> lock(m_mutex);
+            auto timeout = std::chrono::milliseconds(timeout_ms);
+              if (m_condition_variable.wait_until(lock, timeout) == std::cv_status::timeout)
+              {
+                 TEST_LOG("Timeout waiting for request status event");
+                 return m_event_signal == status;
+              }
+            event_signal = m_event_signal;
+            m_event_signal = LifecycleManager_invalidEvent;
+            return event_signal;
+        }
+};
 } // namespace Plugin
 
 namespace Exchange {
 
 struct INotificationTest : public ILifecycleManager::INotification {
-    MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
-    MOCK_METHOD(void, AddRef, (), (const, override));
-    MOCK_METHOD(uint32_t, Release, (), (const, override));
-    MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
+        MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
+        MOCK_METHOD(void, AddRef, (), (const, override));
+        MOCK_METHOD(uint32_t, Release, (), (const, override));
+        MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
 };
 
 struct IStateNotificationTest : public ILifecycleManagerState::INotification {
@@ -88,6 +139,7 @@ protected:
     string errorReason;
     bool success;
     Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
+    Plugin::EventHandlerTest eventHdlTest;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::ILifecycleManagerState* stateInterface = nullptr;
     Exchange::IConfiguration* mLifecycleManagerConfigure = nullptr;
@@ -333,8 +385,34 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 {    
     createResources();
 
+    uint32_t event_signal = LifecycleManager_invalidEvent;
+
+    eventHdlTest.appId = appId;
+    eventHdlTest.appInstanceId = appInstanceId;
+    eventHdlTest.oldLifecycleState = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
+    eventHdlTest.newLifecycleState = targetLifecycleState;
+    eventHdlTest.errorReason = errorReason;
+
+    JsonObject eventData;
+    eventData["appId"] = appId;
+    eventData["appInstanceId"] = appInstanceId;
+    eventData["oldLifecycleState"] = static_cast<uint32_t>(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
+    eventData["newLifecycleState"] = static_cast<uint32_t>(targetLifecycleState);
+    eventData["navigationIntent"] = launchIntent;
+    eventData["errorReason"] = errorReason;
+
     // TC-5: Spawn an app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    event_signal = LifecycleManager_invalidEvent;
+
+    eventHdlTest.onStateChangeEvent(eventData);
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
 
     releaseResources();
 }
