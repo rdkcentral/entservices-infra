@@ -112,6 +112,10 @@ protected:
 
     virtual ~LifecycleManagerTest() override
     {
+        const auto duration = std::chrono::milliseconds(100);
+
+        std::this_thread::sleep_for(duration);
+
 		Core::IWorkerPool::Assign(nullptr);
 		workerPool.Release();
 
