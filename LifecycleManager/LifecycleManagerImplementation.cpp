@@ -23,10 +23,6 @@
 #include <interfaces/json/JsonData_LifecycleManagerState.h>
 #include <interfaces/json/JLifecycleManagerState.h>
 #include <semaphore.h>
-#include <cstdio>
-
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework
 {
@@ -116,13 +112,11 @@ namespace WPEFramework
         
         void LifecycleManagerImplementation::dispatchEvent(EventNames event, const JsonValue &params)
         {
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));
         }
         
         void LifecycleManagerImplementation::Dispatch(EventNames event, const JsonValue params)
         {
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
              JsonObject obj = params.Object();
 
              //below is for ILifecycleManager notification
@@ -135,29 +129,22 @@ namespace WPEFramework
              uint32_t oldLifecycleState(obj["oldLifecycleState"].Number());
              string navigationIntent(obj["navigationIntent"].String());
 
-             DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
              mAdminLock.Lock();
         
              std::list<Exchange::ILifecycleManager::INotification*>::const_iterator index(mLifecycleManagerNotification.begin());
              std::list<Exchange::ILifecycleManagerState::INotification*>::const_iterator stateNotificationIndex(mLifecycleManagerStateNotification.begin());
-
-             DEBUG_PRINTF("ERROR: RDKEMW-2806");
-        
              switch(event)
              {
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
-                     DEBUG_PRINTF("ERROR: RDKEMW-2806");
                      handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
-                     {
-                        DEBUG_PRINTF("ERROR: RDKEMW-2806");
+                     { 
                          (*index)->OnAppStateChanged(appId, (LifecycleState)newLifecycleState, errorReason);
                          ++index;
                      }
                      while (stateNotificationIndex != mLifecycleManagerStateNotification.end())
-                     {
-                        DEBUG_PRINTF("ERROR: RDKEMW-2806");
+                     { 
                          (*stateNotificationIndex)->OnAppLifecycleStateChanged(appId, appInstanceId, (LifecycleState)oldLifecycleState, (LifecycleState)newLifecycleState, navigationIntent);
                          ++stateNotificationIndex;
                      }
@@ -172,7 +159,6 @@ namespace WPEFramework
                      LOGWARN("Event[%u] not handled", event);
                      break;
              }
-             DEBUG_PRINTF("ERROR: RDKEMW-2806");
              mAdminLock.Unlock();
         }
         
@@ -264,13 +250,10 @@ namespace WPEFramework
 	    {
                 if (firstLaunch)
 		{
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                     sem_wait(&context->mReachedLoadingStateSemaphore);
 		}
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 appInstanceId = context->getAppInstanceId();
             }
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
             return status;
         }
         
@@ -574,13 +557,11 @@ namespace WPEFramework
 
 	void LifecycleManagerImplementation::handleStateChangeEvent(const JsonObject &data)
     {
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
             string appInstanceId = data["appInstanceId"];
 	    uint32_t stateInput = data["newLifecycleState"].Number();
             Exchange::ILifecycleManager::LifecycleState state = (Exchange::ILifecycleManager::LifecycleState) stateInput;
             if (state != Exchange::ILifecycleManager::LifecycleState::UNLOADED)
 	    {
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 return;
 	    }
             ApplicationContext* context = nullptr;

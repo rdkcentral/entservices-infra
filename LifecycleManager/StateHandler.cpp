@@ -23,10 +23,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include "IEventHandler.h"
 #include "RequestHandler.h"
-#include <cstdio>
-
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework
 {
@@ -210,7 +206,6 @@ namespace WPEFramework
                 if(result)
                 {
                     printf("StateHandler::changeState: Success %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
-                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 }
                 else
                 {
@@ -219,7 +214,6 @@ namespace WPEFramework
                 }
                 fflush(stdout);
             }
-            DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
                 struct timespec stateChangeTime;
                 timespec_get(&stateChangeTime, TIME_UTC);
@@ -229,13 +223,11 @@ namespace WPEFramework
 
                 if (nullptr != eventHandler)
                 {
-                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 		    Exchange::ILifecycleManager::LifecycleState newLifecycleState = ((State*)context->getState())->getValue();
                     if (isStateTerminating)
 		    {
                         newLifecycleState = statePath[stateIndex];
-                    }
-                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+                    }    
                     JsonObject eventData;
                     eventData["appId"] = context->getAppId();
                     eventData["appInstanceId"] = context->getAppInstanceId();
@@ -244,12 +236,9 @@ namespace WPEFramework
                     if (newLifecycleState == Exchange::ILifecycleManager::LifecycleState::ACTIVE)
                     {
                         eventData["navigationIntent"] = context->getMostRecentIntent();
-                    }
-                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
-                    eventData["errorReason"] = errorReason;
-                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+                    } 
+                    eventData["errorReason"] = errorReason; 
                     eventHandler->onStateChangeEvent(eventData);
-                    DEBUG_PRINTF("ERROR: RDKEMW-2806");
                 }
                 if (isStateTerminating)
             {
@@ -266,7 +255,6 @@ namespace WPEFramework
                 fflush(stdout);
             }
         }
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
         return result;
     }
 

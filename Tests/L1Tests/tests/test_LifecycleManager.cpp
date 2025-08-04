@@ -34,9 +34,6 @@
 #include "ThunderPortability.h"
 #include "WorkerPoolImplementation.h"
 
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
 namespace WPEFramework {
@@ -103,7 +100,6 @@ protected:
 	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
             2, Core::Thread::DefaultStackSize(), 16))
     {
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
         mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementation>::Create();
         
         interface = static_cast<Exchange::ILifecycleManager*>(mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManager::ID));
@@ -112,23 +108,19 @@ protected:
 
 		Core::IWorkerPool::Assign(&(*workerPool));
 		workerPool->Run();
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
 
     virtual ~LifecycleManagerTest() override
     {
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
-		Core::IWorkerPool::Assign(nullptr);
-		workerPool.Release();
-
 		interface->Release();
 		stateInterface->Release();
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
+
+        Core::IWorkerPool::Assign(nullptr);
+		workerPool.Release();
     }
 	
 	void createResources() 
 	{
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    // Initialize the parameters with default values
         appId = "com.test.app";
         launchIntent = "test.launch.intent";
@@ -173,13 +165,11 @@ protected:
         // Configure the LifecycleManager
         mLifecycleManagerConfigure->Configure(mServiceMock);
 		
-		ASSERT_TRUE(interface != nullptr);
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
+		ASSERT_TRUE(interface != nullptr);  
     }
 
     void releaseResources()
     {
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
 	    // Clean up mocks
 		if (mServiceMock != nullptr)
         {
@@ -224,7 +214,6 @@ protected:
         mLifecycleManagerConfigure->Release();
 		
 		ASSERT_TRUE(interface != nullptr); 
-        DEBUG_PRINTF("ERROR: RDKEMW-2806");
     }
 };
 
@@ -341,20 +330,13 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
  */
 
 TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
-{
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
+{    
     createResources();
-
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 
     // TC-5: Spawn an app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
-
     releaseResources();
-
-    DEBUG_PRINTF("ERROR: RDKEMW-2806");
 }
 
 /* Test Case for App Ready after Spawning
