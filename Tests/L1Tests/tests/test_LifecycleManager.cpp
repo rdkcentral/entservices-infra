@@ -74,8 +74,11 @@ class EventHandlerTest : public IEventHandler {
         std::string appInstanceId;
         Exchange::ILifecycleManager::LifecycleState oldLifecycleState;
         Exchange::ILifecycleManager::LifecycleState newLifecycleState;
+        Exchange::IRuntimeManager::RuntimeState state;
         std::string navigationIntent;
         std::string errorReason;
+        std::string name;
+        std::string errorCode;
 
         std::mutex m_mutex;
         std::condition_variable m_condition_variable;
