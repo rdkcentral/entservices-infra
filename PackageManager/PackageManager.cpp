@@ -155,5 +155,29 @@ namespace Plugin
         }
     }
 
+    void PackageManager::NotificationHandler::OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos)
+    {
+        Core::JSON::ArrayType<PackageInfoJson> packageInfoArray;
+        if (packageInfos != nullptr)
+        {
+            Exchange::IPackageDownloader::PackageInfo resultItem{};
+
+            while (packageInfos->Next(resultItem) == true) { packageInfoArray.Add() = resultItem; }
+
+            Core::JSON::Container eventPayload;
+            eventPayload.Add(_T("packageInfoArray"), &packageInfoArray);
+            //unable to remove escaped characters from fileLocator as ToString called in Notify() always adds escape characters.
+            // {
+            //     size_t pos = 0;
+            //     while ((pos = jsonstr.find("\\/", pos)) != std::string::npos)
+            //     {
+            //         jsonstr.replace(pos, 2, "/");
+            //         ++pos;
+            //     }
+            // }
+
+            mParent.Notify(_T("onAppDownloadStatus"), eventPayload);
+        }
+    }
 } // namespace Plugin
 } // namespace WPEFramework
