@@ -167,7 +167,7 @@ protected:
     string appInstanceId;
     string errorReason;
     bool success;
-    Core::ProxyType<Plugin::LifecycleManagerImplementationTest> mLifecycleManagerImpl;
+    Core::ProxyType<LifecycleManagerImplementationTest> mLifecycleManagerImpl;
     EventHandlerTest eventHdlTest;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::ILifecycleManagerState* stateInterface = nullptr;
@@ -183,7 +183,7 @@ protected:
 	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
             2, Core::Thread::DefaultStackSize(), 16))
     {
-        mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementationTest>::Create();
+        mLifecycleManagerImpl = Core::ProxyType<LifecycleManagerImplementationTest>::Create();
         
         interface = static_cast<Exchange::ILifecycleManager*>(mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManager::ID));
 
