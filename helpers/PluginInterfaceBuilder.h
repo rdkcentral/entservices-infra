@@ -113,7 +113,6 @@ namespace Plugin {
             auto pluginInterface = controller->QueryInterfaceByCallsign<INTERFACE>(callsign.c_str());
 
             if (pluginInterface) {
-                pluginInterface->AddRef();
                 LOGINFO("plugin interface succeed and retry count: %d",count);
                 return pluginInterface;
             }
