@@ -48,17 +48,21 @@ typedef enum : uint32_t {
     LifecycleManager_onRippleEvent
 } LifecycleManagerTest_events_t;
 
+namespace WPEFramework {
+namespace Plugin{    
+    class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
+    public:
+        ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const 
+        {
+            return LifecycleManagerImplementation::getContext(appInstanceId, appId);
+        }
+    };    
+} // namespace Plugin
+} // namespace WPEFramework
+
 using ::testing::NiceMock;
 using namespace WPEFramework;
 using namespace std;
-
-class LifecycleManagerImplementationTest : public Plugin::LifecycleManagerImplementation {
-    public:
-        Plugin::ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const 
-        {
-            return getContext(appInstanceId, appId);
-        }
-};
 
 class EventHandlerTest : public Plugin::IEventHandler {
     public:
@@ -167,7 +171,7 @@ protected:
     string appInstanceId;
     string errorReason;
     bool success;
-    Core::ProxyType<LifecycleManagerImplementationTest> mLifecycleManagerImpl;
+    Core::ProxyType<Plugin::LifecycleManagerImplementationTest> mLifecycleManagerImpl;
     EventHandlerTest eventHdlTest;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::ILifecycleManagerState* stateInterface = nullptr;
@@ -183,7 +187,7 @@ protected:
 	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
             2, Core::Thread::DefaultStackSize(), 16))
     {
-        mLifecycleManagerImpl = Core::ProxyType<LifecycleManagerImplementationTest>::Create();
+        mLifecycleManagerImpl = Core::ProxyType<Plugin::LifecycleManagerImplementationTest>::Create();
         
         interface = static_cast<Exchange::ILifecycleManager*>(mLifecycleManagerImpl->QueryInterface(Exchange::ILifecycleManager::ID));
 

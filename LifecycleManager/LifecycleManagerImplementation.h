@@ -151,7 +151,7 @@ namespace WPEFramework
 
                 friend class Job;
 #ifdef UNIT_TEST                
-                friend class ::LifecycleManagerImplementationTest;
+                friend class LifecycleManagerImplementationTest;
 #endif
         };
     } /* namespace Plugin */
