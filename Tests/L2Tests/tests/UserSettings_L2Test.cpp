@@ -2923,193 +2923,132 @@ TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
     }
 }
 
-TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
+TEST_F(UserSettingTest, ErrorHandlingWhenPersistentStoreDbFileMissing)
 {
     uint32_t status = Core::ERROR_GENERAL;
     bool getBoolValue = false;
-    string getStringValue = "";
     Core::Sink<NotificationHandler> notification;
     uint32_t signalled = UserSettings_StateInvalid;
 
-    if (CreateUserSettingInterfaceObjectUsingComRPCConnection() != Core::ERROR_NONE)
-    {
-        TEST_LOG("Invalid Client_UserSettings");
-    }
-    else
-    {
-        ASSERT_TRUE(m_controller_usersettings!= nullptr);
-        if (m_controller_usersettings)
-        {
-            ASSERT_TRUE(m_usersettingsplugin!= nullptr);
-            if (m_usersettingsplugin)
-            {
-                m_usersettingsplugin->Register(&notification);
+    // Step 1: Create interface and verify normal operation
+    ASSERT_EQ(CreateUserSettingInterfaceObjectUsingComRPCConnection(), Core::ERROR_NONE);
+    ASSERT_TRUE(m_controller_usersettings != nullptr);
+    ASSERT_TRUE(m_usersettingsplugin != nullptr);
 
-                TEST_LOG("Setting and Getting AudioDescription Values");
-                status = m_usersettingsplugin->SetAudioDescription(true);
-                EXPECT_EQ(status,Core::ERROR_NONE);
-                if (status != Core::ERROR_NONE)
-                {
-                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
-                    TEST_LOG("Err: %s", errorMsg.c_str());
-                }
-                signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onAudioDescriptionChanged);
-                EXPECT_TRUE(signalled & UserSettings_onAudioDescriptionChanged);
+    m_usersettingsplugin->AddRef();
+    m_usersettingsplugin->Register(&notification);
 
-                status = m_usersettingsplugin->GetAudioDescription(getBoolValue);
-                EXPECT_EQ(getBoolValue, true);
-                EXPECT_EQ(status, Core::ERROR_NONE);
+    // Set AudioDescription to true and verify event and value
+    status = m_usersettingsplugin->SetAudioDescription(true);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onAudioDescriptionChanged);
+    EXPECT_TRUE(signalled & UserSettings_onAudioDescriptionChanged);
 
-                TEST_LOG("Setting and Getting PinControl Values");
-                status = m_usersettingsplugin->SetPinControl(true);
-                EXPECT_EQ(status,Core::ERROR_NONE);
-                if (status != Core::ERROR_NONE)
-                {
-                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
-                    TEST_LOG("Err: %s", errorMsg.c_str());
-                }
-                signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPinControlChanged);
-                EXPECT_TRUE(signalled & UserSettings_onPinControlChanged);
+    status = m_usersettingsplugin->GetAudioDescription(getBoolValue);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_EQ(getBoolValue, true);
 
-                status = m_usersettingsplugin->GetPinControl(getBoolValue);
-                EXPECT_EQ(getBoolValue, true);
-                EXPECT_EQ(status, Core::ERROR_NONE);
+    // Set PinControl to true and verify event and value
+    status = m_usersettingsplugin->SetPinControl(true);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPinControlChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPinControlChanged);
 
-                if (status != Core::ERROR_NONE)
-                {
-                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
-                    TEST_LOG("Err: %s", errorMsg.c_str());
-                }
-                int file_status = remove("/tmp/secure/persistent/rdkservicestore");
-                // Check if the file has been successfully removed
-                if (file_status != 0)
-                {
-                    TEST_LOG("Error deleting file[/tmp/secure/persistent/rdkservicestore]");
-                }
-                else
-                {
-                    TEST_LOG("File[/tmp/secure/persistent/rdkservicestore] successfully deleted");
-                }
+    status = m_usersettingsplugin->GetPinControl(getBoolValue);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_EQ(getBoolValue, true);
 
-                TEST_LOG("Setting and Getting AudioDescription Values after DB file deletion");
-                status = m_usersettingsplugin->SetAudioDescription(false);
-                EXPECT_EQ(status, Core::ERROR_GENERAL);
-
-                signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onAudioDescriptionChanged);
-                EXPECT_TRUE(signalled & UserSettings_onAudioDescriptionChanged);
-
-                status = m_usersettingsplugin->GetAudioDescription(getBoolValue);
-                EXPECT_EQ(getBoolValue, true);
-                EXPECT_EQ(status, Core::ERROR_NONE);
-
-                TEST_LOG("Setting and Getting setPinControl Values after DB file deletion");
-                status = m_usersettingsplugin->SetPinControl(false);
-                EXPECT_EQ(status, Core::ERROR_GENERAL);
-
-                signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPinControlChanged);
-                EXPECT_TRUE(signalled & UserSettings_onPinControlChanged);
-
-                status = m_usersettingsplugin->GetPinControl(getBoolValue);
-                EXPECT_EQ(getBoolValue, true);
-                EXPECT_EQ(status, Core::ERROR_NONE);
-
-                m_usersettingsplugin->Unregister(&notification);
-                m_usersettingsplugin->Release();
-            }
-            else
-            {
-                TEST_LOG("m_usersettingsplugin is NULL");
-            }
-            m_controller_usersettings->Release();
-        }
-        else
-        {
-            TEST_LOG("m_controller_usersettings is NULL");
-        }
-    }
-}
-
-TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
-{
-    uint32_t status = Core::ERROR_GENERAL;
-    bool getBoolValue = false;
-    string getStringValue = "";
-    Core::Sink<NotificationHandler> notification;
-    uint32_t signalled = UserSettings_StateInvalid;
-
-    status = DeactivateService("org.rdk.PersistentStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
-    sleep(5);
-
+    // Step 2: Delete the persistent store DB file
     int file_status = remove("/tmp/secure/persistent/rdkservicestore");
-    // Check if the file has been successfully removed
-    if (file_status != 0)
-    {
+    if (file_status != 0) {
         TEST_LOG("Error deleting file[/tmp/secure/persistent/rdkservicestore]");
-    }
-    else
-    {
+    } else {
         TEST_LOG("File[/tmp/secure/persistent/rdkservicestore] successfully deleted");
     }
 
-    if (CreateUserSettingInterfaceObjectUsingComRPCConnection() != Core::ERROR_NONE)
-    {
-        TEST_LOG("Invalid Client_UserSettings");
+    // Step 3: Attempt to set settings again, expect error
+    status = m_usersettingsplugin->SetAudioDescription(false);
+    EXPECT_EQ(status, Core::ERROR_GENERAL);
+    signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onAudioDescriptionChanged);
+    EXPECT_FALSE(signalled & UserSettings_onAudioDescriptionChanged);
+
+    status = m_usersettingsplugin->SetPinControl(false);
+    EXPECT_EQ(status, Core::ERROR_GENERAL);
+    signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPinControlChanged);
+    EXPECT_FALSE(signalled & UserSettings_onPinControlChanged);
+
+    // Step 4: Get settings after DB file is deleted, expect last known value or default
+    status = m_usersettingsplugin->GetAudioDescription(getBoolValue);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_EQ(getBoolValue, true); // Should return last known value
+
+    status = m_usersettingsplugin->GetPinControl(getBoolValue);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_EQ(getBoolValue, true); // Should return last known value
+
+    m_usersettingsplugin->Unregister(&notification);
+    m_usersettingsplugin->Release();
+    m_controller_usersettings->Release();
+}
+
+TEST_F(UserSettingTest, ErrorHandlingWhenPersistentStoreServiceDeactivated)
+{
+    uint32_t status = Core::ERROR_GENERAL;
+    bool getBoolValue = false;
+    Core::Sink<NotificationHandler> notification;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    // Step 1: Deactivate PersistentStore and UserSettings, delete DB file
+    status = DeactivateService("org.rdk.UserSettings");
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    status = DeactivateService("org.rdk.PersistentStore");
+    EXPECT_EQ(status, Core::ERROR_NONE);
+
+    int file_status = remove("/tmp/secure/persistent/rdkservicestore");
+    if (file_status != 0) {
+        TEST_LOG("Error deleting file[/tmp/secure/persistent/rdkservicestore]");
+    } else {
+        TEST_LOG("File[/tmp/secure/persistent/rdkservicestore] successfully deleted");
     }
-    else
-    {
-        ASSERT_TRUE(m_controller_usersettings!= nullptr);
-        if (m_controller_usersettings)
-        {
-            ASSERT_TRUE(m_usersettingsplugin!= nullptr);
-            if (m_usersettingsplugin)
-            {
-                m_usersettingsplugin->Register(&notification);
 
-                TEST_LOG("Setting and Getting AudioDescription Values");
-                status = m_usersettingsplugin->SetAudioDescription(true);
-                EXPECT_EQ(status,Core::ERROR_GENERAL);
-                if (status != Core::ERROR_NONE)
-                {
-                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
-                    TEST_LOG("Err: %s", errorMsg.c_str());
-                }
-                signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onAudioDescriptionChanged);
-                EXPECT_FALSE(signalled & UserSettings_onAudioDescriptionChanged);
+    // Step 2: Reactivate UserSettings only
+    sleep(2); // Allow time for deactivation
+    status = ActivateService("org.rdk.UserSettings");
+    EXPECT_EQ(status, Core::ERROR_NONE);
 
-                status = m_usersettingsplugin->GetAudioDescription(getBoolValue);
-                EXPECT_EQ(getBoolValue, false);
-                EXPECT_EQ(status, Core::ERROR_NONE);
+    // Step 3: Create interface and attempt to set/get settings
+    ASSERT_EQ(CreateUserSettingInterfaceObjectUsingComRPCConnection(), Core::ERROR_NONE);
+    ASSERT_TRUE(m_controller_usersettings != nullptr);
+    ASSERT_TRUE(m_usersettingsplugin != nullptr);
 
-                TEST_LOG("Setting and Getting PinControl Values");
-                status = m_usersettingsplugin->SetPinControl(true);
-                EXPECT_EQ(status,Core::ERROR_GENERAL);
-                if (status != Core::ERROR_NONE)
-                {
-                    std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
-                    TEST_LOG("Err: %s", errorMsg.c_str());
-                }
-                signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPinControlChanged);
-                EXPECT_FALSE(signalled & UserSettings_onPinControlChanged);
+    m_usersettingsplugin->AddRef();
+    m_usersettingsplugin->Register(&notification);
 
-                status = m_usersettingsplugin->GetPinControl(getBoolValue);
-                EXPECT_EQ(getBoolValue, false);
-                EXPECT_EQ(status, Core::ERROR_NONE);
+    // Set AudioDescription, expect error
+    status = m_usersettingsplugin->SetAudioDescription(true);
+    EXPECT_EQ(status, Core::ERROR_GENERAL);
+    signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onAudioDescriptionChanged);
+    EXPECT_FALSE(signalled & UserSettings_onAudioDescriptionChanged);
 
-                m_usersettingsplugin->Unregister(&notification);
-                m_usersettingsplugin->Release();
-            }
-            else
-            {
-                TEST_LOG("m_usersettingsplugin is NULL");
-            }
-            m_controller_usersettings->Release();
-        }
-        else
-        {
-            TEST_LOG("m_controller_usersettings is NULL");
-        }
-    }
+    // Set PinControl, expect error
+    status = m_usersettingsplugin->SetPinControl(true);
+    EXPECT_EQ(status, Core::ERROR_GENERAL);
+    signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPinControlChanged);
+    EXPECT_FALSE(signalled & UserSettings_onPinControlChanged);
+
+    // Get AudioDescription, expect default value (false)
+    status = m_usersettingsplugin->GetAudioDescription(getBoolValue);
+    EXPECT_EQ(status, Core::ERROR_GENERAL);
+    EXPECT_EQ(getBoolValue, false);
+
+    // Get PinControl, expect default value (false)
+    status = m_usersettingsplugin->GetPinControl(getBoolValue);
+    EXPECT_EQ(status, Core::ERROR_GENERAL);
+    EXPECT_EQ(getBoolValue, false);
+
+    m_usersettingsplugin->Unregister(&notification);
+    m_usersettingsplugin->Release();
+    m_controller_usersettings->Release();
 }
 
 TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivatingErrorCase)
