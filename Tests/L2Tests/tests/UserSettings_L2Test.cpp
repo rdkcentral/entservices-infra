@@ -30,6 +30,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <time.h>
+#include "WaitGroup.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
@@ -43,43 +44,43 @@ using testing::StrictMock;
 using ::WPEFramework::Exchange::IStore2;
 using ::WPEFramework::Exchange::IUserSettings;
 
-class WaitGroup {
-public:
-    WaitGroup()
-        : _count(0)
-    {
-    }
+// class WaitGroup {
+// public:
+//     WaitGroup()
+//         : _count(0)
+//     {
+//     }
 
-    void Add(int count = 1)
-    {
-        _count += count;
+//     void Add(int count = 1)
+//     {
+//         _count += count;
 
-        if (_count <= 0)
-            _cv.notify_all();
-    }
+//         if (_count <= 0)
+//             _cv.notify_all();
+//     }
 
-    void Done() { Add(-1); }
+//     void Done() { Add(-1); }
 
-    void Wait()
-    {
-        if (_count <= 0)
-            return;
+//     void Wait()
+//     {
+//         if (_count <= 0)
+//             return;
 
-        std::unique_lock<std::mutex> _lock{ _m };
-        _cv.wait(_lock, [&]() {
-            return _count == 0;
-        });
-    }
+//         std::unique_lock<std::mutex> _lock{ _m };
+//         _cv.wait(_lock, [&]() {
+//             return _count == 0;
+//         });
+//     }
 
-    // avoid copies of this class
-    WaitGroup(const WaitGroup&) = delete;
-    WaitGroup operator=(const WaitGroup&) = delete;
+//     // avoid copies of this class
+//     WaitGroup(const WaitGroup&) = delete;
+//     WaitGroup operator=(const WaitGroup&) = delete;
 
-private:
-    std::atomic<int> _count;
-    std::mutex _m;
-    std::condition_variable _cv;
-};
+// private:
+//     std::atomic<int> _count;
+//     std::mutex _m;
+//     std::condition_variable _cv;
+// };
 
 typedef enum : uint32_t {
     UserSettings_onAudioDescriptionChanged = 0x00000001,
