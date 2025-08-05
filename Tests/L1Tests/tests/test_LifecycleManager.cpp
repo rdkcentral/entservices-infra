@@ -52,19 +52,9 @@ namespace WPEFramework {
 namespace Plugin {
 class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
     public:
-        MOCK_METHOD(void, AddRef, (), (const, override));
-        MOCK_METHOD(uint32_t, Release, (), (const, override));
         ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const 
         {
             return LifecycleManagerImplementation::getContext(appInstanceId, appId);
-        }
-        void handleRuntimeManagerEventImpl(JsonObject& data) 
-        {
-            return LifecycleManagerImplementation::handleRuntimeManagerEvent(data);
-        }
-        void handleWindowManagerEventImpl(JsonObject& data) 
-        {
-            return LifecycleManagerImplementation::handleWindowManagerEvent(data);
         }
 };
 
@@ -899,7 +889,7 @@ TEST_F(LifecycleManagerTest, closeApp_onUserExit)
     eventSignal();
     
 	// TC-20: User exits the app after spawning 
-    EXPECT_EQ(Core::ERROR_NONE, interface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
@@ -947,7 +937,7 @@ TEST_F(LifecycleManagerTest, closeApp_onError)
     eventSignal();
     
 	// TC-21: Error after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, interface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
@@ -995,7 +985,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
     eventSignal();
     
 	// TC-22: Kill and run after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, interface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
@@ -1054,7 +1044,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
     eventSignal();
     
 	// TC-23: Kill and activate after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, interface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
