@@ -187,6 +187,7 @@ protected:
     WindowManagerMock* mWindowManagerMock = nullptr;
     ServiceMock* mServiceMock = nullptr;
     Core::ProxyType<WorkerPoolImplementation> workerPool;
+    JsonObject eventData;
 
     LifecycleManagerTest()
 	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
@@ -233,7 +234,6 @@ protected:
         eventHdlTest.newLifecycleState = targetLifecycleState;
         eventHdlTest.errorReason = errorReason;
 
-        JsonObject eventData;
         eventData["appId"] = appId;
         eventData["appInstanceId"] = appInstanceId;
         eventData["oldLifecycleState"] = static_cast<uint32_t>(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
