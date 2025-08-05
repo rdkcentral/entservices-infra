@@ -48,21 +48,17 @@ typedef enum : uint32_t {
     LifecycleManager_onRippleEvent
 } LifecycleManagerTest_events_t;
 
-namespace WPEFramework {
-namespace Plugin {
-class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
-    public:
-        ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const 
-        {
-            return LifecycleManagerImplementation::getContext(appInstanceId, appId);
-        }
-};
-} // namespace Plugin
-} // namespace WPEFramework
-
 using ::testing::NiceMock;
 using namespace WPEFramework;
 using namespace std;
+
+class LifecycleManagerImplementationTest : public Plugin::LifecycleManagerImplementation {
+    public:
+        Plugin::ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const 
+        {
+            return getContext(appInstanceId, appId);
+        }
+};
 
 class EventHandlerTest : public Plugin::IEventHandler {
     public:
@@ -144,10 +140,10 @@ class NotificationTest : public Exchange::ILifecycleManager::INotification
     private:
         BEGIN_INTERFACE_MAP(NotificationTest)
         INTERFACE_ENTRY(Exchange::ILifecycleManager::INotification)
-        END_INTERFACE_MAP(NotificationTest)
+        END_INTERFACE_MAP
     
     public:
-        void OnAppStateChanged(const std::string& appId, const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState oldState, const Exchange::ILifecycleManager::LifecycleState newState, const std::string& navigationIntent) override {}     
+        void OnAppStateChanged(const std::string& appId, Exchange::ILifecycleManager::LifecycleState state, const std::string& errorReason) override {}     
 };
 
 class StateNotificationTest : public Exchange::ILifecycleManagerState::INotification 
@@ -155,7 +151,7 @@ class StateNotificationTest : public Exchange::ILifecycleManagerState::INotifica
     private:
         BEGIN_INTERFACE_MAP(StateNotificationTest)
         INTERFACE_ENTRY(Exchange::ILifecycleManagerState::INotification)
-        END_INTERFACE_MAP(StateNotificationTest)
+        END_INTERFACE_MAP
 
     public:
        void OnAppLifecycleStateChanged(const std::string& appId, const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState oldState, const Exchange::ILifecycleManager::LifecycleState newState, const std::string& navigationIntent) override {}
@@ -172,7 +168,7 @@ protected:
     string errorReason;
     bool success;
     Core::ProxyType<Plugin::LifecycleManagerImplementationTest> mLifecycleManagerImpl;
-    Plugin::EventHandlerTest eventHdlTest;
+    EventHandlerTest eventHdlTest;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::ILifecycleManagerState* stateInterface = nullptr;
     Exchange::IConfiguration* mLifecycleManagerConfigure = nullptr;
