@@ -225,6 +225,21 @@ protected:
         runtimeConfigObject = {
             true,true,true,1024,512,"test.env.variables",1,1,1024,true,"test.dial.id","test.command","test.app.type","test.app.path","test.runtime.path","test.logfile.path",1024,"test.log.levels",true,"test.fkps.files","test.firebolt.version",true,"test.unpacked.path"
         };
+
+        // Initialize event parameters and event data
+        eventHdlTest.appId = appId;
+        eventHdlTest.appInstanceId = appInstanceId;
+        eventHdlTest.oldLifecycleState = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
+        eventHdlTest.newLifecycleState = targetLifecycleState;
+        eventHdlTest.errorReason = errorReason;
+
+        JsonObject eventData;
+        eventData["appId"] = appId;
+        eventData["appInstanceId"] = appInstanceId;
+        eventData["oldLifecycleState"] = static_cast<uint32_t>(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
+        eventData["newLifecycleState"] = static_cast<uint32_t>(targetLifecycleState);
+        eventData["navigationIntent"] = launchIntent;
+        eventData["errorReason"] = errorReason;
 		
 		// Set up mocks and expect calls
         mServiceMock = new NiceMock<ServiceMock>;
@@ -427,20 +442,6 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 
     uint32_t event_signal = LifecycleManager_invalidEvent;
 
-    eventHdlTest.appId = appId;
-    eventHdlTest.appInstanceId = appInstanceId;
-    eventHdlTest.oldLifecycleState = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
-    eventHdlTest.newLifecycleState = targetLifecycleState;
-    eventHdlTest.errorReason = errorReason;
-
-    JsonObject eventData;
-    eventData["appId"] = appId;
-    eventData["appInstanceId"] = appInstanceId;
-    eventData["oldLifecycleState"] = static_cast<uint32_t>(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
-    eventData["newLifecycleState"] = static_cast<uint32_t>(targetLifecycleState);
-    eventData["navigationIntent"] = launchIntent;
-    eventData["errorReason"] = errorReason;
-
     // TC-5: Spawn an app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
@@ -473,14 +474,24 @@ TEST_F(LifecycleManagerTest, appready_onSpawnAppSuccess)
 {
     createResources();
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    uint32_t event_signal = LifecycleManager_invalidEvent;
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    event_signal = LifecycleManager_invalidEvent;
+
+    eventHdlTest.onStateChangeEvent(eventData);
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
     
 	// TC-6: Check if app is ready after spawning
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.AppReady(appId));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->AppReady(appId));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
     sem_wait(&context->mAppReadySemaphore);
     
