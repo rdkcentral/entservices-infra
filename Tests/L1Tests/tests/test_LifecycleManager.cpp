@@ -321,8 +321,6 @@ protected:
 
     void eventSignal() 
     {
-        event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
         event_signal = LifecycleManager_invalidEvent;
 
         eventHdlTest.onStateChangeEvent(eventData);
@@ -336,7 +334,7 @@ protected:
 /* Test Case for Registering and Unregistering Notification
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create a mock notification instance and initialize it using the INotificationTest struct
+ * Create a notification instance using the NotificationTest class
  * Register the notification with the Lifecycle Manager interface
  * Verify successful registration of notification by asserting that Register() returns Core::ERROR_NONE
  * Unregister the notification from the Lifecycle Manager interface
@@ -361,7 +359,7 @@ TEST_F(LifecycleManagerTest, unregisterNotification_afterRegister)
 /* Test Case for Unregistering Notification without registering
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create a mock notification instance and initialize it using the INotificationTest struct
+ * Create a notification instance using the NotificationTest class
  * Unregister the notification from the Lifecycle Manager interface
  * Verify unregistration of notification fails by asserting that Unregister() returns Core::ERROR_GENERAL
  * Release the Lifecycle Manager interface object and clean-up related test resources
@@ -382,7 +380,7 @@ TEST_F(LifecycleManagerTest, unregisterNotification_withoutRegister)
 /* Test Case for Registering and Unregistering State Notification 
  * 
  * Set up Lifecycle Manager state interface, configurations, required COM-RPC resources, mocks and expectations
- * Create a mock state notification instance and initialize it using the IStateNotificationTest struct
+ * Create a state notification instance using the StateNotificationTest class
  * Register the state notification with the Lifecycle Manager state interface
  * Verify successful registration of state notification by asserting that Register() returns Core::ERROR_NONE
  * Unregister the state notification from the Lifecycle Manager state interface
@@ -407,7 +405,7 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_afterRegister)
 /* Test Case for Unregistering State Notification without registering
  * 
  * Set up Lifecycle Manager state interface, configurations, required COM-RPC resources, mocks and expectations
- * Create a mock state notification instance and initialize it using the IStateNotificationTest struct
+ * Create a state notification instance using the StateNotificationTest class
  * Unregister the state notification from the Lifecycle Manager state interface
  * Verify unregistration of state notification fails by asserting that Unregister() returns Core::ERROR_GENERAL
  * Release the Lifecycle Manager state interface object and clean-up related test resources
@@ -428,9 +426,10 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
 /* Test Case for Spawning an App
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Spawn an app with valid parameters from the Lifecycle Manager interface with target state as LOADING.
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Handle event signals by calling the eventSignal() method
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
@@ -447,14 +446,14 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 
 /* Test Case for App Ready after Spawning
  * 
- * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING.
+ * Set up Lifecycle Manager interface, state interface, configurations, required COM-RPC resources, mocks and expectations
+ * Spawn an app with valid parameters with target state as LOADING.
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Check if the app is ready after spawning from the LifecycleManagerImplementationTest instance with the appId
+ * Handle event signals by calling the eventSignal() method
+ * Check if the app is ready after spawning with the appId 
  * Verify that the app is ready by asserting that AppReady() returns Core::ERROR_NONE
  * Obtain the loaded app context using getContextImpl() and wait for the app ready semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, appready_onSpawnAppSuccess) 
@@ -477,16 +476,19 @@ TEST_F(LifecycleManagerTest, appready_onSpawnAppSuccess)
 
 /* Test Case for App Ready with invalid AppId after Spawning 
  * 
- * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING.
+ * Set up Lifecycle Manager interface, state interface, configurations, required COM-RPC resources, mocks and expectations
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Handle event signals by calling the eventSignal() method
  * Check failure of app ready due to invalid appId by asserting that AppReady() returns Core::ERROR_GENERAL
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, appready_oninvalidAppId) 
 {
     createResources();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     eventSignal();
 	
@@ -499,12 +501,13 @@ TEST_F(LifecycleManagerTest, appready_oninvalidAppId)
 /* Test Case for querying if App is Loaded after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING.
+ * Spawn an app with valid parameters  with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Check if the app is loaded after spawning from the LifecycleManager interface with the appId
+ * Handle event signals by calling the eventSignal() method
+ * Check if the app is loaded after spawning with the appId
  * Verify that the app is loaded by asserting that IsAppLoaded() returns Core::ERROR_NONE
  * Check that the loaded flag is set to true, confirming that the app is loaded
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Release the Lifecycle Manager object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppSuccess) 
@@ -528,11 +531,12 @@ TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppSuccess)
 /* Test Case for querying if App is Loaded with invalid AppId after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING.
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Handle event signals by calling the eventSignal() method
  * Check failure of app loaded due to invalid appId by asserting that IsAppLoaded() returns Core::ERROR_GENERAL
  * Check that the loaded flag is set to false, confirming that the app is not loaded
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Release the Lifecycle Manager object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
@@ -557,11 +561,12 @@ TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Enable the verbose flag by setting it to true
- * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Handle event signals by calling the eventSignal() method
  * Obtain the loaded apps and assert that GetLoadedApps() returns Core::ERROR_NONE
- * Verify the app list parameters by comparing the obtained and expected app list
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Verify the app list parameters by comparing the obtained and expected appId
+ * Release the Lifecycle Manager object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, getLoadedApps_verboseEnabled)
@@ -587,11 +592,12 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseEnabled)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Disable the verbose flag by setting it to false
- * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Handle event signals by calling the eventSignal() method
  * Obtain the loaded apps and assert that GetLoadedApps() returns Core::ERROR_NONE
  * Verify the app list parameters by comparing the obtained and expected app list
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Release the Lifecycle Manager object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
@@ -618,8 +624,8 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Enable the verbose flag by setting it to true
  * Obtain the loaded apps and assert that GetLoadedApps() returns Core::ERROR_NONE
- * Verify the app list parameters is null indicating no apps are loaded
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Verify the app list parameters is empty indicating no apps are loaded
+ * Release the Lifecycle Manager object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
@@ -640,11 +646,15 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
 /* Test Case for setTargetAppState with valid parameters
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Handle event signals by calling the eventSignal() method
  * Set the target state of the app from LOADING to INITIALIZING with valid parameters
  * Verify successful state change by asserting that SetTargetAppState() returns Core::ERROR_NONE
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Obtain the loaded app context using getContextImpl() and wait for the app running semaphore
+ * Handle event signals by calling the eventSignal() method
+ * Repeat the same process with only required parameters valid
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
@@ -686,11 +696,12 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 /* Test Case for setTargetAppState with invalid parameters
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Handle event signals by calling the eventSignal() method
  * Set the target state of the app to LOADING with invalid appInstanceId
  * Verify state change fails by asserting that SetTargetAppState() returns Core::ERROR_GENERAL
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Release the Lifecycle Manager object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
@@ -710,13 +721,14 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
 /* Test Case for Unload App after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING.
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Unload the app using the appInstanceId with the LifecycleManagerImplementationTest instance.
+ * Handle event signals by calling the eventSignal() method
+ * Unload the app using the appInstanceId 
  * Verify that app is successfully unloaded by asserting that UnloadApp() returns Core::ERROR_NONE
- * Obtain the loaded app context using getContextImpl() and post the app running and app terminating semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Obtain the loaded app context using getContextImpl() and post the app running and app terminating semaphores
+ * Handle event signals by calling the eventSignal() method
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppSuccess)
@@ -758,10 +770,10 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppSuccess)
 /* Test Case for Unload App without Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest and set the appInstanceId to a random test value.
- * Unload the app using the appInstanceId with the LifecycleManagerImplementationTest instance.
+ * Set the appInstanceId to a random test value
+ * Unload the app using the appInstanceId
  * Verify failure of app unload by asserting that UnloadApp() returns Core::ERROR_GENERAL
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Release the Lifecycle Manager object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, unloadApp_withoutSpawning)
@@ -779,13 +791,14 @@ TEST_F(LifecycleManagerTest, unloadApp_withoutSpawning)
 /* Test Case for Kill App after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING.
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Kill the app using the appInstanceId with the LifecycleManagerImplementationTest instance.
+ * Handle event signals by calling the eventSignal() method
+ * Kill the app using the appInstanceId
  * Verify that app is successfully killed by asserting that KillApp() returns Core::ERROR_NONE
- * Obtain the loaded app context using getContextImpl() and post the app running and app terminating semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Obtain the loaded app context using getContextImpl() and post the app running and app terminating semaphores
+ * Handle event signals by calling the eventSignal() method
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, killApp_onSpawnAppSuccess)
@@ -827,8 +840,8 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppSuccess)
 /* Test Case for Kill App without Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest and set the appInstanceId to a random test value.
- * Kill the app using the appInstanceId with the LifecycleManagerImplementationTest instance.
+ * Set the appInstanceId to a random test value
+ * Kill the app using the appInstanceId 
  * Verify failure of app kill by asserting that KillApp() returns Core::ERROR_GENERAL
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
@@ -847,14 +860,15 @@ TEST_F(LifecycleManagerTest, killApp_withoutSpawning)
 
 /* Test Case for Close App on User Exit
  * 
- * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING.
+ * Set up Lifecycle Manager interface, state interface, configurations, required COM-RPC resources, mocks and expectations
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Close the app using the appId and setting the reason for close as USER EXIT with the LifecycleManagerImplementationTest instance.
+ * Handle event signals by calling the eventSignal() method
+ * Close the app using the appId and setting the reason for close as USER EXIT 
  * Verify that app is successfully closed by asserting that CloseApp() returns Core::ERROR_NONE
- * Obtain the loaded app context using getContextImpl() and post the app running and app terminating semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Obtain the loaded app context using getContextImpl() and post the app running and app terminating semaphores
+ * Handle event signals by calling the eventSignal() method
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, closeApp_onUserExit) 
@@ -895,14 +909,15 @@ TEST_F(LifecycleManagerTest, closeApp_onUserExit)
 
 /* Test Case for Close App on Error
  * 
- * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING.
+ * Set up Lifecycle Manager interface, state interface, configurations, required COM-RPC resources, mocks and expectations
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Close the app using the appId and setting the reason for close as ERROR with the LifecycleManagerImplementationTest instance.
+ * Handle event signals by calling the eventSignal() method
+ * Close the app using the appId and setting the reason for close as ERROR
  * Verify that app is successfully closed by asserting that CloseApp() returns Core::ERROR_NONE
- * Obtain the loaded app context using getContextImpl() and post the app running and app terminating semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Obtain the loaded app context using getContextImpl() and post the app running and app terminating semaphores
+ * Handle event signals by calling the eventSignal() method
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, closeApp_onError) 
@@ -943,14 +958,15 @@ TEST_F(LifecycleManagerTest, closeApp_onError)
 
 /* Test Case for Close App on Kill and Run
  * 
- * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING.
+ * Set up Lifecycle Manager interface, state interface, configurations, required COM-RPC resources, mocks and expectations
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Close the app using the appId and setting the reason for close as KILL AND RUN with the LifecycleManagerImplementationTest instance.
+ * Handle event signals by calling the eventSignal() method
+ * Close the app using the appId and setting the reason for close as KILL AND RUN
  * Verify that app is successfully closed by asserting that CloseApp() returns Core::ERROR_NONE
- * Obtain the loaded app context using getContextImpl() and post the app running (twice) and app terminating semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Obtain the loaded app context using getContextImpl() and post the app running (twice) and app terminating semaphores
+ * Handle event signals by calling the eventSignal() method
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, closeApp_onKillandRun) 
@@ -995,14 +1011,15 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 
 /* Test Case for Close App on Kill and Activate
  * 
- * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as LOADING.
+ * Set up Lifecycle Manager interface, state interface, configurations, required COM-RPC resources, mocks and expectations
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Close the app using the appId and setting the reason for close as KILL AND ACTIVATE with the LifecycleManagerImplementationTest instance.
+ * Handle event signals by calling the eventSignal() method
+ * Close the app using the appId and setting the reason for close as KILL AND ACTIVATE
  * Verify that app is successfully closed by asserting that CloseApp() returns Core::ERROR_NONE
- * Obtain the loaded app context using getContextImpl() and post the app running (twice), app terminating and first frame semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Obtain the loaded app context using getContextImpl() and post the app running (twice), app terminating and first frame semaphores
+ * Handle event signals by calling the eventSignal() method
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, closeApp_onKillandActivate) 
@@ -1058,9 +1075,9 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
  * 
  * Set up Lifecycle Manager state interface, configurations, required COM-RPC resources, mocks and expectations
  * Set the stateChangedId to a random test value
- * Using the state interface, signal that the state change is complete
+ * Signal that the state change is complete
  * Verify successful state change by asserting that StateChangeComplete() returns Core::ERROR_NONE
- * Release the Lifecycle Manager state interface object and clean-up related test resources
+ * Release the Lifecycle Manager state object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, stateChangeComplete_withValidParams) 
@@ -1079,11 +1096,13 @@ TEST_F(LifecycleManagerTest, stateChangeComplete_withValidParams)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Set the intent to a random test value
- * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING
+ * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Send an intent to the active app using the appInstanceId with the LifecycleManager interface
+ * Obtain the loaded app context using getContextImpl() and post the app running and first frame semaphores
+ * Handle event signals by calling the eventSignal() method
+ * Send an intent to the active app using the appInstanceId 
  * Verify failure of sent intent (due to failure in websocket) by asserting that SendIntentToActiveApp() returns Core::ERROR_GENERAL
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
@@ -1105,7 +1124,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
     eventSignal();
 
     // TC-25: Send intent to the app after spawning
-    EXPECT_EQ(Core::ERROR_NONE, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));   
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));   
 
     releaseResources();
 }
@@ -1113,12 +1132,13 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
 /* Test Case for Runtime Manager Event - onTerminated after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
+ * Spawn an app with valid parameters with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Obtain the loaded app context using getContextImpl() and post the app running semaphore
+ * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onTerminated along with the appInstanceId obtained
- * Signal the Runtime Manager Event using handleRuntimeManagerEventImpl() with the data and wait for the app terminating semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data and wait for the app terminating semaphore
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated) 
@@ -1158,12 +1178,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
 /* Test Case for Runtime Manager Event - onStateChanged after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
+ * Spawn an app with valid parameters with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Obtain the loaded app context using getContextImpl() and post the app running semaphore
+ * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onStateChanged along with the state as RUNNING and appInstanceId obtained 
- * Signal the Runtime Manager Event using handleRuntimeManagerEventImpl() with the data and wait for the app running semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data and wait for the app running semaphore
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged) 
@@ -1204,12 +1225,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 /* Test Case for Runtime Manager Event - onFailure after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
+ * Spawn an app with valid parameters with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Obtain the loaded app context using getContextImpl() and post the app running semaphore
+ * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onFailure along with the error code and appInstanceId obtained 
- * Signal the Runtime Manager Event using handleRuntimeManagerEventImpl() with the data 
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data 
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure) 
@@ -1248,12 +1270,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
 /* Test Case for Runtime Manager Event - onStarted after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as INITIALIZING
+ * Spawn an app with valid parameters with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Obtain the loaded app context using getContextImpl() and post the app running semaphore
+ * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onStarted along with the appInstanceId obtained 
- * Signal the Runtime Manager Event using handleRuntimeManagerEventImpl() with the data 
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data 
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted) 
@@ -1291,12 +1314,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
 /* Test Case for Window Manager Event - onUserInactivity after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
+ * Spawn an app with valid parameters with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Obtain the loaded app context using getContextImpl() and post the app running and first frame semaphores
+ * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onUserInactivity
- * Signal the Window Manager Event using handleWindowManagerEventImpl() with the data 
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Signal the Window Manager Event using onWindowManagerEvent() with the data 
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity) 
@@ -1341,12 +1365,13 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
 /* Test Case for Window Manager Event - onDisconnect after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
+ * Spawn an app with valid parameters with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Obtain the loaded app context using getContextImpl() and post the app running and first frame semaphores
+ * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onDisconnect
- * Signal the Window Manager Event using handleWindowManagerEventImpl() with the data 
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Signal the Window Manager Event using onWindowManagerEvent() with the data 
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect) 
@@ -1391,12 +1416,13 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
 /* Test Case for Window Manager Event - onReady after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Create an object instance of LifecycleManagerImplementationTest
- * Spawn an app with valid parameters from the LifecycleManagerImplementationTest instance with target state as ACTIVE
+ * Spawn an app with valid parameters with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Obtain the loaded app context using getContextImpl() and post the app running and first frame semaphores
+ * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onReady along with the appInstanceId obtained
- * Signal the Window Manager Event using handleWindowManagerEventImpl() with the data and wait for the first frame semaphore
- * Release the Lifecycle Manager interface object and clean-up related test resources
+ * Signal the Window Manager Event using onWindowManagerEvent() with the data and wait for the first frame semaphore
+ * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, windowManagerEvent_onReady) 
