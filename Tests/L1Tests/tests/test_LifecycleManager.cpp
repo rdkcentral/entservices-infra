@@ -188,6 +188,7 @@ protected:
     ServiceMock* mServiceMock = nullptr;
     Core::ProxyType<WorkerPoolImplementation> workerPool;
     JsonObject eventData;
+    uint32_t event_signal;
 
     LifecycleManagerTest()
 	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
@@ -240,6 +241,8 @@ protected:
         eventData["newLifecycleState"] = static_cast<uint32_t>(targetLifecycleState);
         eventData["navigationIntent"] = launchIntent;
         eventData["errorReason"] = errorReason;
+
+        event_signal = LifecycleManager_invalidEvent;
 		
 		// Set up mocks and expect calls
         mServiceMock = new NiceMock<ServiceMock>;
@@ -321,6 +324,19 @@ protected:
         mLifecycleManagerConfigure->Release();
 		
 		ASSERT_TRUE(interface != nullptr); 
+    }
+
+    void eventSignal() 
+    {
+        event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+        event_signal = LifecycleManager_invalidEvent;
+
+        eventHdlTest.onStateChangeEvent(eventData);
+
+        event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+        EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
     }
 };
 
@@ -440,20 +456,10 @@ TEST_F(LifecycleManagerTest, spawnApp_withValidParams)
 {    
     createResources();
 
-    uint32_t event_signal = LifecycleManager_invalidEvent;
-
     // TC-5: Spawn an app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
-    event_signal = LifecycleManager_invalidEvent;
-
-    eventHdlTest.onStateChangeEvent(eventData);
-
-    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
-    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
+    eventSignal();
 
     releaseResources();
 }
@@ -474,19 +480,9 @@ TEST_F(LifecycleManagerTest, appready_onSpawnAppSuccess)
 {
     createResources();
 
-    uint32_t event_signal = LifecycleManager_invalidEvent;
-
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
-    event_signal = LifecycleManager_invalidEvent;
-
-    eventHdlTest.onStateChangeEvent(eventData);
-
-    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
-    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
+    eventSignal();
     
 	// TC-6: Check if app is ready after spawning
     EXPECT_EQ(Core::ERROR_NONE, stateInterface->AppReady(appId));
@@ -511,7 +507,7 @@ TEST_F(LifecycleManagerTest, appready_oninvalidAppId)
 {
     createResources();
 
-	EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    eventSignal();
 	
 	// TC-7: Verify error on passing an invalid appId
     EXPECT_EQ(Core::ERROR_GENERAL, stateInterface->AppReady(""));
@@ -538,6 +534,8 @@ TEST_F(LifecycleManagerTest, isAppLoaded_onSpawnAppSuccess)
     
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
+    eventSignal();
+
 	// TC-8: Check if app is loaded after spawning
     EXPECT_EQ(Core::ERROR_NONE, interface->IsAppLoaded(appId, loaded));
 
@@ -563,6 +561,8 @@ TEST_F(LifecycleManagerTest, isAppLoaded_oninvalidAppId)
     bool loaded = true;
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
 	
 	// TC-9: Verify error on passing an invalid appId
     EXPECT_EQ(Core::ERROR_NONE, interface->IsAppLoaded("", loaded));
@@ -591,11 +591,13 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseEnabled)
     string apps = "";
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
 	
 	// TC-10: Get loaded apps with verbose enabled
     EXPECT_EQ(Core::ERROR_NONE, interface->GetLoadedApps(verbose, apps)); 
     
-    // Add an expect eq to check the apps
+    EXPECT_THAT(apps, ::testing::HasSubstr("\"appId\":\"com.test.app\""));
 
     releaseResources();
 }
@@ -619,9 +621,13 @@ TEST_F(LifecycleManagerTest, getLoadedApps_verboseDisabled)
     string apps = "";
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
 	
 	// TC-11: Get loaded apps with verbose disabled
     EXPECT_EQ(Core::ERROR_NONE, interface->GetLoadedApps(verbose, apps)); 
+
+    EXPECT_THAT(apps, ::testing::HasSubstr("\"appId\":\"com.test.app\""));
     
     releaseResources();
 }
@@ -655,22 +661,43 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Spawn an app with valid parameters from the LifecycleManager interface with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
- * Set the target state of the app to LOADING with valid parameters
+ * Set the target state of the app from LOADING to INITIALIZING with valid parameters
  * Verify successful state change by asserting that SetTargetAppState() returns Core::ERROR_NONE
  * Release the Lifecycle Manager interface object and clean-up related test resources
  */
 
 TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 {
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
     createResources();
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
+    eventSignal();
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+
     // TC-13: Set the target state of a loaded app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, launchIntent));
 
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
+
+    sem_post(&context->mAppRunningSemaphore);
+
+    eventSignal();
+
     // TC-14: Set the target state of a loaded app with only required parameters valid
-    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, "")); 
+    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, ""));
+    
+    sem_post(&context->mAppRunningSemaphore);
+
+    eventSignal();
 
     releaseResources();
 }
@@ -690,6 +717,8 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withinvalidParams)
     createResources();
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
 
     // TC-15: Set the target state of a loaded app with invalid appInstanceId
     EXPECT_EQ(Core::ERROR_GENERAL, interface->SetTargetAppState("", targetLifecycleState, launchIntent));    
@@ -727,18 +756,20 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppSuccess)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    eventSignal();
     
 	// TC-16: Unload the app after spawning
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.UnloadApp(appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
-    sem_post(&context->mAppTerminatingSemaphore);    
+    sem_post(&context->mAppTerminatingSemaphore);  
+    
+    eventSignal();
 
     releaseResources();
 }
@@ -794,18 +825,20 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppSuccess)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    eventSignal();
     
 	// TC-18: Kill the app after spawning
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.KillApp(appInstanceId, errorReason, success));
+    EXPECT_EQ(Core::ERROR_NONE, interface->KillApp(appInstanceId, errorReason, success));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
-    sem_post(&context->mAppTerminatingSemaphore);   
+    sem_post(&context->mAppTerminatingSemaphore);  
+    
+    eventSignal();
     
     releaseResources();
 }
@@ -861,18 +894,20 @@ TEST_F(LifecycleManagerTest, closeApp_onUserExit)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    eventSignal();
     
 	// TC-20: User exits the app after spawning 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
+    EXPECT_EQ(Core::ERROR_NONE, interface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::USER_EXIT));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore); 
+
+    eventSignal();
 
     releaseResources();
 }
@@ -907,23 +942,23 @@ TEST_F(LifecycleManagerTest, closeApp_onError)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    eventSignal();
     
 	// TC-21: Error after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
+    EXPECT_EQ(Core::ERROR_NONE, interface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::ERROR));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);
 
+    eventSignal();
+
     releaseResources();
 }
-
- #if 0
 
 /* Test Case for Close App on Kill and Run
  * 
@@ -955,20 +990,24 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    eventSignal();
     
 	// TC-22: Kill and run after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
+    EXPECT_EQ(Core::ERROR_NONE, interface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_RUN));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);
 
+    eventSignal();
+
     sem_post(&context->mAppRunningSemaphore);
+
+    eventSignal();
 
     releaseResources();
 }
@@ -1010,26 +1049,29 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
                 return Core::ERROR_NONE;
           }));
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    eventSignal();
     
 	// TC-23: Kill and activate after spawning the app
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
+    EXPECT_EQ(Core::ERROR_NONE, interface->CloseApp(appId, Exchange::ILifecycleManagerState::AppCloseReason::KILL_AND_ACTIVATE));
 
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl("", appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
     sem_post(&context->mAppRunningSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);
 
+    eventSignal();
+
     sem_post(&context->mAppRunningSemaphore);
 
     sem_post(&context->mFirstFrameSemaphore);
 
+    eventSignal();
+
     releaseResources();
 }
-#endif
 
 /* Test Case for State Change Complete with valid parameters
  * 
@@ -1069,10 +1111,20 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
 
     string intent = "test.intent";
 
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
+
+    sem_post(&context->mAppRunningSemaphore);
+
+    sem_post(&context->mFirstFrameSemaphore);
+
+    eventSignal();
+
     // TC-25: Send intent to the app after spawning
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));   
+    EXPECT_EQ(Core::ERROR_NONE, interface->SendIntentToActiveApp(appInstanceId, intent, errorReason, success));   
 
     releaseResources();
 }
@@ -1101,13 +1153,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
-
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+    
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
     sem_post(&context->mAppRunningSemaphore); 
+
+    eventSignal();
 
     JsonObject data;
 
@@ -1115,7 +1167,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
     data["appInstanceId"] = appInstanceId;
 
 	// TC-26: Signal the Runtime Manager Event - onTerminated 
-    mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data);
+    mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
     sem_wait(&context->mAppTerminatingSemaphore);    
 
@@ -1146,13 +1198,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
     sem_post(&context->mAppRunningSemaphore); 
+
+    eventSignal();
  
     JsonObject data;
 
@@ -1161,7 +1213,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
     data["state"] = 2;
 
 	// TC-27: Signal the Runtime Manager Event - onStateChanged
-    mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data);
+    mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
     sem_wait(&context->mAppRunningSemaphore); 
     
@@ -1192,13 +1244,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
     sem_post(&context->mAppRunningSemaphore); 
+
+    eventSignal();
 
     JsonObject data;
 
@@ -1207,8 +1259,8 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
     data["errorCode"] = 1;
 
 	// TC-28: Signal the Runtime Manager Event - onFailure
-    mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data); 
-    
+    mLifecycleManagerImpl->onRuntimeManagerEvent(data);
+
     releaseResources();
 } 
 
@@ -1236,13 +1288,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
     sem_post(&context->mAppRunningSemaphore); 
+
+    eventSignal();
 
     JsonObject data;
 
@@ -1250,7 +1302,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
     data["appInstanceId"] = appInstanceId;
 
 	// TC-29: Signal the Runtime Manager Event - onStarted
-    mLifecycleManagerImplTest.handleRuntimeManagerEventImpl(data);
+    mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
     releaseResources();
 } 
@@ -1286,21 +1338,21 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
     sem_post(&context->mAppRunningSemaphore); 
     sem_post(&context->mFirstFrameSemaphore); 
+
+    eventSignal();
 
     JsonObject data;
 
     data["name"] = "onUserInactivity";
 
 	// TC-30: Signal the Window Manager Event - onUserInactivity
-    mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
+    mLifecycleManagerImpl->onWindowManagerEvent(data);
 
     releaseResources();
 } 
@@ -1336,21 +1388,21 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
     sem_post(&context->mAppRunningSemaphore); 
     sem_post(&context->mFirstFrameSemaphore); 
+
+    eventSignal();
 
     JsonObject data;
 
     data["name"] = "onDisconnect";
 
 	// TC-31: Signal the Window Manager Event - onDisconnect
-    mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
+    mLifecycleManagerImpl->onWindowManagerEvent(data);
 
     releaseResources();
 } 
@@ -1386,14 +1438,14 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
-    Plugin::LifecycleManagerImplementationTest mLifecycleManagerImplTest;
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
-    EXPECT_EQ(Core::ERROR_NONE, mLifecycleManagerImplTest.SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    Plugin::ApplicationContext* context = mLifecycleManagerImplTest.getContextImpl(appInstanceId, appId);
+    Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
     sem_post(&context->mAppRunningSemaphore); 
     sem_post(&context->mFirstFrameSemaphore); 
+
+    eventSignal();
 
     JsonObject data;
 
@@ -1401,7 +1453,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
     data["appInstanceId"] = appInstanceId;
 
 	// TC-32: Signal the Window Manager Event - onReady
-    mLifecycleManagerImplTest.handleWindowManagerEventImpl(data);
+    mLifecycleManagerImpl->onWindowManagerEvent(data);
 
     sem_wait(&context->mFirstFrameSemaphore); 
 
