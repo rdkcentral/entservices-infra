@@ -57,8 +57,20 @@ class LifecycleManagerImplementationTest : public LifecycleManagerImplementation
             return LifecycleManagerImplementation::getContext(appInstanceId, appId);
         }
 };
+} // namespace Plugin
+} // namespace WPEFramework
 
-class EventHandlerTest : public IEventHandler {
+using ::testing::NiceMock;
+using namespace WPEFramework;
+using namespace std;
+
+class EventHandlerTest : public Plugin::IEventHandler {
+
+    private:
+        BEGIN_INTERFACE_MAP(EventHandlerTest)
+        INTERFACE_ENTRY(Plugin::IEventHandler)
+        END_INTERFACE_MAP(EventHandlerTest)
+
     public:
         std::string appId;
         std::string appInstanceId;
@@ -132,31 +144,28 @@ class EventHandlerTest : public IEventHandler {
             return event_signal;
         }
 };
-} // namespace Plugin
 
-namespace Exchange {
-
-struct INotificationTest : public ILifecycleManager::INotification 
+class NotificationTest : public Exchange::ILifecycleManager::INotification 
 {
-        MOCK_METHOD(void, OnAppStateChanged, (const std::string& appId, ILifecycleManager::LifecycleState state, const std::string& errorReason), (override));
-        MOCK_METHOD(void, AddRef, (), (const, override));
-        MOCK_METHOD(uint32_t, Release, (), (const, override));
-        MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
+    private:
+        BEGIN_INTERFACE_MAP(NotificationTest)
+        INTERFACE_ENTRY(Exchange::ILifecycleManager::INotification)
+        END_INTERFACE_MAP(NotificationTest)
+    
+    public:
+        void OnAppStateChanged(const std::string& appId, const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState oldState, const Exchange::ILifecycleManager::LifecycleState newState, const std::string& navigationIntent) override {}     
 };
 
-struct IStateNotificationTest : public ILifecycleManagerState::INotification 
+class StateNotificationTest : public Exchange::ILifecycleManagerState::INotification 
 {
-    MOCK_METHOD(void, OnAppLifecycleStateChanged, (const std::string& appId, const std::string& appInstanceId, ILifecycleManager::LifecycleState oldState, ILifecycleManager::LifecycleState newState,  const std::string& navigationIntent), (override));
-    MOCK_METHOD(void, AddRef, (), (const, override));
-    MOCK_METHOD(uint32_t, Release, (), (const, override));
-    MOCK_METHOD(void*, QueryInterface, (const uint32_t interfaceNumber), (override));
-};
-} // namespace Exchange
-} // namespace WPEFramework
+    private:
+        BEGIN_INTERFACE_MAP(StateNotificationTest)
+        INTERFACE_ENTRY(Exchange::ILifecycleManagerState::INotification)
+        END_INTERFACE_MAP(StateNotificationTest)
 
-using ::testing::NiceMock;
-using namespace WPEFramework;
-using namespace std;
+    public:
+       void OnAppLifecycleStateChanged(const std::string& appId, const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState oldState, const Exchange::ILifecycleManager::LifecycleState newState, const std::string& navigationIntent) override {}
+};
 
 class LifecycleManagerTest : public ::testing::Test {
 protected:
@@ -345,15 +354,12 @@ TEST_F(LifecycleManagerTest, unregisterNotification_afterRegister)
 {
     createResources();
 
-    Exchange::ILifecycleManager::INotification* notification = new Exchange::INotificationTest();
+    Core::Sink<NotificationTest> notification;
 
     // TC-1: Check if the notification is unregistered after registering
     EXPECT_EQ(Core::ERROR_NONE, interface->Register(notification));
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Unregister(notification));
-
-    delete notification;
-    notification = nullptr;
 
     releaseResources();
 }
@@ -371,13 +377,10 @@ TEST_F(LifecycleManagerTest, unregisterNotification_withoutRegister)
 {
     createResources();
 
-    Exchange::ILifecycleManager::INotification* notification = new Exchange::INotificationTest();
+    Core::Sink<NotificationTest> notification;
 	
 	// TC-2: Check if the notification is unregistered without registering
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Unregister(notification));
-
-    delete notification;
-    notification = nullptr;
 
     releaseResources();
 }
@@ -397,15 +400,12 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_afterRegister)
 {
     createResources();
 
-    Exchange::ILifecycleManagerState::INotification* notification = new Exchange::IStateNotificationTest();
+    Core::Sink<NotificationTest> notification;
 
     // TC-3: Check if the state notification is registered after unregistering
     EXPECT_EQ(Core::ERROR_NONE, stateInterface->Register(notification));
 
     EXPECT_EQ(Core::ERROR_NONE, stateInterface->Unregister(notification));
-
-    delete notification;
-    notification = nullptr; 
     
     releaseResources();
 }
@@ -423,13 +423,10 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
 {
     createResources();
 
-    Exchange::ILifecycleManagerState::INotification* notification = new Exchange::IStateNotificationTest();
+    Core::Sink<NotificationTest> notification;
 	
 	// TC-4: Check if the state notification is registered without unregistering
     EXPECT_EQ(Core::ERROR_GENERAL, stateInterface->Unregister(notification));
-
-    delete notification;
-    notification = nullptr;
 
     releaseResources();
 }
@@ -658,14 +655,14 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
 
 TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 {
+    createResources();
+    
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
                 return Core::ERROR_NONE;
           }));
-
-    createResources();
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
