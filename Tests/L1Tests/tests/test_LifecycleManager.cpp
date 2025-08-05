@@ -394,12 +394,12 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_afterRegister)
 {
     createResources();
 
-    Core::Sink<NotificationTest> notification;
+    Core::Sink<StateNotificationTest> stateNotification;
 
     // TC-3: Check if the state notification is registered after unregistering
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Register(&notification));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Register(&stateNotification));
 
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Unregister(&notification));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Unregister(&stateNotification));
     
     releaseResources();
 }
@@ -417,10 +417,10 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
 {
     createResources();
 
-    Core::Sink<NotificationTest> notification;
+    Core::Sink<StateNotificationTest> stateNotification;
 	
 	// TC-4: Check if the state notification is registered without unregistering
-    EXPECT_EQ(Core::ERROR_GENERAL, stateInterface->Unregister(&notification));
+    EXPECT_EQ(Core::ERROR_GENERAL, stateInterface->Unregister(&stateNotification));
 
     releaseResources();
 }
