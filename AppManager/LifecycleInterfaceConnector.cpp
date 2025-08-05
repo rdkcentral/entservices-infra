@@ -217,6 +217,8 @@ namespace WPEFramework
                             {
                                 appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_LAUNCH);
                                 state = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+                                string source = "";
+                                appManagerImplInstance->handleOnAppLaunchRequest(appId, intent, source);
                             }
                             LOGINFO("spawnApp called ,state %u",state);
                             status = mLifecycleManagerRemoteObject->SpawnApp(appId, intent, state, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success);
@@ -751,6 +753,11 @@ End:
                     }
                 }
 
+                if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
+                {
+                    appManagerImplInstance->handleOnAppUnloaded(appId, appInstanceId);
+                }
+
                 if (it != appManagerImplInstance->mAppInfo.end())
                 {
                     shouldNotify = ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_LOADING) ||
@@ -782,19 +789,6 @@ End:
                 return {};
             else
                 return it->second.appInstanceId;
-        }
-
-        void LifecycleInterfaceConnector::RemoveApp(const string& appId)
-        {
-            AppManagerImplementation* appManagerImpl = AppManagerImplementation::getInstance();
-            if (!appManagerImpl)
-                return;
-
-            auto it = appManagerImpl->mAppInfo.find(appId);
-            if (it != appManagerImpl->mAppInfo.end())
-                appManagerImpl->mAppInfo.erase(it);
-            else
-                LOGERR("AppInfo for appId '%s' not found", appId.c_str());
         }
 
         bool LifecycleInterfaceConnector::fileExists(const char* pFileName)
