@@ -65,12 +65,6 @@ using namespace WPEFramework;
 using namespace std;
 
 class EventHandlerTest : public Plugin::IEventHandler {
-
-    private:
-        BEGIN_INTERFACE_MAP(EventHandlerTest)
-        INTERFACE_ENTRY(Plugin::IEventHandler)
-        END_INTERFACE_MAP(EventHandlerTest)
-
     public:
         std::string appId;
         std::string appInstanceId;
@@ -357,9 +351,9 @@ TEST_F(LifecycleManagerTest, unregisterNotification_afterRegister)
     Core::Sink<NotificationTest> notification;
 
     // TC-1: Check if the notification is unregistered after registering
-    EXPECT_EQ(Core::ERROR_NONE, interface->Register(notification));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Register(&notification));
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->Unregister(notification));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Unregister(&notification));
 
     releaseResources();
 }
@@ -380,7 +374,7 @@ TEST_F(LifecycleManagerTest, unregisterNotification_withoutRegister)
     Core::Sink<NotificationTest> notification;
 	
 	// TC-2: Check if the notification is unregistered without registering
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->Unregister(notification));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Unregister(&notification));
 
     releaseResources();
 }
@@ -403,9 +397,9 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_afterRegister)
     Core::Sink<NotificationTest> notification;
 
     // TC-3: Check if the state notification is registered after unregistering
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Register(notification));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Register(&notification));
 
-    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Unregister(notification));
+    EXPECT_EQ(Core::ERROR_NONE, stateInterface->Unregister(&notification));
     
     releaseResources();
 }
@@ -426,7 +420,7 @@ TEST_F(LifecycleManagerTest, unregisterStateNotification_withoutRegister)
     Core::Sink<NotificationTest> notification;
 	
 	// TC-4: Check if the state notification is registered without unregistering
-    EXPECT_EQ(Core::ERROR_GENERAL, stateInterface->Unregister(notification));
+    EXPECT_EQ(Core::ERROR_GENERAL, stateInterface->Unregister(&notification));
 
     releaseResources();
 }
@@ -656,7 +650,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
 TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 {
     createResources();
-    
+
     EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
