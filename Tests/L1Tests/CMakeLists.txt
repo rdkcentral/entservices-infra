@@ -121,6 +121,11 @@ set (APPMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/AppManager ${CMAKE_
 set (APPMANAGER_LIBS ${NAMESPACE}AppManager ${NAMESPACE}AppManagerImplementation)
 add_plugin_test_ex(PLUGIN_APPMANAGER tests/test_AppManager.cpp "${APPMANAGER_INC}" "${APPMANAGER_LIBS}")
 
+# PLUGIN_LIFECYCLE_MANAGER
+set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
+add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
+
 # PLUGIN_OCICONTAINER
 set (OCICONTAINER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/OCIContainer ${CMAKE_SOURCE_DIR}/../entservices-infra/OCIContainer/stubs)
 set (OCICONTAINER_LIBS ${NAMESPACE}OCIContainer)
@@ -148,9 +153,9 @@ add_plugin_test_ex(PLUGIN_STORAGE_MANAGER tests/test_StorageManager.cpp "${STORA
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
-if (RDK_SERVICES_L1_TEST)
-    target_link_options(${MODULE_NAME} PRIVATE "-Wl,-wrap,opendir")
-endif (RDK_SERVICES_L1_TEST)
+#if (RDK_SERVICES_L1_TEST)
+#    target_link_options(${MODULE_NAME} PRIVATE "-Wl,-wrap,opendir")
+#endif (RDK_SERVICES_L1_TEST)
 
 include_directories(${TEST_INC})
 
@@ -167,6 +172,8 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/thunder
         ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
         )
+
+target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
 
 #install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 

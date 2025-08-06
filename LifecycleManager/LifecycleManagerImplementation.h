@@ -149,6 +149,10 @@ namespace WPEFramework
                 ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
 
                 friend class Job;
+
+#ifdef UNIT_TEST                
+                friend class LifecycleManagerImplementationTest;
+#endif
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */
