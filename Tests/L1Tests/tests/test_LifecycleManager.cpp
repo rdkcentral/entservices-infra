@@ -321,6 +321,8 @@ protected:
 
     void eventSignal() 
     {
+        event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+        
         event_signal = LifecycleManager_invalidEvent;
 
         eventHdlTest.onStateChangeEvent(eventData);
