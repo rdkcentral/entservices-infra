@@ -211,7 +211,6 @@ AnalyticsTest::AnalyticsTest()
     Core::JSONRPC::Message message;
     string response;
     uint32_t status = Core::ERROR_GENERAL;
-
     EXPECT_CALL(PowerManagerHalMock::Mock(), PLAT_DS_INIT())
     .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
 
@@ -317,7 +316,6 @@ AnalyticsTest::~AnalyticsTest()
     EXPECT_CALL(PowerManagerHalMock::Mock(), PLAT_TERM())
     .WillOnce(::testing::Return(PWRMGR_SUCCESS));
 
-    status = DeactivateService("org.rdk.Analytics");
     EXPECT_CALL(PowerManagerHalMock::Mock(), PLAT_DS_TERM())
     .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
 
@@ -330,7 +328,7 @@ AnalyticsTest::~AnalyticsTest()
     ON_CALL(*p_rBusApiImplMock, rbus_close(::testing::_))
     .WillByDefault(::testing::Return(RBUS_ERROR_SUCCESS));
 
-    status = DeactivateService("org.rdk.Analytics"); 
+    status = DeactivateService("org.rdk.Analytics");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     sleep(5);
