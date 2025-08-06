@@ -47,14 +47,18 @@ typedef enum : uint32_t {
     LifecycleManager_onWindowManagerEvent,
     LifecycleManager_onRippleEvent
 } LifecycleManagerTest_events_t;
-  
-class WPEFramework::Plugin::LifecycleManagerImplementationTest : public WPEFramework::Plugin::LifecycleManagerImplementation {
+
+namespace WPEFramework {
+namespace Plugin {
+class LifecycleManagerImplementationTest : public LifecycleManagerImplementation {
     public:
-        WPEFramework::Plugin::ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const 
+        ApplicationContext* getContextImpl(const std::string& appInstanceId, const std::string& appId) const 
         {
-            return WPEFramework::Plugin::LifecycleManagerImplementation::getContext(appInstanceId, appId);
+            return LifecycleManagerImplementation::getContext(appInstanceId, appId);
         }
-};    
+};
+} // namespace Plugin
+} // namespace WPEFramework
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
