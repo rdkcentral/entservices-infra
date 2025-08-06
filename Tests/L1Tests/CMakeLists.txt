@@ -153,9 +153,9 @@ add_plugin_test_ex(PLUGIN_STORAGE_MANAGER tests/test_StorageManager.cpp "${STORA
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
-#if (RDK_SERVICES_L1_TEST)
-#    target_link_options(${MODULE_NAME} PRIVATE "-Wl,-wrap,opendir")
-#endif (RDK_SERVICES_L1_TEST)
+if (RDK_SERVICES_L1_TEST)
+    target_link_options(${MODULE_NAME} PRIVATE "-Wl,-wrap,opendir")
+endif (RDK_SERVICES_L1_TEST)
 
 include_directories(${TEST_INC})
 
