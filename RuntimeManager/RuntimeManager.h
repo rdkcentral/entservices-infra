@@ -22,7 +22,7 @@
 #include "Module.h"
 #include <interfaces/IRuntimeManager.h>
 #include <interfaces/IConfiguration.h>
-#include "UtilsLogging.h"
+//#include "UtilsLogging.h"
 #include "tracing/Logging.h"
 
 namespace WPEFramework
