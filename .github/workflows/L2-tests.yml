@@ -1,15 +1,10 @@
 name: L2-tests
 
 on:
-  workflow_call:
-    inputs:
-      caller_source:
-        description: "Specifies the source type (e.g., local or test framework) for the workflow."
-        required: true
-        type: string
-    secrets:
-      RDKCM_RDKE:
-        required: true
+  push:
+    branches: [ main, develop, 'sprint/**', 'release/**' , feature/RDKEMW-6078]
+  pull_request:
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
 
 env:
   BUILD_TYPE: Debug
