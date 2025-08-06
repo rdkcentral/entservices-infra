@@ -499,7 +499,7 @@ TEST_F(USBMassStorageTest, comrpc_getpartitionInfo_success)
             if (m_usbmassstorageplugin)
             {
                 std::string message;
-
+		m_usbmassstorageplugin->AddRef();
                 m_usbmassstorageplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -657,7 +657,7 @@ TEST_F(USBMassStorageTest, comrpc_getDeviceListAndMount_success)
             if (m_usbmassstorageplugin)
             {
                 std::string message;
-
+		m_usbmassstorageplugin->AddRef();
                 m_usbmassstorageplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -873,7 +873,7 @@ TEST_F(USBMassStorageTest, comrpc_mount_failure)
             if (m_usbmassstorageplugin)
             {
                 std::string message;
-
+		m_usbmassstorageplugin->AddRef();
                 m_usbmassstorageplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -962,7 +962,7 @@ TEST_F(USBMassStorageTest, comrpc_open_failure)
             if (m_usbmassstorageplugin)
             {
                 std::string message;
-
+		m_usbmassstorageplugin->AddRef();
                 m_usbmassstorageplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -1076,7 +1076,7 @@ TEST_F(USBMassStorageTest, comrpc_event_default_failure)
             if (m_usbmassstorageplugin)
             {
                 std::string message;
-
+		m_usbmassstorageplugin->AddRef();
                 m_usbmassstorageplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -1152,7 +1152,7 @@ TEST_F(USBMassStorageTest, comrpc_unmount_failure)
             if (m_usbmassstorageplugin)
             {
                 std::string message;
-
+		m_usbmassstorageplugin->AddRef();
                 m_usbmassstorageplugin->Register(&notification);
 
                 /* HotPlug Attach Device 1 Verification */
@@ -1375,6 +1375,7 @@ TEST_F(USBMassStorageTest, comrpc_Multiple_getDeviceListAndMount_success)
                                        });
                 EXPECT_EQ(Core::ERROR_NONE, status);
 
+		m_usbmassstorageplugin->AddRef();    
                 m_usbmassstorageplugin->Register(&notification);
 
 
