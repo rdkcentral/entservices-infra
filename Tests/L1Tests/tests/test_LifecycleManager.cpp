@@ -321,8 +321,6 @@ protected:
 
     void eventSignal() 
     {
-        event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-        
         event_signal = LifecycleManager_invalidEvent;
 
         eventHdlTest.onStateChangeEvent(eventData);
@@ -1002,9 +1000,17 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 
     sem_post(&context->mAppTerminatingSemaphore);
 
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
+
     eventSignal();
 
     sem_post(&context->mAppRunningSemaphore);
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
 
     eventSignal();
 
@@ -1062,11 +1068,19 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 
     sem_post(&context->mAppTerminatingSemaphore);
 
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
+
     eventSignal();
 
     sem_post(&context->mAppRunningSemaphore);
 
     sem_post(&context->mFirstFrameSemaphore);
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
 
     eventSignal();
 
