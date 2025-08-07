@@ -24,6 +24,9 @@
 
 #include <WPEFramework/interfaces/IUserSettings.h>
 
+extern WPEFramework::Exchange::IUserSettings *InterfacePointer;
+extern WPEFramework::Exchange::IUserSettingsInspector *IUserSettingsInspectorPointer;
+
 using namespace WPEFramework::Exchange;
 using namespace WPEFramework; 
 
