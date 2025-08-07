@@ -4,7 +4,7 @@ name: main-workflow
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**', usersettings_testcase ]
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
   pull_request:
     branches: [ main, develop, 'sprint/**', 'release/**' ]
 
