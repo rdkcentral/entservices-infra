@@ -24,7 +24,8 @@
 
 #include <WPEFramework/interfaces/IUserSettings.h>
 
-using namespace WPEFramework::Exchange; 
+using namespace WPEFramework::Exchange;
+using namespace WPEFramework; 
 
 /**
 * @brief Test to verify that GetAudioDescription returns ERROR_NONE with valid value
