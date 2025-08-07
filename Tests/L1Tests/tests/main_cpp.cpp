@@ -18,16 +18,20 @@
 */
 
 #include <WPEFramework/interfaces/IUserSettings.h>
+#include <gtest/gtest.h>
+#include "UserSettingsImplementation.h"
+
+using namespace WPEFramework::Exchange;
 
 IUserSettings *InterfacePointer = nullptr;
 IUserSettingsInspector *IUserSettingsInspectorPointer = nullptr;
 
 int main(int argc, char **argv) {
     
-    <"child class name"> *IUserSettingschild = new <"child class name">();   // Replace <"child class name"> with the plugin/mock service class name 
+    UserSettingsImplementation *IUserSettingschild = new UserSettingsImplementation();
     InterfacePointer = IUserSettingschild;
 
-    <"child class name"> *IUserSettingsInspectorchild = new <"child class name">(); // Replace <"child class name"> with the plugin/mock service class name 
+    UserSettingsImplementation *IUserSettingsInspectorchild = new UserSettingsImplementation();
     IUserSettingsInspectorPointer = IUserSettingsInspectorchild;
 
     ::testing::InitGoogleTest(&argc, argv);
