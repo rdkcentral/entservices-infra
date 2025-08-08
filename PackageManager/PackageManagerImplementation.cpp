@@ -443,23 +443,34 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages)
+    Core::hresult PackageManagerImplementation::ListPackages(string& packagesJson)
     {
         CHECK_CACHE()
         LOGTRACE("entry");
         Core::hresult result = Core::ERROR_NONE;
-        std::list<Exchange::IPackageInstaller::Package> packageList;
+        // std::list<Exchange::IPackageInstaller::Package> packageList;
+        JsonArray packageList;
 
         for (auto const& [key, state] : mState) {
-            Exchange::IPackageInstaller::Package package;
-            package.packageId = key.first.c_str();
-            package.version = key.second.c_str();
-            package.state = state.installState;
-            package.sizeKb = state.runtimeConfig.dataImageSize;
-            packageList.emplace_back(package);
+            // Exchange::IPackageInstaller::Package package;
+            JsonObject package;
+            package["packageId"] = key.first.c_str();
+            package["version"] = key.second.c_str();
+            package["state"] = static_cast<int>(state.installState);
+            package["stateName"] = getInstallState(state.installState); // for readability
+            package["sizeKb"] = state.runtimeConfig.dataImageSize;
+            packageList.Add(package);
         }
 
-        packages = (Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList));
+        // packages = (Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList));
+
+        JsonObject root;
+        root["packages"] = packageList;
+
+        if (!root.ToString(packagesJson)) {
+            LOGERR("Failed to stringify package list to JSON");
+            result = Core::ERROR_GENERAL;
+        }
 
         LOGTRACE("exit");
 
@@ -800,6 +811,17 @@ namespace Plugin {
         std::string jsonstr;
         if (!list.ToString(jsonstr)) {
             LOGERR("Failed to  stringify JsonArray");
+        }
+        else
+        {
+            // Remove escaped characters from jsonstr
+            // This is a workaround for the issue where the JSON string contains escaped characters like \/
+            size_t pos = 0;
+            while ((pos = jsonstr.find("\\/", pos)) != std::string::npos)
+            {
+                jsonstr.replace(pos, 2, "/");
+                ++pos;
+            }
         }
 
         mAdminLock.Lock();
