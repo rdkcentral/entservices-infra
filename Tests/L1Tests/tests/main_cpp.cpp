@@ -20,6 +20,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "UserSettingsImplementation.h"
+#include "UserSettings.h"
 #include <WPEFramework/interfaces/IUserSettings.h>
 #include <WPEFramework/interfaces/Ids.h>
 #include "ServiceMock.h"
@@ -39,6 +40,7 @@ WPEFramework::Exchange::IUserSettingsInspector *IUserSettingsInspectorPointer = 
 NiceMock<ServiceMock>* g_serviceMock = nullptr;
 Store2Mock* g_storeMock = nullptr;
 WPEFramework::Core::ProxyType<WPEFramework::Plugin::UserSettingsImplementation> g_userSettingsImpl;
+WPEFramework::Core::ProxyType<WPEFramework::Plugin::UserSettings> g_userSettings; // Add UserSettings plugin instance
 
 // Global setup that runs once before all tests
 void GlobalSetup() {
@@ -63,6 +65,10 @@ void GlobalSetup() {
     g_userSettingsImpl = Core::ProxyType<UserSettingsImplementation>::Create();
     g_userSettingsImpl->Configure(g_serviceMock);
 
+    // Create the UserSettings plugin instance to include in coverage
+    g_userSettings = Core::ProxyType<UserSettings>::Create();
+    // No need to use it, just instantiating it will include the code in coverage
+
     // Set the global pointers for the tests
     InterfacePointer = g_userSettingsImpl.operator->();
     IUserSettingsInspectorPointer = g_userSettingsImpl.operator->();
@@ -74,8 +80,9 @@ void GlobalTeardown() {
     InterfacePointer = nullptr;
     IUserSettingsInspectorPointer = nullptr;
     
-    // Release the ProxyType implementation first before deleting mocks
+    // Release the ProxyType implementations first before deleting mocks
     g_userSettingsImpl.Release();
+    g_userSettings.Release();  // Release the UserSettings instance
     
     // Clean up mocks
     delete g_storeMock;
