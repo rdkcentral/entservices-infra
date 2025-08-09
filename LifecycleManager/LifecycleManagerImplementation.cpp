@@ -166,6 +166,7 @@ namespace WPEFramework
         Core::hresult LifecycleManagerImplementation::GetLoadedApps(const bool verbose, string& apps)
         {
             Core::hresult status = Core::ERROR_NONE;
+            int testing = 0;
             JsonArray appsInformation;
             std::list<ApplicationContext*>::iterator iter = mLoadedApplications.end();
 	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
