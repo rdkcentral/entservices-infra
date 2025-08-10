@@ -664,12 +664,10 @@ jobs:
         run: >
           cp $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/.lcovrc_l1 ~/.lcovrc
           &&
-          # Only extract UserSettings coverage data
           lcov -c
           -o coverage.info
           -d build/entservices-infra/UserSettings
           &&
-          # Remove any non-UserSettings files
           lcov
           -r coverage.info
           '/usr/include/*'
@@ -682,7 +680,7 @@ jobs:
           &&
           genhtml
           -o coverage
-          -t "UserSettings Plugin coverage"
+          -t "entservices-infra coverage"
           filtered_coverage.info
 
       - name: Upload artifacts
