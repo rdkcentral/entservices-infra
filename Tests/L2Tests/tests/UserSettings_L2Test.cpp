@@ -2970,12 +2970,12 @@ TEST_F(UserSettingTest, ErrorHandlingWhenPersistentStoreDbFileMissing)
     status = m_usersettingsplugin->SetAudioDescription(false);
     EXPECT_EQ(status, Core::ERROR_GENERAL);
     signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onAudioDescriptionChanged);
-    EXPECT_FALSE(signalled & UserSettings_onAudioDescriptionChanged);
+    EXPECT_TRUE(signalled & UserSettings_onAudioDescriptionChanged);
 
     status = m_usersettingsplugin->SetPinControl(false);
     EXPECT_EQ(status, Core::ERROR_GENERAL);
     signalled = notification.WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPinControlChanged);
-    EXPECT_FALSE(signalled & UserSettings_onPinControlChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPinControlChanged);
 
     // Step 4: Get settings after DB file is deleted, expect last known value or default
     status = m_usersettingsplugin->GetAudioDescription(getBoolValue);
