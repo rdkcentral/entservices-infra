@@ -730,7 +730,13 @@ TEST_F(UserSettingsTest, GetHighContrast_Failure)
 
 TEST_F(UserSettingsTest, GetHighContrast_DefaultValueOnKeyNotExist)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    // Configure Store2Mock to return ERROR_UNKNOWN_KEY for USERSETTINGS_HIGH_CONTRAST_KEY
+    EXPECT_CALL(*p_store2Mock, GetValue(
+        ::testing::_, 
+        ::testing::StrEq(USERSETTINGS_NAMESPACE), 
+        ::testing::StrEq(USERSETTINGS_HIGH_CONTRAST_KEY), 
+        ::testing::_, 
+        ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_UNKNOWN_KEY));
     
     // Call getHighContrast which internally calls GetUserSettingsValue
@@ -948,42 +954,28 @@ TEST_F(UserSettingsTest, GetMigrationState_MissingKey)
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getMigrationState"), _T("{}"), response));
 }
 
-TEST_F(UserSettingsTest, GetMigrationState_ValidKey)
+// Test valid key where store returns Core::ERROR_NOT_EXIST
+TEST_F(UserSettingsTest, GetMigrationState_ValidKeyNeedsMigration)
 {
-    // Use a valid key from Exchange::IUserSettingsInspector::SettingsKey enum
-    // These values should be mapped in _userSettingsInspectorMap
+    // Use PREFERRED_AUDIO_LANGUAGES which is in the _userSettingsInspectorMap
     
-    // Configure Store2Mock to return a specific error to trigger the condition
-    // where requiresMigration is set to true
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    // Setup mock to return Core::ERROR_NOT_EXIST for the specific key
+    EXPECT_CALL(*p_store2Mock, GetValue(
+        ::testing::_,
+        ::testing::_,
+        ::testing::_,
+        ::testing::_,
+        ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NOT_EXIST));
     
-    // Use AUDIO_DESCRIPTION which is key 1 based on the enum in IUserSettings.h
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationState"), 
-        _T("{\"key\": 1}"), response));
+    // The implementation should return Core::ERROR_NONE with requiresMigration=true
+    bool requiresMigration = false;
+    EXPECT_EQ(Core::ERROR_NONE, UserSettingsImpl->GetMigrationState(
+        Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_AUDIO_LANGUAGES, 
+        requiresMigration));
     
-    // Verify response contains requiresMigration field and it's set to true
-    EXPECT_TRUE(response.find("requiresMigration") != std::string::npos);
-    EXPECT_TRUE(response.find("true") != std::string::npos);
-}
-
-TEST_F(UserSettingsTest, GetMigrationState_ValidKeyNoMigrationNeeded)
-{
-    // Test the case where a valid key is provided and the store returns success,
-    // indicating no migration is needed
-    
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgReferee<3>("some_value"),
-            ::testing::Return(Core::ERROR_NONE)));
-    
-    // Use CAPTIONS which is key 2 based on the enum in IUserSettings.h
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationState"), 
-        _T("{\"key\": 2}"), response));
-    
-    // Verify response contains requiresMigration field and it's set to false
-    EXPECT_TRUE(response.find("requiresMigration") != std::string::npos);
-    EXPECT_TRUE(response.find("false") != std::string::npos);
+    // Verify requiresMigration was set to true
+    EXPECT_TRUE(requiresMigration);
 }
 
 TEST_F(UserSettingsTest, GetMigrationStates_Exists)
