@@ -730,6 +730,8 @@ TEST_F(UserSettingsTest, GetHighContrast_Failure)
 
 TEST_F(UserSettingsTest, GetHighContrast_DefaultValueOnKeyNotExist)
 {
+    // Want to test the scenario where the key does not exist in Store2
+    // Chose GetHighContrast as an example API thatcalls GetUserSettingsValue internally
     // Configure Store2Mock to return ERROR_UNKNOWN_KEY for USERSETTINGS_HIGH_CONTRAST_KEY
     EXPECT_CALL(*p_store2Mock, GetValue(
         ::testing::_, 
@@ -742,22 +744,10 @@ TEST_F(UserSettingsTest, GetHighContrast_DefaultValueOnKeyNotExist)
     // Call getHighContrast which internally calls GetUserSettingsValue
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getHighContrast"), _T("{}"), response));
     
-    // Log the actual response to understand its format
-    fprintf(stderr, "getHighContrast response: %s\n", response.c_str());
-    
     // The default value for high contrast in usersettingsDefaultMap is "false"
     // Check for a valid response containing default value
-    // First check if we got any response at all
     EXPECT_FALSE(response.empty());
-    
-    // More flexible check for the boolean value in the response
-    // It could be in different formats depending on implementation
-    bool containsHighContrastInfo = 
-        (response.find("\"enabled\":false") != std::string::npos) || 
-        (response.find("\"highContrast\":false") != std::string::npos) ||
-        (response.find("false") != std::string::npos);
-    
-    EXPECT_TRUE(containsHighContrastInfo);
+    EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
 TEST_F(UserSettingsTest, SetVoiceGuidance_Exists)
@@ -984,6 +974,8 @@ TEST_F(UserSettingsTest, GetMigrationState_ValidKeyNeedsMigration)
     // Call the JSON-RPC method
     handler.Invoke(connection, _T("getMigrationState"), 
         _T("{\"key\":\"PREFERRED_AUDIO_LANGUAGES\"}"), response);
+
+    fprintf(stderr, "Response: %s\n", response.c_str()); // Debug output
     
     // Parse and check the response
     EXPECT_NE(std::string::npos, response.find("\"requiresMigration\":true"));
