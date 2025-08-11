@@ -59,11 +59,11 @@ namespace Plugin {
             InstallState installState = InstallState::UNINSTALLED;
             bool preInsalled = false;
             uint32_t mLockCount = 0;
-            Exchange::RuntimeConfig runtimeConfig;
-            string gatewayMetadataPath;
-            string unpackedPath;
-            FailReason failReason;
-            std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
+            Exchange::RuntimeConfig runtimeConfig{};
+            string gatewayMetadataPath{};
+            string unpackedPath{};
+            FailReason failReason = Exchange::IPackageInstaller::FailReason::NONE;;
+            std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks{};
         };
 
         typedef std::pair<std::string, std::string> StateKey;
