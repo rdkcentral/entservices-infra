@@ -381,25 +381,6 @@ TEST_F(UserSettingsTest, GetPrivacyMode_Failure)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::DoAll(
-            // This sets the output parameter to have a value
-            ::testing::SetArgReferee<3>("SHARE"),
-            ::testing::Return(Core::ERROR_GENERAL)
-        ));
-    
-    // The implementation handles the error and returns success with default value
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPrivacyMode"), _T("{}"), response));
-    
-    // Make sure there's a response that contains JSON
-    EXPECT_FALSE(response.empty());
-    // Verify the response contains expected elements
-    EXPECT_TRUE(response.find("{") != std::string::npos);
-    EXPECT_TRUE(response.find("}") != std::string::npos);
-}
-
-TEST_F(UserSettingsTest, GetPrivacyMode_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
             // Set the output parameter value
             ::testing::SetArgReferee<3>("SHARE"),
             ::testing::Return(Core::ERROR_GENERAL)
