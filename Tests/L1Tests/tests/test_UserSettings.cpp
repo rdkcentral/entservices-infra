@@ -998,3 +998,93 @@ TEST_F(UserSettingsTest, GetMigrationStates_Success)
     EXPECT_TRUE(response.find("requiresMigration") != std::string::npos || 
                 response.find("key") != std::string::npos);
 }
+
+TEST_F(UserSettingsTest, GetAudioDescription_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
+
+TEST_F(UserSettingsTest, GetCaptions_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getCaptions"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
+
+TEST_F(UserSettingsTest, GetPinControl_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPinControl"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
+
+TEST_F(UserSettingsTest, GetLiveWatershed_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getLiveWatershed"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
+
+TEST_F(UserSettingsTest, GetPlaybackWatershed_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPlaybackWatershed"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
+
+TEST_F(UserSettingsTest, GetBlockNotRatedContent_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getBlockNotRatedContent"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
+
+TEST_F(UserSettingsTest, GetPinOnPurchase_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPinOnPurchase"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
+
+TEST_F(UserSettingsTest, GetVoiceGuidance_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getVoiceGuidance"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
+
+TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getVoiceGuidanceHints"), _T("{}"), response));
+    EXPECT_TRUE(response.find("false") != std::string::npos);
+}
