@@ -967,28 +967,28 @@ TEST_F(UserSettingsTest, GetMigrationState_MissingKey)
 }
 
 // Test valid key where store returns Core::ERROR_NOT_EXIST
-// TEST_F(UserSettingsTest, GetMigrationState_ValidKeyNeedsMigration)
-// {
-//     // Use PREFERRED_AUDIO_LANGUAGES which is in the _userSettingsInspectorMap
+TEST_F(UserSettingsTest, GetMigrationState_ValidKeyNeedsMigration)
+{
+    // If there's a JSON-RPC method that calls GetMigrationState internally, use that instead
+    // For example, if there's a "getMigrationState" method:
     
-//     // Setup mock to return Core::ERROR_NOT_EXIST for the specific key
-//     EXPECT_CALL(*p_store2Mock, GetValue(
-//         ::testing::_,
-//         ::testing::_,
-//         ::testing::_,
-//         ::testing::_,
-//         ::testing::_))
-//         .WillOnce(::testing::Return(Core::ERROR_NOT_EXIST));
+    // Setup mock to return Core::ERROR_NOT_EXIST for the specific key
+    EXPECT_CALL(*p_store2Mock, GetValue(
+        ::testing::_,
+        ::testing::_,
+        ::testing::_,
+        ::testing::_,
+        ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NOT_EXIST));
     
-//     // The implementation should return Core::ERROR_NONE with requiresMigration=true
-//     bool requiresMigration = false;
-//     EXPECT_EQ(Core::ERROR_NONE, UserSettingsImpl->GetMigrationState(
-//         Exchange::IUserSettingsInspector::SettingsKey::PREFERRED_AUDIO_LANGUAGES, 
-//         requiresMigration));
+    // Call the JSON-RPC method
+    handler.Invoke(connection, _T("getMigrationState"), 
+        _T("{\"key\":\"PREFERRED_AUDIO_LANGUAGES\"}"), response);
     
-//     // Verify requiresMigration was set to true
-//     EXPECT_TRUE(requiresMigration);
-// }
+    // Parse and check the response
+    EXPECT_NE(std::string::npos, response.find("\"requiresMigration\":true"));
+    EXPECT_NE(std::string::npos, response.find("\"success\":true"));
+}
 
 TEST_F(UserSettingsTest, GetMigrationStates_Exists)
 {
