@@ -88,7 +88,6 @@ namespace Plugin {
                 , _maxValue(maxValue)
                 , _limit(limit)
                 , _corrupt(false)
-                ,_data()
             {
                 TempDirectoryCheck();
                 IntegrityCheck();
