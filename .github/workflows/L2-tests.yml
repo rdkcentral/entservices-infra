@@ -707,8 +707,6 @@ jobs:
           RdkServicesL2Test &&
           cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
-          cat valgrind_log &&
-          rm -f valgrind_log
 
       - name: Generate coverage
         if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
