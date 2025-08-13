@@ -1163,181 +1163,183 @@ TEST_F(UserSettingsNotificationTest, RegisterUnregisterNotification) {
     EXPECT_NE(Core::ERROR_NONE, implementation->Unregister(secondNotificationMock));
 }
 
+// ==========================================================================
+
 // Test the dispatch method directly for all notification types
-TEST_F(UserSettingsNotificationTest, TestDispatch_AudioDescription) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_AudioDescription) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::AUDIO_DESCRIPTION_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::AUDIO_DESCRIPTION_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_PreferredAudioLanguages) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnPreferredAudioLanguagesChanged("eng")).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_PreferredAudioLanguages) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnPreferredAudioLanguagesChanged("eng")).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params("eng");
-    implementation->Dispatch(Plugin::UserSettingsImplementation::PREFERRED_AUDIO_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params("eng");
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::PREFERRED_AUDIO_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_PresentationLanguage) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnPresentationLanguageChanged("en-US")).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_PresentationLanguage) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnPresentationLanguageChanged("en-US")).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params("en-US");
-    implementation->Dispatch(Plugin::UserSettingsImplementation::PRESENTATION_LANGUAGE_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params("en-US");
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::PRESENTATION_LANGUAGE_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_Captions) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnCaptionsChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_Captions) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnCaptionsChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::CAPTIONS_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::CAPTIONS_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_PreferredCaptionsLanguages) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnPreferredCaptionsLanguagesChanged("eng,fra")).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_PreferredCaptionsLanguages) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnPreferredCaptionsLanguagesChanged("eng,fra")).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params("eng,fra");
-    implementation->Dispatch(Plugin::UserSettingsImplementation::PREFERRED_CAPTIONS_LANGUAGE_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params("eng,fra");
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::PREFERRED_CAPTIONS_LANGUAGE_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_PreferredClosedCaptionsService) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnPreferredClosedCaptionServiceChanged("CC3")).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_PreferredClosedCaptionsService) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnPreferredClosedCaptionServiceChanged("CC3")).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params("CC3");
-    implementation->Dispatch(Plugin::UserSettingsImplementation::PREFERRED_CLOSED_CAPTIONS_SERVICE_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params("CC3");
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::PREFERRED_CLOSED_CAPTIONS_SERVICE_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_PrivacyMode) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnPrivacyModeChanged("DO_NOT_SHARE")).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_PrivacyMode) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnPrivacyModeChanged("DO_NOT_SHARE")).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params("DO_NOT_SHARE");
-    implementation->Dispatch(Plugin::UserSettingsImplementation::PRIVACY_MODE_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params("DO_NOT_SHARE");
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::PRIVACY_MODE_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_PinControl) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnPinControlChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_PinControl) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnPinControlChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::PIN_CONTROL_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::PIN_CONTROL_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_ViewingRestrictions) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnViewingRestrictionsChanged("{\"ratings\":[\"PG\"]}")).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_ViewingRestrictions) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnViewingRestrictionsChanged("{\"ratings\":[\"PG\"]}")).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params("{\"ratings\":[\"PG\"]}");
-    implementation->Dispatch(Plugin::UserSettingsImplementation::VIEWING_RESTRICTIONS_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params("{\"ratings\":[\"PG\"]}");
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::VIEWING_RESTRICTIONS_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_ViewingRestrictionsWindow) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnViewingRestrictionsWindowChanged("ALWAYS")).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_ViewingRestrictionsWindow) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnViewingRestrictionsWindowChanged("ALWAYS")).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params("ALWAYS");
-    implementation->Dispatch(Plugin::UserSettingsImplementation::VIEWING_RESTRICTIONS_WINDOW_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params("ALWAYS");
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::VIEWING_RESTRICTIONS_WINDOW_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_LiveWatershed) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnLiveWatershedChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_LiveWatershed) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnLiveWatershedChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::LIVE_WATERSHED_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::LIVE_WATERSHED_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_PlaybackWatershed) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnPlaybackWatershedChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_PlaybackWatershed) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnPlaybackWatershedChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::PLAYBACK_WATERSHED_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::PLAYBACK_WATERSHED_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_BlockNotRatedContent) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnBlockNotRatedContentChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_BlockNotRatedContent) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnBlockNotRatedContentChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::BLOCK_NOT_RATED_CONTENT_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::BLOCK_NOT_RATED_CONTENT_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_PinOnPurchase) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnPinOnPurchaseChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_PinOnPurchase) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnPinOnPurchaseChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::PIN_ON_PURCHASE_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::PIN_ON_PURCHASE_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_HighContrast) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnHighContrastChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_HighContrast) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnHighContrastChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::HIGH_CONTRAST_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::HIGH_CONTRAST_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_VoiceGuidance) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnVoiceGuidanceChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_VoiceGuidance) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnVoiceGuidanceChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::VOICE_GUIDANCE_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::VOICE_GUIDANCE_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_VoiceGuidanceRate) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnVoiceGuidanceRateChanged(2.5)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_VoiceGuidanceRate) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnVoiceGuidanceRateChanged(2.5)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(2.5);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::VOICE_GUIDANCE_RATE_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(2.5);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::VOICE_GUIDANCE_RATE_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_VoiceGuidanceHints) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnVoiceGuidanceHintsChanged(true)).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_VoiceGuidanceHints) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnVoiceGuidanceHintsChanged(true)).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params(true);
-    implementation->Dispatch(Plugin::UserSettingsImplementation::VOICE_GUIDANCE_HINTS_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params(true);
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::VOICE_GUIDANCE_HINTS_CHANGED, params);
+// }
 
-TEST_F(UserSettingsNotificationTest, TestDispatch_ContentPin) {
-    // Expect the notification to be called
-    EXPECT_CALL(*notificationMock, OnContentPinChanged("1234")).Times(1);
+// TEST_F(UserSettingsNotificationTest, TestDispatch_ContentPin) {
+//     // Expect the notification to be called
+//     EXPECT_CALL(*notificationMock, OnContentPinChanged("1234")).Times(1);
     
-    // Directly call the Dispatch method with the corresponding event
-    JsonValue params("1234");
-    implementation->Dispatch(Plugin::UserSettingsImplementation::CONTENT_PIN_CHANGED, params);
-}
+//     // Directly call the Dispatch method with the corresponding event
+//     JsonValue params("1234");
+//     implementation->Dispatch(Plugin::UserSettingsImplementation::CONTENT_PIN_CHANGED, params);
+// }
 
 // ===================================================================================
 
-// // Test the dispatchEvent method
+// Test the dispatchEvent method
 // TEST_F(UserSettingsNotificationTest, TestDispatchEvent) {
 //     // Expect the notification to be called
 //     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true)).Times(1);
@@ -1366,272 +1368,272 @@ TEST_F(UserSettingsNotificationTest, TestDispatch_ContentPin) {
 
 // ===================================================================================
 
-// Test the ValueChanged method for all settings
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_AudioDescription) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true)).Times(1);
+Test the ValueChanged method for all settings
+TEST_F(UserSettingsNotificationTest, TestValueChanged_AudioDescription) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_AUDIO_DESCRIPTION_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_AUDIO_DESCRIPTION_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_PreferredAudioLanguages) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnPreferredAudioLanguagesChanged("eng,fra")).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_PreferredAudioLanguages) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnPreferredAudioLanguagesChanged("eng,fra")).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY,
-//                                "eng,fra");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY,
+                               "eng,fra");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_PresentationLanguage) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnPresentationLanguageChanged("en-US")).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_PresentationLanguage) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnPresentationLanguageChanged("en-US")).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_PRESENTATION_LANGUAGE_KEY,
-//                                "en-US");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_PRESENTATION_LANGUAGE_KEY,
+                               "en-US");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_Captions) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnCaptionsChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_Captions) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnCaptionsChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_CAPTIONS_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_CAPTIONS_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_PreferredCaptionsLanguages) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnPreferredCaptionsLanguagesChanged("eng,fra")).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_PreferredCaptionsLanguages) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnPreferredCaptionsLanguagesChanged("eng,fra")).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_PREFERRED_CAPTIONS_LANGUAGES_KEY,
-//                                "eng,fra");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_PREFERRED_CAPTIONS_LANGUAGES_KEY,
+                               "eng,fra");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_PreferredClosedCaptionsService) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnPreferredClosedCaptionServiceChanged("CC3")).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_PreferredClosedCaptionsService) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnPreferredClosedCaptionServiceChanged("CC3")).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY,
-//                                "CC3");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY,
+                               "CC3");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_PrivacyMode) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnPrivacyModeChanged("DO_NOT_SHARE")).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_PrivacyMode) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnPrivacyModeChanged("DO_NOT_SHARE")).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_PRIVACY_MODE_KEY,
-//                                "DO_NOT_SHARE");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_PRIVACY_MODE_KEY,
+                               "DO_NOT_SHARE");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_PinControl) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnPinControlChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_PinControl) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnPinControlChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_PIN_CONTROL_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_PIN_CONTROL_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_ViewingRestrictions) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnViewingRestrictionsChanged("{\"ratings\":[\"PG\"]}")).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_ViewingRestrictions) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnViewingRestrictionsChanged("{\"ratings\":[\"PG\"]}")).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_VIEWING_RESTRICTIONS_KEY,
-//                                "{\"ratings\":[\"PG\"]}");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_VIEWING_RESTRICTIONS_KEY,
+                               "{\"ratings\":[\"PG\"]}");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_ViewingRestrictionsWindow) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnViewingRestrictionsWindowChanged("ALWAYS")).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_ViewingRestrictionsWindow) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnViewingRestrictionsWindowChanged("ALWAYS")).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_VIEWING_RESTRICTIONS_WINDOW_KEY,
-//                                "ALWAYS");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_VIEWING_RESTRICTIONS_WINDOW_KEY,
+                               "ALWAYS");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_LiveWatershed) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnLiveWatershedChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_LiveWatershed) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnLiveWatershedChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_LIVE_WATERSHED_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_LIVE_WATERSHED_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_PlaybackWatershed) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnPlaybackWatershedChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_PlaybackWatershed) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnPlaybackWatershedChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_PLAYBACK_WATERSHED_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_PLAYBACK_WATERSHED_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_BlockNotRatedContent) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnBlockNotRatedContentChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_BlockNotRatedContent) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnBlockNotRatedContentChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_BLOCK_NOT_RATED_CONTENT_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_BLOCK_NOT_RATED_CONTENT_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_PinOnPurchase) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnPinOnPurchaseChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_PinOnPurchase) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnPinOnPurchaseChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_PIN_ON_PURCHASE_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_PIN_ON_PURCHASE_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_HighContrast) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnHighContrastChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_HighContrast) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnHighContrastChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_HIGH_CONTRAST_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_HIGH_CONTRAST_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_VoiceGuidance) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnVoiceGuidanceChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_VoiceGuidance) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnVoiceGuidanceChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_VOICE_GUIDANCE_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_VOICE_GUIDANCE_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_VoiceGuidanceRate) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnVoiceGuidanceRateChanged(2.5)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_VoiceGuidanceRate) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnVoiceGuidanceRateChanged(2.5)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_VOICE_GUIDANCE_RATE_KEY,
-//                                "2.5");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_VOICE_GUIDANCE_RATE_KEY,
+                               "2.5");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_VoiceGuidanceHints) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnVoiceGuidanceHintsChanged(true)).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_VoiceGuidanceHints) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnVoiceGuidanceHintsChanged(true)).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY,
-//                                "true");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY,
+                               "true");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
-// TEST_F(UserSettingsNotificationTest, TestValueChanged_ContentPin) {
-//     // Expect the notification to be called
-//     EXPECT_CALL(*notificationMock, OnContentPinChanged("1234")).Times(1);
+TEST_F(UserSettingsNotificationTest, TestValueChanged_ContentPin) {
+    // Expect the notification to be called
+    EXPECT_CALL(*notificationMock, OnContentPinChanged("1234")).Times(1);
     
-//     // Simulate the store notification
-//     implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
-//                                USERSETTINGS_NAMESPACE,
-//                                USERSETTINGS_CONTENT_PIN_KEY,
-//                                "1234");
+    // Simulate the store notification
+    implementation->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_CONTENT_PIN_KEY,
+                               "1234");
     
-//     // Allow time for job processing
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
+    // Allow time for job processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
 
 // ===================================================================================
 
@@ -1639,7 +1641,7 @@ TEST_F(UserSettingsNotificationTest, TestDispatch_ContentPin) {
 // TEST_F(UserSettingsNotificationTest, FullFlow_AudioDescription) {
 //     // Setup expectations for the Store2 mock
 //     EXPECT_CALL(*store2Mock, SetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, 
-//                                      USERSETTINGS_AUDIO_DESCRIPTION_KEY, "true", _))
+//                                      USERSETTINGS_AUDIO_DESCRIPTION_KEY, "true", ::testing::_))
 //         .WillOnce(::testing::Return(Core::ERROR_NONE));
     
 //     // Expect the notification to be called
@@ -1661,7 +1663,7 @@ TEST_F(UserSettingsNotificationTest, TestDispatch_ContentPin) {
 // TEST_F(UserSettingsNotificationTest, FullFlow_PreferredAudioLanguages) {
 //     // Setup expectations for the Store2 mock
 //     EXPECT_CALL(*store2Mock, SetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, 
-//                                      USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY, "eng,fra", _))
+//                                      USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY, "eng,fra", ::testing::_))
 //         .WillOnce(::testing::Return(Core::ERROR_NONE));
     
 //     // Expect the notification to be called
