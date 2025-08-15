@@ -110,10 +110,18 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     spec["memLimit"] = getSysMemoryLimit(config, runtimeConfig);
 
     Json::Value args(Json::arrayValue);
-    //TODO CHECK FOR APPEND OR NOT
-    std::string command ="/runtime/";
+    std::string command ="";
+    if(!runtimeConfig.runtimePath.empty())
+    {
+        command = "/runtime/";
+    }
+    else
+    {
+        command = "/package/";
+    }
     command.append(runtimeConfig.command);
-
+    printf("MADANA COMMAND FORMED IS [%s] \n", command.c_str());
+    fflush(stdout);
     args.append(command);
     spec["args"] = std::move(args);
     spec["cwd"] = getWorkingDir(config, runtimeConfig);
