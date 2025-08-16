@@ -107,38 +107,78 @@ public:
     MOCK_METHOD(void, OnVoiceGuidanceHintsChanged, (const bool hints), (override));
     MOCK_METHOD(void, OnContentPinChanged, (const string& contentPin), (override));
     
-    BEGIN_INTERFACE_MAP(UserSettingsNotificationMock)
-    INTERFACE_ENTRY(Exchange::IUserSettings::INotification)
-    END_INTERFACE_MAP
+    void AddRef() const override {}
+    uint32_t Release() const override { return 0; }
+    void* QueryInterface(const uint32_t interfaceNummer) override {
+        if (interfaceNummer == Exchange::IUserSettings::INotification::ID) {
+            return static_cast<Exchange::IUserSettings::INotification*>(this);
+        }
+        return nullptr;
+    }
 };
 
 class UserSettingsNotificationTest : public ::testing::Test {
 protected:
-    Plugin::UserSettingsImplementation* implementation;
-    NiceMock<Store2Mock>* store2Mock;
-    NiceMock<UserSettingsNotificationMock>* notificationMock;
-    NiceMock<UserSettingsNotificationMock>* secondNotificationMock;
+    Core::ProxyType<Plugin::UserSettings> plugin;
+    Core::JSONRPC::Handler& handler;
+    Core::JSONRPC::Context connection;
+    Core::JSONRPC::Message message;
+    NiceMock<ServiceMock> service;
+    NiceMock<COMLinkMock> comLinkMock;
+    Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
+    Exchange::IUserSettings* userSettingsInterface;
+    string response;
     
-    void SetUp() override {
-        implementation = new Plugin::UserSettingsImplementation();
-        store2Mock = new NiceMock<Store2Mock>();
-        notificationMock = new NiceMock<UserSettingsNotificationMock>();
-        secondNotificationMock = new NiceMock<UserSettingsNotificationMock>();
-        
-        // Set up the store mock in the implementation
-        implementation->_remotStoreObject = store2Mock;
-        store2Mock->AddRef();
+    WrapsImplMock* p_wrapsImplMock = nullptr;
+    ServiceMock* p_serviceMock = nullptr;
+    Store2Mock* p_store2Mock = nullptr;
+    UserSettingsNotificationMock* notificationMock = nullptr;
+    UserSettingsNotificationMock* secondNotificationMock = nullptr;
+
+    UserSettingsNotificationTest()
+        : plugin(Core::ProxyType<Plugin::UserSettings>::Create())
+        , handler(*plugin)
+        , connection(1, 0, "")
+    {
+        p_serviceMock = new NiceMock<ServiceMock>();
+        p_store2Mock = new NiceMock<Store2Mock>();
+        p_wrapsImplMock = new NiceMock<WrapsImplMock>();
+        notificationMock = new UserSettingsNotificationMock();
+        secondNotificationMock = new UserSettingsNotificationMock();
+
+        Wraps::setImpl(p_wrapsImplMock);
+
+        EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+            .WillRepeatedly(::testing::Return(p_store2Mock));
+
+        ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
+            .WillByDefault(::testing::Invoke(
+                [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
+                    userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+                    return &userSettingsImpl;
+                }));
+
+        plugin->Initialize(&service);
+        userSettingsInterface = plugin->QueryInterface<Exchange::IUserSettings>();
+        EXPECT_NE(nullptr, userSettingsInterface);
         
         // Register our notification mock
-        implementation->Register(notificationMock);
+        userSettingsInterface->Register(notificationMock);
     }
-    
-    void TearDown() override {
-        implementation->Unregister(notificationMock);
-        delete implementation;
-        store2Mock->Release();
-        notificationMock->Release();
-        secondNotificationMock->Release();
+
+    virtual ~UserSettingsNotificationTest() {
+        if (userSettingsInterface != nullptr) {
+            userSettingsInterface->Unregister(notificationMock);
+            userSettingsInterface->Release();
+        }
+        
+        plugin->Deinitialize(&service);
+        
+        delete notificationMock;
+        delete secondNotificationMock;
+        delete p_store2Mock;
+        delete p_serviceMock;
+        delete p_wrapsImplMock;
     }
 };
 
