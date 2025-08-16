@@ -1421,33 +1421,47 @@ TEST_F(UserSettingsTest, RegisterUnregisterNotification_Success) {
 }
 
 // Test notification for AudioDescription via JSON Events
-TEST_F(UserSettingsTest, AudioDescription_SetValue_TriggersNotificationEvent) {
-    // Setup notification handler
-    Core::JSONRPC::Handler::Iterator index = handler.Observers();
+TEST_F(UserSettingsTest, AudioDescription_NotificationViaStore2) {
+    // Define the handler for JSON events
+    Core::JSONRPC::Message message;
+    message.Id = 1234;
+    message.Parameters = _T("{\"notification\":1234}");  // Use message ID as notification ID
     
-    // Setup core message and call the method that should trigger a notification
+    // Register for notifications
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("register"), message.Parameters, response));
+    
+    // Create a mock for the Store2 INotification interface
+    NiceMock<Store2NotificationMock>* store2Notification = new NiceMock<Store2NotificationMock>();
+    
+    // Configure Store2Mock to call its notification handler when setValue is called
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, USERSETTINGS_NAMESPACE, 
                                       USERSETTINGS_AUDIO_DESCRIPTION_KEY, "true", ::testing::_))
         .WillOnce(::testing::DoAll(
-            // Simulate the Store2 callback that would trigger notifications
-            ::testing::InvokeWithoutArgs([this]() {
-                // We can't directly access the implementation, but we can
-                // simulate a value changed by calling setValue again, which
-                // will emit the notification internally
-                p_store2Mock->NotificationStore2();
+            ::testing::InvokeWithoutArgs([this, store2Notification]() {
+                // Simulate the Store2 notification that would happen
+                // This will call all registered IStore2::INotification handlers
+                // including the one in UserSettings
+                p_store2Mock->ValueChange(store2Notification, 
+                                        Exchange::IStore2::ScopeType::DEVICE,
+                                        USERSETTINGS_NAMESPACE, 
+                                        USERSETTINGS_AUDIO_DESCRIPTION_KEY,
+                                        "true");
             }),
             ::testing::Return(Core::ERROR_NONE)
         ));
     
-    // Call the method via JSON-RPC
+    // Call the method that should trigger a notification
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setAudioDescription"), 
                                              _T("{\"enabled\": true}"), response));
     
-    // Allow time for asynchronous notification processing
+    // Allow time for notification processing
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
-    // Verify that we received the notification (would need to be adapted to how your
-    // test framework captures JSON events/notifications)
+    // Unregister from notifications
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("unregister"), message.Parameters, response));
+    
+    // Clean up
+    delete store2Notification;
 }
 
 
