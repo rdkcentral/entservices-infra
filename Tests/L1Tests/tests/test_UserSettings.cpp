@@ -1205,14 +1205,14 @@ TEST_F(UserSettingsTest, RegisterUnregisterNotification_Success) {
 }
 
 TEST_F(UserSettingsNotificationTest, TestValueChanged_AudioDescription) {
-    // Skip test if implementation isn't available
-    if (!userSettingsImpl) {
+    // Check if implementation is available using IsValid() method
+    if (userSettingsImpl.IsValid() == false) {
         GTEST_SKIP() << "UserSettingsImplementation not available";
         return;
     }
     
     // Make sure the notification mock exists
-    ASSERT_TRUE(notificationMock != nullptr);
+    ASSERT_NE(nullptr, notificationMock);
     
     // The AudioDescriptionChanged notification should be called with 'true'
     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true)).Times(1);
