@@ -1400,7 +1400,7 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
 
 // ===================================================================================
 
-Test for Register and Unregister functionality via JSON-RPC
+// Test for Register and Unregister functionality via JSON-RPC
 TEST_F(UserSettingsTest, RegisterUnregisterNotification_Success) {
     // Create notification mock
     NiceMock<UserSettingsNotificationMock>* notificationMock = new NiceMock<UserSettingsNotificationMock>();
@@ -1555,4 +1555,5 @@ TEST_F(UserSettingsNotificationTest, TestValueChanged_AudioDescription) {
 //                                "2");
 //     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 // }
+
 
