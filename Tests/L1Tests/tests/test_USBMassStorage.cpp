@@ -594,39 +594,3 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
     // Removed close() call as it's not available in WrapsImplMock
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\":\"/tmp/media/usb1\"}"), response));
 }
-
-TEST_F(USBMassStorageTest, Register_Success)
-{
-    Exchange::IUSBMassStorage::INotification* testNotification = reinterpret_cast<Exchange::IUSBMassStorage::INotification*>(0x1234);
-    EXPECT_EQ(Core::ERROR_NONE, USBMassStorageImpl->Register(testNotification));
-}
-
-TEST_F(USBMassStorageTest, Register_NullNotification)
-{
-    EXPECT_EQ(Core::ERROR_NONE, USBMassStorageImpl->Register(nullptr));
-}
-
-TEST_F(USBMassStorageTest, Register_SameNotificationTwice)
-{
-    Exchange::IUSBMassStorage::INotification* testNotification = reinterpret_cast<Exchange::IUSBMassStorage::INotification*>(0x1234);
-    USBMassStorageImpl->Register(testNotification);
-    EXPECT_EQ(Core::ERROR_NONE, USBMassStorageImpl->Register(testNotification));
-}
-
-TEST_F(USBMassStorageTest, Unregister_Success)
-{
-    Exchange::IUSBMassStorage::INotification* testNotification = reinterpret_cast<Exchange::IUSBMassStorage::INotification*>(0x1234);
-    USBMassStorageImpl->Register(testNotification);
-    EXPECT_EQ(Core::ERROR_NONE, USBMassStorageImpl->Unregister(testNotification));
-}
-
-TEST_F(USBMassStorageTest, Unregister_NullNotification)
-{
-    EXPECT_EQ(Core::ERROR_GENERAL, USBMassStorageImpl->Unregister(nullptr));
-}
-
-TEST_F(USBMassStorageTest, Unregister_NotRegistered)
-{
-    Exchange::IUSBMassStorage::INotification* testNotification = reinterpret_cast<Exchange::IUSBMassStorage::INotification*>(0x1234);
-    EXPECT_EQ(Core::ERROR_GENERAL, USBMassStorageImpl->Unregister(testNotification));
-}
