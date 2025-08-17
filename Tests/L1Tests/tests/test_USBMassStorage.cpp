@@ -993,3 +993,4 @@ TEST_F(USBMassStorageTest, registerEventHandlers_USBDeviceObjectNull)
     USBMassStorageImpl->_remoteUSBDeviceObject = nullptr;
     USBMassStorageImpl->registerEventHandlers();
     EXPECT_FALSE(USBMassStorageImpl->_registeredEventHandlers);
+}
