@@ -1420,31 +1420,24 @@ TEST_F(UserSettingsTest, RegisterUnregisterNotification_Success) {
     notificationMock->Release();
 }
 
-TEST_F(UserSettingsTest, ValueChanged_TriggersNotification) {
-    // Access the implementation
-    Plugin::UserSettingsImplementation* impl = /* get implementation */;
+TEST_F(UserSettingsNotificationTest, TestValueChanged_AudioDescription) {
+    // Register the notification mock
+    userSettingsImpl->Register(notificationMock);
     
-    // Register mock notification
-    UserSettingsNotificationMock* notificationMock = new NiceMock<UserSettingsNotificationMock>();
-    impl->Register(notificationMock);
-    
-    // Set expectation
+    // Expect the notification to be called
     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true)).Times(1);
     
-    // Call ValueChanged directly
-    impl->ValueChanged(
-        Exchange::IStore2::ScopeType::DEVICE,
-        USERSETTINGS_NAMESPACE,
-        USERSETTINGS_AUDIO_DESCRIPTION_KEY,
-        "true"
-    );
+    // Simulate the store notification
+    userSettingsImpl->ValueChanged(Exchange::IStore2::ScopeType::DEVICE,
+                               USERSETTINGS_NAMESPACE,
+                               USERSETTINGS_AUDIO_DESCRIPTION_KEY,
+                               "true");
     
-    // Allow time for async processing
+    // Allow time for job processing
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
     // Clean up
-    impl->Unregister(notificationMock);
-    notificationMock->Release();
+    userSettingsImpl->Unregister(notificationMock);
 }
 
 // ===================================================================================
