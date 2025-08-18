@@ -1209,16 +1209,20 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
 }
 
 TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_TriggersNotification) {
-    // First verify the plugin and service are properly initialized
     ASSERT_TRUE(plugin.IsValid());
     
-    // Use the COM link mock to properly instantiate UserSettingsImplementation
+    // Set up store mock expectation for the JSON-RPC call that triggers instantiation
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::SetArgReferee<3>("false"),
+            ::testing::Return(Core::ERROR_NONE)));
+    
+    // Set up the COM link mock expectation
     EXPECT_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Invoke(
         [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
             UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
             if (UserSettingsImpl.IsValid()) {
-                // Configure the implementation properly
                 UserSettingsImpl->Configure(p_serviceMock);
             }
             return &UserSettingsImpl;
@@ -1226,7 +1230,7 @@ TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_Tr
     
     // Trigger the instantiation by calling a JSON-RPC method
     string tempResponse;
-    handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), tempResponse);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), tempResponse));
     
     // Now verify UserSettingsImpl is valid
     ASSERT_TRUE(UserSettingsImpl.IsValid());
@@ -1247,7 +1251,7 @@ TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_Tr
         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
         "true"
     );
-    
+
     // Allow time for the worker pool job to process the dispatch
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     
