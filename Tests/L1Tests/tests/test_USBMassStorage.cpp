@@ -136,7 +136,7 @@ TEST_F(USBMassStorageTest, getDeviceList_Success)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
 }
 
-TEST_F(USBMassStorageTest, getDeviceList_Failed)
+TEST_F(USBMassStorageTest, getDeviceList_EmptyList)
 {
     EXPECT_CALL(*p_usbDeviceMock, GetDeviceList(::testing::_))
     .WillOnce([&](Exchange::IUSBDevice::IUSBDeviceIterator*& devices) {
@@ -246,7 +246,7 @@ TEST_F(USBMassStorageTest, getMountPoints_MissingDeviceName)
 
 TEST_F(USBMassStorageTest, getMountPoints_InvalidJson)
 {
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, handler.Invoke(connection, _T("getMountPoints"), _T("{invalid json}"), response));
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("getMountPoints"), _T("{invalidjson}"), response));
 }
 
 TEST_F(USBMassStorageTest, getMountPoints_InvalidDeviceName)
@@ -348,7 +348,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_MissingMountPath)
 
 TEST_F(USBMassStorageTest, getPartitionInfo_InvalidJson)
 {
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, handler.Invoke(connection, _T("getPartitionInfo"), _T("{invalid json}"), response));
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("getPartitionInfo"), _T("{invalidjson}"), response));
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_InvalidMountPoint)
