@@ -1209,15 +1209,38 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
 }
 
 TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_TriggersNotification) {
-    // ASSERT_TRUE(UserSettingsImpl.IsValid());
+    // First verify the plugin and service are properly initialized
+    ASSERT_TRUE(plugin.IsValid());
+    
+    // Use the COM link mock to properly instantiate UserSettingsImplementation
+    EXPECT_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Invoke(
+        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
+            UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+            if (UserSettingsImpl.IsValid()) {
+                // Configure the implementation properly
+                UserSettingsImpl->Configure(p_serviceMock);
+            }
+            return &UserSettingsImpl;
+        }));
+    
+    // Trigger the instantiation by calling a JSON-RPC method
+    string tempResponse;
+    handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), tempResponse);
+    
+    // Now verify UserSettingsImpl is valid
+    ASSERT_TRUE(UserSettingsImpl.IsValid());
     ASSERT_NE(nullptr, notificationMock);
+    
+    // Register the notification mock
+    Core::hresult regResult = UserSettingsImpl->Register(notificationMock);
+    EXPECT_EQ(Core::ERROR_NONE, regResult);
     
     // Set expectation for the notification
     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true))
         .Times(1);
     
     // Trigger ValueChanged directly on the implementation
-    // This simulates what happens when Store2 calls back with a value change
     UserSettingsImpl->ValueChanged(
         Exchange::IStore2::ScopeType::DEVICE,
         USERSETTINGS_NAMESPACE,
@@ -1227,5 +1250,7 @@ TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_Tr
     
     // Allow time for the worker pool job to process the dispatch
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    
+    // Unregister the notification
+    UserSettingsImpl->Unregister(notificationMock);
 }
-
