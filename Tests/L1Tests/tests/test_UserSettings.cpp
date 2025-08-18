@@ -160,7 +160,7 @@ protected:
         EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
             .WillOnce(testing::Return(p_store2Mock));
         
-                ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
+        ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
             .WillByDefault(::testing::Invoke(
             [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
                 UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
@@ -168,9 +168,6 @@ protected:
             }));
 
         plugin->Initialize(&service);
-        
-        // Get the implementation from the plugin
-        UserSettingsImpl = plugin->QueryInterface<Plugin::UserSettingsImplementation>();
         
         notificationMock = new UserSettingsNotificationMock();
     }
