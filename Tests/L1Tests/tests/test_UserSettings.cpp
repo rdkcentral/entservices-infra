@@ -128,52 +128,79 @@ private:
     mutable std::atomic<uint32_t> m_refCount{1};
 };
 
-class UserSettingsDispatchL1Test : public ::testing::Test {
+class UserSettingsAudioDescriptionL1Test : public ::testing::Test {
 protected:
-    Plugin::UserSettingsImplementation* userSettingsImpl;
-    NiceMock<ServiceMock>* serviceMock;
-    NiceMock<Store2Mock>* store2Mock;
-    UserSettingsNotificationMock* notificationMock;
+    Core::ProxyType<Plugin::UserSettings> plugin;
+    Core::JSONRPC::Handler& handler;
+    Core::JSONRPC::Context connection;
+    NiceMock<ServiceMock> service;
+    NiceMock<COMLinkMock> comLinkMock;
+    Core::ProxyType<Plugin::UserSettingsImplementation> UserSettingsImpl;
+    string response;
+    WrapsImplMock *p_wrapsImplMock;
+    ServiceMock *p_serviceMock;
+    Store2Mock *p_store2Mock;
+    UserSettingsNotificationMock *notificationMock;
 
-    UserSettingsDispatchL1Test() 
-        : userSettingsImpl(nullptr)
-        , serviceMock(nullptr)
-        , store2Mock(nullptr)
+    UserSettingsAudioDescriptionL1Test()
+        : plugin(Core::ProxyType<Plugin::UserSettings>::Create())
+        , handler(*plugin)
+        , connection(1, 0, "")
+        , p_wrapsImplMock(nullptr)
+        , p_serviceMock(nullptr)
+        , p_store2Mock(nullptr)
         , notificationMock(nullptr)
     {
-        serviceMock = new NiceMock<ServiceMock>();
-        store2Mock = new NiceMock<Store2Mock>();
+        p_serviceMock = new NiceMock<ServiceMock>;
+        p_store2Mock = new NiceMock<Store2Mock>;
+        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
         
-        EXPECT_CALL(*serviceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-            .WillRepeatedly(::testing::Return(store2Mock));
+        Wraps::setImpl(p_wrapsImplMock);
 
-        userSettingsImpl = new Plugin::UserSettingsImplementation();
-        uint32_t result = userSettingsImpl->Configure(serviceMock);
-        EXPECT_EQ(Core::ERROR_NONE, result);
+        EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+            .WillOnce(testing::Return(p_store2Mock));
+
+        ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
+            .WillByDefault(::testing::Invoke(
+            [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
+                UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+                return &UserSettingsImpl;
+            }));
+        plugin->Initialize(&service);
         
+        // Create and register notification mock
         notificationMock = new UserSettingsNotificationMock();
-        userSettingsImpl->Register(notificationMock);
+        if (UserSettingsImpl.IsValid()) {
+            UserSettingsImpl->Register(notificationMock);
+        }
     }
 
-    virtual ~UserSettingsDispatchL1Test() {
-        if (notificationMock && userSettingsImpl) {
-            userSettingsImpl->Unregister(notificationMock);
+    virtual ~UserSettingsAudioDescriptionL1Test() override {
+        if (notificationMock && UserSettingsImpl.IsValid()) {
+            UserSettingsImpl->Unregister(notificationMock);
             notificationMock->Release();
         }
-        
-        if (userSettingsImpl) {
-            delete userSettingsImpl;
+
+        plugin->Deinitialize(&service);
+
+        if (p_serviceMock != nullptr) {
+            delete p_serviceMock;
+            p_serviceMock = nullptr;
         }
         
-        if (serviceMock) {
-            delete serviceMock;
+        if (p_store2Mock != nullptr) {
+            delete p_store2Mock;
+            p_store2Mock = nullptr;
         }
-        
-        if (store2Mock) {
-            delete store2Mock;
+
+        Wraps::setImpl(nullptr);
+        if (p_wrapsImplMock != nullptr) {
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
         }
     }
 };
+
 
 TEST_F(UserSettingsTest, SetAudioDescription_Exists)
 {
@@ -1181,10 +1208,23 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
     EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
-TEST_F(UserSettingsDispatchL1Test, Dispatch_AudioDescriptionChanged_True) {
+TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_TriggersNotification) {
+    ASSERT_TRUE(UserSettingsImpl.IsValid());
+    ASSERT_NE(nullptr, notificationMock);
+    
+    // Set expectation for the notification
     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true))
         .Times(1);
     
-    JsonValue params(true);
-    userSettingsImpl->Dispatch(Plugin::UserSettingsImplementation::AUDIO_DESCRIPTION_CHANGED, params);
+    // Trigger ValueChanged directly on the implementation
+    // This simulates what happens when Store2 calls back with a value change
+    UserSettingsImpl->ValueChanged(
+        Exchange::IStore2::ScopeType::DEVICE,
+        USERSETTINGS_NAMESPACE,
+        USERSETTINGS_AUDIO_DESCRIPTION_KEY,
+        "true"
+    );
+    
+    // Allow time for the worker pool job to process the dispatch
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
