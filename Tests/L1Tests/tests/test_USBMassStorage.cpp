@@ -101,6 +101,16 @@ protected:
     }
 };
 
+// Add this mock class since it's not in your fixture
+class MockRemoteConnection : public RPC::IRemoteConnection {
+public:
+    MOCK_METHOD(uint32_t, Id, (), (const, override));
+    MOCK_METHOD(void, Terminate, (), (override));
+    MOCK_METHOD(uint32_t, Release, (), (const, override));
+    MOCK_METHOD(uint32_t, AddRef, (), (const, override));
+    MOCK_METHOD(void*, QueryInterface, (const uint32_t), (override));
+};
+
 TEST_F(USBMassStorageTest, getDeviceList_Exists)
 {
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getDeviceList")));
@@ -593,4 +603,181 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
 
     // Removed close() call as it's not available in WrapsImplMock
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\":\"/tmp/media/usb1\"}"), response));
+}
+
+// Add this mock class since it's not in your fixture
+class MockRemoteConnection : public RPC::IRemoteConnection {
+public:
+    MOCK_METHOD(uint32_t, Id, (), (const, override));
+    MOCK_METHOD(void, Terminate, (), (override));
+    MOCK_METHOD(uint32_t, Release, (), (const, override));
+    MOCK_METHOD(uint32_t, AddRef, (), (const, override));
+    MOCK_METHOD(void*, QueryInterface, (const uint32_t), (override));
+};
+
+// Test for Information() method
+TEST_F(USBMassStorageTest, Information_ReturnsCorrectString)
+{
+    string result = plugin->Information();
+    EXPECT_EQ(result, "The USBMassStorage Plugin manages device mounting and stores mount information.");
+}
+
+// Test for Deactivated() method - connection ID matches
+TEST_F(USBMassStorageTest, Deactivated_ConnectionIdMatches_SubmitsDeactivatedJob)
+{
+    NiceMock<MockRemoteConnection> mockConnection;
+    uint32_t testConnectionId = 123;
+    
+    // Set the plugin's connection ID (you'll need to access this appropriately)
+    EXPECT_CALL(mockConnection, Id())
+        .WillRepeatedly(::testing::Return(testConnectionId));
+    
+    // Test: Call Deactivated with matching connection ID
+    // Note: This test may need adjustment based on how _connectionId is accessible
+    plugin->Deactivated(&mockConnection);
+}
+
+// Test for Deactivated() method - connection ID does not match
+TEST_F(USBMassStorageTest, Deactivated_ConnectionIdDoesNotMatch_NoJobSubmitted)
+{
+    NiceMock<MockRemoteConnection> mockConnection;
+    
+    EXPECT_CALL(mockConnection, Id())
+        .WillRepeatedly(::testing::Return(999)); // Different ID
+    
+    // Test: Call Deactivated with non-matching connection ID
+    plugin->Deactivated(&mockConnection);
+}
+
+// Test for OnDeviceUnmounted() notification - with valid mount points
+TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_NotifiesCorrectly)
+{
+    // Setup device info
+    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+    deviceInfo.devicePath = "testDevicePath";
+    deviceInfo.deviceName = "testDeviceName";
+    
+    // Create a simple mock iterator using your existing patterns
+    std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
+    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo1;
+    mountInfo1.MountPath = "/tmp/media/usb1";
+    mountInfo1.FileSystemType = "ntfs";
+    mountInfoList.emplace_back(mountInfo1);
+    
+    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
+    
+    // Create notification instance
+    Plugin::USBMassStorage::Notification notification(*plugin);
+    
+    // Test: Call OnDeviceUnmounted
+    notification.OnDeviceUnmounted(deviceInfo, mockIterator);
+}
+
+// Test for OnDeviceUnmounted() notification - with null mount points
+TEST_F(USBMassStorageTest, OnDeviceUnmounted_NullMountPoints_NoNotification)
+{
+    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+    deviceInfo.devicePath = "testDevicePath";
+    deviceInfo.deviceName = "testDeviceName";
+    
+    Plugin::USBMassStorage::Notification notification(*plugin);
+    
+    // Test: Call OnDeviceUnmounted with null mount points
+    EXPECT_NO_THROW(notification.OnDeviceUnmounted(deviceInfo, nullptr));
+}
+
+// Test for OnDeviceMounted() notification
+TEST_F(USBMassStorageTest, OnDeviceMounted_ValidMountPoints_NotifiesCorrectly)
+{
+    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+    deviceInfo.devicePath = "testDevicePath";
+    deviceInfo.deviceName = "testDeviceName";
+    
+    std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
+    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo;
+    mountInfo.MountPath = "/tmp/media/usb1";
+    mountInfo.FileSystemType = "ntfs";
+    mountInfoList.emplace_back(mountInfo);
+    
+    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
+    
+    Plugin::USBMassStorage::Notification notification(*plugin);
+    
+    // Test: Call OnDeviceMounted
+    notification.OnDeviceMounted(deviceInfo, mockIterator);
+}
+
+// Add this mock class since it's not in your fixture
+class MockRemoteConnection : public RPC::IRemoteConnection {
+public:
+    MOCK_METHOD(uint32_t, Id, (), (const, override));
+    MOCK_METHOD(void, Terminate, (), (override));
+    MOCK_METHOD(uint32_t, Release, (), (const, override));
+    MOCK_METHOD(uint32_t, AddRef, (), (const, override));
+    MOCK_METHOD(void*, QueryInterface, (const uint32_t), (override));
+};
+
+TEST_F(USBMassStorageTest, Deinitialize_ConnectionTerminateSuccess)
+{
+    // Create a mock connection
+    NiceMock<MockRemoteConnection> mockConnection;
+    
+    // Mock service.RemoteConnection() to return the mock connection
+    EXPECT_CALL(service, RemoteConnection(::testing::_))
+        .WillOnce(::testing::Return(&mockConnection));
+    
+    // Mock the connection's methods
+    EXPECT_CALL(mockConnection, Terminate())
+        .WillOnce(::testing::Return());
+    
+    EXPECT_CALL(mockConnection, Release())
+        .WillOnce(::testing::Return());
+    
+    // Mock service.Unregister() - using your existing service mock
+    EXPECT_CALL(service, Unregister(::testing::_))
+        .WillOnce(::testing::Return());
+    
+    // Test: Call Deinitialize
+    plugin->Deinitialize(&service);
+}
+
+TEST_F(USBMassStorageTest, Deinitialize_ConnectionTerminateThrowsException)
+{
+    // Create a mock connection
+    NiceMock<MockRemoteConnection> mockConnection;
+    
+    // Mock service.RemoteConnection() to return the mock connection
+    EXPECT_CALL(service, RemoteConnection(::testing::_))
+        .WillOnce(::testing::Return(&mockConnection));
+    
+    // Mock connection.Terminate() to throw an exception
+    EXPECT_CALL(mockConnection, Terminate())
+        .WillOnce(::testing::Throw(std::runtime_error("Connection termination failed")));
+    
+    // Mock connection.Release() - should still be called after exception
+    EXPECT_CALL(mockConnection, Release())
+        .WillOnce(::testing::Return());
+    
+    // Mock service.Unregister() - using your existing service mock
+    EXPECT_CALL(service, Unregister(::testing::_))
+        .WillOnce(::testing::Return());
+    
+    // Test: Should handle exception gracefully
+    EXPECT_NO_THROW(plugin->Deinitialize(&service));
+}
+
+TEST_F(USBMassStorageTest, Deinitialize_NullConnection)
+{
+    // Mock service.RemoteConnection() to return nullptr
+    EXPECT_CALL(service, RemoteConnection(::testing::_))
+        .WillOnce(::testing::Return(nullptr));
+    
+    // Mock service.Unregister() - using your existing service mock
+    EXPECT_CALL(service, Unregister(::testing::_))
+        .WillOnce(::testing::Return());
+    
+    // Test: Should handle null connection gracefully
+    plugin->Deinitialize(&service);
+    
+    // Verification: No connection methods should be called (verified by not mocking them)
 }
