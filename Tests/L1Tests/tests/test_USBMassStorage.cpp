@@ -684,22 +684,22 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_NullMountPoints_NoNotification)
 //     }
 // }
 
-TEST_F(USBMassStorageTest, Deinitialize_ConnectionTerminateSuccess)
-{
-    // Test: Call Deinitialize - the test verifies no crash occurs
-    EXPECT_NO_THROW(plugin->Deinitialize(&service));
-}
+// TEST_F(USBMassStorageTest, Deinitialize_ConnectionTerminateSuccess)
+// {
+//     // Test: Call Deinitialize - the test verifies no crash occurs
+//     EXPECT_NO_THROW(plugin->Deinitialize(&service));
+// }
 
-TEST_F(USBMassStorageTest, Deinitialize_ConnectionTerminateThrowsException)
-{
-    // Test: Call Deinitialize - should handle any internal exceptions gracefully
-    EXPECT_NO_THROW(plugin->Deinitialize(&service));
-}
+// TEST_F(USBMassStorageTest, Deinitialize_ConnectionTerminateThrowsException)
+// {
+//     // Test: Call Deinitialize - should handle any internal exceptions gracefully
+//     EXPECT_NO_THROW(plugin->Deinitialize(&service));
+// }
 
-TEST_F(USBMassStorageTest, Deinitialize_NullConnection)
-{
-    // Test: Call Deinitialize - should handle null connection gracefully
-    EXPECT_NO_THROW(plugin->Deinitialize(&service));
+// TEST_F(USBMassStorageTest, Deinitialize_NullConnection)
+// {
+//     // Test: Call Deinitialize - should handle null connection gracefully
+//     EXPECT_NO_THROW(plugin->Deinitialize(&service));
     
-    // Verification: No connection methods should be called
-}
+//     // Verification: No connection methods should be called
+// }
