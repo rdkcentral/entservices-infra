@@ -245,14 +245,29 @@ private:
     uint32_t m_event_signalled;
     bool m_OnAudioDescriptionChanged_signalled = false;
     bool m_lastAudioDescriptionValue = false;
-
-    BEGIN_INTERFACE_MAP(UserSettingsNotificationHandler)
-    INTERFACE_ENTRY(Exchange::IUserSettings::INotification)
-    END_INTERFACE_MAP
+    mutable std::atomic<uint32_t> m_refCount{1};
 
 public:
     UserSettingsNotificationHandler() : m_event_signalled(0) {}
     ~UserSettingsNotificationHandler() {}
+
+    // COM interface methods
+    void AddRef() const override { ++m_refCount; }
+    uint32_t Release() const override { 
+        uint32_t result = --m_refCount;
+        if (result == 0) {
+            delete this;
+        }
+        return result;
+    }
+    
+    void* QueryInterface(const uint32_t interfaceNumber) override {
+        if (interfaceNumber == Exchange::IUserSettings::INotification::ID) {
+            AddRef();
+            return static_cast<Exchange::IUserSettings::INotification*>(this);
+        }
+        return nullptr;
+    }
 
     // Implement all notification methods
     void OnAudioDescriptionChanged(const bool enabled) override
@@ -312,27 +327,45 @@ public:
 class UserSettingsImplementationEventTest : public ::testing::Test {
 protected:
     Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
-    Core::Sink<UserSettingsNotificationHandler> notification;
+    UserSettingsNotificationHandler* notificationHandler;
     testing::NiceMock<ServiceMock> service;
-    testing::NiceMock<Store2Mock> store2Mock;  // Changed from IStore2Mock to Store2Mock
+    testing::NiceMock<Store2Mock> store2Mock;
+    WrapsImplMock* p_wrapsImplMock;
 
     UserSettingsImplementationEventTest()
         : userSettingsImpl(Core::ProxyType<Plugin::UserSettingsImplementation>::Create())
+        , notificationHandler(nullptr)
+        , p_wrapsImplMock(nullptr)
     {
-        // Fix the mock setup - use proper method signature
+        // Set up wraps mock
+        p_wrapsImplMock = new testing::NiceMock<WrapsImplMock>;
+        Wraps::setImpl(p_wrapsImplMock);
+
+        // Set up service mock to return store mock
         ON_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
             .WillByDefault(::testing::Return(&store2Mock));
 
-        // Initialize the implementation
-        userSettingsImpl->Configure(&service);
-        
-        // Register for notifications
-        userSettingsImpl->Register(&notification);
+        // Configure the implementation with service
+        uint32_t configResult = userSettingsImpl->Configure(&service);
+        EXPECT_EQ(Core::ERROR_NONE, configResult);
+
+        // Create and register notification handler
+        notificationHandler = new UserSettingsNotificationHandler();
+        userSettingsImpl->Register(notificationHandler);
     }
 
     virtual ~UserSettingsImplementationEventTest() override
     {
-        userSettingsImpl->Unregister(&notification);
+        if (notificationHandler && userSettingsImpl.IsValid()) {
+            userSettingsImpl->Unregister(notificationHandler);
+            delete notificationHandler;
+        }
+
+        Wraps::setImpl(nullptr);
+        if (p_wrapsImplMock != nullptr) {
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
     }
 };
 
@@ -1375,43 +1408,42 @@ TEST_F(UserSettingsImplementationEventTest, OnAudioDescriptionChangedEvent)
     const uint32_t timeout_ms = 1000;
     
     // Reset any previous events
-    notification.ResetEvents();
-    printf("Reset events for audio description\n");
+    notificationHandler->ResetEvents();
+    std::cout << "Reset events for audio description" << std::endl;
 
     // Simulate a value change from the store (this triggers the event)
-    // This mimics what happens when the persistent store notifies of a value change
     userSettingsImpl->ValueChanged(
         Exchange::IStore2::ScopeType::DEVICE,
         USERSETTINGS_NAMESPACE,
         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
         "true"
     );
-    printf("Triggered ValueChanged for audio description with true\n");
+    std::cout << "Triggered ValueChanged for audio description with true" << std::endl;
 
     // Wait for the event to be triggered
-    bool eventReceived = notification.WaitForEvent(timeout_ms, UserSettings_OnAudioDescriptionChanged);
-    printf("Waited for audio description changed event\n");
+    bool eventReceived = notificationHandler->WaitForEvent(timeout_ms, UserSettings_OnAudioDescriptionChanged);
 
     // Verify the event was received
     EXPECT_TRUE(eventReceived);
     
     // Verify the event data is correct
-    EXPECT_TRUE(notification.GetLastAudioDescriptionValue());
-    
+    EXPECT_TRUE(notificationHandler->GetLastAudioDescriptionValue());
+    std::cout << "Verified event data for audio description with true" << std::endl;
+
     // Reset and test with false value
-    notification.ResetEvents();
-    
+    notificationHandler->ResetEvents();
+    std::cout << "Reset events for audio description" << std::endl;
+
     userSettingsImpl->ValueChanged(
         Exchange::IStore2::ScopeType::DEVICE,
         USERSETTINGS_NAMESPACE,
         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
         "false"
     );
-    printf("Triggered ValueChanged for audio description with false\n");
+    std::cout << "Triggered ValueChanged for audio description with false" << std::endl;
 
-    eventReceived = notification.WaitForEvent(timeout_ms, UserSettings_OnAudioDescriptionChanged);
-    printf("Waited for audio description changed event\n");
+    eventReceived = notificationHandler->WaitForEvent(timeout_ms, UserSettings_OnAudioDescriptionChanged);
 
     EXPECT_TRUE(eventReceived);
-    EXPECT_FALSE(notification.GetLastAudioDescriptionValue());
+    EXPECT_FALSE(notificationHandler->GetLastAudioDescriptionValue());
 }
