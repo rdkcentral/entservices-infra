@@ -142,14 +142,14 @@ protected:
     Store2Mock *p_store2Mock;
     UserSettingsNotificationMock *notificationMock;
 
-    UserSettingsAudioDescriptionL1Test()
-        : plugin(Core::ProxyType<Plugin::UserSettings>::Create())
-        , handler(*plugin)
-        , connection(1, 0, "")
-        , p_wrapsImplMock(nullptr)
-        , p_serviceMock(nullptr)
-        , p_store2Mock(nullptr)
-        , notificationMock(nullptr)
+UserSettingsAudioDescriptionL1Test()
+    : plugin(Core::ProxyType<Plugin::UserSettings>::Create())
+    , handler(*plugin)
+    , connection(1, 0, "")
+    , p_wrapsImplMock(nullptr)
+    , p_serviceMock(nullptr)
+    , p_store2Mock(nullptr)
+    , notificationMock(nullptr)
     {
         p_serviceMock = new NiceMock<ServiceMock>;
         p_store2Mock = new NiceMock<Store2Mock>;
@@ -157,13 +157,14 @@ protected:
         
         Wraps::setImpl(p_wrapsImplMock);
 
+        // Set up service mock to return store mock
         EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
             .WillRepeatedly(testing::Return(p_store2Mock));
         
-        // Create UserSettingsImpl directly in constructor
+        // Create UserSettingsImpl directly
         UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
         
-        // Set up COM link mock to return our pre-created implementation
+        // Set up COM link mock 
         ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
             .WillByDefault(::testing::Invoke(
             [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
@@ -171,10 +172,18 @@ protected:
             }));
 
         plugin->Initialize(&service);
-        // Configure the implementation with the service mock
+        
+        // CRITICAL: Properly configure the implementation 
         if (UserSettingsImpl.IsValid()) {
+            // First set up the service interface
+            UserSettingsImpl->SetService(&service);
+            
+            // Then configure with the service mock to initialize _remotStoreObject
             uint32_t configResult = UserSettingsImpl->Configure(p_serviceMock);
             EXPECT_EQ(Core::ERROR_NONE, configResult);
+            
+            // Verify _remotStoreObject was set up by calling registerEventHandlers
+            UserSettingsImpl->registerEventHandlers();
         }
         
         notificationMock = new UserSettingsNotificationMock();
@@ -1217,12 +1226,10 @@ TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_Tr
     ASSERT_TRUE(plugin.IsValid());
     ASSERT_TRUE(UserSettingsImpl.IsValid());
     ASSERT_NE(nullptr, notificationMock);
-    std::cout << "Initial assertions passed." << std::endl;
 
     // Register the notification mock
     Core::hresult regResult = UserSettingsImpl->Register(notificationMock);
     EXPECT_EQ(Core::ERROR_NONE, regResult);
-    std::cout << "Notification mock registered." << std::endl;
 
     // Set expectation for the notification
     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true))
@@ -1235,7 +1242,6 @@ TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_Tr
         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
         "true"
     );
-    std::cout << "ValueChanged called on UserSettingsImpl." << std::endl;
 
     // Allow time for the worker pool job to process the dispatch
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
