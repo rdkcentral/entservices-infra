@@ -1376,7 +1376,8 @@ TEST_F(UserSettingsImplementationEventTest, OnAudioDescriptionChangedEvent)
     
     // Reset any previous events
     notification.ResetEvents();
-    
+    printf("Reset events for audio description\n");
+
     // Simulate a value change from the store (this triggers the event)
     // This mimics what happens when the persistent store notifies of a value change
     userSettingsImpl->ValueChanged(
@@ -1385,10 +1386,12 @@ TEST_F(UserSettingsImplementationEventTest, OnAudioDescriptionChangedEvent)
         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
         "true"
     );
-    
+    printf("Triggered ValueChanged for audio description with true\n");
+
     // Wait for the event to be triggered
     bool eventReceived = notification.WaitForEvent(timeout_ms, UserSettings_OnAudioDescriptionChanged);
-    
+    printf("Waited for audio description changed event\n");
+
     // Verify the event was received
     EXPECT_TRUE(eventReceived);
     
@@ -1404,9 +1407,11 @@ TEST_F(UserSettingsImplementationEventTest, OnAudioDescriptionChangedEvent)
         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
         "false"
     );
-    
+    printf("Triggered ValueChanged for audio description with false\n");
+
     eventReceived = notification.WaitForEvent(timeout_ms, UserSettings_OnAudioDescriptionChanged);
-    
+    printf("Waited for audio description changed event\n");
+
     EXPECT_TRUE(eventReceived);
     EXPECT_FALSE(notification.GetLastAudioDescriptionValue());
 }
