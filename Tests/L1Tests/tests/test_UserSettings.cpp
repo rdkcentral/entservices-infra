@@ -314,13 +314,13 @@ protected:
     Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
     Core::Sink<UserSettingsNotificationHandler> notification;
     testing::NiceMock<ServiceMock> service;
-    testing::NiceMock<IStore2Mock> store2Mock;
+    testing::NiceMock<Store2Mock> store2Mock;  // Changed from IStore2Mock to Store2Mock
 
     UserSettingsImplementationEventTest()
         : userSettingsImpl(Core::ProxyType<Plugin::UserSettingsImplementation>::Create())
     {
-        // Set up the mock store
-        ON_CALL(service, QueryInterfaceByCallsign<Exchange::IStore2>(::testing::_))
+        // Fix the mock setup - use proper method signature
+        ON_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
             .WillByDefault(::testing::Return(&store2Mock));
 
         // Initialize the implementation
