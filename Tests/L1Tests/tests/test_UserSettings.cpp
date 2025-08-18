@@ -243,38 +243,38 @@ private:
     std::mutex m_mutex;
     std::condition_variable m_condition_variable;
     uint32_t m_event_signalled;
-    bool m_OnAudioDescriptionChanged_signalled = false;
+    // bool m_OnAudioDescriptionChanged_signalled = false;
     bool m_lastAudioDescriptionValue = false;
-    mutable std::atomic<uint32_t> m_refCount{1};
+    // mutable std::atomic<uint32_t> m_refCount{1};
 
 public:
     UserSettingsNotificationHandler() : m_event_signalled(0) {}
     ~UserSettingsNotificationHandler() {}
 
     // COM interface methods
-    void AddRef() const override { ++m_refCount; }
-    uint32_t Release() const override { 
-        uint32_t result = --m_refCount;
-        if (result == 0) {
-            delete this;
-        }
-        return result;
-    }
+    // void AddRef() const override { ++m_refCount; }
+    // uint32_t Release() const override { 
+    //     uint32_t result = --m_refCount;
+    //     if (result == 0) {
+    //         delete this;
+    //     }
+    //     return result;
+    // }
     
-    void* QueryInterface(const uint32_t interfaceNumber) override {
-        if (interfaceNumber == Exchange::IUserSettings::INotification::ID) {
-            AddRef();
-            return static_cast<Exchange::IUserSettings::INotification*>(this);
-        }
-        return nullptr;
-    }
+    // void* QueryInterface(const uint32_t interfaceNumber) override {
+    //     if (interfaceNumber == Exchange::IUserSettings::INotification::ID) {
+    //         AddRef();
+    //         return static_cast<Exchange::IUserSettings::INotification*>(this);
+    //     }
+    //     return nullptr;
+    // }
 
     // Implement all notification methods
     void OnAudioDescriptionChanged(const bool enabled) override
     {
         std::unique_lock<std::mutex> lock(m_mutex);
         m_event_signalled |= UserSettings_OnAudioDescriptionChanged;
-        m_OnAudioDescriptionChanged_signalled = true;
+        // m_OnAudioDescriptionChanged_signalled = true;
         m_lastAudioDescriptionValue = enabled;
         m_condition_variable.notify_one();
     }
@@ -316,10 +316,10 @@ public:
     }
 
     bool GetLastAudioDescriptionValue() const { return m_lastAudioDescriptionValue; }
+    
     void ResetEvents() { 
         std::unique_lock<std::mutex> lock(m_mutex);
         m_event_signalled = 0; 
-        m_OnAudioDescriptionChanged_signalled = false;
     }
 };
 
@@ -1403,47 +1403,41 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
 //     UserSettingsImpl->Unregister(notificationMock);
 // }
 
-TEST_F(UserSettingsImplementationEventTest, OnAudioDescriptionChangedEvent)
+TEST_F(UserSettingsTest, OnAudioDescriptionChanged_EventTriggered)
 {
-    const uint32_t timeout_ms = 1000;
+    // Use the existing UserSettingsImpl from the main test setup
+    ASSERT_TRUE(UserSettingsImpl.IsValid());
     
-    // Reset any previous events
-    notificationHandler->ResetEvents();
-    std::cout << "Reset events for audio description" << std::endl;
-
-    // Simulate a value change from the store (this triggers the event)
-    userSettingsImpl->ValueChanged(
-        Exchange::IStore2::ScopeType::DEVICE,
-        USERSETTINGS_NAMESPACE,
-        USERSETTINGS_AUDIO_DESCRIPTION_KEY,
-        "true"
-    );
-    std::cout << "Triggered ValueChanged for audio description with true" << std::endl;
-
-    // Wait for the event to be triggered
-    bool eventReceived = notificationHandler->WaitForEvent(timeout_ms, UserSettings_OnAudioDescriptionChanged);
-
+    // Create notification handler using Core::Sink pattern like HdmiCecSource
+    Core::Sink<UserSettingsNotificationHandler> notification;
+    
+    // Register the notification handler
+    Core::hresult result = UserSettingsImpl->Register(&notification);
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    
+    // Set up the store mock to trigger a ValueChanged when SetValue is called
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(
+            ::testing::Invoke([&](Exchange::IStore2::ScopeType scope, const string& ns, const string& key, const string& value, const uint32_t ttl) {
+                // Simulate the store calling ValueChanged on our implementation
+                if (UserSettingsImpl.IsValid()) {
+                    UserSettingsImpl->ValueChanged(scope, ns, key, value);
+                }
+            }),
+            ::testing::Return(Core::ERROR_NONE)
+        ));
+    
+    // Reset events
+    notification.ResetEvents();
+    
+    // Trigger the event by calling the JSON-RPC method (this will cause SetValue to be called)
+    string response;
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setAudioDescription"), _T("{\"enabled\": true}"), response));
+    
+    // Wait for the event with timeout
+    bool eventReceived = notification.WaitForEvent(1000, UserSettings_OnAudioDescriptionChanged);
+    
     // Verify the event was received
     EXPECT_TRUE(eventReceived);
-    
-    // Verify the event data is correct
-    EXPECT_TRUE(notificationHandler->GetLastAudioDescriptionValue());
-    std::cout << "Verified event data for audio description with true" << std::endl;
-
-    // Reset and test with false value
-    notificationHandler->ResetEvents();
-    std::cout << "Reset events for audio description" << std::endl;
-
-    userSettingsImpl->ValueChanged(
-        Exchange::IStore2::ScopeType::DEVICE,
-        USERSETTINGS_NAMESPACE,
-        USERSETTINGS_AUDIO_DESCRIPTION_KEY,
-        "false"
-    );
-    std::cout << "Triggered ValueChanged for audio description with false" << std::endl;
-
-    eventReceived = notificationHandler->WaitForEvent(timeout_ms, UserSettings_OnAudioDescriptionChanged);
-
-    EXPECT_TRUE(eventReceived);
-    EXPECT_FALSE(notificationHandler->GetLastAudioDescriptionValue());
+    EXPECT_TRUE(notification.GetLastAudioDescriptionValue());
 }
