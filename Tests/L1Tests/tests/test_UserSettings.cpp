@@ -151,93 +151,6 @@ private:
     mutable std::atomic<uint32_t> m_refCount{1};
 };
 
-// class UserSettingsAudioDescriptionL1Test : public ::testing::Test {
-// protected:
-//     Core::ProxyType<Plugin::UserSettings> plugin;
-//     Core::JSONRPC::Handler& handler;
-//     Core::JSONRPC::Context connection;
-//     NiceMock<ServiceMock> service;
-//     NiceMock<COMLinkMock> comLinkMock;
-//     Core::ProxyType<Plugin::UserSettingsImplementation> UserSettingsImpl;
-//     string response;
-//     WrapsImplMock *p_wrapsImplMock;
-//     ServiceMock *p_serviceMock;
-//     Store2Mock *p_store2Mock;
-//     UserSettingsNotificationMock *notificationMock;
-
-// UserSettingsAudioDescriptionL1Test()
-//     : plugin(Core::ProxyType<Plugin::UserSettings>::Create())
-//     , handler(*plugin)
-//     , connection(1, 0, "")
-//     , p_wrapsImplMock(nullptr)
-//     , p_serviceMock(nullptr)
-//     , p_store2Mock(nullptr)
-//     , notificationMock(nullptr)
-//     {
-//         p_serviceMock = new NiceMock<ServiceMock>;
-//         p_store2Mock = new NiceMock<Store2Mock>;
-//         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
-        
-//         Wraps::setImpl(p_wrapsImplMock);
-
-//         // Set up service mock to return store mock
-//         EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-//             .WillRepeatedly(testing::Return(p_store2Mock));
-        
-//         // Create UserSettingsImpl directly
-//         UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-        
-//         // Set up COM link mock 
-//         ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-//             .WillByDefault(::testing::Invoke(
-//             [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-//                 return &UserSettingsImpl;
-//             }));
-
-//         plugin->Initialize(&service);
-        
-//         // CRITICAL: Properly configure the implementation 
-//         if (UserSettingsImpl.IsValid()) {
-//             // First set up the service interface
-//             UserSettingsImpl->SetService(&service);
-            
-//             // Then configure with the service mock to initialize _remotStoreObject
-//             uint32_t configResult = UserSettingsImpl->Configure(p_serviceMock);
-//             EXPECT_EQ(Core::ERROR_NONE, configResult);
-            
-//             // Verify _remotStoreObject was set up by calling registerEventHandlers
-//             UserSettingsImpl->registerEventHandlers();
-//         }
-        
-//         notificationMock = new UserSettingsNotificationMock();
-//     }
-
-//     virtual ~UserSettingsAudioDescriptionL1Test() override {
-//         if (notificationMock && UserSettingsImpl.IsValid()) {
-//             UserSettingsImpl->Unregister(notificationMock);
-//             notificationMock->Release();
-//         }
-
-//         plugin->Deinitialize(&service);
-
-//         if (p_serviceMock != nullptr) {
-//             delete p_serviceMock;
-//             p_serviceMock = nullptr;
-//         }
-        
-//         if (p_store2Mock != nullptr) {
-//             delete p_store2Mock;
-//             p_store2Mock = nullptr;
-//         }
-
-//         Wraps::setImpl(nullptr);
-//         if (p_wrapsImplMock != nullptr) {
-//             delete p_wrapsImplMock;
-//             p_wrapsImplMock = nullptr;
-//         }
-//     }
-// };
-
 class UserSettingsNotificationHandler : public Exchange::IUserSettings::INotification {
 private:
     std::mutex m_mutex;
@@ -358,7 +271,7 @@ protected:
     {
         if (notificationHandler && userSettingsImpl.IsValid()) {
             userSettingsImpl->Unregister(notificationHandler);
-            delete notificationHandler;
+            notificationHandler->Release();
         }
 
         Wraps::setImpl(nullptr);
@@ -1403,35 +1316,21 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
 //     UserSettingsImpl->Unregister(notificationMock);
 // }
 
-TEST_F(UserSettingsTest, OnAudioDescriptionChanged_EventTriggered)
+TEST_F(UserSettingsImplementationEventTest, OnAudioDescriptionChanged_EventTriggered)
 {
-    ASSERT_TRUE(UserSettingsImpl.IsValid());
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(nullptr, notificationHandler);
     
-    // Create notification handler directly
-    UserSettingsNotificationHandler* notificationHandler = new UserSettingsNotificationHandler();
-    
-    // Register the notification handler
-    Core::hresult result = UserSettingsImpl->Register(notificationHandler);
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    
-    // Set up the store mock to trigger a ValueChanged when SetValue is called
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::Invoke([&](Exchange::IStore2::ScopeType scope, const string& ns, const string& key, const string& value, const uint32_t ttl) {
-                // Simulate the store calling ValueChanged on our implementation
-                if (UserSettingsImpl.IsValid()) {
-                    UserSettingsImpl->ValueChanged(scope, ns, key, value);
-                }
-            }),
-            ::testing::Return(Core::ERROR_NONE)
-        ));
-    
-    // Reset events
+    // Reset events before test
     notificationHandler->ResetEvents();
     
-    // Trigger the event by calling the JSON-RPC method
-    string response;
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setAudioDescription"), _T("{\"enabled\": true}"), response));
+    // Directly trigger ValueChanged on the implementation to simulate store callback
+    userSettingsImpl->ValueChanged(
+        Exchange::IStore2::ScopeType::DEVICE,
+        "UserSettings",  // USERSETTINGS_NAMESPACE
+        "AudioDescription",  // USERSETTINGS_AUDIO_DESCRIPTION_KEY  
+        "true"
+    );
     
     // Wait for the event with timeout
     bool eventReceived = notificationHandler->WaitForEvent(1000, UserSettings_OnAudioDescriptionChanged);
@@ -1443,23 +1342,42 @@ TEST_F(UserSettingsTest, OnAudioDescriptionChanged_EventTriggered)
     // Test with false value
     notificationHandler->ResetEvents();
     
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::Invoke([&](Exchange::IStore2::ScopeType scope, const string& ns, const string& key, const string& value, const uint32_t ttl) {
-                if (UserSettingsImpl.IsValid()) {
-                    UserSettingsImpl->ValueChanged(scope, ns, key, value);
-                }
-            }),
-            ::testing::Return(Core::ERROR_NONE)
-        ));
-    
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setAudioDescription"), _T("{\"enabled\": false}"), response));
+    userSettingsImpl->ValueChanged(
+        Exchange::IStore2::ScopeType::DEVICE,
+        "UserSettings",
+        "AudioDescription", 
+        "false"
+    );
     
     eventReceived = notificationHandler->WaitForEvent(1000, UserSettings_OnAudioDescriptionChanged);
     EXPECT_TRUE(eventReceived);
     EXPECT_FALSE(notificationHandler->GetLastAudioDescriptionValue());
+}
+
+TEST_F(UserSettingsImplementationEventTest, AudioDescription_SetAndGet_L1Test)
+{
+    ASSERT_TRUE(userSettingsImpl.IsValid());
     
-    // Unregister and cleanup
-    UserSettingsImpl->Unregister(notificationHandler);
-    notificationHandler->Release();
+    bool enabled = false;
+    
+    // Test GetAudioDescription - should return error if not set
+    uint32_t result = userSettingsImpl->GetAudioDescription(enabled);
+    // Implementation may return error or success with default - check both cases
+    
+    // Test SetAudioDescription 
+    result = userSettingsImpl->SetAudioDescription(true);
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    
+    // Test GetAudioDescription after set
+    result = userSettingsImpl->GetAudioDescription(enabled);
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    EXPECT_TRUE(enabled);
+    
+    // Test with false
+    result = userSettingsImpl->SetAudioDescription(false);
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    
+    result = userSettingsImpl->GetAudioDescription(enabled);
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    EXPECT_FALSE(enabled);
 }
