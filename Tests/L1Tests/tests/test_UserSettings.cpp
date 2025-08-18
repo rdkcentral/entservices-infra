@@ -160,19 +160,12 @@ protected:
         EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
             .WillOnce(testing::Return(p_store2Mock));
 
-        // ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-        //     .WillByDefault(::testing::Invoke(
-        //     [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-        //         UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-        //         return &UserSettingsImpl;
-        //     }));
         plugin->Initialize(&service);
         
-        // Create and register notification mock
+        // Get the implementation from the plugin
+        UserSettingsImpl = plugin->QueryInterface<Plugin::UserSettingsImplementation>();
+        
         notificationMock = new UserSettingsNotificationMock();
-        if (UserSettingsImpl.IsValid()) {
-            UserSettingsImpl->Register(notificationMock);
-        }
     }
 
     virtual ~UserSettingsAudioDescriptionL1Test() override {
@@ -1211,28 +1204,8 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
 TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_TriggersNotification) {
     ASSERT_TRUE(plugin.IsValid());
     
-    // Set up store mock expectation for the JSON-RPC call
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgReferee<3>("false"),
-            ::testing::Return(Core::ERROR_NONE)));
-    
-    // Set up COM link mock expectation  
-    EXPECT_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Invoke(
-        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-            UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-            if (UserSettingsImpl.IsValid()) {
-                UserSettingsImpl->Configure(p_serviceMock);
-            }
-            return &UserSettingsImpl;
-        }));
-    
-    // Trigger instantiation with JSON-RPC call
-    string tempResponse;
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), tempResponse));
-    
-    // Verify UserSettingsImpl is now valid
+    // Get the implementation directly from the plugin
+    UserSettingsImpl = plugin->QueryInterface<Plugin::UserSettingsImplementation>();
     ASSERT_TRUE(UserSettingsImpl.IsValid());
     ASSERT_NE(nullptr, notificationMock);
     
@@ -1251,6 +1224,7 @@ TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_Tr
         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
         "true"
     );
+    
     // Allow time for the worker pool job to process the dispatch
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     
