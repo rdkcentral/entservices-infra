@@ -173,7 +173,8 @@ protected:
         plugin->Initialize(&service);
         // Configure the implementation with the service mock
         if (UserSettingsImpl.IsValid()) {
-            UserSettingsImpl->Configure(p_serviceMock);
+            uint32_t configResult = UserSettingsImpl->Configure(p_serviceMock);
+            EXPECT_EQ(Core::ERROR_NONE, configResult);
         }
         
         notificationMock = new UserSettingsNotificationMock();
@@ -1216,12 +1217,10 @@ TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_Tr
     ASSERT_TRUE(plugin.IsValid());
     ASSERT_TRUE(UserSettingsImpl.IsValid());
     ASSERT_NE(nullptr, notificationMock);
-    std::cout << "Initial assertions passed." << std::endl;
 
     // Register the notification mock
     Core::hresult regResult = UserSettingsImpl->Register(notificationMock);
     EXPECT_EQ(Core::ERROR_NONE, regResult);
-    std::cout << "Notification mock registered." << std::endl;
 
     // Set expectation for the notification
     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true))
@@ -1234,7 +1233,6 @@ TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_Tr
         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
         "true"
     );
-    std::cout << "ValueChanged called on UserSettingsImpl." << std::endl;
     
     // Allow time for the worker pool job to process the dispatch
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
