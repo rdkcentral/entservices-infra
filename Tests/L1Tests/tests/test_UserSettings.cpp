@@ -158,16 +158,23 @@ protected:
         Wraps::setImpl(p_wrapsImplMock);
 
         EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-            .WillOnce(testing::Return(p_store2Mock));
+            .WillRepeatedly(testing::Return(p_store2Mock));
         
+        // Create UserSettingsImpl directly in constructor
+        UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+        
+        // Set up COM link mock to return our pre-created implementation
         ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
             .WillByDefault(::testing::Invoke(
             [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-                UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
                 return &UserSettingsImpl;
             }));
 
         plugin->Initialize(&service);
+        // Configure the implementation with the service mock
+        if (UserSettingsImpl.IsValid()) {
+            UserSettingsImpl->Configure(p_serviceMock);
+        }
         
         notificationMock = new UserSettingsNotificationMock();
     }
@@ -1207,17 +1214,6 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
 
 TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_TriggersNotification) {
     ASSERT_TRUE(plugin.IsValid());
-    
-    // Trigger COM instantiation by calling a JSON-RPC method first
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgReferee<3>("false"),
-            ::testing::Return(Core::ERROR_NONE)));
-    
-    string tempResponse;
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), tempResponse));
-    
-    // Now UserSettingsImpl should be valid from the COM instantiation
     ASSERT_TRUE(UserSettingsImpl.IsValid());
     ASSERT_NE(nullptr, notificationMock);
     
