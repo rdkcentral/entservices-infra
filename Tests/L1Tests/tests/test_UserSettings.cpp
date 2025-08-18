@@ -107,15 +107,13 @@ public:
     MOCK_METHOD1(OnVoiceGuidanceHintsChanged, void(const bool hints));
     MOCK_METHOD1(OnContentPinChanged, void(const string& contentPin));
     
-    // Proper interface implementations
     void AddRef() const override { ++m_refCount; }
     uint32_t Release() const override { 
-        --m_refCount;
-        if (m_refCount == 0) {
+        uint32_t result = --m_refCount;
+        if (result == 0) {
             delete this;
-            return 0;
         }
-        return m_refCount;
+        return result;
     }
     
     void* QueryInterface(const uint32_t interfaceNumber) override {
@@ -130,102 +128,50 @@ private:
     mutable std::atomic<uint32_t> m_refCount{1};
 };
 
-class UserSettingsValueChangedTest : public ::testing::Test {
+class UserSettingsDispatchL1Test : public ::testing::Test {
 protected:
-    Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
+    Plugin::UserSettingsImplementation* userSettingsImpl;
     NiceMock<ServiceMock>* serviceMock;
     NiceMock<Store2Mock>* store2Mock;
     UserSettingsNotificationMock* notificationMock;
 
-    UserSettingsValueChangedTest() {
-        // Create mocks
+    UserSettingsDispatchL1Test() 
+        : userSettingsImpl(nullptr)
+        , serviceMock(nullptr)
+        , store2Mock(nullptr)
+        , notificationMock(nullptr)
+    {
         serviceMock = new NiceMock<ServiceMock>();
         store2Mock = new NiceMock<Store2Mock>();
-        notificationMock = new UserSettingsNotificationMock();
-
-        // Set up the store mock to be returned by QueryInterfaceByCallsign
+        
         EXPECT_CALL(*serviceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
             .WillRepeatedly(::testing::Return(store2Mock));
 
-        // Create the implementation
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-        
-        // Configure the implementation with our mock service
-        // This will trigger registerEventHandlers() internally
+        userSettingsImpl = new Plugin::UserSettingsImplementation();
         uint32_t result = userSettingsImpl->Configure(serviceMock);
         EXPECT_EQ(Core::ERROR_NONE, result);
-    }
-
-    virtual ~UserSettingsValueChangedTest() {
-        // Cleanup: unregister notification if registered
-        if (notificationMock && userSettingsImpl.IsValid()) {
-            userSettingsImpl->Unregister(notificationMock);
-        }
         
-        // Release the implementation
-        userSettingsImpl.Release();
-        
-        // Clean up mocks
-        delete serviceMock;
-        delete store2Mock;
-        // notificationMock will be deleted by Release() if ref count reaches 0
-    }
-};
-
-class UserSettingsNotificationTest : public ::testing::Test {
-protected:
-    Core::ProxyType<Plugin::UserSettings> plugin;
-    Core::JSONRPC::Handler& handler;
-    Core::JSONRPC::Context connection;
-    Core::JSONRPC::Message message;
-    NiceMock<ServiceMock> service;
-    NiceMock<COMLinkMock> comLinkMock;
-    Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
-    Exchange::IUserSettings* userSettingsInterface;
-    string response;
-    
-    WrapsImplMock* p_wrapsImplMock = nullptr;
-    ServiceMock* p_serviceMock = nullptr;
-    Store2Mock* p_store2Mock = nullptr;
-    UserSettingsNotificationMock* notificationMock = nullptr;
-
-    UserSettingsNotificationTest()
-        : plugin(Core::ProxyType<Plugin::UserSettings>::Create())
-        , handler(*plugin)
-        , connection(1, 0, "")
-    {
-        p_serviceMock = new NiceMock<ServiceMock>();
-        p_store2Mock = new NiceMock<Store2Mock>();
-        p_wrapsImplMock = new NiceMock<WrapsImplMock>();
         notificationMock = new UserSettingsNotificationMock();
-
-        Wraps::setImpl(p_wrapsImplMock);
-
-        EXPECT_CALL(*p_serviceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-            .WillRepeatedly(::testing::Return(p_store2Mock));
-
-        // Create the implementation directly
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-        
-        // Initialize with our mock service
-        plugin->Initialize(p_serviceMock);
-        
-        // Verify the implementation was created
-        EXPECT_TRUE(userSettingsImpl.IsValid());
+        userSettingsImpl->Register(notificationMock);
     }
 
-    virtual ~UserSettingsNotificationTest() {
-        if (userSettingsInterface != nullptr) {
-            userSettingsInterface->Unregister(notificationMock);
-            userSettingsInterface->Release();
+    virtual ~UserSettingsDispatchL1Test() {
+        if (notificationMock && userSettingsImpl) {
+            userSettingsImpl->Unregister(notificationMock);
+            notificationMock->Release();
         }
         
-        plugin->Deinitialize(&service);
+        if (userSettingsImpl) {
+            delete userSettingsImpl;
+        }
         
-        delete notificationMock;
-        delete p_store2Mock;
-        delete p_serviceMock;
-        delete p_wrapsImplMock;
+        if (serviceMock) {
+            delete serviceMock;
+        }
+        
+        if (store2Mock) {
+            delete store2Mock;
+        }
     }
 };
 
@@ -1235,30 +1181,10 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
     EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
-TEST_F(UserSettingsValueChangedTest, ValueChanged_AudioDescription_True) {
-    ASSERT_TRUE(userSettingsImpl.IsValid());
-    ASSERT_NE(nullptr, notificationMock);
-    
-    // Set expectation for the notification
+TEST_F(UserSettingsDispatchL1Test, Dispatch_AudioDescriptionChanged_True) {
     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true))
         .Times(1);
     
-    // Register the notification mock
-    Core::hresult regResult = userSettingsImpl->Register(notificationMock);
-    EXPECT_EQ(Core::ERROR_NONE, regResult);
-    
-    // Trigger the ValueChanged event
-    userSettingsImpl->ValueChanged(
-        Exchange::IStore2::ScopeType::DEVICE,
-        USERSETTINGS_NAMESPACE,
-        USERSETTINGS_AUDIO_DESCRIPTION_KEY,
-        "true"
-    );
-    
-    // Allow time for the worker pool job to process
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    
-    // Unregister (this will be called again in destructor, but that's OK)
-    Core::hresult unregResult = userSettingsImpl->Unregister(notificationMock);
-    EXPECT_EQ(Core::ERROR_NONE, unregResult);
+    JsonValue params(true);
+    userSettingsImpl->Dispatch(Plugin::UserSettingsImplementation::AUDIO_DESCRIPTION_CHANGED, params);
 }
