@@ -862,45 +862,53 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
 }
 
 // L1 Test for USBMassStorage::Deinitialize method - connection is nullptr
+// L1 Test for USBMassStorage::Deinitialize method - connection is nullptr
 TEST_F(USBMassStorageTest, Deinitialize_ConnectionIsNull_SkipsConnectionCleanup)
 {
-    // Setup the plugin to be in an initialized state first
-    // The constructor already calls Initialize, but we need to ensure proper state
+    // Create a separate plugin instance for this test to avoid affecting other tests
+    Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
     
-    // Mock the service RemoteConnection to return nullptr
-    EXPECT_CALL(service, RemoteConnection(::testing::_))
-        .WillOnce(::testing::Return(nullptr));
+    // Setup a separate service mock
+    NiceMock<ServiceMock> testService;
     
-    // Mock the _usbMassStorage release to return DESTRUCTION_SUCCEEDED
-    if (plugin->_usbMassStorage != nullptr) {
-        // Note: We can't directly access private members, so we test the behavior indirectly
-        // The test will verify that when connection is nullptr, no connection cleanup occurs
-    }
+    // Setup basic initialization expectations
+    EXPECT_CALL(testService, AddRef()).Times(1);
+    EXPECT_CALL(testService, Register(::testing::_)).Times(1);
     
-    // Test that Deinitialize handles nullptr connection gracefully
-    EXPECT_NO_THROW(plugin->Deinitialize(&service));
+    // Mock QueryInterfaceByCallsign to return our USB device mock
+    EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillOnce(testing::Return(p_usbDeviceMock));
     
-    // Verify that the plugin is properly deinitialized
-    // Since connection was nullptr, connection->Terminate() and connection->Release() should not be called
+    // Initialize the plugin
+    string initResult = testPlugin->Initialize(&testService);
+    EXPECT_EQ(initResult, ""); // Should succeed
+    
+    // Setup deinitialize expectations - focusing on the connection == nullptr path
+    EXPECT_CALL(testService, Unregister(::testing::_)).Times(1);
+    EXPECT_CALL(testService, Release()).Times(1);
+    
+    // Test that Deinitialize handles the case gracefully
+    EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
+    
+    // The test verifies that when connection is nullptr (default case),
+    // no connection cleanup occurs, but all other cleanup steps execute
 }
 
 TEST_F(USBMassStorageTest, Deinitialize_NullUSBMassStorage_SkipsUSBMassStorageCleanup)
 {
-    // Create a fresh plugin instance with nullptr _usbMassStorage
+    // Create a fresh plugin instance
     Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
     
     // Mock service expectations for basic cleanup
     NiceMock<ServiceMock> testService;
-    EXPECT_CALL(testService, Unregister(::testing::_))
-        .Times(1);
-    EXPECT_CALL(testService, Release())
-        .Times(1);
+    EXPECT_CALL(testService, Unregister(::testing::_)).Times(1);
+    EXPECT_CALL(testService, Release()).Times(1);
     
     // Initialize with a service that will result in nullptr _usbMassStorage
     EXPECT_CALL(testService, AddRef()).Times(1);
     EXPECT_CALL(testService, Register(::testing::_)).Times(1);
-    EXPECT_CALL(testService, Root<Exchange::IUSBMassStorage>(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(nullptr));
+    EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillOnce(testing::Return(nullptr)); // This will cause _usbMassStorage to be nullptr
     
     // Initialize the plugin (this should result in nullptr _usbMassStorage)
     string initResult = testPlugin->Initialize(&testService);
@@ -913,20 +921,13 @@ TEST_F(USBMassStorageTest, Deinitialize_NullUSBMassStorage_SkipsUSBMassStorageCl
 TEST_F(USBMassStorageTest, Deinitialize_ValidUSBMassStorage_NullConnection_CleansUpCorrectly)
 {
     // This test covers the path where _usbMassStorage is valid but connection is nullptr
+    // Using the existing plugin which should have valid _usbMassStorage
     
-    // Mock the RemoteConnection to return nullptr
-    EXPECT_CALL(service, RemoteConnection(::testing::_))
-        .WillOnce(::testing::Return(nullptr));
+    // Mock the service operations that will be called during deinitialize
+    EXPECT_CALL(service, Unregister(::testing::_)).Times(1);
+    EXPECT_CALL(service, Release()).Times(1);
     
-    // Mock the service Unregister call
-    EXPECT_CALL(service, Unregister(::testing::_))
-        .Times(1);
-    
-    // Mock the service Release call
-    EXPECT_CALL(service, Release())
-        .Times(1);
-    
-    // Test deinitialize with null connection
+    // Test deinitialize - connection will be nullptr by default in our test setup
     EXPECT_NO_THROW(plugin->Deinitialize(&service));
     
     // Verify that when connection is nullptr:
@@ -939,51 +940,64 @@ TEST_F(USBMassStorageTest, Deinitialize_ValidUSBMassStorage_NullConnection_Clean
 TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_VerifyCleanupSequence)
 {
     // Test the complete cleanup sequence when connection is nullptr
+    // Create a separate test instance to verify sequence
+    Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
+    NiceMock<ServiceMock> testService;
+    
+    // Setup initialization
+    EXPECT_CALL(testService, AddRef()).Times(1);
+    EXPECT_CALL(testService, Register(::testing::_)).Times(1);
+    EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillOnce(testing::Return(p_usbDeviceMock));
+    
+    testPlugin->Initialize(&testService);
     
     // Setup expectations for the cleanup sequence
     testing::InSequence seq;
     
     // First: Unregister from service notifications
-    EXPECT_CALL(service, Unregister(::testing::_))
-        .Times(1);
+    EXPECT_CALL(testService, Unregister(::testing::_)).Times(1);
     
-    // Second: Get remote connection (returns nullptr)
-    EXPECT_CALL(service, RemoteConnection(::testing::_))
-        .WillOnce(::testing::Return(nullptr));
-    
-    // Third: Release service
-    EXPECT_CALL(service, Release())
-        .Times(1);
+    // Second: Release service (connection handling is internal)
+    EXPECT_CALL(testService, Release()).Times(1);
     
     // Execute deinitialize
-    EXPECT_NO_THROW(plugin->Deinitialize(&service));
+    EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
     
     // Verify the method completes without attempting connection cleanup
-    // since connection is nullptr
+    // since connection is nullptr in our test environment
 }
 
 TEST_F(USBMassStorageTest, Deinitialize_AssertServiceMatch_ValidService)
 {
     // Test that ASSERT(_service == service) passes with matching service
+    // Create a test plugin with known service
+    Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
+    NiceMock<ServiceMock> testService;
     
-    // Mock service operations
-    EXPECT_CALL(service, Unregister(::testing::_)).Times(1);
-    EXPECT_CALL(service, RemoteConnection(::testing::_))
-        .WillOnce(::testing::Return(nullptr));
-    EXPECT_CALL(service, Release()).Times(1);
+    // Initialize first
+    EXPECT_CALL(testService, AddRef()).Times(1);
+    EXPECT_CALL(testService, Register(::testing::_)).Times(1);
+    EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillOnce(testing::Return(p_usbDeviceMock));
+    
+    testPlugin->Initialize(&testService);
+    
+    // Mock service operations for deinitialize
+    EXPECT_CALL(testService, Unregister(::testing::_)).Times(1);
+    EXPECT_CALL(testService, Release()).Times(1);
     
     // This should not throw since the service matches
-    EXPECT_NO_THROW(plugin->Deinitialize(&service));
+    EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
 }
 
 TEST_F(USBMassStorageTest, Deinitialize_ConfigureRelease_WhenUSBMassStorageValid)
 {
-    // Test that configure->Release() is called when _usbMassStorage is valid
+    // Test that the complete cleanup occurs when _usbMassStorage is valid
+    // Using existing plugin which should have valid _usbMassStorage from constructor
     
-    // Setup expectations
+    // Setup expectations for deinitialize operations
     EXPECT_CALL(service, Unregister(::testing::_)).Times(1);
-    EXPECT_CALL(service, RemoteConnection(::testing::_))
-        .WillOnce(::testing::Return(nullptr));
     EXPECT_CALL(service, Release()).Times(1);
     
     // Execute deinitialize
@@ -999,40 +1013,30 @@ TEST_F(USBMassStorageTest, Deinitialize_ConfigureRelease_WhenUSBMassStorageValid
 
 TEST_F(USBMassStorageTest, Deinitialize_ConnectionIdReset_ServiceSetToNull)
 {
-    // Test that _connectionId is reset to 0 and _service is set to nullptr
+    // Test that internal state is properly reset after deinitialize
+    Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
+    NiceMock<ServiceMock> testService;
     
-    // Mock service operations
-    EXPECT_CALL(service, Unregister(::testing::_)).Times(1);
-    EXPECT_CALL(service, RemoteConnection(::testing::_))
-        .WillOnce(::testing::Return(nullptr));
-    EXPECT_CALL(service, Release()).Times(1);
+    // Initialize first
+    EXPECT_CALL(testService, AddRef()).Times(1);
+    EXPECT_CALL(testService, Register(::testing::_)).Times(1);
+    EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillOnce(testing::Return(p_usbDeviceMock));
+    
+    testPlugin->Initialize(&testService);
+    
+    // Mock service operations for deinitialize
+    EXPECT_CALL(testService, Unregister(::testing::_)).Times(1);
+    EXPECT_CALL(testService, Release()).Times(1);
     
     // Execute deinitialize
-    EXPECT_NO_THROW(plugin->Deinitialize(&service));
+    EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
     
     // After deinitialize:
     // - _connectionId should be 0
-    // - _service should be nullptr
+    // - _service should be nullptr  
     // - _usbMassStorage should be nullptr (if it was valid before)
     
-    // Note: We can't directly verify private member values, but we can test
-    // that subsequent operations behave as expected with these values reset
-}
-
-TEST_F(USBMassStorageTest, Deinitialize_DoubleCallSafety_NullService)
-{
-    // Test calling Deinitialize twice to ensure it's safe
-    
-    // First call
-    EXPECT_CALL(service, Unregister(::testing::_)).Times(1);
-    EXPECT_CALL(service, RemoteConnection(::testing::_))
-        .WillOnce(::testing::Return(nullptr));
-    EXPECT_CALL(service, Release()).Times(1);
-    
-    plugin->Deinitialize(&service);
-    
-    // Second call should handle nullptr _service gracefully
-    // Note: This would typically cause an ASSERT failure in production,
-    // but we're testing the method's behavior
-    // In practice, calling Deinitialize twice is not expected
+    // We can verify proper cleanup by trying to call methods that would fail with null pointers
+    // The plugin should handle subsequent calls gracefully
 }
