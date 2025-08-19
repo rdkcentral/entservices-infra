@@ -1451,7 +1451,7 @@ TEST_F(UserSettingsImplementationDispatchTest, OnAudioDescriptionChanged_UsingID
     
     // Create JsonValue parameter for audio description change event
     JsonValue audioDescParam(true);
-    std::cout<<"Dispatching event with param: "<< audioDescParam.ToString() << std::endl;
+    std::cout<<"Dispatching event with param"<< std::endl;
 
     // Use IDispatch to trigger the event
     DispatchJobDirectly(Plugin::UserSettingsImplementation::AUDIO_DESCRIPTION_CHANGED, audioDescParam);
