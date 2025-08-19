@@ -1376,7 +1376,6 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
     // Test that we can create the implementation
     if (!userSettingsImpl.IsValid()) {
         userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-        std::cout<<"plugin created during test"<<std::endl;
     }
     
     ASSERT_TRUE(userSettingsImpl.IsValid());
@@ -1387,7 +1386,7 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "AudioDescription",
+            "audioDescription",
             "true"
         );
     });
@@ -1397,7 +1396,7 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "AudioDescription",
+            "audioDescription",
             "false"
         );
     });
