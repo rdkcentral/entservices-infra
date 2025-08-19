@@ -1310,6 +1310,9 @@ TEST_F(UserSettingsTest, OnAudioDescriptionChanged_TriggerEvent)
 // ...existing code...
 
 // Separate test fixture for notification events
+// ...existing code...
+
+// Separate test fixture for notification events
 class UserSettingsNotificationTest : public ::testing::Test {
 protected:
     Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
@@ -1324,9 +1327,9 @@ protected:
         p_wrapsImplMock = new testing::NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
 
-        // Set up service mock to return store mock
-        ON_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-            .WillByDefault(::testing::Return(&store2Mock));
+        // Set up service mock to return store mock - this is the key fix
+        EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+            .WillOnce(::testing::Return(&store2Mock));
 
         // Configure the implementation with service
         uint32_t configResult = userSettingsImpl->Configure(&service);
