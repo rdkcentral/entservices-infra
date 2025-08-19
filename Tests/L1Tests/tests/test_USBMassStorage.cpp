@@ -862,33 +862,33 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
 }
 
 // Simpler L1 Test using existing infrastructure
-// TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionCleanup)
-// {
-//     // Create a custom service class that extends ServiceMock to add RemoteConnection method
-//     class ExtendedServiceMock : public ServiceMock {
-//     public:
-//         MOCK_METHOD(RPC::IRemoteConnection*, RemoteConnection, (const uint32_t), (override));
-//     };
+TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionCleanup)
+{
+    // Create a custom service class that extends ServiceMock to add RemoteConnection method
+    class ExtendedServiceMock : public ServiceMock {
+    public:
+        MOCK_METHOD(RPC::IRemoteConnection*, RemoteConnection, (const uint32_t), (override));
+    };
     
-//     // Create test plugin and extended service mock
-//     Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
-//     NiceMock<ExtendedServiceMock> extendedService;
+    // Create test plugin and extended service mock
+    Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
+    NiceMock<ExtendedServiceMock> extendedService;
     
-//     // Setup basic service expectations for initialization
-//     ON_CALL(extendedService, QueryInterfaceByCallsign(testing::_, testing::_))
-//         .WillByDefault(testing::Return(p_usbDeviceMock));
+    // Setup basic service expectations for initialization
+    ON_CALL(extendedService, QueryInterfaceByCallsign(testing::_, testing::_))
+        .WillByDefault(testing::Return(p_usbDeviceMock));
     
-//     // Initialize the plugin first to establish proper state
-//     string initResult = testPlugin->Initialize(&extendedService);
-//     EXPECT_EQ(initResult, ""); // Should succeed with our USB device mock
+    // Initialize the plugin first to establish proper state
+    string initResult = testPlugin->Initialize(&extendedService);
+    EXPECT_EQ(initResult, ""); // Should succeed with our USB device mock
     
-//     // Now set up the key expectation: RemoteConnection returns nullptr
-//     EXPECT_CALL(extendedService, RemoteConnection(testing::_))
-//         .WillOnce(testing::Return(nullptr));
+    // Now set up the key expectation: RemoteConnection returns nullptr
+    EXPECT_CALL(extendedService, RemoteConnection(testing::_))
+        .WillOnce(testing::Return(nullptr));
     
-//     // Call Deinitialize - this should exercise the connection == nullptr path
-//     EXPECT_NO_THROW(testPlugin->Deinitialize(&extendedService));
-// }
+    // Call Deinitialize - this should exercise the connection == nullptr path
+    EXPECT_NO_THROW(testPlugin->Deinitialize(&extendedService));
+}
 
 // L1 Test for USBMassStorage::Deinitialize method - connection is nullptr
 // L1 Test for USBMassStorage::Deinitialize method - connection is nullptr
