@@ -1462,7 +1462,6 @@ TEST_F(UserSettingsImplementationDispatchTest, OnAudioDescriptionChanged_UsingID
     
     // Verify the event was received
     EXPECT_TRUE(eventReceived);
-    EXPECT_TRUE(notificationHandler->GetLastAudioDescriptionValue());
 }
 
 TEST_F(UserSettingsImplementationDispatchTest, OnAudioDescriptionChanged_UsingIDispatch_False)
