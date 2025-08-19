@@ -41,19 +41,24 @@ protected:
         , connection(1,0,"")
     {
         p_serviceMock = new NiceMock <ServiceMock>;
-
         p_store2Mock = new NiceMock <Store2Mock>;
-
         p_wrapsImplMock  = new NiceMock <WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
 
         EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
             .WillOnce(testing::Return(p_store2Mock));
 
+        // Create UserSettingsImpl directly instead of relying on the lambda
+        UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+        
+        // Configure it with the service mock
+        if (UserSettingsImpl.IsValid()) {
+            UserSettingsImpl->Configure(&service);
+        }
+
         ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
             .WillByDefault(::testing::Invoke(
             [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-                UserSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
                 return &UserSettingsImpl;
                 }));
 
