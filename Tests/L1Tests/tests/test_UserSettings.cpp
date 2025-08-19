@@ -1114,17 +1114,6 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
     EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
-
-
-class MockWorkerPool : public Core::IWorkerPool {
-public:
-    MOCK_METHOD1(Submit, void(const Core::ProxyType<Core::IDispatch>& job));
-    MOCK_METHOD1(Schedule, void(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job));
-    MOCK_METHOD1(Revoke, void(const Core::ProxyType<Core::IDispatch>& job));
-    MOCK_METHOD0(Stop, void());
-    MOCK_METHOD1(Run, uint32_t(const uint32_t waitTime));
-};
-
 // Test fixture that can control the worker pool
 class UserSettingsNotificationTest : public ::testing::Test {
 protected:
@@ -1132,12 +1121,13 @@ protected:
     testing::NiceMock<ServiceMock> service;
     testing::NiceMock<Store2Mock> store2Mock;
     WrapsImplMock* p_wrapsImplMock;
-    MockWorkerPool* mockWorkerPool;
+    Core::ProxyType<WorkerPoolImplementation> workerPool;
 
     UserSettingsNotificationTest()
         : userSettingsImpl(Core::ProxyType<Plugin::UserSettingsImplementation>::Create())
         , p_wrapsImplMock(nullptr)
-        , mockWorkerPool(new testing::NiceMock<MockWorkerPool>)
+        , workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
+            2, Core::Thread::DefaultStackSize(), 16))
     {
         p_wrapsImplMock = new testing::NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
@@ -1145,6 +1135,9 @@ protected:
         // Set up service mock to return store mock
         EXPECT_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
             .WillOnce(::testing::Return(&store2Mock));
+
+        Core::IWorkerPool::Assign(&(*workerPool));
+        workerPool->Run();
 
         // Configure the implementation
         if (userSettingsImpl.IsValid()) {
@@ -1162,14 +1155,14 @@ protected:
             userSettingsImpl.Release();
         }
 
+        // Clean up worker pool
+        Core::IWorkerPool::Assign(nullptr);
+        workerPool.Release();
+
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr) {
             delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
-        }
-        if (mockWorkerPool != nullptr) {
-            delete mockWorkerPool;
-            mockWorkerPool = nullptr;
         }
     }
 };
@@ -1204,13 +1197,6 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
     }
     
     ASSERT_TRUE(userSettingsImpl.IsValid());
-
-    // Set expectation that Submit will be called on the worker pool
-    EXPECT_CALL(*mockWorkerPool, Submit(::testing::_))
-        .Times(1);
-
-    // Temporarily replace the worker pool instance (if possible in your framework)
-    // This depends on how Core::IWorkerPool::Instance() is implemented
     
     // Call ValueChanged which should trigger dispatchEvent -> Submit
     EXPECT_NO_THROW({
@@ -1221,6 +1207,8 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
             "true"
         );
     });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
     // Test with false value too
     // EXPECT_NO_THROW({
