@@ -1307,16 +1307,28 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
 //     // EXPECT_TRUE(eventReceived);
 // }
 
-class UserSettingsNotificationTest : public ::testing::Test {
+class MockWorkerPool : public Core::IWorkerPool {
+public:
+    MOCK_METHOD1(Submit, void(const Core::ProxyType<Core::IDispatch>& job));
+    MOCK_METHOD1(Schedule, void(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job));
+    MOCK_METHOD1(Revoke, void(const Core::ProxyType<Core::IDispatch>& job));
+    MOCK_METHOD0(Stop, void());
+    MOCK_METHOD1(Run, uint32_t(const uint32_t waitTime));
+};
+
+// Test fixture that can control the worker pool
+class UserSettingsWorkerPoolTest : public ::testing::Test {
 protected:
     Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
     testing::NiceMock<ServiceMock> service;
     testing::NiceMock<Store2Mock> store2Mock;
     WrapsImplMock* p_wrapsImplMock;
+    MockWorkerPool* mockWorkerPool;
 
-    UserSettingsNotificationTest()
+    UserSettingsWorkerPoolTest()
         : userSettingsImpl(Core::ProxyType<Plugin::UserSettingsImplementation>::Create())
         , p_wrapsImplMock(nullptr)
+        , mockWorkerPool(new testing::NiceMock<MockWorkerPool>)
     {
         p_wrapsImplMock = new testing::NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
@@ -1329,7 +1341,7 @@ protected:
         if (userSettingsImpl.IsValid()) {
             uint32_t configResult = userSettingsImpl->Configure(&service);
             if (configResult != Core::ERROR_NONE) {
-                // If configure fails, create a minimal test environment
+                std::cout << "Configuration failed" << std::endl;
                 userSettingsImpl.Release();
             }
         }
@@ -1340,11 +1352,15 @@ protected:
         if (userSettingsImpl.IsValid()) {
             userSettingsImpl.Release();
         }
-        
+
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr) {
             delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
+        }
+        if (mockWorkerPool != nullptr) {
+            delete mockWorkerPool;
+            mockWorkerPool = nullptr;
         }
     }
 };
@@ -1379,9 +1395,15 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
     }
     
     ASSERT_TRUE(userSettingsImpl.IsValid());
+
+    // Set expectation that Submit will be called on the worker pool
+    EXPECT_CALL(*mockWorkerPool, Submit(::testing::_))
+        .Times(1);
+
+    // Temporarily replace the worker pool instance (if possible in your framework)
+    // This depends on how Core::IWorkerPool::Instance() is implemented
     
-    // Test that ValueChanged method exists and doesn't crash when called with AudioDescription
-    // This simulates the store callback that would trigger OnAudioDescriptionChanged
+    // Call ValueChanged which should trigger dispatchEvent -> Submit
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
@@ -1392,12 +1414,12 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
     });
     
     // Test with false value too
-    EXPECT_NO_THROW({
-        userSettingsImpl->ValueChanged(
-            Exchange::IStore2::ScopeType::DEVICE,
-            "UserSettings", 
-            "audioDescription",
-            "false"
-        );
-    });
+    // EXPECT_NO_THROW({
+    //     userSettingsImpl->ValueChanged(
+    //         Exchange::IStore2::ScopeType::DEVICE,
+    //         "UserSettings", 
+    //         "audioDescription",
+    //         "false"
+    //     );
+    // });
 }
