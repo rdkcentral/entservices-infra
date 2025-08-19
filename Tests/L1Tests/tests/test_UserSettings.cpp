@@ -1370,3 +1370,35 @@ TEST_F(UserSettingsNotificationTest, ValueChanged_MethodExists)
         );
     });
 }
+
+TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
+{
+    // Test that we can create the implementation
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+        std::cout<<"plugin created during test"<<std::endl;
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    // Test that ValueChanged method exists and doesn't crash when called with AudioDescription
+    // This simulates the store callback that would trigger OnAudioDescriptionChanged
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "AudioDescription",
+            "true"
+        );
+    });
+    
+    // Test with false value too
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "AudioDescription",
+            "false"
+        );
+    });
+}
