@@ -1444,15 +1444,18 @@ TEST_F(UserSettingsImplementationDispatchTest, OnAudioDescriptionChanged_UsingID
 {
     ASSERT_TRUE(userSettingsImpl.IsValid());
     ASSERT_NE(nullptr, notificationHandler);
-    
+    std::cout<<"Assertions run"<<std::endl;
+
     // Reset events before test
     notificationHandler->ResetEvents();
     
     // Create JsonValue parameter for audio description change event
     JsonValue audioDescParam(true);
-    
+    std::cout<<"Dispatching event with param: "<< audioDescParam.ToString() << std::endl;
+
     // Use IDispatch to trigger the event
     DispatchJobDirectly(Plugin::UserSettingsImplementation::AUDIO_DESCRIPTION_CHANGED, audioDescParam);
+    std::cout<<"Dispatched event"<<std::endl;
     
     // Wait for the event with timeout
     bool eventReceived = notificationHandler->WaitForEvent(1000, UserSettings_OnAudioDescriptionChanged);
