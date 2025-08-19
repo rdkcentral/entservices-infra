@@ -1114,198 +1114,7 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
     EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
-// TEST_F(UserSettingsAudioDescriptionL1Test, ValueChanged_AudioDescription_True_TriggersNotification) {
-//     ASSERT_TRUE(plugin.IsValid());
-//     ASSERT_TRUE(UserSettingsImpl.IsValid());
-//     ASSERT_NE(nullptr, notificationMock);
 
-//     // Register the notification mock
-//     Core::hresult regResult = UserSettingsImpl->Register(notificationMock);
-//     EXPECT_EQ(Core::ERROR_NONE, regResult);
-
-//     // Set expectation for the notification
-//     EXPECT_CALL(*notificationMock, OnAudioDescriptionChanged(true))
-//         .Times(1);
-    
-//     // Trigger ValueChanged directly on the implementation
-//     UserSettingsImpl->ValueChanged(
-//         Exchange::IStore2::ScopeType::DEVICE,
-//         USERSETTINGS_NAMESPACE,
-//         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
-//         "true"
-//     );
-
-//     // Allow time for the worker pool job to process the dispatch
-//     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    
-//     // Unregister the notification
-//     UserSettingsImpl->Unregister(notificationMock);
-// }
-
-// TEST_F(UserSettingsImplementationEventTest, OnAudioDescriptionChanged_EventTriggered)
-// {
-//     ASSERT_TRUE(userSettingsImpl.IsValid());
-//     ASSERT_NE(nullptr, notificationHandler);
-    
-//     // Reset events before test
-//     notificationHandler->ResetEvents();
-    
-//     // Directly trigger ValueChanged on the implementation to simulate store callback
-//     userSettingsImpl->ValueChanged(
-//         Exchange::IStore2::ScopeType::DEVICE,
-//         "UserSettings",  // USERSETTINGS_NAMESPACE
-//         "AudioDescription",  // USERSETTINGS_AUDIO_DESCRIPTION_KEY  
-//         "true"
-//     );
-    
-//     // Wait for the event with timeout
-//     bool eventReceived = notificationHandler->WaitForEvent(1000, UserSettings_OnAudioDescriptionChanged);
-    
-//     // Verify the event was received
-//     EXPECT_TRUE(eventReceived);
-//     EXPECT_TRUE(notificationHandler->GetLastAudioDescriptionValue());
-    
-//     // Test with false value
-//     notificationHandler->ResetEvents();
-    
-//     userSettingsImpl->ValueChanged(
-//         Exchange::IStore2::ScopeType::DEVICE,
-//         "UserSettings",
-//         "AudioDescription", 
-//         "false"
-//     );
-    
-//     eventReceived = notificationHandler->WaitForEvent(1000, UserSettings_OnAudioDescriptionChanged);
-//     EXPECT_TRUE(eventReceived);
-//     EXPECT_FALSE(notificationHandler->GetLastAudioDescriptionValue());
-// }
-
-// TEST_F(UserSettingsImplementationEventTest, AudioDescription_SetAndGet_L1Test)
-// {
-//     ASSERT_TRUE(userSettingsImpl.IsValid());
-    
-//     bool enabled = false;
-    
-//     // Test GetAudioDescription - should return error if not set
-//     uint32_t result = userSettingsImpl->GetAudioDescription(enabled);
-//     // Implementation may return error or success with default - check both cases
-    
-//     // Test SetAudioDescription 
-//     result = userSettingsImpl->SetAudioDescription(true);
-//     EXPECT_EQ(Core::ERROR_NONE, result);
-    
-//     // Test GetAudioDescription after set
-//     result = userSettingsImpl->GetAudioDescription(enabled);
-//     EXPECT_EQ(Core::ERROR_NONE, result);
-//     EXPECT_TRUE(enabled);
-    
-//     // Test with false
-//     result = userSettingsImpl->SetAudioDescription(false);
-//     EXPECT_EQ(Core::ERROR_NONE, result);
-    
-//     result = userSettingsImpl->GetAudioDescription(enabled);
-//     EXPECT_EQ(Core::ERROR_NONE, result);
-//     EXPECT_FALSE(enabled);
-// }
-// Add this test class after the existing UserSettingsImplementationEventTest class
-
-// TEST_F(UserSettingsTest, OnAudioDescriptionChanged_TriggerEvent)
-// {
-//     ASSERT_TRUE(UserSettingsImpl.IsValid());
-    
-//     // Trigger the ValueChanged method which should dispatch the event internally
-//     UserSettingsImpl->ValueChanged(
-//         Exchange::IStore2::ScopeType::DEVICE,
-//         USERSETTINGS_NAMESPACE,
-//         USERSETTINGS_AUDIO_DESCRIPTION_KEY,
-//         "true"
-//     );
-    
-//     // Simple success - if we get here without crashing, the dispatch mechanism worked
-//     EXPECT_TRUE(true);
-// }
-
-// class UserSettingsImplementationDispatchTest : public ::testing::Test {
-// protected:
-//     Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
-//     UserSettingsNotificationHandler* notificationHandler;
-//     testing::NiceMock<ServiceMock> service;
-//     testing::NiceMock<Store2Mock> store2Mock;
-//     WrapsImplMock* p_wrapsImplMock;
-
-//     UserSettingsImplementationDispatchTest()
-//         : userSettingsImpl(Core::ProxyType<Plugin::UserSettingsImplementation>::Create())
-//         , notificationHandler(nullptr)
-//         , p_wrapsImplMock(nullptr)
-//     {
-//         // Set up wraps mock
-//         p_wrapsImplMock = new testing::NiceMock<WrapsImplMock>;
-//         Wraps::setImpl(p_wrapsImplMock);
-
-//         // Set up service mock to return store mock
-//         ON_CALL(service, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-//             .WillByDefault(::testing::Return(&store2Mock));
-
-//         // Configure the implementation with service
-//         uint32_t configResult = userSettingsImpl->Configure(&service);
-//         EXPECT_EQ(Core::ERROR_NONE, configResult);
-
-//         // Create and register notification handler
-//         notificationHandler = new UserSettingsNotificationHandler();
-//         userSettingsImpl->Register(notificationHandler);
-//     }
-
-//     virtual ~UserSettingsImplementationDispatchTest() override
-//     {
-//         if (notificationHandler && userSettingsImpl.IsValid()) {
-//             userSettingsImpl->Unregister(notificationHandler);
-//             notificationHandler->Release();
-//         }
-
-//         Wraps::setImpl(nullptr);
-//         if (p_wrapsImplMock != nullptr) {
-//             delete p_wrapsImplMock;
-//             p_wrapsImplMock = nullptr;
-//         }
-//     }
-
-//     // Helper method to create and dispatch a job
-//     void DispatchJobDirectly(Plugin::UserSettingsImplementation::Event event, const JsonValue& params)
-//     {
-//         // Create a job using the UserSettingsImplementation's Job::Create method
-//         auto job = Plugin::UserSettingsImplementation::Job::Create(userSettingsImpl.operator->(), event, params);
-        
-//         // Dispatch the job directly
-//         if (job.IsValid()) {
-//             job->Dispatch();
-//         }
-//     }
-// };
-
-// // Test using IDispatch to trigger OnAudioDescriptionChanged event
-// TEST_F(UserSettingsImplementationDispatchTest, OnAudioDescriptionChanged_UsingIDispatch_True)
-// {
-//     ASSERT_TRUE(userSettingsImpl.IsValid());
-//     ASSERT_NE(nullptr, notificationHandler);
-//     std::cout<<"Assertions run"<<std::endl;
-
-//     // Reset events before test
-//     notificationHandler->ResetEvents();
-    
-//     // Create JsonValue parameter for audio description change event
-//     JsonValue audioDescParam(true);
-//     std::cout<<"Dispatching event with param"<< std::endl;
-
-//     // Use IDispatch to trigger the event
-//     DispatchJobDirectly(Plugin::UserSettingsImplementation::AUDIO_DESCRIPTION_CHANGED, audioDescParam);
-//     std::cout<<"Dispatched event"<<std::endl;
-    
-//     // Wait for the event with timeout
-//     // bool eventReceived = notificationHandler->WaitForEvent(1000, UserSettings_OnAudioDescriptionChanged);
-    
-//     // Verify the event was received
-//     // EXPECT_TRUE(eventReceived);
-// }
 
 class MockWorkerPool : public Core::IWorkerPool {
 public:
@@ -1317,7 +1126,7 @@ public:
 };
 
 // Test fixture that can control the worker pool
-class UserSettingsWorkerPoolTest : public ::testing::Test {
+class UserSettingsNotificationTest : public ::testing::Test {
 protected:
     Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
     testing::NiceMock<ServiceMock> service;
@@ -1325,7 +1134,7 @@ protected:
     WrapsImplMock* p_wrapsImplMock;
     MockWorkerPool* mockWorkerPool;
 
-    UserSettingsWorkerPoolTest()
+    UserSettingsNotificationTest()
         : userSettingsImpl(Core::ProxyType<Plugin::UserSettingsImplementation>::Create())
         , p_wrapsImplMock(nullptr)
         , mockWorkerPool(new testing::NiceMock<MockWorkerPool>)
