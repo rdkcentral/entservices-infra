@@ -117,7 +117,6 @@ namespace WPEFramework
             // void releaseStorageManagerRemoteObject();
 
         private:
-            mutable Core::CriticalSection mAdminLock;
             Exchange::IStorageManager *mStorageManagerRemoteObject;
             PluginHost::IShell *mCurrentservice;
             Core::Sink<PackageManagerNotification> mPackageManagerNotification;
