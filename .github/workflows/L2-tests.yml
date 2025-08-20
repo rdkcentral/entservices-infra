@@ -1,4 +1,4 @@
-name: L2-tests
+name: L2-tests-IN
 
 on:
   workflow_call:

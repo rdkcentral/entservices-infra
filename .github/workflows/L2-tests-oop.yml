@@ -1,4 +1,4 @@
-name: L2-tests-OOP
+name: L2-tests-OOP-IN
 
 on:
   workflow_call:
