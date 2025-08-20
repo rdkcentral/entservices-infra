@@ -100,7 +100,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: usersettings_testcase
+          ref: sequential_run_1
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
@@ -114,7 +114,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: usersersettings_testcase
+          ref: sequential_run_1
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout googletest

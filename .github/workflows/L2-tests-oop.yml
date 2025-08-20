@@ -105,7 +105,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: usersersettings_testcase
+          ref: sequential_run_1
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-deviceanddisplay
@@ -127,7 +127,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: usersettings_testcase
+          ref: sequential_run_1
 
       - name: Apply  ThunderTools
         run: |
