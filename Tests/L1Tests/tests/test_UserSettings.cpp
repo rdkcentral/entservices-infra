@@ -1115,6 +1115,17 @@ TEST_F(UserSettingsTest, GetVoiceGuidanceHints_False)
     EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
+TEST_F(UserSettingsTest, Information_ReturnsEmptyString)
+{
+    // Test the Information() method
+    string info = plugin->Information();
+    
+    // Verify it returns an empty string as documented
+    EXPECT_TRUE(info.empty());
+    EXPECT_EQ(info.length(), 0);
+    EXPECT_EQ(info, "");
+}
+
 // Test fixture that can control the worker pool
 class UserSettingsNotificationTest : public ::testing::Test {
 protected:
@@ -1354,7 +1365,7 @@ TEST_F(UserSettingsNotificationTest, OnPreferredClosedCaptionServiceChanged_Trig
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "preferredClosedCaptionService",
+            "preferredClosedCaptionsService",
             "CC1"
         );
     });
@@ -1365,7 +1376,7 @@ TEST_F(UserSettingsNotificationTest, OnPreferredClosedCaptionServiceChanged_Trig
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "preferredClosedCaptionService",
+            "preferredClosedCaptionsService",
             "TEXT3"
         );
     });
@@ -1482,7 +1493,7 @@ TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "liveWatershed",
+            "liveWaterShed",
             "true"
         );
     });
@@ -1493,7 +1504,7 @@ TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "liveWatershed",
+            "liveWaterShed",
             "false"
         );
     });
@@ -1512,7 +1523,7 @@ TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "playbackWatershed",
+            "playbackWaterShed",
             "true"
         );
     });
@@ -1523,7 +1534,7 @@ TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "playbackWatershed",
+            "playbackWaterShed",
             "false"
         );
     });
