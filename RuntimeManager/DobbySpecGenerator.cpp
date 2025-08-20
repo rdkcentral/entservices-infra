@@ -606,6 +606,11 @@ Json::Value DobbySpecGenerator::createAppServiceSDKPlugin(const ApplicationConfi
     {
         ports.append(port);
     }
+    //TESTING PURPOSE
+	ports.append(9100);
+	ports.append(9101);
+	ports.append(9998);
+	
     pluginObj["data"]["additionalPorts"] = std::move(ports);
 
     return pluginObj;
