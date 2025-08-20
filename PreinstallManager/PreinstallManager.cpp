@@ -51,8 +51,8 @@ namespace WPEFramework
         PreinstallManager::PreinstallManager() : mCurrentService(nullptr),
                                                  mConnectionId(0),
                                                  mPreinstallManagerImpl(nullptr),
-                                                 mPreinstallManagerNotification(this),
-        // mPreinstallManagerConfigure(nullptr)
+                                                 mPreinstallManagerNotification(this)
+                                                // mPreinstallManagerConfigure(nullptr)
         {
             SYSLOG(Logging::Startup, (_T("PreinstallManager Constructor")));
             if (nullptr == PreinstallManager::_instance)

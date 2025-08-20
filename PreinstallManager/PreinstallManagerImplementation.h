@@ -27,6 +27,7 @@
 #include <com/com.h>
 #include <core/core.h>
 #include <plugins/plugins.h>
+#include <mutex>
 #include <map>
 
 namespace WPEFramework
@@ -117,12 +118,9 @@ namespace WPEFramework
             // void releaseStorageManagerRemoteObject();
 
         private:
-            Exchange::IStorageManager *mStorageManagerRemoteObject;
             PluginHost::IShell *mCurrentservice;
-            Core::Sink<PackageManagerNotification> mPackageManagerNotification;
-            void OnAppInstallationStatus(const string &jsonresponse);
-            std::string getInstallAppType(ApplicationType type);
-
+            mutable Core::CriticalSection mAdminLock;
+            std::list<Exchange::IPreinstallManager::INotification*> mPreinstallManagerNotifications;
             void dispatchEvent(EventNames, const JsonObject &params);
             void Dispatch(EventNames event, const JsonObject params);
             friend class Job;

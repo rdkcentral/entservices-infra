@@ -17,10 +17,8 @@
  * limitations under the License.
  */
 
-#include <iomanip> /* for std::setw, std::setfill */
 #include "PreinstallManagerImplementation.h"
 
-#define TIME_DATA_SIZE 200
 
 namespace WPEFramework
 {
@@ -31,7 +29,7 @@ namespace WPEFramework
     PreinstallManagerImplementation *PreinstallManagerImplementation::_instance = nullptr;
 
     PreinstallManagerImplementation::PreinstallManagerImplementation()
-        : mAdminLock(), mPreinstallManagerNotification(), mCurrentservice(nullptr)
+        : mAdminLock(), mPreinstallManagerNotifications(), mCurrentservice(nullptr)
     {
         LOGINFO("Create PreinstallManagerImplementation Instance");
         if (nullptr == PreinstallManagerImplementation::_instance)
@@ -49,15 +47,6 @@ namespace WPEFramework
     {
         LOGINFO("Delete PreinstallManagerImplementation Instance");
         _instance = nullptr;
-        if (nullptr != mLifecycleInterfaceConnector)
-        {
-            mLifecycleInterfaceConnector->releaseLifecycleManagerRemoteObject();
-            delete mLifecycleInterfaceConnector;
-            mLifecycleInterfaceConnector = nullptr;
-        }
-        releasePersistentStoreRemoteStoreObject();
-        releasePackageManagerObject();
-        releaseStorageManagerRemoteObject();
         if (nullptr != mCurrentservice)
         {
             mCurrentservice->Release();
@@ -74,10 +63,10 @@ namespace WPEFramework
 
         mAdminLock.Lock();
 
-        if (std::find(mPreinstallManagerNotification.begin(), mPreinstallManagerNotification.end(), notification) == mPreinstallManagerNotification.end())
+        if (std::find(mPreinstallManagerNotifications.begin(), mPreinstallManagerNotifications.end(), notification) == mPreinstallManagerNotifications.end())
         {
             LOGINFO("Register notification");
-            mPreinstallManagerNotification.push_back(notification);
+            mPreinstallManagerNotifications.push_back(notification);
             notification->AddRef();
         }
 
@@ -97,12 +86,12 @@ namespace WPEFramework
 
         mAdminLock.Lock();
 
-        auto itr = std::find(mPreinstallManagerNotification.begin(), mPreinstallManagerNotification.end(), notification);
-        if (itr != mPreinstallManagerNotification.end())
+        auto itr = std::find(mPreinstallManagerNotifications.begin(), mPreinstallManagerNotifications.end(), notification);
+        if (itr != mPreinstallManagerNotifications.end())
         {
             (*itr)->Release();
             LOGINFO("Unregister notification");
-            mPreinstallManagerNotification.erase(itr);
+            mPreinstallManagerNotifications.erase(itr);
             status = Core::ERROR_NONE;
         }
         else
@@ -158,7 +147,7 @@ namespace WPEFramework
             //     oldState = static_cast<AppLifecycleState>(params["oldState"].Number());
             //     errorReason = static_cast<AppErrorReason>(params["errorReason"].Number());
             //     mAdminLock.Lock();
-            //     for (auto& notification : mPreinstallManagerNotification)
+            //     for (auto& notification : mPreinstallManagerNotifications)
             //     {
             //         notification->OnAppLifecycleStateChanged(appId, appInstanceId, newState, oldState, errorReason);
             //     }
@@ -170,6 +159,20 @@ namespace WPEFramework
             LOGERR("Unknown event: %d", static_cast<int>(event));
             break;
         }
+    }
+
+
+    void PreinstallManagerImplementation::StartPreInstall(bool forceInstall)
+    {
+        // Implementation for starting the pre-install process
+        LOGINFO("Starting pre-install process with forceInstall=%s", forceInstall ? "true" : "false");
+        mAdminLock.Lock();
+        std::string jsonstr = "{\"forceInstall\": " + std::to_string(forceInstall) + "}";
+        for (auto notification: mPreinstallManagerNotifications) {
+            notification->OnAppInstallationStatus(jsonstr);
+            LOGTRACE();
+        }
+        mAdminLock.Unlock();
     }
 
     } /* namespace Plugin */
