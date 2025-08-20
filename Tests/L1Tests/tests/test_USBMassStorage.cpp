@@ -947,3 +947,47 @@ TEST_F(USBMassStorageTest, Notification_Deactivated_DelegatesToParent)
     // No assertion needed; just verify it runs without crashing
     SUCCEED();
 }
+
+TEST_F(USBMassStorageTest, DeviceMount_ExfatBranch_Succeeds)
+{
+    // Setup device info
+    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+    deviceInfo.devicePath = "/dev/sdx1";
+    deviceInfo.deviceName = "usb1";
+
+    // Mock stat to simulate mount directory exists
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+
+    // Mock mount: fail for VFAT, succeed for EXFAT
+    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("vfat"), ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(-1));
+    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("exfat"), ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(0));
+
+    // Call DeviceMount directly
+    bool result = USBMassStorageImpl->DeviceMount(deviceInfo);
+    EXPECT_TRUE(result); // Should succeed via EXFAT branch
+}
+
+TEST_F(USBMassStorageTest, DeviceMount_FailureBranch_Fails)
+{
+    // Setup device info
+    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+    deviceInfo.devicePath = "/dev/sdx1";
+    deviceInfo.deviceName = "usb1";
+
+    // Mock stat to simulate mount directory exists
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+
+    // Mock mount: fail for both VFAT and EXFAT
+    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("vfat"), ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(-1));
+    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("exfat"), ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(-1));
+
+    // Call DeviceMount directly
+    bool result = USBMassStorageImpl->DeviceMount(deviceInfo);
+    EXPECT_FALSE(result); // Should fail via else branch
+}
