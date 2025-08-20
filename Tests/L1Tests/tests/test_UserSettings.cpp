@@ -1175,9 +1175,9 @@ TEST_F(UserSettingsNotificationTest, ValueChanged_MethodExists)
     if (!userSettingsImpl.IsValid()) {
         userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
     }
-    
+
     ASSERT_TRUE(userSettingsImpl.IsValid());
-    
+
     // Test that ValueChanged method exists and doesn't crash when called
     // This is an L1 unit test - we're just testing the method exists and is callable
     EXPECT_NO_THROW({
@@ -1208,16 +1208,605 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
             "true"
         );
     });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with false value too
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "audioDescription",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnPreferredAudioLanguagesChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "preferredAudioLanguages",
+            "eng"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with different language set
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "preferredAudioLanguages",
+            "fra"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnPresentationLanguageChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "presentationLanguage",
+            "en-US"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with different locale
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "presentationLanguage",
+            "fr-FR"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnCaptionsChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "captions",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "captions",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnPreferredCaptionsLanguagesChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "preferredCaptionsLanguages",
+            "eng"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with different caption languages
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "preferredCaptionsLanguages",
+            "fra"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnPreferredClosedCaptionServiceChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "preferredClosedCaptionService",
+            "CC1"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with different service
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "preferredClosedCaptionService",
+            "TEXT3"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnPrivacyModeChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "privacyMode",
+            "SHARE"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with different privacy mode
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "privacyMode",
+            "DO_NOT_SHARE"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnPinControlChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "pinControl",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "pinControl",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnViewingRestrictionsChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    // Test with different restrictions
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "viewingRestrictions",
+            "{\"restrictions\": [{\"scheme\": \"US_TV\", \"restrict\": [\"TV-Y7/FV\"]}, {\"scheme\": \"MPAA\", \"restrict\": []}]}"
+        );
+    });
+}
+
+TEST_F(UserSettingsNotificationTest, OnViewingRestrictionsWindowChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "viewingRestrictionsWindow",
+            "ALWAYS"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "liveWatershed",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "liveWatershed",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "playbackWatershed",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "playbackWatershed",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnBlockNotRatedContentChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "blockNotRatedContent",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "blockNotRatedContent",
+            "false"
+        );
+    });
+}
+
+TEST_F(UserSettingsNotificationTest, OnPinOnPurchaseChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "pinOnPurchase",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "pinOnPurchase",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnHighContrastChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "highContrast",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "highContrast",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "voiceGuidance",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "voiceGuidance",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceRateChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "voiceGuidanceRate",
+            "1.0"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Test with different rate
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "voiceGuidanceRate",
+            "0.1"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceHintsChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "voiceGuidanceHints",
+            "true"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    // Test with false value
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "voiceGuidanceHints",
+            "false"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST_F(UserSettingsNotificationTest, OnContentPinChanged_TriggerEvent)
+{
+    if (!userSettingsImpl.IsValid()) {
+        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+    }
+    
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "contentPin",
+            "1234"
+        );
+    });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
-    // Test with false value too
-    // EXPECT_NO_THROW({
-    //     userSettingsImpl->ValueChanged(
-    //         Exchange::IStore2::ScopeType::DEVICE,
-    //         "UserSettings", 
-    //         "audioDescription",
-    //         "false"
-    //     );
-    // });
+    // Test with different PIN
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "contentPin",
+            "5678"
+        );
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
+
+// L1 test for edge cases in ValueChanged method
+// TEST_F(UserSettingsNotificationTest, ValueChanged_EdgeCases)
+// {
+//     if (!userSettingsImpl.IsValid()) {
+//         userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+//     }
+    
+//     ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+//     // Test with empty value
+//     EXPECT_NO_THROW({
+//         userSettingsImpl->ValueChanged(
+//             Exchange::IStore2::ScopeType::DEVICE,
+//             "UserSettings",
+//             "audioDescription",
+//             ""
+//         );
+//     });
+    
+//     // Test with null-like value
+//     EXPECT_NO_THROW({
+//         userSettingsImpl->ValueChanged(
+//             Exchange::IStore2::ScopeType::DEVICE,
+//             "UserSettings",
+//             "audioDescription",
+//             "null"
+//         );
+//     });
+    
+//     // Test with very long value
+//     std::string longValue(1000, 'a');
+//     EXPECT_NO_THROW({
+//         userSettingsImpl->ValueChanged(
+//             Exchange::IStore2::ScopeType::DEVICE,
+//             "UserSettings",
+//             "audioDescription",
+//             longValue
+//         );
+//     });
+// }
+
+// // L1 test for different scope types
+// TEST_F(UserSettingsNotificationTest, ValueChanged_DifferentScopes)
+// {
+//     if (!userSettingsImpl.IsValid()) {
+//         userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
+//     }
+    
+//     ASSERT_TRUE(userSettingsImpl.IsValid());
+    
+//     // Test with ACCOUNT scope - should not trigger event
+//     EXPECT_NO_THROW({
+//         userSettingsImpl->ValueChanged(
+//             Exchange::IStore2::ScopeType::ACCOUNT,
+//             "UserSettings",
+//             "audioDescription",
+//             "true"
+//         );
+//     });
+    
+//     // Test with APPLICATION scope - should not trigger event
+//     EXPECT_NO_THROW({
+//         userSettingsImpl->ValueChanged(
+//             Exchange::IStore2::ScopeType::APPLICATION,
+//             "UserSettings",
+//             "audioDescription",
+//             "true"
+//         );
+//     });
+// }
