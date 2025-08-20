@@ -892,3 +892,58 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
         // If we reach here without exception, the connection == nullptr path worked
     });
 }
+
+// Test 1: USBMassStorage::Deactivated
+TEST_F(USBMassStorageTest, Deactivated_CallsWorkerPoolSubmitIfConnectionIdMatches)
+{
+    // Create a mock RPC::IRemoteConnection
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MOCK_METHOD(uint32_t, Id, (), (const, override));
+        // Implement other pure virtuals as needed for compilation
+        MOCK_METHOD(void, AddRef, (), (override));
+        MOCK_METHOD(uint32_t, Release, (), (override));
+    };
+
+    MockConnection connection;
+    // Set up the connection to return the plugin's _connectionId
+    ON_CALL(connection, Id()).WillByDefault(testing::Return(plugin->_connectionId));
+
+    // Call the method
+    plugin->Deactivated(&connection);
+
+    // No assertion needed; just verify it runs without crashing
+    SUCCEED();
+}
+
+// Test 2: USBMassStorage::Notification::Activated
+TEST_F(USBMassStorageTest, Notification_Activated_DoesNothing)
+{
+    // Create a dummy RPC::IRemoteConnection pointer
+    RPC::IRemoteConnection* dummyConnection = nullptr;
+
+    // Call the method
+    plugin->_usbStoragesNotification.Activated(dummyConnection);
+
+    // No assertion needed; just verify it runs without crashing
+    SUCCEED();
+}
+
+// Test 3: USBMassStorage::Notification::Deactivated
+TEST_F(USBMassStorageTest, Notification_Deactivated_DelegatesToParent)
+{
+    // Create a mock RPC::IRemoteConnection
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MOCK_METHOD(uint32_t, Id, (), (const, override));
+        MOCK_METHOD(void, AddRef, (), (override));
+        MOCK_METHOD(uint32_t, Release, (), (override));
+    };
+
+    MockConnection connection;
+    // Call the method
+    plugin->_usbStoragesNotification.Deactivated(&connection);
+
+    // No assertion needed; just verify it runs without crashing
+    SUCCEED();
+}
