@@ -29,10 +29,19 @@
 
 enum LogLevel {FATAL_LEVEL = 0, ERROR_LEVEL, WARNING_LEVEL, INFO_LEVEL, DEBUG_LEVEL};
 
-#define UNUSED(x) (void)(x)
+//#define UNUSED(x) (void)(x)
 
 static int gDefaultLogLevel = ERROR_LEVEL;
-UNUSED(gDefaultLogLevel);
+
+namespace {
+    template <typename T>
+    const T* UNUSED_GLOBAL_VARIABLE_HELPER(const T& dummy) {
+        return &dummy;
+    }
+
+    static const auto UNUSED_GLOBAL_VARIABLE_gDefaultLogLevel =
+        UNUSED_GLOBAL_VARIABLE_HELPER(gDefaultLogLevel);
+}
 
 #define LOGDBG(fmt, ...) do { if(gDefaultLogLevel >= DEBUG_LEVEL) { fprintf(stderr, "[%d] DEBUG [%s:%d] %s: " fmt "\n", (int)syscall(SYS_gettid), WPEFramework::Core::FileNameOnly(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); }} while (0)
 #define LOGINFO(fmt, ...) do { if(gDefaultLogLevel >= INFO_LEVEL) { fprintf(stderr, "[%d] INFO [%s:%d] %s: " fmt "\n", (int)syscall(SYS_gettid), WPEFramework::Core::FileNameOnly(__FILE__), __LINE__, __FUNCTION__, ##__VA_ARGS__); fflush(stderr); }} while (0)
