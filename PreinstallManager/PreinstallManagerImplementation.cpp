@@ -126,7 +126,7 @@ namespace WPEFramework
         }
     }
 
-    void handleOnAppInstallationStatus(std::list<AppInstallInfo> &appInstallInfoList)
+    void PreinstallManagerImplementation::handleOnAppInstallationStatus(std::list<AppInstallInfo> &appInstallInfoList)
     {
         JsonArray appInfoJsonArray;
         for (const auto& appInstallInfo : appInstallInfoList)
