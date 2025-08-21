@@ -1,0 +1,15 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "SceneSet Plugin",
+    "callsign": "SceneSet",
+    "locator": "libWPEFrameworkSceneSet.so",
+    "status": "development",
+    "description": [
+    ""
+    ],
+    "version": "1.0"
+  },
+  "interface": {
+  }
+}
