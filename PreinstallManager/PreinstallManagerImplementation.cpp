@@ -126,7 +126,7 @@ namespace WPEFramework
         }
     }
 
-    void handleOnAppInstallationStatus(std::list<AppInstallInfo> appInstallInfoList)
+    void handleOnAppInstallationStatus(std::list<AppInstallInfo> &appInstallInfoList)
     {
         JsonArray appInfoJsonArray;
         for (const auto& appInstallInfo : appInstallInfoList)
@@ -139,7 +139,7 @@ namespace WPEFramework
             appInfoJsonArray.Add(appInfoJson);
         }
         std::string appInstallInfoArrayString;
-        appInstallInfoArrayString = appInfoJsonArray.ToString();
+        appInfoJsonArray.ToString(appInstallInfoArrayString); //converting back to string
 
         mAdminLock.Lock();
         for (auto notification: mPreinstallManagerNotifications) {
