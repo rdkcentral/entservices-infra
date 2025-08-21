@@ -21,7 +21,7 @@ set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_PREINSTALL_MANAGER_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
+set(PLUGIN_PREINSTALL_MANAGER_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_PREINSTALL_MANAGER_AUTOSTART false CACHE STRING "Automatically start start PreinstallManager plugin")
 set(PLUGIN_PREINSTALL_MANAGER_EXTRA_LIBRARIES "")
 
