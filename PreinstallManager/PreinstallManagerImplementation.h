@@ -24,6 +24,7 @@
 #include <interfaces/IPreinstallManager.h>
 #include <interfaces/IAppPackageManager.h>
 #include "tracing/Logging.h"
+#include "UtilsLogging.h"
 #include <com/com.h>
 #include <core/core.h>
 #include <plugins/plugins.h>
@@ -58,6 +59,11 @@ namespace WPEFramework
             //     APPLICATION_TYPE_INTERACTIVE,
             //     APPLICATION_TYPE_SYSTEM
             // } ApplicationType;
+
+            enum EventNames {
+            PREINSTALL_MANAGER_UNKNOWN = 0,
+            PREINSTALL_MANAGER_APP_INSTALLATION_STATUS
+            };
 
         private:
             class EXTERNAL Job : public Core::IDispatch

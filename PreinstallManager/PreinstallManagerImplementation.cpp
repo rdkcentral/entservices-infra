@@ -162,7 +162,7 @@ namespace WPEFramework
     }
 
 
-    void PreinstallManagerImplementation::StartPreInstall(bool forceInstall)
+    void PreinstallManagerImplementation::StartPreinstall(bool forceInstall)
     {
         // Implementation for starting the pre-install process
         LOGINFO("Starting pre-install process with forceInstall=%s", forceInstall ? "true" : "false");
