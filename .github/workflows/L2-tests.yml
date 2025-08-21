@@ -114,7 +114,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: test_new
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout googletest
@@ -488,7 +488,7 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RFC=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DPLUGIN_TELEMETRY=ON
-          -DPLUGIN_USERSETTINGS=ON
+          -DPLUGIN_USERSETTINGS=OFF
           -DPLUGIN_PERSISTENTSTORE=ON
           -DPLUGIN_SHAREDSTORAGE=ON
           -DPLUGIN_RESOURCEMANAGER=ON
@@ -573,7 +573,7 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RFC=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DPLUGIN_TELEMETRY=ON
-          -DPLUGIN_USERSETTINGS=ON
+          -DPLUGIN_USERSETTINGS=OFF
           -DPLUGIN_PERSISTENTSTORE=ON
           -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_SHAREDSTORAGE=ON
