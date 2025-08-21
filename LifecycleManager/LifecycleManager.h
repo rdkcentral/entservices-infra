@@ -24,7 +24,6 @@
 #include <interfaces/json/JsonData_LifecycleManagerState.h>
 #include <interfaces/json/JLifecycleManagerState.h>
 #include <interfaces/ILifecycleManagerState.h>
-//#include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <mutex>
 
