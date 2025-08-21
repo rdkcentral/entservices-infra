@@ -126,7 +126,7 @@ namespace WPEFramework
         }
     }
 
-    void handleOnAppInstallationStatus(list<AppInstallInfo> appInstallInfoList)
+    void handleOnAppInstallationStatus(std::list<AppInstallInfo> appInstallInfoList)
     {
         JsonArray appInfoJsonArray;
         for (const auto& appInstallInfo : appInstallInfoList)
@@ -134,8 +134,8 @@ namespace WPEFramework
             JsonObject appInfoJson;
             appInfoJson["packageId"] = appInstallInfo.packageId;
             appInfoJson["version"] = appInstallInfo.version;
-            appInfoJson["PreinstallState"] = static_cast<int>(PreinstallState);
-            appInfoJson["PreinstallFailReason"] = static_cast<int>(PreinstallFailReason);
+            appInfoJson["PreinstallState"] = static_cast<int>(appInstallInfo.state);
+            appInfoJson["PreinstallFailReason"] = static_cast<int>(appInstallInfo.failReason);
             appInfoJsonArray.Add(appInfoJson);
         }
         std::string appInstallInfoArrayString;
@@ -164,17 +164,17 @@ namespace WPEFramework
         result = Core::ERROR_NONE; // fix after implementation
 
         //dummy code to be removed after implementation
-        list<AppInstallInfo> appInstallInfoList;
+        std::list<AppInstallInfo> appInstallInfoList;
         AppInstallInfo info_a,info_b;
         info_a.packageId = "com.example.app";
         info_a.version = "1.0.0";
-        info_a.preinstallState = PreinstallState::PREINSTALL_STATE_INSTALLED;
-        info_a.preinstallFailReason = PreinstallFailReason::PREINSTALL_FAIL_REASON_NONE;
+        info_a.state = PreinstallState::PREINSTALL_STATE_INSTALLED;
+        info_a.failReason = PreinstallFailReason::PREINSTALL_FAIL_REASON_NONE;
         appInstallInfoList.push_back(info_a);
         info_b.packageId = "com.example.app2";
         info_b.version = "1.0.1";
-        info_b.preinstallState = PreinstallState::PREINSTALL_STATE_INSTALL_FAILURE;
-        info_b.preinstallFailReason = PreinstallFailReason::PREINSTALL_FAIL_REASON_SIGNATURE_VERIFICATION_FAILURE;
+        info_b.state = PreinstallState::PREINSTALL_STATE_INSTALL_FAILURE;
+        info_b.failReason = PreinstallFailReason::PREINSTALL_FAIL_REASON_SIGNATURE_VERIFICATION_FAILURE;
         appInstallInfoList.push_back(info_b);
 
         handleOnAppInstallationStatus(appInstallInfoList);
