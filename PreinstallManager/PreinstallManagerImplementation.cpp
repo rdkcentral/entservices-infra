@@ -116,44 +116,8 @@ namespace WPEFramework
         case PREINSTALL_MANAGER_APP_INSTALLATION_STATUS:
         {
             LOGINFO("Preinstall Manager App Installation Status Dispatch "); //remove
-            // string appId = "";
-            // string appInstanceId = "";
-            // AppLifecycleState newState = Exchange::IPreinstallManager::AppLifecycleState::APP_STATE_UNKNOWN;
-            // AppLifecycleState oldState = Exchange::IPreinstallManager::AppLifecycleState::APP_STATE_UNKNOWN;
-            // AppErrorReason errorReason = Exchange::IPreinstallManager::AppErrorReason::APP_ERROR_NONE;
 
-            // if (!(params.HasLabel("appId") && !(appId = params["appId"].String()).empty()))
-            // {
-            //     LOGERR("appId not present or empty");
-            // }
-            // else if (!(params.HasLabel("appInstanceId") && !(appInstanceId = params["appInstanceId"].String()).empty()))
-            // {
-            //     LOGERR("appInstanceId not present or empty");
-            // }
-            // else if (!params.HasLabel("newState"))
-            // {
-            //     LOGERR("newState not present");
-            // }
-            // else if (!params.HasLabel("oldState"))
-            // {
-            //     LOGERR("oldState not present");
-            // }
-            // else if (!params.HasLabel("errorReason"))
-            // {
-            //     LOGERR("errorReason not present");
-            // }
-            // else
-            // {
-            //     newState = static_cast<AppLifecycleState>(params["newState"].Number());
-            //     oldState = static_cast<AppLifecycleState>(params["oldState"].Number());
-            //     errorReason = static_cast<AppErrorReason>(params["errorReason"].Number());
-            //     mAdminLock.Lock();
-            //     for (auto& notification : mPreinstallManagerNotifications)
-            //     {
-            //         notification->OnAppLifecycleStateChanged(appId, appInstanceId, newState, oldState, errorReason);
-            //     }
-            //     mAdminLock.Unlock();
-            // }
+            // handle dispatchEvent() here if necessary
             break;
         }
         default:
@@ -162,20 +126,58 @@ namespace WPEFramework
         }
     }
 
+    void handleOnAppInstallationStatus(list<AppInstallInfo> appInstallInfoList)
+    {
+        JsonArray appInfoJsonArray;
+        for (const auto& appInstallInfo : appInstallInfoList)
+        {
+            JsonObject appInfoJson;
+            appInfoJson["packageId"] = appInstallInfo.packageId;
+            appInfoJson["version"] = appInstallInfo.version;
+            appInfoJson["PreinstallState"] = static_cast<int>(PreinstallState);
+            appInfoJson["PreinstallFailReason"] = static_cast<int>(PreinstallFailReason);
+            appInfoJsonArray.Add(appInfoJson);
+        }
+        std::string appInstallInfoArrayString;
+        appInstallInfoArrayString = appInfoJsonArray.ToString();
 
+        mAdminLock.Lock();
+        for (auto notification: mPreinstallManagerNotifications) {
+            notification->OnAppInstallationStatus(appInstallInfoArrayString); //move to dispatchEvent() if necessary?
+            LOGTRACE();
+        }
+        mAdminLock.Unlock();
+
+    }
+
+    /*
+    * @brief Checks the preinstall directory for packages to be preinstalled and installs them as needed.
+    * @Params[in]  : bool forceInstall
+    * @Params[out] : None
+    * @return      : Core::hresult
+    */
     Core::hresult PreinstallManagerImplementation::StartPreinstall(bool forceInstall)
     {
         Core::hresult result = Core::ERROR_GENERAL;
         // Implementation for starting the pre-install process
         LOGINFO("Starting pre-install process with forceInstall=%s", forceInstall ? "true" : "false");
-        mAdminLock.Lock();
-        std::string jsonstr = "{\"forceInstall\": " + std::to_string(forceInstall) + "}";
-        for (auto notification: mPreinstallManagerNotifications) {
-            notification->OnAppInstallationStatus(jsonstr);
-            LOGTRACE();
-        }
-        mAdminLock.Unlock();
-        result = Core::ERROR_NONE; // fix afet implementation
+        result = Core::ERROR_NONE; // fix after implementation
+
+        //dummy code to be removed after implementation
+        list<AppInstallInfo> appInstallInfoList;
+        AppInstallInfo info_a,info_b;
+        info_a.packageId = "com.example.app";
+        info_a.version = "1.0.0";
+        info_a.preinstallState = PreinstallState::PREINSTALL_STATE_INSTALLED;
+        info_a.preinstallFailReason = PreinstallFailReason::PREINSTALL_FAIL_REASON_NONE;
+        appInstallInfoList.push_back(info_a);
+        info_b.packageId = "com.example.app2";
+        info_b.version = "1.0.1";
+        info_b.preinstallState = PreinstallState::PREINSTALL_STATE_INSTALL_FAILURE;
+        info_b.preinstallFailReason = PreinstallFailReason::PREINSTALL_FAIL_REASON_SIGNATURE_VERIFICATION_FAILURE;
+        appInstallInfoList.push_back(info_b);
+
+        handleOnAppInstallationStatus(appInstallInfoList);
         return result;
     }
 
