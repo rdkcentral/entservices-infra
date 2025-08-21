@@ -124,9 +124,9 @@ namespace WPEFramework
             // void releaseStorageManagerRemoteObject();
 
         private:
-            PluginHost::IShell *mCurrentservice;
             mutable Core::CriticalSection mAdminLock;
             std::list<Exchange::IPreinstallManager::INotification*> mPreinstallManagerNotifications;
+            PluginHost::IShell *mCurrentservice;
             void dispatchEvent(EventNames, const JsonObject &params);
             void Dispatch(EventNames event, const JsonObject params);
             friend class Job;

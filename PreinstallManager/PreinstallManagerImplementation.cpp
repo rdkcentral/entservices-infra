@@ -113,8 +113,9 @@ namespace WPEFramework
     {
         switch (event)
         {
-        case APP_EVENT_LIFECYCLE_STATE_CHANGED:
+        case PREINSTALL_MANAGER_APP_INSTALLATION_STATUS:
         {
+            LOGINFO("Preinstall Manager App Installation Status Dispatch "); //remove
             // string appId = "";
             // string appInstanceId = "";
             // AppLifecycleState newState = Exchange::IPreinstallManager::AppLifecycleState::APP_STATE_UNKNOWN;
@@ -162,8 +163,9 @@ namespace WPEFramework
     }
 
 
-    void PreinstallManagerImplementation::StartPreinstall(bool forceInstall)
+    Core::hresult PreinstallManagerImplementation::StartPreinstall(bool forceInstall)
     {
+        Core::hresult result = Core::ERROR_GENERAL;
         // Implementation for starting the pre-install process
         LOGINFO("Starting pre-install process with forceInstall=%s", forceInstall ? "true" : "false");
         mAdminLock.Lock();
@@ -173,6 +175,8 @@ namespace WPEFramework
             LOGTRACE();
         }
         mAdminLock.Unlock();
+        result = Core::ERROR_NONE; // fix afet implementation
+        return result;
     }
 
     } /* namespace Plugin */
