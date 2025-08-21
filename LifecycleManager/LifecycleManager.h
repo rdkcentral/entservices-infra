@@ -59,12 +59,10 @@ namespace WPEFramework
 
                     void Activated(RPC::IRemoteConnection*) override
                     {
-                        //LOGINFO("LifecycleManagerState Notification Activated");
                     }
 
                     void Deactivated(RPC::IRemoteConnection *connection) override
                     {
-                        //LOGINFO("LifecycleManagerState Notification Deactivated");
                     }
 
                     void OnAppLifecycleStateChanged(const string& appId,
