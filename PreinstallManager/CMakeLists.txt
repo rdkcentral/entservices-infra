@@ -15,13 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(PreinstallManager)
-set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+set(PLUGIN_NAME PreinstallManager)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_PREINSTALL_MANAGER_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_PREINSTALL_MANAGER_AUTOSTART false CACHE STRING "Automatically start start PreinstallManager plugin")
+set(PLUGIN_PREINSTALL_MANAGER_EXTRA_LIBRARIES "")
 
 add_definitions(-DPREINSTALL_MANAGER_API_VERSION_NUMBER_MAJOR=1)
 add_definitions(-DPREINSTALL_MANAGER_API_VERSION_NUMBER_MINOR=0)
@@ -54,10 +56,26 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
+add_library(${PLUGIN_IMPLEMENTATION} SHARED
+    PreinstallManagerImplementation.cpp
+    Module.cpp)
+
 include_directories(../helpers)
+
+set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
 
 set(PREINSTALL_MANAGER_INCLUDES $ENV{PREINSTALL_MANAGER_INCLUDES})
 separate_arguments(PREINSTALL_MANAGER_INCLUDES)
 include_directories(BEFORE ${PREINSTALL_MANAGER_INCLUDES})
+if (RDK_SERVICES_L1_TEST)
+	target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
+endif (RDK_SERVICES_L1_TEST)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
+    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_PREINSTALL_MANAGER_EXTRA_LIBRARIES})
+
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})
