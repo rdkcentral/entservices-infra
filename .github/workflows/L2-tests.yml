@@ -1,4 +1,4 @@
-name: L2-tests
+name: L2-tests-IN
 
 on:
   workflow_call:
@@ -19,7 +19,7 @@ env:
   AUTOMATICS_PASSCODE: ${{ secrets. AUTOMATICS_PASSCODE}}
 
 jobs:
-  L2-tests:
+  L2-tests-IN:
     name: Build and run L2 tests
     runs-on: ubuntu-22.04
     strategy:
