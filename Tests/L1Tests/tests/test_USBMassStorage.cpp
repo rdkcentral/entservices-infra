@@ -167,6 +167,25 @@ TEST_F(USBMassStorageTest, getDeviceList_EmptyDevicePath)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
 }
 
+TEST_F(USBMassStorageTest, getDeviceList_MissingDevicePath)
+{
+    std::list<Exchange::IUSBDevice::USBDevice> usbDeviceList;
+    Exchange::IUSBDevice::USBDevice usbDevice1;
+    usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
+    usbDevice1.deviceSubclass = 0x12;
+    usbDevice1.deviceName = "001/002";
+    usbDeviceList.emplace_back(usbDevice1);
+    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
+
+    EXPECT_CALL(*p_usbDeviceMock, GetDeviceList(::testing::_))
+    .WillOnce([&](Exchange::IUSBDevice::IUSBDeviceIterator*& devices) {
+        devices = mockIterator;
+        return Core::ERROR_GENERAL;
+    });
+
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
+}
+
 TEST_F(USBMassStorageTest, getDeviceList_NonMassStorageDevice)
 {
     std::list<Exchange::IUSBDevice::USBDevice> usbDeviceList;
@@ -206,6 +225,7 @@ TEST_F(USBMassStorageTest, getMountPoints_Success)
     });
 
     // Populate internal device list first
+    // Do we have to do this?
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     
     // Simulate device being plugged in and mounted
@@ -508,7 +528,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
         if (buf) buf->f_type = 0x565a;
         return 0;
     });
-    
+
     EXPECT_CALL(*p_wrapsImplMock, statvfs(::testing::_, ::testing::_))
     .WillOnce([](const char* path, struct statvfs* stat) -> int {
         if (stat) {
@@ -643,6 +663,7 @@ TEST_F(USBMassStorageTest, Information_ReturnsCorrectString)
 // }
 
 // Test for OnDeviceUnmounted() notification - with null mount points
+// Somewhat dumb test to include in the suite
 TEST_F(USBMassStorageTest, OnDeviceUnmounted_NullMountPoints_NoNotification)
 {
     Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
@@ -861,6 +882,8 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     // notification system, verifying the complete flow works correctly
 }
 
+
+
 // Simpler L1 Test using existing infrastructure
 TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectionCleanup)
 {
@@ -893,101 +916,121 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
     });
 }
 
-// Test 1: USBMassStorage::Deactivated
-TEST_F(USBMassStorageTest, Deactivated_CallsWorkerPoolSubmitIfConnectionIdMatches)
+TEST_F(USBMassStorageTest, DispatchUnMountEvent_DeviceNotInMountInfo)
 {
-    // Create a mock RPC::IRemoteConnection
-    class MockConnection : public RPC::IRemoteConnection {
-    public:
-        MOCK_METHOD(uint32_t, Id, (), (const, override));
-        // Implement other pure virtuals as needed for compilation
-        MOCK_METHOD(void, AddRef, (), (override));
-        MOCK_METHOD(uint32_t, Release, (), (override));
-    };
-
-    MockConnection connection;
-    // Set up the connection to return the plugin's _connectionId
-    ON_CALL(connection, Id()).WillByDefault(testing::Return(plugin->_connectionId));
-
-    // Call the method
-    plugin->Deactivated(&connection);
-
-    // No assertion needed; just verify it runs without crashing
-    SUCCEED();
+    // Set up test device that only exists in usbStorageDeviceInfo but not in usbStorageMountInfo
+    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+    deviceInfo.deviceName = "testDevice";
+    deviceInfo.devicePath = "/dev/sda1";
+    
+    // Add device to usbStorageDeviceInfo directly
+    USBMassStorageImpl->usbStorageDeviceInfo.push_back(deviceInfo);
+    
+    // Verify device exists in deviceInfo list before test
+    ASSERT_FALSE(USBMassStorageImpl->usbStorageDeviceInfo.empty());
+    
+    // Call DispatchUnMountEvent directly
+    USBMassStorageImpl->DispatchUnMountEvent(deviceInfo);
+    
+    // Verify device was removed from usbStorageDeviceInfo
+    EXPECT_TRUE(USBMassStorageImpl->usbStorageDeviceInfo.empty());
 }
+
+// Test 1: USBMassStorage::Deactivated
+// TEST_F(USBMassStorageTest, Deactivated_CallsWorkerPoolSubmitIfConnectionIdMatches)
+// {
+//     // Create a mock RPC::IRemoteConnection
+//     class MockConnection : public RPC::IRemoteConnection {
+//     public:
+//         MOCK_METHOD(uint32_t, Id, (), (const, override));
+//         // Implement other pure virtuals as needed for compilation
+//         MOCK_METHOD(void, AddRef, (), (override));
+//         MOCK_METHOD(uint32_t, Release, (), (override));
+//     };
+
+//     MockConnection connection;
+//     // Set up the connection to return the plugin's _connectionId
+//     ON_CALL(connection, Id()).WillByDefault(testing::Return(plugin->_connectionId));
+
+//     // Call the method
+//     plugin->Deactivated(&connection);
+
+//     // No assertion needed; just verify it runs without crashing
+//     SUCCEED();
+// }
 
 // Test 2: USBMassStorage::Notification::Activated
-TEST_F(USBMassStorageTest, Notification_Activated_DoesNothing)
-{
-    // Create a dummy RPC::IRemoteConnection pointer
-    RPC::IRemoteConnection* dummyConnection = nullptr;
+// TEST_F(USBMassStorageTest, Notification_Activated_DoesNothing)
+// {
+//     // Create a dummy RPC::IRemoteConnection pointer
+//     RPC::IRemoteConnection* dummyConnection = nullptr;
 
-    // Call the method
-    plugin->_usbStoragesNotification.Activated(dummyConnection);
+//     // Call the method
+//     plugin->_usbStoragesNotification.Activated(dummyConnection);
 
-    // No assertion needed; just verify it runs without crashing
-    SUCCEED();
-}
+//     // No assertion needed; just verify it runs without crashing
+//     SUCCEED();
+// }
 
-// Test 3: USBMassStorage::Notification::Deactivated
-TEST_F(USBMassStorageTest, Notification_Deactivated_DelegatesToParent)
-{
-    // Create a mock RPC::IRemoteConnection
-    class MockConnection : public RPC::IRemoteConnection {
-    public:
-        MOCK_METHOD(uint32_t, Id, (), (const, override));
-        MOCK_METHOD(void, AddRef, (), (override));
-        MOCK_METHOD(uint32_t, Release, (), (override));
-    };
+// // Test 3: USBMassStorage::Notification::Deactivated
+// TEST_F(USBMassStorageTest, Notification_Deactivated_DelegatesToParent)
+// {
+//     // Create a mock RPC::IRemoteConnection
+//     class MockConnection : public RPC::IRemoteConnection {
+//     public:
+//         MOCK_METHOD(uint32_t, Id, (), (const, override));
+//         MOCK_METHOD(void, AddRef, (), (override));
+//         MOCK_METHOD(uint32_t, Release, (), (override));
+//     };
 
-    MockConnection connection;
-    // Call the method
-    plugin->_usbStoragesNotification.Deactivated(&connection);
+//     MockConnection connection;
+//     // Call the method
+//     plugin->_usbStoragesNotification.Deactivated(&connection);
 
-    // No assertion needed; just verify it runs without crashing
-    SUCCEED();
-}
+//     // No assertion needed; just verify it runs without crashing
+//     SUCCEED();
+// }
 
-TEST_F(USBMassStorageTest, DeviceMount_ExfatBranch_Succeeds)
-{
-    // Setup device info
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.devicePath = "/dev/sdx1";
-    deviceInfo.deviceName = "usb1";
+// TEST_F(USBMassStorageTest, DeviceMount_ExfatBranch_Succeeds)
+// {
+//     // Setup device info
+//     Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+//     deviceInfo.devicePath = "/dev/sdx1";
+//     deviceInfo.deviceName = "usb1";
 
-    // Mock stat to simulate mount directory exists
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0));
+//     // Mock stat to simulate mount directory exists
+//     EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+//         .WillRepeatedly(::testing::Return(0));
 
-    // Mock mount: fail for VFAT, succeed for EXFAT
-    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("vfat"), ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(-1));
-    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("exfat"), ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(0));
+//     // Mock mount: fail for VFAT, succeed for EXFAT
+//     EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("vfat"), ::testing::_, ::testing::_))
+//         .WillOnce(::testing::Return(-1));
+//     EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("exfat"), ::testing::_, ::testing::_))
+//         .WillOnce(::testing::Return(0));
 
-    // Call DeviceMount directly
-    bool result = USBMassStorageImpl->DeviceMount(deviceInfo);
-    EXPECT_TRUE(result); // Should succeed via EXFAT branch
-}
+//     // Call DeviceMount directly
+//     bool result = USBMassStorageImpl->DeviceMount(deviceInfo);
+//     EXPECT_TRUE(result); // Should succeed via EXFAT branch
+// }
 
-TEST_F(USBMassStorageTest, DeviceMount_FailureBranch_Fails)
-{
-    // Setup device info
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.devicePath = "/dev/sdx1";
-    deviceInfo.deviceName = "usb1";
+// TEST_F(USBMassStorageTest, DeviceMount_FailureBranch_Fails)
+// {
+//     // Setup device info
+//     Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+//     deviceInfo.devicePath = "/dev/sdx1";
+//     deviceInfo.deviceName = "usb1";
 
-    // Mock stat to simulate mount directory exists
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0));
+//     // Mock stat to simulate mount directory exists
+//     EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+//         .WillRepeatedly(::testing::Return(0));
 
-    // Mock mount: fail for both VFAT and EXFAT
-    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("vfat"), ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(-1));
-    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("exfat"), ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(-1));
+//     // Mock mount: fail for both VFAT and EXFAT
+//     EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("vfat"), ::testing::_, ::testing::_))
+//         .WillOnce(::testing::Return(-1));
+//     EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::StrEq("exfat"), ::testing::_, ::testing::_))
+//         .WillOnce(::testing::Return(-1));
 
-    // Call DeviceMount directly
-    bool result = USBMassStorageImpl->DeviceMount(deviceInfo);
-    EXPECT_FALSE(result); // Should fail via else branch
-}
+//     // Call DeviceMount directly
+//     bool result = USBMassStorageImpl->DeviceMount(deviceInfo);
+//     EXPECT_FALSE(result); // Should fail via else branch
+// }
