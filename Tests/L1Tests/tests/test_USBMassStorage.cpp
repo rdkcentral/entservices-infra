@@ -916,23 +916,34 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
     });
 }
 
-TEST_F(USBMassStorageTest, DispatchUnMountEvent_DeviceNotInMountInfo)
+TEST_F(USBMassStorageTest, DispatchUnMountEvent_DeviceNotInMountInfo_RemovesFromDeviceInfo)
 {
-    // Set up test device that only exists in usbStorageDeviceInfo but not in usbStorageMountInfo
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.deviceName = "testDevice";
-    deviceInfo.devicePath = "/dev/sda1";
+    // Setup: Create a device that will be present in usbStorageDeviceInfo but not in usbStorageMountInfo
+    Exchange::IUSBDevice::USBDevice usbDevice1;
+    usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
+    usbDevice1.deviceSubclass = 0x12;
+    usbDevice1.deviceName = "001/002";
+    usbDevice1.devicePath = "/dev/sdx1";
     
-    // Add device to usbStorageDeviceInfo directly
-    USBMassStorageImpl->usbStorageDeviceInfo.push_back(deviceInfo);
+    // Add the device directly to usbStorageDeviceInfo (not to mount info)
+    Exchange::IUSBMassStorage::USBStorageDeviceInfo storageDeviceInfo;
+    storageDeviceInfo.devicePath = "/dev/sdx1";
+    storageDeviceInfo.deviceName = "testDevice123";
+    USBMassStorageImpl->usbStorageDeviceInfo.push_back(storageDeviceInfo);
     
     // Verify device exists in deviceInfo list before test
     ASSERT_FALSE(USBMassStorageImpl->usbStorageDeviceInfo.empty());
+    size_t initialSize = USBMassStorageImpl->usbStorageDeviceInfo.size();
+    ASSERT_GT(initialSize, 0);
     
-    // Call DispatchUnMountEvent directly
-    USBMassStorageImpl->DispatchUnMountEvent(deviceInfo);
+    // Mock umount to avoid actual system calls
+    EXPECT_CALL(*p_wrapsImplMock, umount(::testing::_))
+        .WillRepeatedly(::testing::Return(0));
     
-    // Verify device was removed from usbStorageDeviceInfo
+    // Act: Call OnDevicePluggedOut which will indirectly call DispatchUnMountEvent
+    USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
+    
+    // Assert: The device should be removed from usbStorageDeviceInfo
     EXPECT_TRUE(USBMassStorageImpl->usbStorageDeviceInfo.empty());
 }
 
