@@ -149,6 +149,7 @@ namespace Plugin {
         Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
         Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::InstallState &state) override;
+        Core::hresult GetConfigForPackage(const string &fileLocator, string& packageId, string &version, Exchange::RuntimeConfig& metadata) override;
 
         Core::hresult Register(Exchange::IPackageInstaller::INotification *sink) override;
         Core::hresult Unregister(Exchange::IPackageInstaller::INotification *sink) override;
@@ -162,7 +163,6 @@ namespace Plugin {
         Core::hresult Unlock(const string &packageId, const string &version) override;
         Core::hresult GetLockedInfo(const string &packageId, const string &version, string &unpackedPath, Exchange::RuntimeConfig& configMetadata,
             string& gatewayMetadataPath, bool &locked) override;
-
         static void getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig);
         static void getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig);
 
