@@ -143,11 +143,15 @@ namespace Plugin {
             , _store2Sink(*this)
             , _notification(*this)
         {
+            printf("Entering into PersistentStore Constructor\n");
             RegisterAll();
+            printf("Exiting into PersistentStore Constructor\n");
         }
         ~PersistentStore() override
         {
+            printf("Entering into PersistentStore destructor\n");
             UnregisterAll();
+            printf("Exiting into PersistentStore destructor\n");
         }
 
         BEGIN_INTERFACE_MAP(PersistentStore)
