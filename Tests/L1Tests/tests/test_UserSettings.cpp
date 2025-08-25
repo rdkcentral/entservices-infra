@@ -1125,36 +1125,452 @@ TEST_F(UserSettingsTest, Information_ReturnsEmptyString)
     EXPECT_EQ(info.length(), 0);
     EXPECT_EQ(info, "");
 }
+typedef enum : uint32_t {
+    UserSettings_OnAudioDescriptionChanged = 0x00000001,
+    UserSettings_OnPreferredAudioLanguagesChanged = 0x00000002,
+    UserSettings_OnPresentationLanguageChanged = 0x00000004,
+    UserSettings_OnCaptionsChanged = 0x00000008,
+    UserSettings_OnPreferredCaptionsLanguagesChanged = 0x00000010,
+    UserSettings_OnPreferredClosedCaptionServiceChanged = 0x00000020,
+    UserSettings_OnPrivacyModeChanged = 0x00000040,
+    UserSettings_OnPinControlChanged = 0x00000080,
+    UserSettings_OnViewingRestrictionsChanged = 0x00000100,
+    UserSettings_OnViewingRestrictionsWindowChanged = 0x00000200,
+    UserSettings_OnLiveWatershedChanged = 0x00000400,
+    UserSettings_OnPlaybackWatershedChanged = 0x00000800,
+    UserSettings_OnBlockNotRatedContentChanged = 0x00001000,
+    UserSettings_OnPinOnPurchaseChanged = 0x00002000,
+    UserSettings_OnHighContrastChanged = 0x00004000,
+    UserSettings_OnVoiceGuidanceChanged = 0x00008000,
+    UserSettings_OnVoiceGuidanceRateChanged = 0x00010000,
+    UserSettings_OnVoiceGuidanceHintsChanged = 0x00020000,
+    UserSettings_OnContentPinChanged = 0x00040000,
+} UserSettingsEventType_t;
 
 class TestNotificationClient : public Exchange::IUserSettings::INotification {
+private:
+    /** @brief Mutex */
+    std::mutex m_mutex;
+
+    /** @brief Condition variable */
+    std::condition_variable m_condition_variable;
+
+    /** @brief Event signalled flag */
+    uint32_t m_event_signalled;
+
+    // Event-specific flags
+    bool m_OnAudioDescriptionChanged_signalled = false;
+    bool m_OnPreferredAudioLanguagesChanged_signalled = false;
+    bool m_OnPresentationLanguageChanged_signalled = false;
+    bool m_OnCaptionsChanged_signalled = false;
+    bool m_OnPreferredCaptionsLanguagesChanged_signalled = false;
+    bool m_OnPreferredClosedCaptionServiceChanged_signalled = false;
+    bool m_OnPrivacyModeChanged_signalled = false;
+    bool m_OnPinControlChanged_signalled = false;
+    bool m_OnViewingRestrictionsChanged_signalled = false;
+    bool m_OnViewingRestrictionsWindowChanged_signalled = false;
+    bool m_OnLiveWatershedChanged_signalled = false;
+    bool m_OnPlaybackWatershedChanged_signalled = false;
+    bool m_OnBlockNotRatedContentChanged_signalled = false;
+    bool m_OnPinOnPurchaseChanged_signalled = false;
+    bool m_OnHighContrastChanged_signalled = false;
+    bool m_OnVoiceGuidanceChanged_signalled = false;
+    bool m_OnVoiceGuidanceRateChanged_signalled = false;
+    bool m_OnVoiceGuidanceHintsChanged_signalled = false;
+    bool m_OnContentPinChanged_signalled = false;
+
+    // Store last received values for verification
+    bool m_lastAudioDescriptionValue = false;
+    string m_lastPreferredAudioLanguagesValue = "";
+    string m_lastPresentationLanguageValue = "";
+    bool m_lastCaptionsValue = false;
+    string m_lastPreferredCaptionsLanguagesValue = "";
+    string m_lastPreferredClosedCaptionServiceValue = "";
+    string m_lastPrivacyModeValue = "";
+    bool m_lastPinControlValue = false;
+    string m_lastViewingRestrictionsValue = "";
+    string m_lastViewingRestrictionsWindowValue = "";
+    bool m_lastLiveWatershedValue = false;
+    bool m_lastPlaybackWatershedValue = false;
+    bool m_lastBlockNotRatedContentValue = false;
+    bool m_lastPinOnPurchaseValue = false;
+    bool m_lastHighContrastValue = false;
+    bool m_lastVoiceGuidanceValue = false;
+    double m_lastVoiceGuidanceRateValue = 0.0;
+    bool m_lastVoiceGuidanceHintsValue = false;
+    string m_lastContentPinValue = "";
+
+    BEGIN_INTERFACE_MAP(TestNotificationClient)
+    INTERFACE_ENTRY(Exchange::IUserSettings::INotification)
+    END_INTERFACE_MAP
+
 public:
+    TestNotificationClient() : m_event_signalled(0) {}
     virtual ~TestNotificationClient() = default;
-    
-    // Implement all required notification methods (can be empty for L1 testing)
-    void OnAudioDescriptionChanged(const bool enabled) override {}
-    void OnPreferredAudioLanguagesChanged(const string& preferredLanguages) override {}
-    void OnPresentationLanguageChanged(const string& presentationLanguage) override {}
-    void OnCaptionsChanged(const bool enabled) override {}
-    void OnPreferredCaptionsLanguagesChanged(const string& preferredLanguages) override {}
-    void OnPreferredClosedCaptionServiceChanged(const string& service) override {}
-    void OnPrivacyModeChanged(const string& privacyMode) override {}
-    void OnPinControlChanged(const bool pinControl) override {}
-    void OnViewingRestrictionsChanged(const string& viewingRestrictions) override {}
-    void OnViewingRestrictionsWindowChanged(const string& viewingRestrictionsWindow) override {}
-    void OnLiveWatershedChanged(const bool liveWatershed) override {}
-    void OnPlaybackWatershedChanged(const bool playbackWatershed) override {}
-    void OnBlockNotRatedContentChanged(const bool blockNotRatedContent) override {}
-    void OnPinOnPurchaseChanged(const bool pinOnPurchase) override {}
-    void OnHighContrastChanged(const bool enabled) override {}
-    void OnVoiceGuidanceChanged(const bool enabled) override {}
-    void OnVoiceGuidanceRateChanged(const double rate) override {}
-    void OnVoiceGuidanceHintsChanged(const bool enabled) override {}
-    void OnContentPinChanged(const string& contentPin) override {}
+
+    void OnAudioDescriptionChanged(const bool enabled) override
+    {
+        TEST_LOG("OnAudioDescriptionChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("AudioDescription enabled: %d\n", enabled);
+        m_lastAudioDescriptionValue = enabled;
+        m_event_signalled |= UserSettings_OnAudioDescriptionChanged;
+        m_OnAudioDescriptionChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnPreferredAudioLanguagesChanged(const string& preferredLanguages) override
+    {
+        TEST_LOG("OnPreferredAudioLanguagesChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("PreferredAudioLanguages: %s\n", preferredLanguages.c_str());
+        m_lastPreferredAudioLanguagesValue = preferredLanguages;
+        m_event_signalled |= UserSettings_OnPreferredAudioLanguagesChanged;
+        m_OnPreferredAudioLanguagesChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnPresentationLanguageChanged(const string& presentationLanguage) override
+    {
+        TEST_LOG("OnPresentationLanguageChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("PresentationLanguage: %s\n", presentationLanguage.c_str());
+        m_lastPresentationLanguageValue = presentationLanguage;
+        m_event_signalled |= UserSettings_OnPresentationLanguageChanged;
+        m_OnPresentationLanguageChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnCaptionsChanged(const bool enabled) override
+    {
+        TEST_LOG("OnCaptionsChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("Captions enabled: %d\n", enabled);
+        m_lastCaptionsValue = enabled;
+        m_event_signalled |= UserSettings_OnCaptionsChanged;
+        m_OnCaptionsChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnPreferredCaptionsLanguagesChanged(const string& preferredLanguages) override
+    {
+        TEST_LOG("OnPreferredCaptionsLanguagesChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("PreferredCaptionsLanguages: %s\n", preferredLanguages.c_str());
+        m_lastPreferredCaptionsLanguagesValue = preferredLanguages;
+        m_event_signalled |= UserSettings_OnPreferredCaptionsLanguagesChanged;
+        m_OnPreferredCaptionsLanguagesChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnPreferredClosedCaptionServiceChanged(const string& service) override
+    {
+        TEST_LOG("OnPreferredClosedCaptionServiceChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("PreferredClosedCaptionService: %s\n", service.c_str());
+        m_lastPreferredClosedCaptionServiceValue = service;
+        m_event_signalled |= UserSettings_OnPreferredClosedCaptionServiceChanged;
+        m_OnPreferredClosedCaptionServiceChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnPrivacyModeChanged(const string& privacyMode) override
+    {
+        TEST_LOG("OnPrivacyModeChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("PrivacyMode: %s\n", privacyMode.c_str());
+        m_lastPrivacyModeValue = privacyMode;
+        m_event_signalled |= UserSettings_OnPrivacyModeChanged;
+        m_OnPrivacyModeChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnPinControlChanged(const bool pinControl) override
+    {
+        TEST_LOG("OnPinControlChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("PinControl: %d\n", pinControl);
+        m_lastPinControlValue = pinControl;
+        m_event_signalled |= UserSettings_OnPinControlChanged;
+        m_OnPinControlChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnViewingRestrictionsChanged(const string& viewingRestrictions) override
+    {
+        TEST_LOG("OnViewingRestrictionsChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("ViewingRestrictions: %s\n", viewingRestrictions.c_str());
+        m_lastViewingRestrictionsValue = viewingRestrictions;
+        m_event_signalled |= UserSettings_OnViewingRestrictionsChanged;
+        m_OnViewingRestrictionsChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnViewingRestrictionsWindowChanged(const string& viewingRestrictionsWindow) override
+    {
+        TEST_LOG("OnViewingRestrictionsWindowChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("ViewingRestrictionsWindow: %s\n", viewingRestrictionsWindow.c_str());
+        m_lastViewingRestrictionsWindowValue = viewingRestrictionsWindow;
+        m_event_signalled |= UserSettings_OnViewingRestrictionsWindowChanged;
+        m_OnViewingRestrictionsWindowChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnLiveWatershedChanged(const bool liveWatershed) override
+    {
+        TEST_LOG("OnLiveWatershedChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("LiveWatershed: %d\n", liveWatershed);
+        m_lastLiveWatershedValue = liveWatershed;
+        m_event_signalled |= UserSettings_OnLiveWatershedChanged;
+        m_OnLiveWatershedChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnPlaybackWatershedChanged(const bool playbackWatershed) override
+    {
+        TEST_LOG("OnPlaybackWatershedChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("PlaybackWatershed: %d\n", playbackWatershed);
+        m_lastPlaybackWatershedValue = playbackWatershed;
+        m_event_signalled |= UserSettings_OnPlaybackWatershedChanged;
+        m_OnPlaybackWatershedChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnBlockNotRatedContentChanged(const bool blockNotRatedContent) override
+    {
+        TEST_LOG("OnBlockNotRatedContentChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("BlockNotRatedContent: %d\n", blockNotRatedContent);
+        m_lastBlockNotRatedContentValue = blockNotRatedContent;
+        m_event_signalled |= UserSettings_OnBlockNotRatedContentChanged;
+        m_OnBlockNotRatedContentChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnPinOnPurchaseChanged(const bool pinOnPurchase) override
+    {
+        TEST_LOG("OnPinOnPurchaseChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("PinOnPurchase: %d\n", pinOnPurchase);
+        m_lastPinOnPurchaseValue = pinOnPurchase;
+        m_event_signalled |= UserSettings_OnPinOnPurchaseChanged;
+        m_OnPinOnPurchaseChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnHighContrastChanged(const bool enabled) override
+    {
+        TEST_LOG("OnHighContrastChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("HighContrast enabled: %d\n", enabled);
+        m_lastHighContrastValue = enabled;
+        m_event_signalled |= UserSettings_OnHighContrastChanged;
+        m_OnHighContrastChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnVoiceGuidanceChanged(const bool enabled) override
+    {
+        TEST_LOG("OnVoiceGuidanceChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("VoiceGuidance enabled: %d\n", enabled);
+        m_lastVoiceGuidanceValue = enabled;
+        m_event_signalled |= UserSettings_OnVoiceGuidanceChanged;
+        m_OnVoiceGuidanceChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnVoiceGuidanceRateChanged(const double rate) override
+    {
+        TEST_LOG("OnVoiceGuidanceRateChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("VoiceGuidanceRate: %lf\n", rate);
+        m_lastVoiceGuidanceRateValue = rate;
+        m_event_signalled |= UserSettings_OnVoiceGuidanceRateChanged;
+        m_OnVoiceGuidanceRateChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnVoiceGuidanceHintsChanged(const bool enabled) override
+    {
+        TEST_LOG("OnVoiceGuidanceHintsChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("VoiceGuidanceHints enabled: %d\n", enabled);
+        m_lastVoiceGuidanceHintsValue = enabled;
+        m_event_signalled |= UserSettings_OnVoiceGuidanceHintsChanged;
+        m_OnVoiceGuidanceHintsChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
+
+    void OnContentPinChanged(const string& contentPin) override
+    {
+        TEST_LOG("OnContentPinChanged event triggered ***\n");
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        TEST_LOG("ContentPin: %s\n", contentPin.c_str());
+        m_lastContentPinValue = contentPin;
+        m_event_signalled |= UserSettings_OnContentPinChanged;
+        m_OnContentPinChanged_signalled = true;
+        m_condition_variable.notify_one();
+    }
 
     // Required interface methods
     void AddRef() const override {}
     uint32_t Release() const override { return 0; }
     void* QueryInterface(const uint32_t interfaceNumber) override { return nullptr; }
+
+    // Utility method to wait for specific events
+    bool WaitForRequestStatus(uint32_t timeout_ms, UserSettingsEventType_t expected_status)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        auto now = std::chrono::system_clock::now();
+        std::chrono::milliseconds timeout(timeout_ms);
+        bool signalled = false;
+
+        while (!(expected_status & m_event_signalled))
+        {
+            if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
+            {
+                TEST_LOG("Timeout waiting for request status event");
+                break;
+            }
+        }
+
+        switch(expected_status)
+        {
+            case UserSettings_OnAudioDescriptionChanged:
+                signalled = m_OnAudioDescriptionChanged_signalled;
+                break;
+            case UserSettings_OnPreferredAudioLanguagesChanged:
+                signalled = m_OnPreferredAudioLanguagesChanged_signalled;
+                break;
+            case UserSettings_OnPresentationLanguageChanged:
+                signalled = m_OnPresentationLanguageChanged_signalled;
+                break;
+            case UserSettings_OnCaptionsChanged:
+                signalled = m_OnCaptionsChanged_signalled;
+                break;
+            case UserSettings_OnPreferredCaptionsLanguagesChanged:
+                signalled = m_OnPreferredCaptionsLanguagesChanged_signalled;
+                break;
+            case UserSettings_OnPreferredClosedCaptionServiceChanged:
+                signalled = m_OnPreferredClosedCaptionServiceChanged_signalled;
+                break;
+            case UserSettings_OnPrivacyModeChanged:
+                signalled = m_OnPrivacyModeChanged_signalled;
+                break;
+            case UserSettings_OnPinControlChanged:
+                signalled = m_OnPinControlChanged_signalled;
+                break;
+            case UserSettings_OnViewingRestrictionsChanged:
+                signalled = m_OnViewingRestrictionsChanged_signalled;
+                break;
+            case UserSettings_OnViewingRestrictionsWindowChanged:
+                signalled = m_OnViewingRestrictionsWindowChanged_signalled;
+                break;
+            case UserSettings_OnLiveWatershedChanged:
+                signalled = m_OnLiveWatershedChanged_signalled;
+                break;
+            case UserSettings_OnPlaybackWatershedChanged:
+                signalled = m_OnPlaybackWatershedChanged_signalled;
+                break;
+            case UserSettings_OnBlockNotRatedContentChanged:
+                signalled = m_OnBlockNotRatedContentChanged_signalled;
+                break;
+            case UserSettings_OnPinOnPurchaseChanged:
+                signalled = m_OnPinOnPurchaseChanged_signalled;
+                break;
+            case UserSettings_OnHighContrastChanged:
+                signalled = m_OnHighContrastChanged_signalled;
+                break;
+            case UserSettings_OnVoiceGuidanceChanged:
+                signalled = m_OnVoiceGuidanceChanged_signalled;
+                break;
+            case UserSettings_OnVoiceGuidanceRateChanged:
+                signalled = m_OnVoiceGuidanceRateChanged_signalled;
+                break;
+            case UserSettings_OnVoiceGuidanceHintsChanged:
+                signalled = m_OnVoiceGuidanceHintsChanged_signalled;
+                break;
+            case UserSettings_OnContentPinChanged:
+                signalled = m_OnContentPinChanged_signalled;
+                break;
+            default:
+                signalled = false;
+                break;
+        }
+
+        return signalled;
+    }
+
+    // Reset event flags for reuse
+    void ResetEventFlags()
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_event_signalled = 0;
+        m_OnAudioDescriptionChanged_signalled = false;
+        m_OnPreferredAudioLanguagesChanged_signalled = false;
+        m_OnPresentationLanguageChanged_signalled = false;
+        m_OnCaptionsChanged_signalled = false;
+        m_OnPreferredCaptionsLanguagesChanged_signalled = false;
+        m_OnPreferredClosedCaptionServiceChanged_signalled = false;
+        m_OnPrivacyModeChanged_signalled = false;
+        m_OnPinControlChanged_signalled = false;
+        m_OnViewingRestrictionsChanged_signalled = false;
+        m_OnViewingRestrictionsWindowChanged_signalled = false;
+        m_OnLiveWatershedChanged_signalled = false;
+        m_OnPlaybackWatershedChanged_signalled = false;
+        m_OnBlockNotRatedContentChanged_signalled = false;
+        m_OnPinOnPurchaseChanged_signalled = false;
+        m_OnHighContrastChanged_signalled = false;
+        m_OnVoiceGuidanceChanged_signalled = false;
+        m_OnVoiceGuidanceRateChanged_signalled = false;
+        m_OnVoiceGuidanceHintsChanged_signalled = false;
+        m_OnContentPinChanged_signalled = false;
+    }
+
+    // Getter methods for last received values
+    bool GetLastAudioDescriptionValue() const { return m_lastAudioDescriptionValue; }
+    string GetLastPreferredAudioLanguagesValue() const { return m_lastPreferredAudioLanguagesValue; }
+    string GetLastPresentationLanguageValue() const { return m_lastPresentationLanguageValue; }
+    bool GetLastCaptionsValue() const { return m_lastCaptionsValue; }
+    string GetLastPreferredCaptionsLanguagesValue() const { return m_lastPreferredCaptionsLanguagesValue; }
+    string GetLastPreferredClosedCaptionServiceValue() const { return m_lastPreferredClosedCaptionServiceValue; }
+    string GetLastPrivacyModeValue() const { return m_lastPrivacyModeValue; }
+    bool GetLastPinControlValue() const { return m_lastPinControlValue; }
+    string GetLastViewingRestrictionsValue() const { return m_lastViewingRestrictionsValue; }
+    string GetLastViewingRestrictionsWindowValue() const { return m_lastViewingRestrictionsWindowValue; }
+    bool GetLastLiveWatershedValue() const { return m_lastLiveWatershedValue; }
+    bool GetLastPlaybackWatershedValue() const { return m_lastPlaybackWatershedValue; }
+    bool GetLastBlockNotRatedContentValue() const { return m_lastBlockNotRatedContentValue; }
+    bool GetLastPinOnPurchaseValue() const { return m_lastPinOnPurchaseValue; }
+    bool GetLastHighContrastValue() const { return m_lastHighContrastValue; }
+    bool GetLastVoiceGuidanceValue() const { return m_lastVoiceGuidanceValue; }
+    double GetLastVoiceGuidanceRateValue() const { return m_lastVoiceGuidanceRateValue; }
+    bool GetLastVoiceGuidanceHintsValue() const { return m_lastVoiceGuidanceHintsValue; }
+    string GetLastContentPinValue() const { return m_lastContentPinValue; }
 };
 
 // Test fixture that can control the worker pool
@@ -1242,17 +1658,17 @@ TEST_F(UserSettingsNotificationTest, ValueChanged_MethodExists)
         );
     });
 }
+// ...existing code...
 
 TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
 {
-    // Test that we can create the implementation
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
     
-    // Call ValueChanged which should trigger dispatchEvent -> Submit
+    // Reset event flags for clean test state
+    notificationClient->ResetEventFlags();
+    
+    // Test with true value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
@@ -1261,9 +1677,15 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // Test with false value too
+    // Wait for and verify the event
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnAudioDescriptionChanged));
+    EXPECT_TRUE(notificationClient->GetLastAudioDescriptionValue());
+    
+    // Reset for next test
+    notificationClient->ResetEventFlags();
+    
+    // Test with false value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
@@ -1272,46 +1694,53 @@ TEST_F(UserSettingsNotificationTest, OnAudioDescriptionChanged_TriggerEvent)
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    // Verify false value event
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnAudioDescriptionChanged));
+    EXPECT_FALSE(notificationClient->GetLastAudioDescriptionValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnPreferredAudioLanguagesChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
             "preferredAudioLanguages",
-            "eng"
+            "eng,fra"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredAudioLanguagesChanged));
+    EXPECT_EQ(notificationClient->GetLastPreferredAudioLanguagesValue(), "eng,fra");
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with different language set
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "preferredAudioLanguages",
-            "fra"
+            "spa,ger"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredAudioLanguagesChanged));
+    EXPECT_EQ(notificationClient->GetLastPreferredAudioLanguagesValue(), "spa,ger");
 }
 
 TEST_F(UserSettingsNotificationTest, OnPresentationLanguageChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1321,8 +1750,12 @@ TEST_F(UserSettingsNotificationTest, OnPresentationLanguageChanged_TriggerEvent)
             "en-US"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPresentationLanguageChanged));
+    EXPECT_EQ(notificationClient->GetLastPresentationLanguageValue(), "en-US");
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with different locale
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1332,16 +1765,17 @@ TEST_F(UserSettingsNotificationTest, OnPresentationLanguageChanged_TriggerEvent)
             "fr-FR"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPresentationLanguageChanged));
+    EXPECT_EQ(notificationClient->GetLastPresentationLanguageValue(), "fr-FR");
 }
 
 TEST_F(UserSettingsNotificationTest, OnCaptionsChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1351,8 +1785,12 @@ TEST_F(UserSettingsNotificationTest, OnCaptionsChanged_TriggerEvent)
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnCaptionsChanged));
+    EXPECT_TRUE(notificationClient->GetLastCaptionsValue());
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with false value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1362,76 +1800,87 @@ TEST_F(UserSettingsNotificationTest, OnCaptionsChanged_TriggerEvent)
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnCaptionsChanged));
+    EXPECT_FALSE(notificationClient->GetLastCaptionsValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnPreferredCaptionsLanguagesChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
             "preferredCaptionsLanguages",
-            "eng"
+            "eng,fra"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredCaptionsLanguagesChanged));
+    EXPECT_EQ(notificationClient->GetLastPreferredCaptionsLanguagesValue(), "eng,fra");
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with different caption languages
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "preferredCaptionsLanguages",
-            "fra"
+            "spa,ita"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredCaptionsLanguagesChanged));
+    EXPECT_EQ(notificationClient->GetLastPreferredCaptionsLanguagesValue(), "spa,ita");
 }
 
 TEST_F(UserSettingsNotificationTest, OnPreferredClosedCaptionServiceChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "preferredClosedCaptionsService",
+            "preferredClosedCaptionService",
             "CC1"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // Test with different service
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredClosedCaptionServiceChanged));
+    EXPECT_EQ(notificationClient->GetLastPreferredClosedCaptionServiceValue(), "CC1");
+    
+    notificationClient->ResetEventFlags();
+    
+    // Test with different CC service
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "preferredClosedCaptionsService",
-            "TEXT3"
+            "preferredClosedCaptionService",
+            "CC3"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredClosedCaptionServiceChanged));
+    EXPECT_EQ(notificationClient->GetLastPreferredClosedCaptionServiceValue(), "CC3");
 }
 
 TEST_F(UserSettingsNotificationTest, OnPrivacyModeChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1441,27 +1890,32 @@ TEST_F(UserSettingsNotificationTest, OnPrivacyModeChanged_TriggerEvent)
             "SHARE"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPrivacyModeChanged));
+    EXPECT_EQ(notificationClient->GetLastPrivacyModeValue(), "SHARE");
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with different privacy mode
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "privacyMode",
-            "DO_NOT_SHARE"
+            "LIMIT"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPrivacyModeChanged));
+    EXPECT_EQ(notificationClient->GetLastPrivacyModeValue(), "LIMIT");
 }
 
 TEST_F(UserSettingsNotificationTest, OnPinControlChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1471,8 +1925,12 @@ TEST_F(UserSettingsNotificationTest, OnPinControlChanged_TriggerEvent)
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPinControlChanged));
+    EXPECT_TRUE(notificationClient->GetLastPinControlValue());
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with false value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1482,35 +1940,54 @@ TEST_F(UserSettingsNotificationTest, OnPinControlChanged_TriggerEvent)
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPinControlChanged));
+    EXPECT_FALSE(notificationClient->GetLastPinControlValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnViewingRestrictionsChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
+    
+    string restrictions1 = "{\"scheme\":\"US-TV\",\"ratings\":[\"TV-14\",\"TV-MA\"]}";
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "viewingRestrictions",
+            restrictions1
+        );
+    });
+
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnViewingRestrictionsChanged));
+    EXPECT_EQ(notificationClient->GetLastViewingRestrictionsValue(), restrictions1);
+    
+    notificationClient->ResetEventFlags();
     
     // Test with different restrictions
+    string restrictions2 = "{\"scheme\":\"US-MOVIE\",\"ratings\":[\"PG-13\",\"R\"]}";
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "viewingRestrictions",
-            "{\"restrictions\": [{\"scheme\": \"US_TV\", \"restrict\": [\"TV-Y7/FV\"]}, {\"scheme\": \"MPAA\", \"restrict\": []}]}"
+            restrictions2
         );
     });
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnViewingRestrictionsChanged));
+    EXPECT_EQ(notificationClient->GetLastViewingRestrictionsValue(), restrictions2);
 }
 
 TEST_F(UserSettingsNotificationTest, OnViewingRestrictionsWindowChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1520,76 +1997,102 @@ TEST_F(UserSettingsNotificationTest, OnViewingRestrictionsWindowChanged_TriggerE
             "ALWAYS"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnViewingRestrictionsWindowChanged));
+    EXPECT_EQ(notificationClient->GetLastViewingRestrictionsWindowValue(), "ALWAYS");
+    
+    notificationClient->ResetEventFlags();
+    
+    // Test with different window setting
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "viewingRestrictionsWindow",
+            "NEVER"
+        );
+    });
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnViewingRestrictionsWindowChanged));
+    EXPECT_EQ(notificationClient->GetLastViewingRestrictionsWindowValue(), "NEVER");
 }
 
 TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "liveWaterShed",
+            "liveWatershed",
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnLiveWatershedChanged));
+    EXPECT_TRUE(notificationClient->GetLastLiveWatershedValue());
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with false value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "liveWaterShed",
+            "liveWatershed",
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnLiveWatershedChanged));
+    EXPECT_FALSE(notificationClient->GetLastLiveWatershedValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "playbackWaterShed",
+            "playbackWatershed",
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPlaybackWatershedChanged));
+    EXPECT_TRUE(notificationClient->GetLastPlaybackWatershedValue());
+    
+    notificationClient->ResetEventFlags();
     
     // Test with false value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "playbackWaterShed",
+            "playbackWatershed",
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPlaybackWatershedChanged));
+    EXPECT_FALSE(notificationClient->GetLastPlaybackWatershedValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnBlockNotRatedContentChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1599,8 +2102,12 @@ TEST_F(UserSettingsNotificationTest, OnBlockNotRatedContentChanged_TriggerEvent)
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnBlockNotRatedContentChanged));
+    EXPECT_TRUE(notificationClient->GetLastBlockNotRatedContentValue());
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with false value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1610,15 +2117,17 @@ TEST_F(UserSettingsNotificationTest, OnBlockNotRatedContentChanged_TriggerEvent)
             "false"
         );
     });
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnBlockNotRatedContentChanged));
+    EXPECT_FALSE(notificationClient->GetLastBlockNotRatedContentValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnPinOnPurchaseChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1628,8 +2137,12 @@ TEST_F(UserSettingsNotificationTest, OnPinOnPurchaseChanged_TriggerEvent)
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPinOnPurchaseChanged));
+    EXPECT_TRUE(notificationClient->GetLastPinOnPurchaseValue());
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with false value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1639,16 +2152,17 @@ TEST_F(UserSettingsNotificationTest, OnPinOnPurchaseChanged_TriggerEvent)
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPinOnPurchaseChanged));
+    EXPECT_FALSE(notificationClient->GetLastPinOnPurchaseValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnHighContrastChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1658,7 +2172,11 @@ TEST_F(UserSettingsNotificationTest, OnHighContrastChanged_TriggerEvent)
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnHighContrastChanged));
+    EXPECT_TRUE(notificationClient->GetLastHighContrastValue());
+    
+    notificationClient->ResetEventFlags();
     
     // Test with false value
     EXPECT_NO_THROW({
@@ -1669,16 +2187,17 @@ TEST_F(UserSettingsNotificationTest, OnHighContrastChanged_TriggerEvent)
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnHighContrastChanged));
+    EXPECT_FALSE(notificationClient->GetLastHighContrastValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1688,8 +2207,12 @@ TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceChanged_TriggerEvent)
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnVoiceGuidanceChanged));
+    EXPECT_TRUE(notificationClient->GetLastVoiceGuidanceValue());
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with false value
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1699,16 +2222,17 @@ TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceChanged_TriggerEvent)
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnVoiceGuidanceChanged));
+    EXPECT_FALSE(notificationClient->GetLastVoiceGuidanceValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceRateChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1718,27 +2242,32 @@ TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceRateChanged_TriggerEvent)
             "1.0"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnVoiceGuidanceRateChanged));
+    EXPECT_DOUBLE_EQ(notificationClient->GetLastVoiceGuidanceRateValue(), 1.0);
+    
+    notificationClient->ResetEventFlags();
+    
     // Test with different rate
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "voiceGuidanceRate",
-            "0.1"
+            "1.5"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnVoiceGuidanceRateChanged));
+    EXPECT_DOUBLE_EQ(notificationClient->GetLastVoiceGuidanceRateValue(), 1.5);
 }
 
 TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceHintsChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1748,7 +2277,11 @@ TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceHintsChanged_TriggerEvent)
             "true"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnVoiceGuidanceHintsChanged));
+    EXPECT_TRUE(notificationClient->GetLastVoiceGuidanceHintsValue());
+    
+    notificationClient->ResetEventFlags();
     
     // Test with false value
     EXPECT_NO_THROW({
@@ -1759,16 +2292,17 @@ TEST_F(UserSettingsNotificationTest, OnVoiceGuidanceHintsChanged_TriggerEvent)
             "false"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnVoiceGuidanceHintsChanged));
+    EXPECT_FALSE(notificationClient->GetLastVoiceGuidanceHintsValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnContentPinChanged_TriggerEvent)
 {
-    if (!userSettingsImpl.IsValid()) {
-        userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-    }
-    
     ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(notificationClient, nullptr);
+    
+    notificationClient->ResetEventFlags();
     
     EXPECT_NO_THROW({
         userSettingsImpl->ValueChanged(
@@ -1779,7 +2313,10 @@ TEST_F(UserSettingsNotificationTest, OnContentPinChanged_TriggerEvent)
         );
     });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnContentPinChanged));
+    EXPECT_EQ(notificationClient->GetLastContentPinValue(), "1234");
+    
+    notificationClient->ResetEventFlags();
     
     // Test with different PIN
     EXPECT_NO_THROW({
@@ -1790,5 +2327,7 @@ TEST_F(UserSettingsNotificationTest, OnContentPinChanged_TriggerEvent)
             "5678"
         );
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnContentPinChanged));
+    EXPECT_EQ(notificationClient->GetLastContentPinValue(), "5678");
 }
