@@ -87,28 +87,6 @@ protected:
     }
 };
 
-typedef enum : uint32_t {
-    UserSettings_OnAudioDescriptionChanged = 0x00000001,
-    UserSettings_OnPreferredAudioLanguagesChanged = 0x00000002,
-    UserSettings_OnPresentationLanguageChanged = 0x00000004,
-    UserSettings_OnCaptionsChanged = 0x00000008,
-    UserSettings_OnPreferredCaptionsLanguagesChanged = 0x00000010,
-    UserSettings_OnPreferredClosedCaptionServiceChanged = 0x00000020,
-    UserSettings_OnPrivacyModeChanged = 0x00000040,
-    UserSettings_OnPinControlChanged = 0x00000080,
-    UserSettings_OnViewingRestrictionsChanged = 0x00000100,
-    UserSettings_OnViewingRestrictionsWindowChanged = 0x00000200,
-    UserSettings_OnLiveWatershedChanged = 0x00000400,
-    UserSettings_OnPlaybackWatershedChanged = 0x00000800,
-    UserSettings_OnBlockNotRatedContentChanged = 0x00001000,
-    UserSettings_OnPinOnPurchaseChanged = 0x00002000,
-    UserSettings_OnHighContrastChanged = 0x00004000,
-    UserSettings_OnVoiceGuidanceChanged = 0x00008000,
-    UserSettings_OnVoiceGuidanceRateChanged = 0x00010000,
-    UserSettings_OnVoiceGuidanceHintsChanged = 0x00020000,
-    UserSettings_OnContentPinChanged = 0x00040000,
-} UserSettingsEventType_t;
-
 TEST_F(UserSettingsTest, SetAudioDescription_Exists)
 {
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setAudioDescription")));
@@ -549,86 +527,86 @@ TEST_F(UserSettingsTest, GetViewingRestrictionsWindow_Failure)
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getViewingRestrictionsWindow"), _T("{}"), response));
 }
 
-TEST_F(UserSettingsTest, SetLiveWatershed_Exists)
+TEST_F(UserSettingsTest, SetLiveWaterShed_Exists)
 {
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setLiveWatershed")));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setLiveWaterShed")));
 }
 
-TEST_F(UserSettingsTest, SetLiveWatershed_Success)
+TEST_F(UserSettingsTest, SetLiveWaterShed_Success)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setLiveWatershed"), _T("{\"liveWatershed\": true}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setLiveWaterShed"), _T("{\"liveWaterShed\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, SetLiveWatershed_Failure)
+TEST_F(UserSettingsTest, SetLiveWaterShed_Failure)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setLiveWatershed"), _T("{\"liveWatershed\": true}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setLiveWaterShed"), _T("{\"liveWaterShed\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetLiveWatershed_Exists)
+TEST_F(UserSettingsTest, GetLiveWaterShed_Exists)
 {
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getLiveWatershed")));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getLiveWaterShed")));
 }
 
-TEST_F(UserSettingsTest, GetLiveWatershed_Success)
+TEST_F(UserSettingsTest, GetLiveWaterShed_Success)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::DoAll(
             ::testing::SetArgReferee<3>("true"),
             ::testing::Return(Core::ERROR_NONE)));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getLiveWatershed"), _T("{}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getLiveWaterShed"), _T("{}"), response));
     EXPECT_TRUE(response.find("true") != std::string::npos);
 }
 
-TEST_F(UserSettingsTest, GetLiveWatershed_Failure)
+TEST_F(UserSettingsTest, GetLiveWaterShed_Failure)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getLiveWatershed"), _T("{}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getLiveWaterShed"), _T("{}"), response));
 }
 
-TEST_F(UserSettingsTest, SetPlaybackWatershed_Exists)
+TEST_F(UserSettingsTest, SetPlaybackWaterShed_Exists)
 {
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPlaybackWatershed")));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPlaybackWaterShed")));
 }
 
-TEST_F(UserSettingsTest, SetPlaybackWatershed_Success)
+TEST_F(UserSettingsTest, SetPlaybackWaterShed_Success)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPlaybackWatershed"), _T("{\"playbackWatershed\": true}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPlaybackWaterShed"), _T("{\"playbackWaterShed\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, SetPlaybackWatershed_Failure)
+TEST_F(UserSettingsTest, SetPlaybackWaterShed_Failure)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPlaybackWatershed"), _T("{\"playbackWatershed\": true}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPlaybackWaterShed"), _T("{\"playbackWaterShed\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetPlaybackWatershed_Exists)
+TEST_F(UserSettingsTest, GetPlaybackWaterShed_Exists)
 {
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPlaybackWatershed")));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPlaybackWaterShed")));
 }
 
-TEST_F(UserSettingsTest, GetPlaybackWatershed_Success)
+TEST_F(UserSettingsTest, GetPlaybackWaterShed_Success)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::DoAll(
             ::testing::SetArgReferee<3>("true"),
             ::testing::Return(Core::ERROR_NONE)));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPlaybackWatershed"), _T("{}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPlaybackWaterShed"), _T("{}"), response));
     EXPECT_TRUE(response.find("true") != std::string::npos);
 }
 
-TEST_F(UserSettingsTest, GetPlaybackWatershed_Failure)
+TEST_F(UserSettingsTest, GetPlaybackWaterShed_Failure)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPlaybackWatershed"), _T("{}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPlaybackWaterShed"), _T("{}"), response));
 }
 
 TEST_F(UserSettingsTest, SetBlockNotRatedContent_Exists)
@@ -1055,23 +1033,23 @@ TEST_F(UserSettingsTest, GetPinControl_False)
     EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
-TEST_F(UserSettingsTest, GetLiveWatershed_False)
+TEST_F(UserSettingsTest, GetLiveWaterShed_False)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::DoAll(
             ::testing::SetArgReferee<3>("false"),
             ::testing::Return(Core::ERROR_NONE)));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getLiveWatershed"), _T("{}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getLiveWaterShed"), _T("{}"), response));
     EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
-TEST_F(UserSettingsTest, GetPlaybackWatershed_False)
+TEST_F(UserSettingsTest, GetPlaybackWaterShed_False)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::DoAll(
             ::testing::SetArgReferee<3>("false"),
             ::testing::Return(Core::ERROR_NONE)));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPlaybackWatershed"), _T("{}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPlaybackWaterShed"), _T("{}"), response));
     EXPECT_TRUE(response.find("false") != std::string::npos);
 }
 
@@ -1125,6 +1103,9 @@ TEST_F(UserSettingsTest, Information_ReturnsEmptyString)
     EXPECT_EQ(info.length(), 0);
     EXPECT_EQ(info, "");
 }
+
+// ...existing code...
+
 typedef enum : uint32_t {
     UserSettings_OnAudioDescriptionChanged = 0x00000001,
     UserSettings_OnPreferredAudioLanguagesChanged = 0x00000002,
@@ -1136,8 +1117,8 @@ typedef enum : uint32_t {
     UserSettings_OnPinControlChanged = 0x00000080,
     UserSettings_OnViewingRestrictionsChanged = 0x00000100,
     UserSettings_OnViewingRestrictionsWindowChanged = 0x00000200,
-    UserSettings_OnLiveWatershedChanged = 0x00000400,
-    UserSettings_OnPlaybackWatershedChanged = 0x00000800,
+    UserSettings_OnLiveWaterShedChanged = 0x00000400,
+    UserSettings_OnPlaybackWaterShedChanged = 0x00000800,  // Fixed: removed space
     UserSettings_OnBlockNotRatedContentChanged = 0x00001000,
     UserSettings_OnPinOnPurchaseChanged = 0x00002000,
     UserSettings_OnHighContrastChanged = 0x00004000,
@@ -1169,8 +1150,8 @@ private:
     bool m_OnPinControlChanged_signalled = false;
     bool m_OnViewingRestrictionsChanged_signalled = false;
     bool m_OnViewingRestrictionsWindowChanged_signalled = false;
-    bool m_OnLiveWatershedChanged_signalled = false;
-    bool m_OnPlaybackWatershedChanged_signalled = false;
+    bool m_OnLiveWaterShedChanged_signalled = false;
+    bool m_OnPlaybackWaterShedChanged_signalled = false;
     bool m_OnBlockNotRatedContentChanged_signalled = false;
     bool m_OnPinOnPurchaseChanged_signalled = false;
     bool m_OnHighContrastChanged_signalled = false;
@@ -1190,8 +1171,8 @@ private:
     bool m_lastPinControlValue = false;
     string m_lastViewingRestrictionsValue = "";
     string m_lastViewingRestrictionsWindowValue = "";
-    bool m_lastLiveWatershedValue = false;
-    bool m_lastPlaybackWatershedValue = false;
+    bool m_lastLiveWaterShedValue = false;
+    bool m_lastPlaybackWaterShedValue = false;
     bool m_lastBlockNotRatedContentValue = false;
     bool m_lastPinOnPurchaseValue = false;
     bool m_lastHighContrastValue = false;
@@ -1328,27 +1309,27 @@ public:
         m_condition_variable.notify_one();
     }
 
-    void OnLiveWatershedChanged(const bool liveWatershed) override
+    void OnLiveWaterShedChanged(const bool liveWaterShed) override
     {
-        TEST_LOG("OnLiveWatershedChanged event triggered ***\n");
+        TEST_LOG("OnLiveWaterShedChanged event triggered ***\n");
         std::unique_lock<std::mutex> lock(m_mutex);
 
-        TEST_LOG("LiveWatershed: %d\n", liveWatershed);
-        m_lastLiveWatershedValue = liveWatershed;
-        m_event_signalled |= UserSettings_OnLiveWatershedChanged;
-        m_OnLiveWatershedChanged_signalled = true;
+        TEST_LOG("LiveWaterShed: %d\n", liveWaterShed);
+        m_lastLiveWaterShedValue = liveWaterShed;
+        m_event_signalled |= UserSettings_OnLiveWaterShedChanged;
+        m_OnLiveWaterShedChanged_signalled = true;
         m_condition_variable.notify_one();
     }
 
-    void OnPlaybackWatershedChanged(const bool playbackWatershed) override
+    void OnPlaybackWaterShedChanged(const bool playbackWaterShed) override
     {
-        TEST_LOG("OnPlaybackWatershedChanged event triggered ***\n");
+        TEST_LOG("OnPlaybackWaterShedChanged event triggered ***\n");
         std::unique_lock<std::mutex> lock(m_mutex);
 
-        TEST_LOG("PlaybackWatershed: %d\n", playbackWatershed);
-        m_lastPlaybackWatershedValue = playbackWatershed;
-        m_event_signalled |= UserSettings_OnPlaybackWatershedChanged;
-        m_OnPlaybackWatershedChanged_signalled = true;
+        TEST_LOG("PlaybackWaterShed: %d\n", playbackWaterShed);
+        m_lastPlaybackWaterShedValue = playbackWaterShed;
+        m_event_signalled |= UserSettings_OnPlaybackWaterShedChanged;
+        m_OnPlaybackWaterShedChanged_signalled = true;
         m_condition_variable.notify_one();
     }
 
@@ -1436,10 +1417,9 @@ public:
         m_condition_variable.notify_one();
     }
 
-    // Required interface methods
+    // Required interface methods - REMOVED duplicate QueryInterface as it's declared by BEGIN_INTERFACE_MAP
     void AddRef() const override {}
     uint32_t Release() const override { return 0; }
-    void* QueryInterface(const uint32_t interfaceNumber) override { return nullptr; }
 
     // Utility method to wait for specific events
     bool WaitForRequestStatus(uint32_t timeout_ms, UserSettingsEventType_t expected_status)
@@ -1490,11 +1470,11 @@ public:
             case UserSettings_OnViewingRestrictionsWindowChanged:
                 signalled = m_OnViewingRestrictionsWindowChanged_signalled;
                 break;
-            case UserSettings_OnLiveWatershedChanged:
-                signalled = m_OnLiveWatershedChanged_signalled;
+            case UserSettings_OnLiveWaterShedChanged:
+                signalled = m_OnLiveWaterShedChanged_signalled;
                 break;
-            case UserSettings_OnPlaybackWatershedChanged:
-                signalled = m_OnPlaybackWatershedChanged_signalled;
+            case UserSettings_OnPlaybackWaterShedChanged:
+                signalled = m_OnPlaybackWaterShedChanged_signalled;
                 break;
             case UserSettings_OnBlockNotRatedContentChanged:
                 signalled = m_OnBlockNotRatedContentChanged_signalled;
@@ -1540,8 +1520,8 @@ public:
         m_OnPinControlChanged_signalled = false;
         m_OnViewingRestrictionsChanged_signalled = false;
         m_OnViewingRestrictionsWindowChanged_signalled = false;
-        m_OnLiveWatershedChanged_signalled = false;
-        m_OnPlaybackWatershedChanged_signalled = false;
+        m_OnLiveWaterShedChanged_signalled = false;
+        m_OnPlaybackWaterShedChanged_signalled = false;
         m_OnBlockNotRatedContentChanged_signalled = false;
         m_OnPinOnPurchaseChanged_signalled = false;
         m_OnHighContrastChanged_signalled = false;
@@ -1562,8 +1542,8 @@ public:
     bool GetLastPinControlValue() const { return m_lastPinControlValue; }
     string GetLastViewingRestrictionsValue() const { return m_lastViewingRestrictionsValue; }
     string GetLastViewingRestrictionsWindowValue() const { return m_lastViewingRestrictionsWindowValue; }
-    bool GetLastLiveWatershedValue() const { return m_lastLiveWatershedValue; }
-    bool GetLastPlaybackWatershedValue() const { return m_lastPlaybackWatershedValue; }
+    bool GetLastLiveWaterShedValue() const { return m_lastLiveWaterShedValue; }
+    bool GetLastPlaybackWaterShedValue() const { return m_lastPlaybackWaterShedValue; }
     bool GetLastBlockNotRatedContentValue() const { return m_lastBlockNotRatedContentValue; }
     bool GetLastPinOnPurchaseValue() const { return m_lastPinOnPurchaseValue; }
     bool GetLastHighContrastValue() const { return m_lastHighContrastValue; }
@@ -2017,7 +1997,7 @@ TEST_F(UserSettingsNotificationTest, OnViewingRestrictionsWindowChanged_TriggerE
     EXPECT_EQ(notificationClient->GetLastViewingRestrictionsWindowValue(), "NEVER");
 }
 
-TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
+TEST_F(UserSettingsNotificationTest, OnLiveWaterShedChanged_TriggerEvent)
 {
     ASSERT_TRUE(userSettingsImpl.IsValid());
     ASSERT_NE(notificationClient, nullptr);
@@ -2048,8 +2028,8 @@ TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
         );
     });
     
-    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnLiveWatershedChanged));
-    EXPECT_FALSE(notificationClient->GetLastLiveWatershedValue());
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnLiveWaterShedChanged));
+    EXPECT_FALSE(notificationClient->GetLastLiveWaterShedValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnPlaybackWaterShedChanged_TriggerEvent)
@@ -2083,8 +2063,8 @@ TEST_F(UserSettingsNotificationTest, OnPlaybackWaterShedChanged_TriggerEvent)
         );
     });
     
-    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPlaybackWatershedChanged));
-    EXPECT_FALSE(notificationClient->GetLastPlaybackWatershedValue());
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPlaybackWaterShedChanged));
+    EXPECT_FALSE(notificationClient->GetLastPlaybackWaterShedValue());
 }
 
 TEST_F(UserSettingsNotificationTest, OnBlockNotRatedContentChanged_TriggerEvent)
