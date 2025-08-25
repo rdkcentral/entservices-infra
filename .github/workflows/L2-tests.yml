@@ -1,4 +1,4 @@
-name: L2-tests
+name: L2-tests-IN
 
 on:
   workflow_call:
@@ -19,7 +19,7 @@ env:
   AUTOMATICS_PASSCODE: ${{ secrets. AUTOMATICS_PASSCODE}}
 
 jobs:
-  L2-tests:
+  L2-tests-IN:
     name: Build and run L2 tests
     runs-on: ubuntu-22.04
     strategy:
@@ -100,7 +100,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: topic/RDKEMW-5410
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
@@ -114,7 +114,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: topic/RDKEMW-5410
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout googletest
@@ -708,6 +708,22 @@ jobs:
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           RdkServicesL2Test &&
           cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithoutValgrind.json &&
+          rm -rf $(pwd)/rdkL2TestResults.json
+
+      - name: Run unit tests with valgrind
+        if: ${{ !env.ACT }}
+        run: >
+          PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
+          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
+          valgrind
+          --tool=memcheck
+          --log-file=valgrind_log
+          --leak-check=yes
+          --show-reachable=yes
+          --track-fds=yes
+          --fair-sched=try
+          RdkServicesL2Test &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Generate coverage
