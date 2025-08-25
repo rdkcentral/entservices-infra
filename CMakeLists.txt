@@ -140,6 +140,10 @@ if(PLUGIN_NATIVEJS)
 	add_subdirectory(NativeJS)
 endif()
 
+if(PLUGIN_TELEMETRYMETRICS)
+    add_subdirectory(TelemetryMetrics)
+endif()
+
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
