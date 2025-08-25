@@ -1154,6 +1154,7 @@ public:
     // Required interface methods
     void AddRef() const override {}
     uint32_t Release() const override { return 0; }
+    void* QueryInterface(const uint32_t interfaceNumber) override { return nullptr; }
 };
 
 // Test fixture that can control the worker pool
@@ -1166,7 +1167,7 @@ protected:
     Core::ProxyType<WorkerPoolImplementation> workerPool;
     TestNotificationClient* notificationClient;
 
-    UserSettingsNotificationWithClientTest()
+    UserSettingsNotificationTest()
         : userSettingsImpl(Core::ProxyType<Plugin::UserSettingsImplementation>::Create())
         , p_wrapsImplMock(nullptr)
         , workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
@@ -1194,7 +1195,7 @@ protected:
         }
     }
 
-    virtual ~UserSettingsNotificationWithClientTest() override
+    virtual ~UserSettingsNotificationTest() override
     {
         // Unregister and clean up notification client
         if (userSettingsImpl.IsValid() && notificationClient != nullptr) {
@@ -1791,74 +1792,3 @@ TEST_F(UserSettingsNotificationTest, OnContentPinChanged_TriggerEvent)
     });
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
-
-// L1 test for edge cases in ValueChanged method
-// TEST_F(UserSettingsNotificationTest, ValueChanged_EdgeCases)
-// {
-//     if (!userSettingsImpl.IsValid()) {
-//         userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-//     }
-    
-//     ASSERT_TRUE(userSettingsImpl.IsValid());
-    
-//     // Test with empty value
-//     EXPECT_NO_THROW({
-//         userSettingsImpl->ValueChanged(
-//             Exchange::IStore2::ScopeType::DEVICE,
-//             "UserSettings",
-//             "audioDescription",
-//             ""
-//         );
-//     });
-    
-//     // Test with null-like value
-//     EXPECT_NO_THROW({
-//         userSettingsImpl->ValueChanged(
-//             Exchange::IStore2::ScopeType::DEVICE,
-//             "UserSettings",
-//             "audioDescription",
-//             "null"
-//         );
-//     });
-    
-//     // Test with very long value
-//     std::string longValue(1000, 'a');
-//     EXPECT_NO_THROW({
-//         userSettingsImpl->ValueChanged(
-//             Exchange::IStore2::ScopeType::DEVICE,
-//             "UserSettings",
-//             "audioDescription",
-//             longValue
-//         );
-//     });
-// }
-
-// // L1 test for different scope types
-// TEST_F(UserSettingsNotificationTest, ValueChanged_DifferentScopes)
-// {
-//     if (!userSettingsImpl.IsValid()) {
-//         userSettingsImpl = Core::ProxyType<Plugin::UserSettingsImplementation>::Create();
-//     }
-    
-//     ASSERT_TRUE(userSettingsImpl.IsValid());
-    
-//     // Test with ACCOUNT scope - should not trigger event
-//     EXPECT_NO_THROW({
-//         userSettingsImpl->ValueChanged(
-//             Exchange::IStore2::ScopeType::ACCOUNT,
-//             "UserSettings",
-//             "audioDescription",
-//             "true"
-//         );
-//     });
-    
-//     // Test with APPLICATION scope - should not trigger event
-//     EXPECT_NO_THROW({
-//         userSettingsImpl->ValueChanged(
-//             Exchange::IStore2::ScopeType::APPLICATION,
-//             "UserSettings",
-//             "audioDescription",
-//             "true"
-//         );
-//     });
-// }
