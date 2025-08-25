@@ -28,7 +28,20 @@ namespace WPEFramework
         {
 	}
 
-        ApplicationContext::ApplicationContext (std::string appId): mPendingStateTransition(false), mPendingStates(), mPendingEventName(""), mAppInstanceId(""), mAppId(std::move(appId)), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
+        ApplicationContext::ApplicationContext (std::string appId)
+        : mPendingStateTransition(false),
+	  mPendingStates(),
+	  mPendingEventName(""),
+	  mAppInstanceId(""),
+          mAppId(std::move(appId)),
+          mLastLifecycleStateChangeTime(),
+          mActiveSessionId(""),
+          mTargetLifecycleState(),
+          mMostRecentIntent(""),
+          mState(nullptr),
+          mStateChangeId(0),
+          mRequestTime(0),
+          mRequestType(REQUEST_TYPE_NONE)
         {
             mState = (void*) new UnloadedState(this);
             sem_init(&mReachedLoadingStateSemaphore, 0, 0);
@@ -99,6 +112,15 @@ namespace WPEFramework
             mKillParams.mForce = force;
         }
 
+        void ApplicationContext::setRequestTime(uint64_t requestTime)
+        {
+            mRequestTime = requestTime;
+        }
+        void ApplicationContext::setRequestType(RequestType requestType)
+        {
+            mRequestType = requestType;
+        }
+
 	std::string ApplicationContext::getAppId()
 	{
             return mAppId;
@@ -155,5 +177,14 @@ namespace WPEFramework
             return mKillParams;
 	}
 
+        uint64_t ApplicationContext::getRequestTime()
+        {
+            return mRequestTime;
+        }
+
+        RequestType ApplicationContext::getRequestType()
+        {
+            return mRequestType;
+        }
     } /* namespace Plugin */
 } /* namespace WPEFramework */

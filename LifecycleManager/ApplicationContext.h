@@ -46,6 +46,17 @@ namespace WPEFramework
 	    bool mForce;
         };
 
+        enum RequestType {
+            REQUEST_TYPE_NONE,
+            REQUEST_TYPE_LAUNCH,
+            REQUEST_TYPE_PAUSE,
+            REQUEST_TYPE_SUSPEND,
+            REQUEST_TYPE_RESUME,
+            REQUEST_TYPE_HIBERNATE,
+            REQUEST_TYPE_WAKE,
+            REQUEST_TYPE_TERMINATE
+        };
+
         class ApplicationContext
 	{
             public:
@@ -61,6 +72,8 @@ namespace WPEFramework
                 void setStateChangeId(uint32_t id);
                 void setApplicationLaunchParams(const string& appId, const string& launchIntent, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject);
                 void setApplicationKillParams(bool force);
+                void setRequestTime(uint64_t requestTime);
+                void setRequestType(RequestType requestType);
 
                 void* getState();
                 std::string getAppId();
@@ -73,7 +86,15 @@ namespace WPEFramework
                 uint32_t getStateChangeId();
                 ApplicationLaunchParams& getApplicationLaunchParams();
                 ApplicationKillParams& getApplicationKillParams();
+                uint64_t getRequestTime();
+                RequestType getRequestType();
 
+                sem_t mReachedLoadingStateSemaphore;
+                sem_t mAppRunningSemaphore;
+                sem_t mAppReadySemaphore;
+                sem_t mFirstFrameSemaphore;
+                sem_t mFirstFrameAfterResumeSemaphore;
+                sem_t mAppTerminatingSemaphore;
                 sem_t mReachedLoadingStateSemaphore;
                 sem_t mAppReadySemaphore;
                 sem_t mFirstFrameAfterResumeSemaphore;
@@ -93,6 +114,8 @@ namespace WPEFramework
                 uint32_t mStateChangeId;
                 ApplicationLaunchParams mLaunchParams;
                 ApplicationKillParams mKillParams;
+                uint64_t mRequestTime;
+                RequestType mRequestType;
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */

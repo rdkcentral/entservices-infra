@@ -23,6 +23,7 @@
 #include <interfaces/json/JsonData_LifecycleManagerState.h>
 #include <interfaces/json/JLifecycleManagerState.h>
 #include <semaphore.h>
+#include "LifecycleManagerTelemetryReporting.h"
 
 namespace WPEFramework
 {
@@ -128,6 +129,7 @@ namespace WPEFramework
              string appInstanceId(obj["appInstanceId"].String());
              uint32_t oldLifecycleState(obj["oldLifecycleState"].Number());
              string navigationIntent(obj["navigationIntent"].String());
+             ApplicationContext* context = getContext("", appId);
 
              mAdminLock.Lock();
         
@@ -137,6 +139,7 @@ namespace WPEFramework
              switch(event)
              {
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
+                     LifecycleManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(context, obj);
                      handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
                      {
@@ -240,6 +243,10 @@ namespace WPEFramework
 		mLoadedApplications.push_back(context);
                 firstLaunch = true;
 	    }
+
+            context->setRequestTime(LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp());
+            context->setRequestType(REQUEST_TYPE_LAUNCH);
+
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
             success = RequestHandler::getInstance()->launch(context, launchIntent, targetLifecycleState, errorReason);
@@ -269,6 +276,27 @@ namespace WPEFramework
                 return status;
 	    }
 
+            switch(targetLifecycleState)
+            {
+                case Exchange::ILifecycleManager::LifecycleState::PAUSED:        //before SUSPEND or HIBERNATE app will be PAUSED
+                    context->setRequestTime(LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp());
+                    context->setRequestType(REQUEST_TYPE_PAUSE);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::SUSPENDED:
+                    context->setRequestType(REQUEST_TYPE_SUSPEND);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::HIBERNATED:
+                    context->setRequestType(REQUEST_TYPE_HIBERNATE);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::ACTIVE:
+                    context->setRequestTime(LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp());
+                    context->setRequestType(REQUEST_TYPE_RESUME);
+                break;
+                default:
+                    LOGERR("targetLifecycleState is invalid");
+                break;
+            }
+
             string errorReason("");
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
@@ -295,6 +323,13 @@ namespace WPEFramework
                 success = false;
                 return status;
 	    }
+
+            if(REQUEST_TYPE_PAUSE != context->getRequestType())   //If request through AppManager closeApp, requestTime is already set
+            {
+                context->setRequestTime(LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp());
+            }
+            context->setRequestType(REQUEST_TYPE_TERMINATE);
+
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(false);
 
@@ -316,6 +351,10 @@ namespace WPEFramework
                 success = false;
                 return status;
 	    }
+
+            context->setRequestTime(LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp());
+            context->setRequestType(REQUEST_TYPE_TERMINATE);
+
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(true);
             success = RequestHandler::getInstance()->terminate(context, true, errorReason);

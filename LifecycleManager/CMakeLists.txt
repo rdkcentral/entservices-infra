@@ -46,6 +46,8 @@ add_library(${MODULE_NAME} SHARED
 	StateHandler.cpp
         StateTransitionHandler.cpp
         WebSocket.cpp
+        LifecycleManagerTelemetryReporting
+        ../helpers/TelemetryMetricsReporting.cpp
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
