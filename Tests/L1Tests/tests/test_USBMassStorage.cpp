@@ -1104,3 +1104,85 @@ TEST_F(USBMassStorageTest, OnDevicePluggedOut_DeviceNotInMountInfo_RemovesFromDe
 //     bool result = USBMassStorageImpl->DeviceMount(deviceInfo);
 //     EXPECT_FALSE(result); // Should fail via else branch
 // }
+
+TEST_F(USBMassStorageTest, Configure_CallsMountDevicesOnBootUp_WithDevices)
+{
+    // Create a new implementation to test (don't use the one in fixture)
+    Core::ProxyType<Plugin::USBMassStorageImplementation> testImpl = Core::ProxyType<Plugin::USBMassStorageImplementation>::Create();
+    
+    // Create mock service
+    NiceMock<ServiceMock> testService;
+    
+    // Create USB device mock that will be returned by QueryInterfaceByCallsign
+    USBDeviceMock* mockUsbDevice = new NiceMock<USBDeviceMock>();
+    
+    // Create test devices for the mock iterator
+    std::list<Exchange::IUSBDevice::USBDevice> usbDeviceList;
+    
+    // Add a mass storage device with valid path
+    Exchange::IUSBDevice::USBDevice massStorageDevice;
+    massStorageDevice.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
+    massStorageDevice.deviceSubclass = 0x12;
+    massStorageDevice.deviceName = "test_storage_device";
+    massStorageDevice.devicePath = "/dev/sda";
+    usbDeviceList.push_back(massStorageDevice);
+    
+    // Add a mass storage device with empty path (to test the empty path branch)
+    Exchange::IUSBDevice::USBDevice emptyPathDevice;
+    emptyPathDevice.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
+    emptyPathDevice.deviceSubclass = 0x12;
+    emptyPathDevice.deviceName = "empty_path_device";
+    emptyPathDevice.devicePath = ""; // Empty path to test that branch
+    usbDeviceList.push_back(emptyPathDevice);
+    
+    // Add a non-mass storage device (to test the other branch)
+    Exchange::IUSBDevice::USBDevice nonStorageDevice;
+    nonStorageDevice.deviceClass = LIBUSB_CLASS_HID; // Not mass storage
+    nonStorageDevice.deviceSubclass = 0x01;
+    nonStorageDevice.deviceName = "non_storage_device";
+    nonStorageDevice.devicePath = "/dev/input0";
+    usbDeviceList.push_back(nonStorageDevice);
+    
+    // Create iterator with our test devices
+    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
+    
+    // Mock QueryInterfaceByCallsign to return our USB device mock
+    EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(mockUsbDevice));
+    
+    // Mock GetDeviceList to return our iterator with test devices
+    EXPECT_CALL(*mockUsbDevice, GetDeviceList(::testing::_))
+        .WillOnce([&](Exchange::IUSBDevice::IUSBDeviceIterator*& devices) {
+            devices = mockIterator;
+            return Core::ERROR_NONE;
+        });
+    
+    // Mock Register to return success
+    EXPECT_CALL(*mockUsbDevice, Register(::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
+    // Mock device mounting operations
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly([](const std::string& path, struct stat* info) {
+            if (path.find("/tmp/media") != std::string::npos) {
+                return -1; // Directory doesn't exist, needs creation
+            }
+            if (info) info->st_mode = S_IFDIR;
+            return 0;
+        });
+    
+    EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    
+    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0)); // All mounts succeed
+    
+    // Call Configure which will internally call MountDevicesOnBootUp
+    uint32_t result = testImpl->Configure(&testService);
+    
+    // Verify Configure succeeded
+    EXPECT_EQ(result, Core::ERROR_NONE);
+    
+    // Unfortunately we can't directly verify usbStorageDeviceInfo as it's private,
+    // but the successful completion of the test indicates the code path was executed
+}
