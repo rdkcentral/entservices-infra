@@ -1712,12 +1712,12 @@ TEST_F(UserSettingsNotificationTest, OnPreferredAudioLanguagesChanged_TriggerEve
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
             "preferredAudioLanguages",
-            "eng,fra"
+            "eng"
         );
     });
 
     EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredAudioLanguagesChanged));
-    EXPECT_EQ(notificationClient->GetLastPreferredAudioLanguagesValue(), "eng,fra");
+    EXPECT_EQ(notificationClient->GetLastPreferredAudioLanguagesValue(), "eng");
     
     notificationClient->ResetEventFlags();
     
@@ -1727,12 +1727,12 @@ TEST_F(UserSettingsNotificationTest, OnPreferredAudioLanguagesChanged_TriggerEve
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "preferredAudioLanguages",
-            "spa,ger"
+            "fra"
         );
     });
     
     EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredAudioLanguagesChanged));
-    EXPECT_EQ(notificationClient->GetLastPreferredAudioLanguagesValue(), "spa,ger");
+    EXPECT_EQ(notificationClient->GetLastPreferredAudioLanguagesValue(), "fra");
 }
 
 TEST_F(UserSettingsNotificationTest, OnPresentationLanguageChanged_TriggerEvent)
@@ -1817,12 +1817,12 @@ TEST_F(UserSettingsNotificationTest, OnPreferredCaptionsLanguagesChanged_Trigger
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
             "preferredCaptionsLanguages",
-            "eng,fra"
+            "eng"
         );
     });
 
     EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredCaptionsLanguagesChanged));
-    EXPECT_EQ(notificationClient->GetLastPreferredCaptionsLanguagesValue(), "eng,fra");
+    EXPECT_EQ(notificationClient->GetLastPreferredCaptionsLanguagesValue(), "eng");
     
     notificationClient->ResetEventFlags();
     
@@ -1832,12 +1832,12 @@ TEST_F(UserSettingsNotificationTest, OnPreferredCaptionsLanguagesChanged_Trigger
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "preferredCaptionsLanguages",
-            "spa,ita"
+            "fra"
         );
     });
     
     EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredCaptionsLanguagesChanged));
-    EXPECT_EQ(notificationClient->GetLastPreferredCaptionsLanguagesValue(), "spa,ita");
+    EXPECT_EQ(notificationClient->GetLastPreferredCaptionsLanguagesValue(), "fra");
 }
 
 TEST_F(UserSettingsNotificationTest, OnPreferredClosedCaptionServiceChanged_TriggerEvent)
@@ -1867,12 +1867,12 @@ TEST_F(UserSettingsNotificationTest, OnPreferredClosedCaptionServiceChanged_Trig
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "preferredClosedCaptionService",
-            "CC3"
+            "TEXT3"
         );
     });
     
     EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPreferredClosedCaptionServiceChanged));
-    EXPECT_EQ(notificationClient->GetLastPreferredClosedCaptionServiceValue(), "CC3");
+    EXPECT_EQ(notificationClient->GetLastPreferredClosedCaptionServiceValue(), "TEXT3");
 }
 
 TEST_F(UserSettingsNotificationTest, OnPrivacyModeChanged_TriggerEvent)
@@ -1902,12 +1902,12 @@ TEST_F(UserSettingsNotificationTest, OnPrivacyModeChanged_TriggerEvent)
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
             "privacyMode",
-            "LIMIT"
+            "DO_NOT_SHARE"
         );
     });
     
     EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPrivacyModeChanged));
-    EXPECT_EQ(notificationClient->GetLastPrivacyModeValue(), "LIMIT");
+    EXPECT_EQ(notificationClient->GetLastPrivacyModeValue(), "DO_NOT_SHARE");
 }
 
 TEST_F(UserSettingsNotificationTest, OnPinControlChanged_TriggerEvent)
@@ -2028,14 +2028,14 @@ TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "liveWatershed",
+            "liveWaterShed",
             "true"
         );
     });
 
-    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnLiveWatershedChanged));
-    EXPECT_TRUE(notificationClient->GetLastLiveWatershedValue());
-    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnLiveWaterShedChanged));
+    EXPECT_TRUE(notificationClient->GetLastLiveWaterShedValue());
+
     notificationClient->ResetEventFlags();
     
     // Test with false value
@@ -2043,7 +2043,7 @@ TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "liveWatershed",
+            "liveWaterShed",
             "false"
         );
     });
@@ -2052,7 +2052,7 @@ TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
     EXPECT_FALSE(notificationClient->GetLastLiveWatershedValue());
 }
 
-TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
+TEST_F(UserSettingsNotificationTest, OnPlaybackWaterShedChanged_TriggerEvent)
 {
     ASSERT_TRUE(userSettingsImpl.IsValid());
     ASSERT_NE(notificationClient, nullptr);
@@ -2063,14 +2063,14 @@ TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "playbackWatershed",
+            "playbackWaterShed",
             "true"
         );
     });
 
-    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPlaybackWatershedChanged));
-    EXPECT_TRUE(notificationClient->GetLastPlaybackWatershedValue());
-    
+    EXPECT_TRUE(notificationClient->WaitForRequestStatus(1000, UserSettings_OnPlaybackWaterShedChanged));
+    EXPECT_TRUE(notificationClient->GetLastPlaybackWaterShedValue());
+
     notificationClient->ResetEventFlags();
     
     // Test with false value
@@ -2078,7 +2078,7 @@ TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "playbackWatershed",
+            "playbackWaterShed",
             "false"
         );
     });
