@@ -1127,19 +1127,51 @@ TEST_F(UserSettingsTest, Information_ReturnsEmptyString)
 }
 
 // Test fixture that can control the worker pool
-class UserSettingsNotificationTest : public ::testing::Test {
+class MockUserSettingsNotification : public Exchange::IUserSettings::INotification {
+public:
+    virtual ~MockUserSettingsNotification() = default;
+    
+    MOCK_METHOD1(OnAudioDescriptionChanged, void(const bool enabled));
+    MOCK_METHOD1(OnPreferredAudioLanguagesChanged, void(const string& preferredLanguages));
+    MOCK_METHOD1(OnPresentationLanguageChanged, void(const string& presentationLanguage));
+    MOCK_METHOD1(OnCaptionsChanged, void(const bool enabled));
+    MOCK_METHOD1(OnPreferredCaptionsLanguagesChanged, void(const string& preferredLanguages));
+    MOCK_METHOD1(OnPreferredClosedCaptionServiceChanged, void(const string& service));
+    MOCK_METHOD1(OnPrivacyModeChanged, void(const string& privacyMode));
+    MOCK_METHOD1(OnPinControlChanged, void(const bool pinControl));
+    MOCK_METHOD1(OnViewingRestrictionsChanged, void(const string& viewingRestrictions));
+    MOCK_METHOD1(OnViewingRestrictionsWindowChanged, void(const string& viewingRestrictionsWindow));
+    MOCK_METHOD1(OnLiveWatershedChanged, void(const bool liveWatershed));
+    MOCK_METHOD1(OnPlaybackWatershedChanged, void(const bool playbackWatershed));
+    MOCK_METHOD1(OnBlockNotRatedContentChanged, void(const bool blockNotRatedContent));
+    MOCK_METHOD1(OnPinOnPurchaseChanged, void(const bool pinOnPurchase));
+    MOCK_METHOD1(OnHighContrastChanged, void(const bool enabled));
+    MOCK_METHOD1(OnVoiceGuidanceChanged, void(const bool enabled));
+    MOCK_METHOD1(OnVoiceGuidanceRateChanged, void(const double rate));
+    MOCK_METHOD1(OnVoiceGuidanceHintsChanged, void(const bool enabled));
+    MOCK_METHOD1(OnContentPinChanged, void(const string& contentPin));
+
+    // Required interface methods
+    virtual void AddRef() const override {}
+    virtual uint32_t Release() const override { return 0; }
+};
+
+// Enhanced test fixture that registers a notification client
+class UserSettingsNotificationWithClientTest : public ::testing::Test {
 protected:
     Core::ProxyType<Plugin::UserSettingsImplementation> userSettingsImpl;
     testing::NiceMock<ServiceMock> service;
     testing::NiceMock<Store2Mock> store2Mock;
     WrapsImplMock* p_wrapsImplMock;
     Core::ProxyType<WorkerPoolImplementation> workerPool;
+    MockUserSettingsNotification* mockNotificationClient;
 
-    UserSettingsNotificationTest()
+    UserSettingsNotificationWithClientTest()
         : userSettingsImpl(Core::ProxyType<Plugin::UserSettingsImplementation>::Create())
         , p_wrapsImplMock(nullptr)
         , workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
             2, Core::Thread::DefaultStackSize(), 16))
+        , mockNotificationClient(nullptr)
     {
         p_wrapsImplMock = new testing::NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
@@ -1154,15 +1186,23 @@ protected:
         // Configure the implementation
         if (userSettingsImpl.IsValid()) {
             uint32_t configResult = userSettingsImpl->Configure(&service);
-            if (configResult != Core::ERROR_NONE) {
-                std::cout << "Configuration failed" << std::endl;
-                userSettingsImpl.Release();
+            if (configResult == Core::ERROR_NONE) {
+                // Create and register a mock notification client
+                mockNotificationClient = new testing::NiceMock<MockUserSettingsNotification>();
+                userSettingsImpl->Register(mockNotificationClient);
             }
         }
     }
 
-    virtual ~UserSettingsNotificationTest() override
+    virtual ~UserSettingsNotificationWithClientTest() override
     {
+        // Unregister notification client
+        if (userSettingsImpl.IsValid() && mockNotificationClient != nullptr) {
+            userSettingsImpl->Unregister(mockNotificationClient);
+            delete mockNotificationClient;
+            mockNotificationClient = nullptr;
+        }
+
         if (userSettingsImpl.IsValid()) {
             userSettingsImpl.Release();
         }
@@ -1178,6 +1218,46 @@ protected:
         }
     }
 };
+
+// L1 Test: OnPresentationLanguageChanged with registered notification client
+TEST_F(UserSettingsNotificationWithClientTest, OnPresentationLanguageChanged_WithRegisteredClient)
+{
+    ASSERT_TRUE(userSettingsImpl.IsValid());
+    ASSERT_NE(mockNotificationClient, nullptr);
+    
+    // Set expectation that OnPresentationLanguageChanged will be called
+    EXPECT_CALL(*mockNotificationClient, OnPresentationLanguageChanged(::testing::StrEq("en-US")))
+        .Times(1);
+    
+    // Trigger the ValueChanged event - this should make the while loop condition true
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings",
+            "presentationLanguage",
+            "en-US"
+        );
+    });
+
+    // Allow time for async processing through worker pool
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    
+    // Test with different locale
+    EXPECT_CALL(*mockNotificationClient, OnPresentationLanguageChanged(::testing::StrEq("fr-FR")))
+        .Times(1);
+    
+    EXPECT_NO_THROW({
+        userSettingsImpl->ValueChanged(
+            Exchange::IStore2::ScopeType::DEVICE,
+            "UserSettings", 
+            "presentationLanguage",
+            "fr-FR"
+        );
+    });
+    
+    // Allow time for async processing
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+}
 
 // Simple L1 test to verify ValueChanged method exists and can be called
 TEST_F(UserSettingsNotificationTest, ValueChanged_MethodExists)
