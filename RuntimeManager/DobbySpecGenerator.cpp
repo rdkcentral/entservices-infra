@@ -120,8 +120,6 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
         command = "/package/";
     }
     command.append(runtimeConfig.command);
-    printf("MADANA COMMAND FORMED IS [%s] \n", command.c_str());
-    fflush(stdout);
     args.append(command);
     spec["args"] = std::move(args);
     spec["cwd"] = getWorkingDir(config, runtimeConfig);
@@ -606,10 +604,6 @@ Json::Value DobbySpecGenerator::createAppServiceSDKPlugin(const ApplicationConfi
     {
         ports.append(port);
     }
-    //TESTING PURPOSE
-	ports.append(9100);
-	ports.append(9101);
-	ports.append(9998);
 	
     pluginObj["data"]["additionalPorts"] = std::move(ports);
 
