@@ -197,19 +197,27 @@ namespace Plugin {
             return Core::ERROR_UNAVAILABLE;
         }
 
-        std::lock_guard<std::mutex> lock(mMutex);
+        LOGDBG("Downloading '%s'", url.c_str());
+        {
+            if (mMutex.try_lock()) {
+                LOGDBG("try_lock Success");
+                 mMutex.unlock();
+            } else {
+                LOGDBG("try_lock Failed");
+            }
+            std::lock_guard<std::mutex> lock(mMutex);
 
-        DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
-        std::string filename = downloadDir + "package" + di->GetId();
-        di->SetFileLocator(filename);
-        if (options.priority) {
-            mDownloadQueue.push_front(di);
-        } else {
-            mDownloadQueue.push_back(di);
-        }
+            DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
+            std::string filename = downloadDir + "package" + di->GetId();
+            di->SetFileLocator(filename);
+            if (options.priority) {
+                mDownloadQueue.push_front(di);
+            } else {
+                mDownloadQueue.push_back(di);
+            }
+            downloadId.downloadId = di->GetId();
+        } // control block to releae the lock
         cv.notify_one();
-
-        downloadId.downloadId = di->GetId();
 
         return result;
     }
@@ -741,9 +749,10 @@ namespace Plugin {
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
-                LOGTRACE("Waiting ... ");
+                LOGDBG("Waiting ... ");
                 std::unique_lock<std::mutex> lock(mMutex);
                 cv.wait(lock);
+                LOGDBG("Waiting over ");
             } else {
                 HttpClient::Status status = HttpClient::Status::Success;
                 int waitTime = 1;
@@ -837,8 +846,15 @@ namespace Plugin {
 
     PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext()
     {
+        if (mMutex.try_lock()) {
+            LOGDBG("try_lock Success");
+                mMutex.unlock();
+        } else {
+            LOGDBG("try_lock Failed");
+        }
+
         std::lock_guard<std::mutex> lock(mMutex);
-        LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
+        LOGDBG("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDownload == nullptr) {
             mInprogressDownload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
