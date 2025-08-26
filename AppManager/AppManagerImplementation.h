@@ -82,6 +82,23 @@ namespace Plugin {
             APP_ACTION_KILL,
         };
 
+#ifdef ENABLE_TELEMETRY_METRICS
+        enum CurrentActionError{
+            ERROR_NONE,
+            ERROR_INVALID_PARAMS,
+            ERROR_INTERNAL,
+            ERROR_PACKAGE_LOCK,
+            ERROR_PACKAGE_UNLOCK,
+            ERROR_PACKAGE_LIST_FETCH,
+            ERROR_PACKAGE_NOT_INSTALLED,
+            ERROR_PACKAGE_INVALID,
+            ERROR_SPAWN_APP,
+            ERROR_UNLOAD_APP,
+            ERROR_KILL_APP,
+            ERROR_SET_TARGET_APP_STATE
+        };
+#endif
+
         typedef struct _AppInfo
         {
             /* From LifecycleManager */
@@ -99,6 +116,9 @@ namespace Plugin {
             Exchange::IAppManager::AppLifecycleState appOldState;
             /* Current Action*/
             CurrentAction currentAction = APP_ACTION_NONE;
+#ifdef ENABLE_TELEMETRY_METRICS
+            uint64_t currentActionTime;
+#endif
         } AppInfo;
 
         std::map<std::string, AppInfo> mAppInfo;
@@ -239,7 +259,9 @@ namespace Plugin {
 
     public: /* public methods */
         void updateCurrentAction(const std::string& appId, CurrentAction action);
-
+#ifdef ENABLE_TELEMETRY_METRICS
+        void updateCurrentActionTime(const std::string& appId, uint64_t currentActionTime, CurrentAction currentAction);
+#endif
     };
 } /* namespace Plugin */
 } /* namespace WPEFramework */
