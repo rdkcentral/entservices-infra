@@ -154,9 +154,6 @@ namespace Plugin {
     void TelemetryImplementation::activateUserSettingsandGetPrivacyMode()
     {
         PluginHost::IShell::state state;
-
-        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
-            Utils::activatePlugin(_service, USERSETTINGS_CALLSIGN);
             
         if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
         {
