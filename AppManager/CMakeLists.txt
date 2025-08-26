@@ -23,6 +23,7 @@ set(PLUGIN_APP_MANAGER_MODE "Off" CACHE STRING "Controls if the plugin should ru
 set(PLUGIN_APP_MANAGER_AUTOSTART false CACHE STRING "Automatically start AppManager plugin")
 set(PLUGIN_APP_MANAGER_EXTRA_LIBRARIES "")
 set(PLUGIN_APP_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start AppManager plugin")
+option(TELEMETRY_METRICS_SUPPORT "TELEMETRY_METRICS_SUPPORT" ON)
 
 add_definitions(-DAPP_MANAGER_API_VERSION_NUMBER_MAJOR=1)
 add_definitions(-DAPP_MANAGER_API_VERSION_NUMBER_MINOR=0)
@@ -56,11 +57,22 @@ target_link_libraries(${MODULE_NAME}
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
-
-add_library(${PLUGIN_IMPLEMENTATION} SHARED
+	
+set(PLUGIN_APP_MANAGER_IMPLEMENTATION_SOURCES
     AppManagerImplementation.cpp
     LifecycleInterfaceConnector.cpp
     Module.cpp)
+
+if (TELEMETRY_METRICS_SUPPORT)
+list( APPEND PLUGIN_APP_MANAGER_IMPLEMENTATION_SOURCES
+    AppManagerTelemetryReporting.cpp
+)
+add_definitions(-DENABLE_TELEMETRY_METRICS)		
+endif (TELEMETRY_METRICS_SUPPORT)	
+
+add_library(${PLUGIN_IMPLEMENTATION} SHARED
+    ${PLUGIN_APP_MANAGER_IMPLEMENTATION_SOURCES}
+)
 
 include_directories(../helpers)
 
