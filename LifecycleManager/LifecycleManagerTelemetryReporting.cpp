@@ -18,20 +18,26 @@
 **/
 
 #include "LifecycleManagerTelemetryReporting.h"
-#include "TelemetryMetricsReporting.h"
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
+#include <time.h>
 
 namespace WPEFramework
 {
 namespace Plugin
 {
-    LifecycleManagerTelemetryReporting::LifecycleManagerTelemetryReporting()
+    LifecycleManagerTelemetryReporting::LifecycleManagerTelemetryReporting(): mTelemetryMetricsObject(nullptr), mCurrentservice(nullptr)
     {
     }
 
     LifecycleManagerTelemetryReporting::~LifecycleManagerTelemetryReporting()
     {
+        if(mTelemetryMetricsObject )
+        {
+            mTelemetryMetricsObject ->Release();
+            mTelemetryMetricsObject = nullptr;
+            mCurrentservice = nullptr;
+        }
     }
 
     LifecycleManagerTelemetryReporting& LifecycleManagerTelemetryReporting::getInstance()
@@ -40,10 +46,51 @@ namespace Plugin
         static LifecycleManagerTelemetryReporting instance;
         return instance;
     }
+
+    void LifecycleManagerTelemetryReporting::initialize(PluginHost::IShell* service)
+    {
+        ASSERT(nullptr != service);
+        mAdminLock.Lock();
+        mCurrentservice = service;
+        mAdminLock.Unlock();
+        if(Core::ERROR_NONE != createTelemetryMetricsPluginObject())
+        {
+            LOGERR("Failed to create TelemetryMetricsObject\n");
+        }
+    }
+
     uint64_t LifecycleManagerTelemetryReporting::getCurrentTimestamp()
     {
-        return (TelemetryMetricsReporting::getInstance().getCurrentTimestamp());
+        timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return ((uint64_t)(ts.tv_sec * 1000) + ((uint64_t)ts.tv_nsec/1000000));
     }
+
+/*
+* Creates TelemetryMetrics plugin object to access interface methods
+*/
+    Core::hresult LifecycleManagerTelemetryReporting::createTelemetryMetricsPluginObject()
+    {
+        Core::hresult status = Core::ERROR_GENERAL;
+
+        mAdminLock.Lock();
+        if (nullptr == mCurrentservice)
+        {
+                LOGERR("mCurrentservice is null \n");
+        }
+        else if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+        {
+                LOGERR("Failed to create TelemetryMetricsObject\n");
+        }
+        else
+        {
+            status = Core::ERROR_NONE;
+            LOGINFO("created TelemetryMetrics Object");
+        }
+        mAdminLock.Unlock();
+        return status;
+    }
+
     void LifecycleManagerTelemetryReporting::reportTelemetryDataOnStateChange(ApplicationContext* context, const JsonObject &data)
     {
         string appId = "";
@@ -55,79 +102,107 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
-        TelemetryMetricsReporting& telemetryMetricsInstance = TelemetryMetricsReporting::getInstance();
+        bool shouldPublish = false;
 
-        if ((data.HasLabel("appId") && !(appId = data["appId"].String()).empty()))
+        if(nullptr == mTelemetryMetricsObject) /*mTelemetryMetricsObject is null retry to create*/
         {
-            if (nullptr != context)
+            if(Core::ERROR_NONE != createTelemetryMetricsPluginObject())
             {
-                requestType = context->getRequestType();
-                requestTime = context->getRequestTime();
-                currentTime = telemetryMetricsInstance.getCurrentTimestamp();
-                targetLifecycleState = context->getTargetLifecycleState();
-                newLifecycleState = static_cast<Exchange::ILifecycleManager::LifecycleState>(data["newLifecycleState"].Number());
-                LOGINFO("Received state change for appId %s newLifecycleState %d requestType %d", appId.c_str(), newLifecycleState, requestType);
-
-                if ((REQUEST_TYPE_LAUNCH == requestType) &&
-                    (((Exchange::ILifecycleManager::LifecycleState::ACTIVE == newLifecycleState) && (Exchange::ILifecycleManager::LifecycleState::ACTIVE == targetLifecycleState)) ||
-                    ((Exchange::ILifecycleManager::LifecycleState::PAUSED == newLifecycleState) && (Exchange::ILifecycleManager::LifecycleState::PAUSED == targetLifecycleState))))
-                {
-                    /*Telemetry reporting - launch case*/
-                    jsonParam["lifecycleManagerSpawnTime"] = (int)(currentTime - requestTime);
-                    jsonParam.ToString(telemetryMetrics);
-                    markerName = TELEMETRY_MARKER_LAUNCH_TIME;
-                }
-                else if ((REQUEST_TYPE_TERMINATE == requestType) && (Exchange::ILifecycleManager::LifecycleState::UNLOADED == newLifecycleState))
-                {
-                    /*Telemetry reporting - close case*/
-                    jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
-                    jsonParam.ToString(telemetryMetrics);
-                    markerName = TELEMETRY_MARKER_CLOSE_TIME;
-                }
-                else
-                {
-                    jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
-                    jsonParam["appId"] = appId;
-                    jsonParam["appInstanceId"] = context->getAppInstanceId();
-                    jsonParam.ToString(telemetryMetrics);
-
-                    if ((REQUEST_TYPE_SUSPEND == requestType) && (Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState))
-                    {
-                        /*Telemetry reporting - suspend case*/
-                        markerName = TELEMETRY_MARKER_SUSPEND_TIME;
-                    }
-                    else if ((REQUEST_TYPE_RESUME == requestType) && (Exchange::ILifecycleManager::LifecycleState::ACTIVE == newLifecycleState))
-                    {
-                        /*Telemetry reporting - resume case*/
-                        markerName = TELEMETRY_MARKER_RESUME_TIME;
-                    }
-                    else if ((REQUEST_TYPE_HIBERNATE == requestType) && (Exchange::ILifecycleManager::LifecycleState::HIBERNATED == newLifecycleState))
-                    {
-                        /*Telemetry reporting - hibernate case*/
-                        markerName = TELEMETRY_MARKER_HIBERNATE_TIME;
-                    }
-                    else if ((REQUEST_TYPE_TERMINATE == requestType) && (Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState))
-                    {
-                        /*Telemetry reporting - wake case, wake is called during app terminate*/
-                        markerName = TELEMETRY_MARKER_WAKE_TIME;
-                    }
-                }
-
-                if(!markerName.empty() && !telemetryMetrics.empty())
-                {
-                    telemetryMetricsInstance.recordTelemetryMetrics(markerName, appId, telemetryMetrics);
-
-                    if ((REQUEST_TYPE_SUSPEND == requestType) || (REQUEST_TYPE_HIBERNATE == requestType) || (REQUEST_TYPE_RESUME == requestType) ||
-                        ((REQUEST_TYPE_TERMINATE == requestType) && (Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState)))
-                    {
-                        telemetryMetricsInstance.publishTelemetryMetrics(markerName, appId);
-                    }
-                }
+                LOGERR("Failed to create TelemetryMetricsObject\n");
             }
+        }
+
+        if (nullptr == context)
+        {
+            LOGERR("context is nullptr");
+        }
+        else if (nullptr == mTelemetryMetricsObject)
+        {
+            LOGERR("mTelemetryMetricsObject is not valid");
+        }
+        else if (!data.HasLabel("appId") || (appId = data["appId"].String()).empty())
+        {
+            LOGERR("appId not present or empty");
         }
         else
         {
-            LOGERR("appId not present or empty");
+            requestType = context->getRequestType();
+            requestTime = context->getRequestTime();
+            currentTime = getCurrentTimestamp();
+            targetLifecycleState = context->getTargetLifecycleState();
+            newLifecycleState = static_cast<Exchange::ILifecycleManager::LifecycleState>(data["newLifecycleState"].Number());
+            LOGINFO("Received state change for appId %s newLifecycleState %d requestType %d", appId.c_str(), newLifecycleState, requestType);
+
+            switch(requestType)
+            {
+                case REQUEST_TYPE_LAUNCH:
+                    if (((Exchange::ILifecycleManager::LifecycleState::ACTIVE == newLifecycleState) && (Exchange::ILifecycleManager::LifecycleState::ACTIVE == targetLifecycleState)) ||
+                        ((Exchange::ILifecycleManager::LifecycleState::PAUSED == newLifecycleState) && (Exchange::ILifecycleManager::LifecycleState::PAUSED == targetLifecycleState)))
+                    {
+                        /*Telemetry reporting - launch case*/
+                        jsonParam["lifecycleManagerSpawnTime"] = (int)(currentTime - requestTime);
+                        jsonParam.ToString(telemetryMetrics);
+                        markerName = TELEMETRY_MARKER_LAUNCH_TIME;
+                        mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
+                    }
+                break;
+                case REQUEST_TYPE_TERMINATE:
+                    if(Exchange::ILifecycleManager::LifecycleState::UNLOADED == newLifecycleState)
+                    {
+                        /*Telemetry reporting - close case*/
+                        jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
+                        jsonParam.ToString(telemetryMetrics);
+                        markerName = TELEMETRY_MARKER_CLOSE_TIME;
+                        mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
+                    }
+                    else if(Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState)
+                    {
+                        /*Telemetry reporting - wake case, wake is called during app terminate*/
+                        markerName = TELEMETRY_MARKER_WAKE_TIME;
+                        shouldPublish = true;
+                    }
+                break;
+                case REQUEST_TYPE_SUSPEND:
+                    /*Telemetry reporting - suspend case*/
+                    if(Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState)
+                    {
+                        markerName = TELEMETRY_MARKER_SUSPEND_TIME;
+                        shouldPublish = true;
+                    }
+                break;
+                case REQUEST_TYPE_RESUME:
+                    /*Telemetry reporting - resume case*/
+                    if(Exchange::ILifecycleManager::LifecycleState::ACTIVE == newLifecycleState)
+                    {
+                        markerName = TELEMETRY_MARKER_RESUME_TIME;
+                        shouldPublish = true;
+                    }
+                break;
+                case REQUEST_TYPE_HIBERNATE:
+                    /*Telemetry reporting - hibernate case*/
+                    if(Exchange::ILifecycleManager::LifecycleState::HIBERNATED == newLifecycleState)
+                    {
+                        markerName = TELEMETRY_MARKER_HIBERNATE_TIME;
+                        shouldPublish = true;
+                    }
+                break;
+                default:
+                    LOGERR("requestType is invalid");
+                break;
+            }
+
+            if (!markerName.empty() && shouldPublish)
+            {
+                jsonParam["appId"] = appId;
+                jsonParam["appInstanceId"] = context->getAppInstanceId();
+                jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
+                jsonParam.ToString(telemetryMetrics);
+                if(!telemetryMetrics.empty())
+                {
+                    mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
+                    mTelemetryMetricsObject->Publish(appId, markerName);
+                }
+            }
         }
     }
 

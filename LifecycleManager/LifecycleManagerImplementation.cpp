@@ -23,7 +23,9 @@
 #include <interfaces/json/JsonData_LifecycleManagerState.h>
 #include <interfaces/json/JLifecycleManagerState.h>
 #include <semaphore.h>
+#ifdef ENABLE_TELEMETRY_METRICS
 #include "LifecycleManagerTelemetryReporting.h"
+#endif
 
 namespace WPEFramework
 {
@@ -45,6 +47,9 @@ namespace WPEFramework
         bool LifecycleManagerImplementation::initialize(PluginHost::IShell* service)
         {
             bool ret = RequestHandler::getInstance()->initialize(service, this);
+#ifdef ENABLE_TELEMETRY_METRICS
+            LifecycleManagerTelemetryReporting::getInstance().initialize(service);
+#endif
 	    return ret;
         }
 
@@ -129,7 +134,9 @@ namespace WPEFramework
              string appInstanceId(obj["appInstanceId"].String());
              uint32_t oldLifecycleState(obj["oldLifecycleState"].Number());
              string navigationIntent(obj["navigationIntent"].String());
+#ifdef ENABLE_TELEMETRY_METRICS
              ApplicationContext* context = getContext("", appId);
+#endif
 
              mAdminLock.Lock();
         
@@ -139,7 +146,9 @@ namespace WPEFramework
              switch(event)
              {
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
+#ifdef ENABLE_TELEMETRY_METRICS
                      LifecycleManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(context, obj);
+#endif
                      handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
                      {
@@ -243,10 +252,10 @@ namespace WPEFramework
 		mLoadedApplications.push_back(context);
                 firstLaunch = true;
 	    }
-
+#ifdef ENABLE_TELEMETRY_METRICS
             context->setRequestTime(LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp());
             context->setRequestType(REQUEST_TYPE_LAUNCH);
-
+#endif
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
             success = RequestHandler::getInstance()->launch(context, launchIntent, targetLifecycleState, errorReason);
@@ -275,7 +284,7 @@ namespace WPEFramework
                 status = Core::ERROR_GENERAL;
                 return status;
 	    }
-
+#ifdef ENABLE_TELEMETRY_METRICS
             switch(targetLifecycleState)
             {
                 case Exchange::ILifecycleManager::LifecycleState::PAUSED:        //before SUSPEND or HIBERNATE app will be PAUSED
@@ -296,7 +305,7 @@ namespace WPEFramework
                     LOGERR("targetLifecycleState is invalid");
                 break;
             }
-
+#endif
             string errorReason("");
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
@@ -323,13 +332,13 @@ namespace WPEFramework
                 success = false;
                 return status;
 	    }
-
+#ifdef ENABLE_TELEMETRY_METRICS
             if(REQUEST_TYPE_PAUSE != context->getRequestType())   //If request through AppManager closeApp, requestTime is already set
             {
                 context->setRequestTime(LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp());
             }
             context->setRequestType(REQUEST_TYPE_TERMINATE);
-
+#endif
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(false);
 
@@ -351,10 +360,10 @@ namespace WPEFramework
                 success = false;
                 return status;
 	    }
-
+#ifdef ENABLE_TELEMETRY_METRICS
             context->setRequestTime(LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp());
             context->setRequestType(REQUEST_TYPE_TERMINATE);
-
+#endif
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(true);
             success = RequestHandler::getInstance()->terminate(context, true, errorReason);
