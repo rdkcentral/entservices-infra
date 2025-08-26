@@ -40,8 +40,10 @@ namespace WPEFramework
           mMostRecentIntent(""),
           mState(nullptr),
           mStateChangeId(0),
-          mRequestTime(0),
+#ifdef ENABLE_TELEMETRY_METRICS
+	  mRequestTime(0),
           mRequestType(REQUEST_TYPE_NONE)
+#endif
         {
             mState = (void*) new UnloadedState(this);
             sem_init(&mReachedLoadingStateSemaphore, 0, 0);
@@ -112,6 +114,7 @@ namespace WPEFramework
             mKillParams.mForce = force;
         }
 
+#ifdef ENABLE_TELEMETRY_METRICS
         void ApplicationContext::setRequestTime(uint64_t requestTime)
         {
             mRequestTime = requestTime;
@@ -120,6 +123,7 @@ namespace WPEFramework
         {
             mRequestType = requestType;
         }
+#endif
 
 	std::string ApplicationContext::getAppId()
 	{
@@ -177,6 +181,7 @@ namespace WPEFramework
             return mKillParams;
 	}
 
+#ifdef ENABLE_TELEMETRY_METRICS
         uint64_t ApplicationContext::getRequestTime()
         {
             return mRequestTime;
@@ -186,5 +191,6 @@ namespace WPEFramework
         {
             return mRequestType;
         }
+#endif
     } /* namespace Plugin */
 } /* namespace WPEFramework */
