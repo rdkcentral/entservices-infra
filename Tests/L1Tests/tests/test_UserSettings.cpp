@@ -137,14 +137,14 @@ TEST_F(UserSettingsTest, SetPreferredAudioLanguages_Success)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredAudioLanguages"), _T("{\"preferredLanguages\": \"eng,fra\"}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredAudioLanguages"), _T("{\"preferredLanguages\": \"eng\"}"), response));
 }
 
 TEST_F(UserSettingsTest, SetPreferredAudioLanguages_Failure)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredAudioLanguages"), _T("{\"preferredLanguages\": \"eng,fra\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredAudioLanguages"), _T("{\"preferredLanguages\": \"eng\"}"), response));
 }
 
 TEST_F(UserSettingsTest, SetPreferredAudioLanguages_EmptyParam)
@@ -163,10 +163,10 @@ TEST_F(UserSettingsTest, GetPreferredAudioLanguages_Success)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::DoAll(
-            ::testing::SetArgReferee<3>("eng,fra"),
+            ::testing::SetArgReferee<3>("eng"),
             ::testing::Return(Core::ERROR_NONE)));
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPreferredAudioLanguages"), _T("{}"), response));
-    EXPECT_TRUE(response.find("eng,fra") != std::string::npos);
+    EXPECT_TRUE(response.find("eng") != std::string::npos);
 }
 
 TEST_F(UserSettingsTest, GetPreferredAudioLanguages_Failure)
@@ -267,14 +267,14 @@ TEST_F(UserSettingsTest, SetPreferredCaptionsLanguages_Success)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredCaptionsLanguages"), _T("{\"preferredLanguages\": \"eng,fra\"}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredCaptionsLanguages"), _T("{\"preferredLanguages\": \"eng\"}"), response));
 }
 
 TEST_F(UserSettingsTest, SetPreferredCaptionsLanguages_Failure)
 {
     EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredCaptionsLanguages"), _T("{\"preferredLanguages\": \"eng,fra\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredCaptionsLanguages"), _T("{\"preferredLanguages\": \"eng\"}"), response));
 }
 
 TEST_F(UserSettingsTest, SetPreferredCaptionsLanguages_EmptyParam)
@@ -293,10 +293,10 @@ TEST_F(UserSettingsTest, GetPreferredCaptionsLanguages_Success)
 {
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::DoAll(
-            ::testing::SetArgReferee<3>("eng,fra"),
+            ::testing::SetArgReferee<3>("eng"),
             ::testing::Return(Core::ERROR_NONE)));
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPreferredCaptionsLanguages"), _T("{}"), response));
-    EXPECT_TRUE(response.find("eng,fra") != std::string::npos);
+    EXPECT_TRUE(response.find("eng") != std::string::npos);
 }
 
 TEST_F(UserSettingsTest, GetPreferredCaptionsLanguages_Failure)
@@ -1831,7 +1831,7 @@ TEST_F(UserSettingsNotificationTest, OnPreferredClosedCaptionServiceChanged_Trig
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "preferredClosedCaptionService",
+            "preferredClosedCaptionsService",
             "CC1"
         );
     });
@@ -1846,7 +1846,7 @@ TEST_F(UserSettingsNotificationTest, OnPreferredClosedCaptionServiceChanged_Trig
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "preferredClosedCaptionService",
+            "preferredClosedCaptionsService",
             "TEXT3"
         );
     });
@@ -2008,7 +2008,7 @@ TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "liveWatershed",
+            "liveWaterShed",
             "true"
         );
     });
@@ -2023,7 +2023,7 @@ TEST_F(UserSettingsNotificationTest, OnLiveWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "liveWatershed",
+            "liveWaterShed",
             "false"
         );
     });
@@ -2043,7 +2043,7 @@ TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings",
-            "playbackWatershed",
+            "playbackWaterShed",
             "true"
         );
     });
@@ -2058,7 +2058,7 @@ TEST_F(UserSettingsNotificationTest, OnPlaybackWatershedChanged_TriggerEvent)
         userSettingsImpl->ValueChanged(
             Exchange::IStore2::ScopeType::DEVICE,
             "UserSettings", 
-            "playbackWatershed",
+            "playbackWaterShed",
             "false"
         );
     });
