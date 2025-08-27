@@ -172,7 +172,7 @@ namespace Plugin {
          }
 		 else
          {
-                LOGERR("Failed to GetPrivacyMode handle");
+                LOGERR("Failed to get _userSettingsPlugin handle");
          }
     }
     
