@@ -170,6 +170,10 @@ namespace Plugin {
                 LOGERR("Failed to get privacy mode");
              }
          }
+		 else
+         {
+                LOGERR("Failed to GetPrivacyMode handle");
+         }
     }
     
     static void t2EventHandler(rbusHandle_t handle, char const* methodName, rbusError_t error, rbusObject_t param)
