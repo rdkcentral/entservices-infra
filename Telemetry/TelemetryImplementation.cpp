@@ -151,7 +151,7 @@ namespace Plugin {
     }
 
 #ifdef HAS_RBUS
-    void TelemetryImplementation::activateUserSettingsandGetPrivacyMode()
+    void TelemetryImplementation::getPrivacyMode()
     {
          ASSERT(_service != nullptr);
 
@@ -334,7 +334,7 @@ namespace Plugin {
         InitializePowerManager();
 
 #ifdef HAS_RBUS        
-        activateUserSettingsandGetPrivacyMode();
+        getPrivacyMode();
 #endif        
         setRFCReportProfiles();
         
