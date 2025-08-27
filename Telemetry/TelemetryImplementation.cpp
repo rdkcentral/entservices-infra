@@ -153,8 +153,6 @@ namespace Plugin {
 #ifdef HAS_RBUS
     void TelemetryImplementation::activateUserSettingsandGetPrivacyMode()
     {
-        PluginHost::IShell::state state;
-
          ASSERT(_service != nullptr);
 
          _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
