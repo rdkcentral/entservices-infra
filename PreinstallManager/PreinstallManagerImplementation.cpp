@@ -54,6 +54,10 @@ namespace WPEFramework
             mCurrentservice->Release();
             mCurrentservice = nullptr;
         }
+        if (nullptr != mPackageManagerInstallerObject)
+        {
+            releasePackageManagerObject();
+        }
     }
 
     /**
@@ -275,6 +279,9 @@ namespace WPEFramework
 
             PackageInfo packageInfo;
             packageInfo.fileLocator = filepath;
+            //debug logs
+            LOGDBG("Found package file: %s", filepath.c_str());
+            LOGDBG(" Ping getconfig yet to be implemented");
             // API yet to be added
             // if (mPackageManagerInstallerObject->GetConfigForPackage(packageInfo.fileLocator, packageInfo.packageId, packageInfo.version, packageInfo.configMetadata) == Core::ERROR_NONE)
             // {
@@ -387,7 +394,7 @@ namespace WPEFramework
         {
             if((pkg.packageId.empty() || pkg.version.empty() || pkg.fileLocator.empty()) /*&& !forceInstall */) // force install anyway
             {
-                LOGERR("Skipping invalid package with empty fields: %s , forceInstall: %s", pkg.fileLocator.empty() ? "NULL" : pkg.fileLocator.c_str(), forceInstall ? "true" : "false");
+                LOGERR("Skipping invalid package with empty fields: %s", pkg.fileLocator.empty() ? "NULL" : pkg.fileLocator.c_str());
                 skippedApps++;
                 //continue;  todo removed for testing
             }
@@ -413,7 +420,7 @@ namespace WPEFramework
         // LOGINFO("Installation summary: Skipped packages: %d", skippedApps);
 
         //cleanup
-        releasePackageManagerObject();
+        // releasePackageManagerObject();
 
         if(!installError)
         {
