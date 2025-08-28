@@ -397,7 +397,7 @@ namespace WPEFramework
             }
             else
             {
-                LOGINFO("Successfully installed package: %s, version: %s", pkg.packageId.c_str(), pkg.version.c_str());
+                LOGINFO("Successfully installed package: %s, version: %s, fileLocator: %s", pkg.packageId.c_str(), pkg.version.c_str(), pkg.fileLocator.c_str());
             }
         }
 
