@@ -40,8 +40,8 @@ namespace WPEFramework
           mMostRecentIntent(""),
           mState(nullptr),
           mStateChangeId(0),
-#ifdef ENABLE_TELEMETRY_METRICS
-	  mRequestTime(0),
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+          mRequestTime(0),
           mRequestType(REQUEST_TYPE_NONE)
 #endif
         {
@@ -114,16 +114,19 @@ namespace WPEFramework
             mKillParams.mForce = force;
         }
 
-#ifdef ENABLE_TELEMETRY_METRICS
-        void ApplicationContext::setRequestTime(uint64_t requestTime)
+        void ApplicationContext::setRequestTime(time_t requestTime)
         {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             mRequestTime = requestTime;
+#endif
         }
         void ApplicationContext::setRequestType(RequestType requestType)
         {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             mRequestType = requestType;
-        }
 #endif
+        }
+
 
 	std::string ApplicationContext::getAppId()
 	{
@@ -181,8 +184,8 @@ namespace WPEFramework
             return mKillParams;
 	}
 
-#ifdef ENABLE_TELEMETRY_METRICS
-        uint64_t ApplicationContext::getRequestTime()
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        time_t ApplicationContext::getRequestTime()
         {
             return mRequestTime;
         }
