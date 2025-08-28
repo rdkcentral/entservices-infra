@@ -51,8 +51,8 @@ namespace WPEFramework
         PreinstallManager::PreinstallManager() : mCurrentService(nullptr),
                                                  mConnectionId(0),
                                                  mPreinstallManagerImpl(nullptr),
-                                                 mPreinstallManagerNotification(this)
-                                                // mPreinstallManagerConfigure(nullptr)
+                                                 mPreinstallManagerNotification(this),
+                                                 mPreinstallManagerConfigure(nullptr)
         {
             SYSLOG(Logging::Startup, (_T("PreinstallManager Constructor")));
             if (nullptr == PreinstallManager::_instance)
@@ -89,11 +89,11 @@ namespace WPEFramework
                     SYSLOG(Logging::Startup, (_T("PreinstallManager::Initialize: object creation failed")));
                     message = _T("PreinstallManager plugin could not be initialised");
                 }
-                // else if (nullptr == (mPreinstallManagerConfigure = mPreinstallManagerImpl->QueryInterface<Exchange::IConfiguration>()))
-                // {
-                //     SYSLOG(Logging::Startup, (_T("PreinstallManager::Initialize: did not provide a configuration interface")));
-                //     message = _T("PreinstallManager implementation did not provide a configuration interface");
-                // }
+                else if (nullptr == (mPreinstallManagerConfigure = mPreinstallManagerImpl->QueryInterface<Exchange::IConfiguration>()))
+                {
+                    SYSLOG(Logging::Startup, (_T("PreinstallManager::Initialize: did not provide a configuration interface")));
+                    message = _T("PreinstallManager implementation did not provide a configuration interface");
+                }
                 else
                 {
                     // Register for notifications
@@ -101,11 +101,11 @@ namespace WPEFramework
                     // Invoking Plugin API register to wpeframework
                     Exchange::JPreinstallManager::Register(*this, mPreinstallManagerImpl);
 
-                    // if (Core::ERROR_NONE != mPreinstallManagerConfigure->Configure(mCurrentService))
-                    // {
-                    //     SYSLOG(Logging::Startup, (_T("PreinstallManager::Initialize: could not be configured")));
-                    //     message = _T("PreinstallManager could not be configured");
-                    // }
+                    if (Core::ERROR_NONE != mPreinstallManagerConfigure->Configure(mCurrentService))
+                    {
+                        SYSLOG(Logging::Startup, (_T("PreinstallManager::Initialize: could not be configured")));
+                        message = _T("PreinstallManager could not be configured");
+                    }
                 }
             }
             else
@@ -136,11 +136,11 @@ namespace WPEFramework
                 mPreinstallManagerImpl->Unregister(&mPreinstallManagerNotification);
                 Exchange::JPreinstallManager::Unregister(*this);
 
-                // if (nullptr != mPreinstallManagerConfigure)
-                // {
-                //     mPreinstallManagerConfigure->Release();
-                //     mPreinstallManagerConfigure = nullptr;
-                // }
+                if (nullptr != mPreinstallManagerConfigure)
+                {
+                    mPreinstallManagerConfigure->Release();
+                    mPreinstallManagerConfigure = nullptr;
+                }
 
                 // Stop processing:
                 RPC::IRemoteConnection *connection = service->RemoteConnection(mConnectionId);

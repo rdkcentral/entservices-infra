@@ -106,6 +106,24 @@ namespace WPEFramework
         return status;
     }
 
+    uint32_t PreinstallManagerImplementation::Configure(PluginHost::IShell* service)
+    {
+        uint32_t result = Core::ERROR_GENERAL;
+        if (service != nullptr)
+        {
+            mCurrentservice = service;
+            mCurrentservice->AddRef();
+            result = Core::ERROR_NONE;
+            LOGINFO("PreinstallManagerImplementation service configured successfully");
+        }
+        else
+        {
+            LOGERR("service is null \n");
+        }
+
+        return result;
+    }
+
     void PreinstallManagerImplementation::dispatchEvent(EventNames event, const JsonObject &params)
     {
         Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));

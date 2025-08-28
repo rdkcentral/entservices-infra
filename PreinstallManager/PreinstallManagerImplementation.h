@@ -23,6 +23,7 @@
 #include <interfaces/Ids.h>
 #include <interfaces/IPreinstallManager.h>
 #include <interfaces/IAppPackageManager.h>
+#include <interfaces/IConfiguration.h>
 #include "tracing/Logging.h"
 #include "UtilsLogging.h"
 #include <com/com.h>
@@ -39,7 +40,7 @@ namespace WPEFramework
         typedef Exchange::IPreinstallManager::PreinstallFailReason PreinstallFailReason;
         typedef Exchange::IPreinstallManager::AppInstallInfo AppInstallInfo;
 
-        class PreinstallManagerImplementation : public Exchange::IPreinstallManager//, public Exchange::IConfiguration
+        class PreinstallManagerImplementation : public Exchange::IPreinstallManager, public Exchange::IConfiguration
         {
 
         public:
@@ -52,7 +53,7 @@ namespace WPEFramework
 
             BEGIN_INTERFACE_MAP(PreinstallManagerImplementation)
             INTERFACE_ENTRY(Exchange::IPreinstallManager)
-            // INTERFACE_ENTRY(Exchange::IConfiguration)
+            INTERFACE_ENTRY(Exchange::IConfiguration)
             END_INTERFACE_MAP
 
         public:
@@ -122,11 +123,9 @@ namespace WPEFramework
             void handleOnAppInstallationStatus(std::list<AppInstallInfo> &appInstallInfoList);
 
             // // IConfiguration methods
-            // uint32_t Configure(PluginHost::IShell *service) override;
+            uint32_t Configure(PluginHost::IShell *service) override;
 
         private: /* private methods */
-            // Core::hresult createStorageManagerRemoteObject();
-            // void releaseStorageManagerRemoteObject();
             Core::hresult createPackageManagerObject();
             void releasePackageManagerObject();
             bool readPreinstallDirectory(std::list<PackageInfo> &packages);

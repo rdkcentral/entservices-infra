@@ -107,6 +107,7 @@ namespace WPEFramework
             uint32_t mConnectionId{};
             Exchange::IPreinstallManager *mPreinstallManagerImpl{};
             Core::Sink<Notification> mPreinstallManagerNotification;
+            Exchange::IConfiguration* mPreinstallManagerConfigure;
 
         public /* constants */:
             static const string SERVICE_NAME;
