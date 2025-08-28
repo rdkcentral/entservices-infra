@@ -33,7 +33,7 @@
 
 #include "UtilsString.h"
 #include "AppManagerImplementation.h"
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
 #include "AppManagerTelemetryReporting.h"
 #endif
 
@@ -164,7 +164,7 @@ namespace WPEFramework
             string errorReason = "";
             bool success = true;
             Exchange::ILifecycleManager::LifecycleState state = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
 #endif
 
@@ -243,7 +243,7 @@ namespace WPEFramework
                             else
                             {
                                 LOGERR("spawnApp failed");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_SPAWN_APP);
 #endif
                             }
@@ -251,14 +251,14 @@ namespace WPEFramework
                     }
                     else
                     {
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                         appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_INTERNAL);
 #endif
                     }
                 }
                 else
                 {
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_INTERNAL);
 #endif
                 }
@@ -272,7 +272,7 @@ namespace WPEFramework
         {
             Core::hresult status = Core::ERROR_GENERAL;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
 #endif
 
@@ -328,14 +328,14 @@ namespace WPEFramework
                     else
                     {
                         LOGERR("PreLoad failed");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                         appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_PRELOAD, AppManagerImplementation::ERROR_SPAWN_APP);
 #endif
                     }
                 }
                 else
                 {
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_PRELOAD, AppManagerImplementation::ERROR_INTERNAL);
 #endif
                 }
@@ -353,7 +353,7 @@ namespace WPEFramework
             bool success = false;
             std::string errorReason = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
 #endif
             bool isAppLoaded = false;
@@ -429,7 +429,7 @@ namespace WPEFramework
                                             if (status != Core::ERROR_NONE)
                                             {
                                                 LOGERR("UnloadApp failed with error reason: %s", errorReason.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                                                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_UNLOAD_APP);
 #endif
                                             }
@@ -442,7 +442,7 @@ namespace WPEFramework
                                     else
                                     {
                                         LOGERR("AppId: %s not found after PAUSED wait", appId.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                                         appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
 #endif
                                         status = Core::ERROR_GENERAL;
@@ -451,7 +451,7 @@ namespace WPEFramework
                                 else
                                 {
                                     LOGERR("Timed out waiting for appId: %s to reach PAUSED state", appId.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                                     appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
 #endif
                                     status = Core::ERROR_GENERAL;
@@ -460,14 +460,14 @@ namespace WPEFramework
                             else
                             {
                                 LOGERR("Failed to set PAUSED state for AppId: %s", appId.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_SET_TARGET_APP_STATE);
 #endif
                             }
                         }
                         else
                         {
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                             appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
 #endif
                         }
@@ -479,7 +479,7 @@ namespace WPEFramework
                 if (!isAppLoaded)
                 {
                     LOGERR("AppId %s not found in database", appId.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INVALID_PARAMS);
 #endif
                 }
@@ -487,7 +487,7 @@ namespace WPEFramework
             else
             {
                 LOGERR("AppManagerImplementation instance is null");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
 #endif
             }
@@ -501,7 +501,7 @@ namespace WPEFramework
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
 #endif
             bool success = false;
@@ -527,7 +527,7 @@ namespace WPEFramework
                             if (status != Core::ERROR_NONE)
                             {
                                 LOGERR("UnloadApp failed with error reason: %s", errorReason.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_UNLOAD_APP);
 #endif
                             }
@@ -538,7 +538,7 @@ namespace WPEFramework
                 if (!foundAppId)
                 {
                     LOGERR("AppId %s not found in database", appId.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_INVALID_PARAMS);
 #endif
                 }
@@ -546,7 +546,7 @@ namespace WPEFramework
             else
             {
                 LOGERR("appManagerImplInstance is null");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_INTERNAL);
 #endif
             }
@@ -560,7 +560,7 @@ namespace WPEFramework
             LOGINFO("killApp entered");
             Core::hresult result = Core::ERROR_GENERAL;
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
 #endif
 
@@ -586,7 +586,7 @@ namespace WPEFramework
                 if (appInstanceId.empty())
                 {
                     LOGERR("appInstanceId not found for appId '%s'", appId.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_INVALID_PARAMS);
 #endif
                 }
@@ -601,7 +601,7 @@ namespace WPEFramework
                     if (!(result == Core::ERROR_NONE && success))
                     {
                         LOGERR("killApp failed, result: %d, success: %d, errorReason: %s", result, success, errorReason.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                         appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_KILL_APP);
 #endif
                     }
@@ -610,7 +610,7 @@ namespace WPEFramework
             }
             else
             {
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_INTERNAL);
 #endif
             }
@@ -878,7 +878,7 @@ End:
                     {
                         appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
                     }
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     AppManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(appId, newState);
 #endif
                     if(Exchange::ILifecycleManager::LifecycleState::UNLOADED == newState)

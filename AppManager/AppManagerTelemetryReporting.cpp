@@ -52,11 +52,11 @@ namespace Plugin
         }
     }
 
-    uint64_t AppManagerTelemetryReporting::getCurrentTimestamp()
+    time_t AppManagerTelemetryReporting::getCurrentTimestamp()
     {
         timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        return ((uint64_t)(ts.tv_sec * 1000) + ((uint64_t)ts.tv_nsec/1000000));
+        return ((time_t)(ts.tv_sec * 1000) + ((time_t)ts.tv_nsec/1000000));
     }
 
     Core::hresult AppManagerTelemetryReporting::createTelemetryMetricsPluginObject()
@@ -86,7 +86,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
-        uint64_t currentTime = getCurrentTimestamp();
+        time_t currentTime = getCurrentTimestamp();
         AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
 
         if(nullptr == mTelemetryMetricsObject) /*mTelemetryMetricsObject is null retry to create*/
@@ -147,7 +147,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
-        uint64_t currentTime = getCurrentTimestamp();
+        time_t currentTime = getCurrentTimestamp();
         AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
 
         if(nullptr == mTelemetryMetricsObject) /*mTelemetryMetricsObject is null retry to create*/

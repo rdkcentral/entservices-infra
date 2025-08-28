@@ -19,7 +19,7 @@
 
 #include <iomanip>      /* for std::setw, std::setfill */
 #include "AppManagerImplementation.h"
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
 #include "AppManagerTelemetryReporting.h"
 #endif
 
@@ -405,7 +405,7 @@ uint32_t AppManagerImplementation::Configure(PluginHost::IShell* service)
         {
             LOGINFO("created createStorageManagerRemoteObject");
         }
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         AppManagerTelemetryReporting::getInstance().initialize(service);
 #endif
         result = Core::ERROR_NONE;
@@ -614,7 +614,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
     bool installed = false;
     bool loaded = false;
     std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
 #endif
 
@@ -666,7 +666,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
                         if (!result)
                         {
                             LOGERR("Failed to createOrUpdate the PackageInfo");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                             appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_PACKAGE_INVALID);
 #endif
                             status = Core::ERROR_GENERAL;
@@ -675,7 +675,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
                     else
                     {
                         LOGERR("Failed to PackageManager Lock %s", appId.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                         appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_PACKAGE_LOCK);
 #endif
                         packageData.version.clear();  /* Clear version on failure */
@@ -684,7 +684,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
                 else
                 {
                     LOGERR("PackageManager handler is %s", (nullptr != mPackageManagerHandlerObject) ? "valid, but package version is empty" : "null");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     CurrentActionError errorCode = (packageData.version.empty()?AppManagerImplementation::ERROR_PACKAGE_INVALID:AppManagerImplementation::ERROR_INTERNAL);
                     appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, errorCode);
 #endif
@@ -694,7 +694,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
             else
             {
                 LOGERR("isInstalled Failed for appId: %s", appId.c_str());
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_PACKAGE_NOT_INSTALLED);
 #endif
                 status = Core::ERROR_GENERAL;
@@ -703,7 +703,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
         else
         {
             LOGERR("Failed to Get the list of Packages");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_PACKAGE_LIST_FETCH);
 #endif
             status = Core::ERROR_GENERAL;
@@ -720,7 +720,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
 Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
 {
         Core::hresult status = Core::ERROR_GENERAL;
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
 #endif
 
@@ -734,7 +734,7 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
                 if(Core::ERROR_NONE != status)
                 {
                     LOGERR("Failed to PackageManager Unlock ");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_PACKAGE_UNLOCK);
 #endif
                 }
@@ -742,7 +742,7 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
             else
             {
                 LOGERR("PackageManager handler is %s",((nullptr != mPackageManagerHandlerObject) ? "valid": "null"));
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
 #endif
             }
@@ -750,7 +750,7 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
         else
         {
             LOGERR("AppId not found in map to get the version");
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INVALID_PARAMS);
 #endif
         }
@@ -767,9 +767,9 @@ Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const st
     Core::hresult status = Core::ERROR_GENERAL;
     PackageInfo packageData;
     Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
-    uint64_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
+    time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
 #endif
     LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
 
@@ -785,7 +785,7 @@ Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const st
             status = mLifecycleInterfaceConnector->launch(appId, intent, launchArgs, runtimeConfig);
         }
     }
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     if(status == Core::ERROR_NONE)
     {
         updateCurrentActionTime(appId, requestTime, AppManagerImplementation::APP_ACTION_LAUNCH);
@@ -814,9 +814,9 @@ Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const st
 Core::hresult AppManagerImplementation::CloseApp(const string& appId)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
-    uint64_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
+    time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
 #endif
     LOGINFO("CloseApp Entered with appId %s", appId.c_str());
 
@@ -827,7 +827,7 @@ Core::hresult AppManagerImplementation::CloseApp(const string& appId)
         {
             status = mLifecycleInterfaceConnector->closeApp(appId);
         }
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         if(status == Core::ERROR_NONE)
         {
             updateCurrentActionTime(appId, requestTime, AppManagerImplementation::APP_ACTION_CLOSE);
@@ -859,9 +859,9 @@ Core::hresult AppManagerImplementation::CloseApp(const string& appId)
 Core::hresult AppManagerImplementation::TerminateApp(const string& appId )
 {
     Core::hresult status = Core::ERROR_GENERAL;
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
-    uint64_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
+    time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
 #endif
     LOGINFO(" TerminateApp Entered with appId %s", appId.c_str());
 
@@ -876,7 +876,7 @@ Core::hresult AppManagerImplementation::TerminateApp(const string& appId )
                 status = packageUnLock(appId);
             }
         }
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         if(status == Core::ERROR_NONE)
         {
             updateCurrentActionTime(appId, requestTime, AppManagerImplementation::APP_ACTION_TERMINATE);
@@ -895,9 +895,9 @@ Core::hresult AppManagerImplementation::TerminateApp(const string& appId )
 Core::hresult AppManagerImplementation::KillApp(const string& appId)
 {
     Core::hresult status = Core::ERROR_NONE;
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
-    uint64_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
+    time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
 #endif
     LOGINFO("KillApp entered appId: '%s'", appId.c_str());
 
@@ -910,7 +910,7 @@ Core::hresult AppManagerImplementation::KillApp(const string& appId)
             status = packageUnLock(appId);
         }
     }
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     if(status == Core::ERROR_NONE)
     {
         updateCurrentActionTime(appId, requestTime, AppManagerImplementation::APP_ACTION_KILL);
@@ -971,9 +971,9 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
 
     PackageInfo packageData;
     Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting = AppManagerTelemetryReporting::getInstance();
-    uint64_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
+    time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
 #endif
     LOGINFO(" PreloadApp enter with appId %s", appId.c_str());
 
@@ -990,7 +990,7 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
             status = mLifecycleInterfaceConnector->preLoadApp(appId, launchArgs, runtimeConfig, error);
         }
     }
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     if(status == Core::ERROR_NONE)
     {
         updateCurrentActionTime(appId, requestTime, AppManagerImplementation::APP_ACTION_PRELOAD);
@@ -1470,8 +1470,8 @@ void AppManagerImplementation::updateCurrentAction(const std::string& appId, Cur
         LOGERR("App ID %s not found while updating currentAction", appId.c_str());
     }
 }
-#ifdef ENABLE_TELEMETRY_METRICS
-void AppManagerImplementation::updateCurrentActionTime(const std::string& appId, uint64_t currentActionTime, CurrentAction currentAction)
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+void AppManagerImplementation::updateCurrentActionTime(const std::string& appId, time_t currentActionTime, CurrentAction currentAction)
 {
     auto it = mAppInfo.find(appId);
     if((it != mAppInfo.end()) && (currentAction == it->second.currentAction))
