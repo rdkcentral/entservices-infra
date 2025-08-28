@@ -46,7 +46,6 @@ namespace WPEFramework
 	    bool mForce;
         };
 
-#ifdef ENABLE_TELEMETRY_METRICS
         enum RequestType {
             REQUEST_TYPE_NONE,
             REQUEST_TYPE_LAUNCH,
@@ -57,7 +56,6 @@ namespace WPEFramework
             REQUEST_TYPE_WAKE,
             REQUEST_TYPE_TERMINATE
         };
-#endif
 
         class ApplicationContext
 	{
@@ -74,10 +72,8 @@ namespace WPEFramework
                 void setStateChangeId(uint32_t id);
                 void setApplicationLaunchParams(const string& appId, const string& launchIntent, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject);
                 void setApplicationKillParams(bool force);
-#ifdef ENABLE_TELEMETRY_METRICS
-                void setRequestTime(uint64_t requestTime);
+                void setRequestTime(time_t requestTime);
                 void setRequestType(RequestType requestType);
-#endif
 
                 void* getState();
                 std::string getAppId();
@@ -90,8 +86,8 @@ namespace WPEFramework
                 uint32_t getStateChangeId();
                 ApplicationLaunchParams& getApplicationLaunchParams();
                 ApplicationKillParams& getApplicationKillParams();
-#ifdef ENABLE_TELEMETRY_METRICS
-                uint64_t getRequestTime();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                time_t getRequestTime();
                 RequestType getRequestType();
 #endif
 
@@ -120,8 +116,8 @@ namespace WPEFramework
                 uint32_t mStateChangeId;
                 ApplicationLaunchParams mLaunchParams;
                 ApplicationKillParams mKillParams;
-#ifdef ENABLE_TELEMETRY_METRICS
-                uint64_t mRequestTime;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                time_t mRequestTime;
                 RequestType mRequestType;
 #endif
         };

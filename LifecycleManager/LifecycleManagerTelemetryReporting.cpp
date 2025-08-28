@@ -59,11 +59,11 @@ namespace Plugin
         }
     }
 
-    uint64_t LifecycleManagerTelemetryReporting::getCurrentTimestamp()
+    time_t LifecycleManagerTelemetryReporting::getCurrentTimestamp()
     {
         timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
-        return ((uint64_t)(ts.tv_sec * 1000) + ((uint64_t)ts.tv_nsec/1000000));
+        return ((time_t)(ts.tv_sec * 1000) + ((time_t)ts.tv_nsec/1000000));
     }
 
 /*
@@ -95,8 +95,8 @@ namespace Plugin
     {
         string appId = "";
         RequestType requestType = REQUEST_TYPE_NONE;
-        uint64_t requestTime = 0;
-        uint64_t currentTime = 0;
+        time_t requestTime = 0;
+        time_t currentTime = 0;
         Exchange::ILifecycleManager::LifecycleState targetLifecycleState;
         Exchange::ILifecycleManager::LifecycleState newLifecycleState;
         JsonObject jsonParam;

@@ -41,7 +41,7 @@ class LifecycleManagerTelemetryReporting
         LifecycleManagerTelemetryReporting& operator=(const LifecycleManagerTelemetryReporting&) = delete;
         static LifecycleManagerTelemetryReporting& getInstance();
         void reportTelemetryDataOnStateChange(ApplicationContext* context, const JsonObject &data);
-        uint64_t getCurrentTimestamp();
+        time_t getCurrentTimestamp();
         void initialize(PluginHost::IShell* service);
 
     private /*methods*/:
