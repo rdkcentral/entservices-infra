@@ -381,9 +381,17 @@ namespace WPEFramework
         bool installError = false;
         int  failedApps   = 0;
         int  totalApps    = preinstallPackages.size();
+        int  skippedApps  = 0;
 
         for (const auto &pkg : preinstallPackages)
         {
+            if((pkg.packageId.empty() || pkg.version.empty() || pkg.fileLocator.empty()) /*&& !forceInstall */) // force install anyway
+            {
+                LOGERR("Skipping invalid package with empty fields: %s , forceInstall: %s", pkg.fileLocator.empty() ? "NULL" : pkg.fileLocator.c_str(), forceInstall ? "true" : "false");
+                skippedApps++;
+                //continue;  todo removed for testing
+            }
+
             // todo multi threading ??
             LOGINFO("Installing package: %s, version: %s", pkg.packageId.c_str(), pkg.version.c_str());
             Exchange::IPackageInstaller::FailReason failReason;
@@ -401,7 +409,8 @@ namespace WPEFramework
             }
         }
 
-        LOGINFO("Installation summary: %d/%d packages installed successfully. %d apps failed", totalApps - failedApps, totalApps, failedApps);
+        LOGINFO("Installation summary: %d/%d packages installed successfully. %d apps failed. %d apps skipped.", totalApps - failedApps - skippedApps, totalApps, failedApps, skippedApps);
+        // LOGINFO("Installation summary: Skipped packages: %d", skippedApps);
 
         //cleanup
         releasePackageManagerObject();
