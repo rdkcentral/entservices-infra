@@ -23,6 +23,7 @@
 // #include <interfaces/json/JsonData_PreinstallManager.h>
 #include <interfaces/json/JPreinstallManager.h>
 #include <interfaces/IPreinstallManager.h>
+#include <interfaces/IConfiguration.h>
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <mutex>
