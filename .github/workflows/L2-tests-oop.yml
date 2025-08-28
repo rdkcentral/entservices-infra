@@ -105,7 +105,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: RDKEMW-7169 - Gtest Add missing empty files
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-deviceanddisplay
@@ -257,6 +257,9 @@ jobs:
           systemaudioplatform.h
           maintenanceMGR.h
           pkg.h
+          edid-parser.hpp
+          drm.h
+          drm_mode.h
           btmgr.h
           tvError.h
           tvTypes.h
