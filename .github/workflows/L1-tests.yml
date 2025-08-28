@@ -123,7 +123,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: feature/RDK-55547
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
@@ -302,9 +302,6 @@ jobs:
           telemetry_busmessage_sender.h
           maintenanceMGR.h
           pkg.h
-          edid-parser.hpp
-          drm.h
-          drm_mode.h
           secure_wrapper.h
           wpa_ctrl.h
           proc/readproc.h
