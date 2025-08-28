@@ -82,7 +82,7 @@ namespace Plugin {
             APP_ACTION_KILL,
         };
 
-#ifdef ENABLE_TELEMETRY_METRICS
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         enum CurrentActionError{
             ERROR_NONE,
             ERROR_INVALID_PARAMS,
@@ -116,8 +116,8 @@ namespace Plugin {
             Exchange::IAppManager::AppLifecycleState appOldState;
             /* Current Action*/
             CurrentAction currentAction = APP_ACTION_NONE;
-#ifdef ENABLE_TELEMETRY_METRICS
-            uint64_t currentActionTime;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            time_t currentActionTime;
 #endif
         } AppInfo;
 
@@ -259,8 +259,8 @@ namespace Plugin {
 
     public: /* public methods */
         void updateCurrentAction(const std::string& appId, CurrentAction action);
-#ifdef ENABLE_TELEMETRY_METRICS
-        void updateCurrentActionTime(const std::string& appId, uint64_t currentActionTime, CurrentAction currentAction);
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        void updateCurrentActionTime(const std::string& appId, time_t currentActionTime, CurrentAction currentAction);
 #endif
     };
 } /* namespace Plugin */

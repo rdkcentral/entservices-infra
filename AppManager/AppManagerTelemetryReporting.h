@@ -39,7 +39,7 @@ class AppManagerTelemetryReporting
         AppManagerTelemetryReporting(const AppManagerTelemetryReporting&) = delete;
         AppManagerTelemetryReporting& operator=(const AppManagerTelemetryReporting&) = delete;
         static AppManagerTelemetryReporting& getInstance();
-        uint64_t getCurrentTimestamp();
+        time_t getCurrentTimestamp();
         void reportTelemetryData(const std::string& appId, AppManagerImplementation::CurrentAction currentAction);
         void reportTelemetryDataOnStateChange(const string& appId, const Exchange::ILifecycleManager::LifecycleState newState);
         void reportTelemetryErrorData(const std::string& appId, AppManagerImplementation::CurrentAction currentAction, AppManagerImplementation::CurrentActionError errorCode);
