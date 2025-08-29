@@ -306,8 +306,6 @@ jobs:
           maintenanceMGR.h
           pkg.h
           edid-parser.hpp
-          drm.h
-          drm_mode.h
           secure_wrapper.h
           wpa_ctrl.h
           proc/readproc.h
