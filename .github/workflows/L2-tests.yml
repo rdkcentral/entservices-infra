@@ -269,7 +269,7 @@ jobs:
           systemaudioplatform.h
           maintenanceMGR.h
           pkg.h
-          edid-parser.hpp
+          mocks/edid-parser.hpp
           drm.h
           drm_mode.h
           btmgr.h
