@@ -305,9 +305,9 @@ jobs:
           telemetry_busmessage_sender.h
           maintenanceMGR.h
           pkg.h
-          ../mocks/edid-parser.hpp
-          ../mocks/drm.h
-          ../mocks/drm_mode.h
+          edid-parser.hpp
+          drm.h
+          drm_mode.h
           secure_wrapper.h
           wpa_ctrl.h
           proc/readproc.h
@@ -403,6 +403,7 @@ jobs:
           -DUSE_DRM_SCREENCAPTURE
           -DHAS_API_SYSTEM
           -DHAS_API_POWERSTATE
+          -D_DRM_MODE_H
           -DHAS_RBUS
           -DENABLE_DEVICE_MANUFACTURER_INFO"
           &&
@@ -555,6 +556,7 @@ jobs:
           -DUSE_DRM_SCREENCAPTURE
           -DHAS_API_SYSTEM
           -DHAS_API_POWERSTATE
+          -D_DRM_MODE_H
           -DHAS_RBUS
           -DENABLE_DEVICE_MANUFACTURER_INFO"
           -DCOMCAST_CONFIG=OFF
