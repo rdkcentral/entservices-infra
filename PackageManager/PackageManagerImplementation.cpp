@@ -743,6 +743,7 @@ namespace Plugin {
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
+                LOGTRACE("Waiting ... ");
                 std::unique_lock<std::mutex> lock(mMutex);
                 cv.wait(lock, [&]{ return done || mDownloadQueue.size(); });
             } else {
@@ -806,7 +807,7 @@ namespace Plugin {
         mAdminLock.Lock();
         for (auto notification: mDownloaderNotifications) {
             notification->OnAppDownloadStatus(jsonstr);
-            LOGDBG("fileLocator: %s", locator.c_str());
+            LOGTRACE();
         }
         mAdminLock.Unlock();
     }
@@ -831,7 +832,7 @@ namespace Plugin {
         mAdminLock.Lock();
         for (auto notification: mInstallNotifications) {
             notification->OnAppInstallationStatus(jsonstr);
-            LOGDBG();
+            LOGTRACE();
         }
         mAdminLock.Unlock();
     }
@@ -839,7 +840,7 @@ namespace Plugin {
     PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext()
     {
         std::lock_guard<std::mutex> lock(mMutex);
-        LOGDBG("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
+        LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDownload == nullptr) {
             mInprogressDownload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
