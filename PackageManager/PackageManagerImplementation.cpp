@@ -199,12 +199,6 @@ namespace Plugin {
 
         LOGDBG("Downloading '%s'", url.c_str());
         {
-            if (mMutex.try_lock()) {
-                LOGDBG("try_lock Success");
-                 mMutex.unlock();
-            } else {
-                LOGDBG("try_lock Failed");
-            }
             std::lock_guard<std::mutex> lock(mMutex);
 
             DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
@@ -749,10 +743,8 @@ namespace Plugin {
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
-                LOGDBG("Waiting ... ");
                 std::unique_lock<std::mutex> lock(mMutex);
-                cv.wait(lock);
-                LOGDBG("Waiting over ");
+                cv.wait(lock, [&]{ return done || mDownloadQueue.size(); });
             } else {
                 HttpClient::Status status = HttpClient::Status::Success;
                 int waitTime = 1;
@@ -814,7 +806,7 @@ namespace Plugin {
         mAdminLock.Lock();
         for (auto notification: mDownloaderNotifications) {
             notification->OnAppDownloadStatus(jsonstr);
-            LOGTRACE();
+            LOGDBG("fileLocator: %s", locator.c_str());
         }
         mAdminLock.Unlock();
     }
@@ -839,20 +831,13 @@ namespace Plugin {
         mAdminLock.Lock();
         for (auto notification: mInstallNotifications) {
             notification->OnAppInstallationStatus(jsonstr);
-            LOGTRACE();
+            LOGDBG();
         }
         mAdminLock.Unlock();
     }
 
     PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext()
     {
-        if (mMutex.try_lock()) {
-            LOGDBG("try_lock Success");
-                mMutex.unlock();
-        } else {
-            LOGDBG("try_lock Failed");
-        }
-
         std::lock_guard<std::mutex> lock(mMutex);
         LOGDBG("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDownload == nullptr) {
