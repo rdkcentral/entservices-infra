@@ -305,7 +305,7 @@ jobs:
           telemetry_busmessage_sender.h
           maintenanceMGR.h
           pkg.h
-          edid-parser.hpp
+          ../mocks/edid-parser.hpp
           drm.h
           drm_mode.h
           secure_wrapper.h
