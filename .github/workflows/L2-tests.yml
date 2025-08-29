@@ -331,8 +331,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           -DCMAKE_CXX_FLAGS="
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers
-          -I $GITHUB_WORKSPACE/install/usr/include
-          -I ./usr/include/libdrm"
+          -I $GITHUB_WORKSPACE/install/usr/include"
           &&
           cmake --build build/mocks -j8
           &&
@@ -365,7 +364,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices/proc
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks
-          -I ./usr/include/libdrm
+          -I $GITHUB_WORKSPACE/install/usr/include
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
