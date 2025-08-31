@@ -1147,14 +1147,6 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionCleanup)
     // so it will return nullptr by default when service->RemoteConnection(_connectionId) is called
     
     EXPECT_CALL(testService, Unregister(::testing::_)).WillOnce(::testing::Return());
-    
-    // Set up expectations for USB mass storage cleanup
-    if (USBMassStorageImpl.IsValid()) {
-        // Mock the Release call that should return ERROR_DESTRUCTION_SUCCEEDED
-        ON_CALL(*USBMassStorageImpl, Release())
-            .WillByDefault(::testing::Return(Core::ERROR_DESTRUCTION_SUCCEEDED));
-    }
-    
     EXPECT_CALL(testService, Release()).WillOnce(::testing::Return(0));
     
     // Call Deinitialize - this should hit the connection == nullptr path
