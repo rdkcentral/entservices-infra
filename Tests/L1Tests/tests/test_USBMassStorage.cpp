@@ -1105,13 +1105,120 @@ TEST_F(USBMassStorageTest, OnDevicePluggedOut_DeviceNotInMountInfo_RemovesFromDe
 //     EXPECT_FALSE(result); // Should fail via else branch
 // }
 
-TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionCleanup)
+TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
 {
     // Create a new instance of the plugin for this specific test
     Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
     
     // Create mock service
     NiceMock<ServiceMock> testService;
+    
+    // Create a mock USB device
+    USBDeviceMock* mockUsbDevice = new NiceMock<USBDeviceMock>();
+    
+    // Create test devices with different characteristics to cover all branches
+    std::list<Exchange::IUSBDevice::USBDevice> usbDeviceList;
+    
+    // Mass storage device with valid path
+    Exchange::IUSBDevice::USBDevice validDevice;
+    validDevice.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
+    validDevice.deviceSubclass = 0x06;
+    validDevice.deviceName = "valid_device";
+    validDevice.devicePath = "/dev/sda1";
+    usbDeviceList.push_back(validDevice);
+    
+    // Mass storage device with empty path (to test the empty path branch)
+    Exchange::IUSBDevice::USBDevice emptyPathDevice;
+    emptyPathDevice.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
+    emptyPathDevice.deviceSubclass = 0x06;
+    emptyPathDevice.deviceName = "empty_path_device";
+    emptyPathDevice.devicePath = ""; // Empty path to test that branch
+    usbDeviceList.push_back(emptyPathDevice);
+    
+    // Non-mass storage device (to test the else branch)
+    Exchange::IUSBDevice::USBDevice nonMassStorageDevice;
+    nonMassStorageDevice.deviceClass = LIBUSB_CLASS_HID; // Not mass storage
+    nonMassStorageDevice.deviceSubclass = 0x01;
+    nonMassStorageDevice.deviceName = "hid_device";
+    nonMassStorageDevice.devicePath = "/dev/hidraw0";
+    usbDeviceList.push_back(nonMassStorageDevice);
+    
+    // Create iterator with our test devices
+    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
+    
+    // Set up expectations for QueryInterfaceByCallsign to return our USB device mock
+    EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(mockUsbDevice));
+    
+    // Set up expectations for AddRef and Register
+    EXPECT_CALL(testService, AddRef()).WillRepeatedly(::testing::Return());
+    EXPECT_CALL(testService, Register(::testing::_)).WillRepeatedly(::testing::Return());
+    
+    // Set up expectations for GetDeviceList to return our iterator with test devices
+    EXPECT_CALL(*mockUsbDevice, GetDeviceList(::testing::_))
+        .WillOnce([&](Exchange::IUSBDevice::IUSBDeviceIterator*& devices) {
+            devices = mockIterator;
+            return Core::ERROR_NONE;
+        });
+    
+    // Set up expectation for Register on the USB device
+    EXPECT_CALL(*mockUsbDevice, Register(::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
+    // Mock filesystem operations for device mounting
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly([](const std::string& path, struct stat* info) {
+            if (path.find("/tmp/media") != std::string::npos) {
+                return -1; // Directory doesn't exist, needs creation
+            }
+            if (info) info->st_mode = S_IFDIR;
+            return 0;
+        });
+    
+    EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    
+    // Mock for reading partition information - avoid using fopen() since it's not available
+    // Instead, mock lower-level functionality if needed for the test
+    
+    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0)); // All mounts succeed
+    
+    // Use COM implementation mock which the test fixture already sets up
+    ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke(
+        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
+            connectionId = 12345; // Set a connection ID
+            return &USBMassStorageImpl;
+        }));
+    
+    // Call Initialize which will call Configure which will call MountDevicesOnBootUp
+    string result = testPlugin->Initialize(&testService);
+    
+    // Verify initialization succeeded
+    EXPECT_EQ(result, "");
+    
+    // Clean up
+    testPlugin->Deinitialize(&testService);
+    
+    // Cleanup the allocated mock object
+    delete mockUsbDevice;
+}
+
+TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTermination)
+{
+    // Create a custom ServiceMock that explicitly mocks RemoteConnection
+    class TestServiceMock : public ServiceMock {
+    public:
+        MOCK_METHOD(RPC::IRemoteConnection*, RemoteConnection, (const uint32_t), (override));
+        // Inherit all other methods from ServiceMock
+    };
+    
+    // Create a new instance of the plugin for this specific test
+    Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
+    
+    // Create mock service with explicit RemoteConnection mock
+    NiceMock<TestServiceMock> testService;
     
     // Create a mock USB device
     USBDeviceMock* mockUsbDevice = new NiceMock<USBDeviceMock>();
@@ -1126,7 +1233,7 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionCleanup)
     EXPECT_CALL(*mockUsbDevice, Register(::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
     
-    // Mock the COM link to return our implementation
+    // Mock the COM link to return our implementation (this ensures _usbMassStorage is not null)
     ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Invoke(
         [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
@@ -1134,25 +1241,25 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionCleanup)
             return &USBMassStorageImpl;
         }));
     
-    // Initialize the plugin
+    // Initialize the plugin - this should set up _usbMassStorage
     string result = testPlugin->Initialize(&testService);
     EXPECT_EQ(result, "");
     
     // Now set up expectations for deinitialization
-    // Based on the actual USBMassStorage::Deinitialize implementation:
-    // 1. It calls _service->Unregister(&_usbStoragesNotification) - but only if the plugin was properly initialized
-    // 2. It calls _service->Release() at the end
-    // 3. If _usbMassStorage is not null, it may call additional Release() methods
-    
-    // Set up flexible expectations that match the actual behavior
     EXPECT_CALL(testService, Unregister(::testing::_)).Times(::testing::AnyNumber());
-    EXPECT_CALL(testService, Release()).Times(::testing::AtLeast(1));
     
     // Mock USB device unregister if it gets called
     EXPECT_CALL(*mockUsbDevice, Unregister(::testing::_)).Times(::testing::AnyNumber());
     
+    // THIS IS THE KEY: Mock RemoteConnection to explicitly return nullptr
+    EXPECT_CALL(testService, RemoteConnection(::testing::_))
+        .WillOnce(::testing::Return(static_cast<RPC::IRemoteConnection*>(nullptr)));
+    
+    // Set up Release expectations
+    EXPECT_CALL(testService, Release()).Times(::testing::AtLeast(1));
+    
     // Call Deinitialize - this should hit the connection == nullptr path
-    // Since ServiceMock doesn't implement RemoteConnection, it returns nullptr
+    // The RemoteConnection call will return nullptr, so connection->Terminate() should NOT be called
     EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
     
     // The test passes if:
