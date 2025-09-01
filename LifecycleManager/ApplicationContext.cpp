@@ -28,7 +28,19 @@ namespace WPEFramework
         {
 	}
 
-        ApplicationContext::ApplicationContext (std::string appId): mAppInstanceId(""), mAppId(std::move(appId)), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
+        ApplicationContext::ApplicationContext (std::string appId)
+        : mAppInstanceId("")
+          ,mAppId(std::move(appId))
+          ,mLastLifecycleStateChangeTime()
+          ,mActiveSessionId("")
+          ,mTargetLifecycleState()
+          ,mMostRecentIntent("")
+          ,mState(nullptr)
+          ,mStateChangeId(0)
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+          ,mRequestTime(0)
+          ,mRequestType(REQUEST_TYPE_NONE)
+#endif
         {
             mState = (void*) new UnloadedState(this);
             sem_init(&mReachedLoadingStateSemaphore, 0, 0);
@@ -102,6 +114,20 @@ namespace WPEFramework
             mKillParams.mForce = force;
         }
 
+        void ApplicationContext::setRequestTime(time_t requestTime)
+        {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            mRequestTime = requestTime;
+#endif
+        }
+        void ApplicationContext::setRequestType(RequestType requestType)
+        {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            mRequestType = requestType;
+#endif
+        }
+
+
 	std::string ApplicationContext::getAppId()
 	{
             return mAppId;
@@ -157,5 +183,17 @@ namespace WPEFramework
 	{
             return mKillParams;
 	}
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        time_t ApplicationContext::getRequestTime()
+        {
+            return mRequestTime;
+        }
+
+        RequestType ApplicationContext::getRequestType()
+        {
+            return mRequestType;
+        }
+#endif
     } /* namespace Plugin */
 } /* namespace WPEFramework */

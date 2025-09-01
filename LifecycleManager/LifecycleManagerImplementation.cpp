@@ -23,6 +23,9 @@
 #include <interfaces/json/JsonData_LifecycleManagerState.h>
 #include <interfaces/json/JLifecycleManagerState.h>
 #include <semaphore.h>
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+#include "LifecycleManagerTelemetryReporting.h"
+#endif
 
 namespace WPEFramework
 {
@@ -44,6 +47,9 @@ namespace WPEFramework
         bool LifecycleManagerImplementation::initialize(PluginHost::IShell* service)
         {
             bool ret = RequestHandler::getInstance()->initialize(service, this);
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            LifecycleManagerTelemetryReporting::getInstance().initialize(service);
+#endif
 	    return ret;
         }
 
@@ -128,6 +134,9 @@ namespace WPEFramework
              string appInstanceId(obj["appInstanceId"].String());
              uint32_t oldLifecycleState(obj["oldLifecycleState"].Number());
              string navigationIntent(obj["navigationIntent"].String());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+             ApplicationContext* context = getContext("", appId);
+#endif
 
              mAdminLock.Lock();
         
@@ -137,6 +146,9 @@ namespace WPEFramework
              switch(event)
              {
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                     LifecycleManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(context, obj);
+#endif
                      handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
                      {
@@ -233,6 +245,11 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext("", appId);
             bool firstLaunch = false;
+            time_t requestTime = 0;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
+#endif
+            mAdminLock.Lock();
             if (nullptr == context)
 	    {
                 context = new ApplicationContext(appId);
@@ -240,6 +257,8 @@ namespace WPEFramework
 		mLoadedApplications.push_back(context);
                 firstLaunch = true;
 	    }
+            context->setRequestTime(requestTime);
+            context->setRequestType(REQUEST_TYPE_LAUNCH);
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
             success = RequestHandler::getInstance()->launch(context, launchIntent, targetLifecycleState, errorReason);
@@ -255,6 +274,7 @@ namespace WPEFramework
 		}
                 appInstanceId = context->getAppInstanceId();
             }
+            mAdminLock.Unlock();
             return status;
         }
         
@@ -263,17 +283,42 @@ namespace WPEFramework
             // Moves a currently loaded app between states
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext(appInstanceId, "");
+            time_t requestTime = 0;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
+#endif
             if (nullptr == context)
 	    {
                 status = Core::ERROR_GENERAL;
                 return status;
 	    }
-
+            mAdminLock.Lock();
+            switch(targetLifecycleState)
+            {
+                case Exchange::ILifecycleManager::LifecycleState::PAUSED:        //before SUSPEND or HIBERNATE app will be PAUSED
+                    context->setRequestTime(requestTime);
+                    context->setRequestType(REQUEST_TYPE_PAUSE);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::SUSPENDED:
+                    context->setRequestType(REQUEST_TYPE_SUSPEND);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::HIBERNATED:
+                    context->setRequestType(REQUEST_TYPE_HIBERNATE);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::ACTIVE:
+                    context->setRequestTime(requestTime);
+                    context->setRequestType(REQUEST_TYPE_RESUME);
+                break;
+                default:
+                    LOGERR("targetLifecycleState is invalid");
+                break;
+            }
             string errorReason("");
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
 
             bool success = RequestHandler::getInstance()->updateState(context, targetLifecycleState, errorReason);
+            mAdminLock.Unlock();
             if (false == success)
             {
                 status = Core::ERROR_GENERAL;
@@ -289,12 +334,22 @@ namespace WPEFramework
             // This moves an app to the unloaded state
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext(appInstanceId, "");
+            time_t requestTime = 0;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
+#endif
             if (nullptr == context)
 	    {
                 status = Core::ERROR_GENERAL;
                 success = false;
                 return status;
 	    }
+            mAdminLock.Lock();
+            if(REQUEST_TYPE_PAUSE != context->getRequestType())   //If request through AppManager closeApp, requestTime is already set
+            {
+                context->setRequestTime(requestTime);
+            }
+            context->setRequestType(REQUEST_TYPE_TERMINATE);
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(false);
 
@@ -303,6 +358,7 @@ namespace WPEFramework
 	    {
                 status = Core::ERROR_GENERAL;
 	    }
+            mAdminLock.Unlock();
             return status;
         }
         
@@ -310,15 +366,24 @@ namespace WPEFramework
         {
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext(appInstanceId, "");
+            time_t requestTime =0;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
+#endif
+
             if (nullptr == context)
 	    {
                 status = Core::ERROR_GENERAL;
                 success = false;
                 return status;
 	    }
+            mAdminLock.Lock();
+            context->setRequestTime(requestTime);
+            context->setRequestType(REQUEST_TYPE_TERMINATE);
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(true);
             success = RequestHandler::getInstance()->terminate(context, true, errorReason);
+            mAdminLock.Unlock();
             return status;
         }
         
