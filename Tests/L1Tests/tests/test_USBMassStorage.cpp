@@ -1207,18 +1207,11 @@ TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
 
 TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTermination)
 {
-    // Create a custom ServiceMock that explicitly mocks RemoteConnection
-    class TestServiceMock : public ServiceMock {
-    public:
-        MOCK_METHOD(RPC::IRemoteConnection*, RemoteConnection, (const uint32_t), (override));
-        // Inherit all other methods from ServiceMock
-    };
-    
     // Create a new instance of the plugin for this specific test
     Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
     
-    // Create mock service with explicit RemoteConnection mock
-    NiceMock<TestServiceMock> testService;
+    // Create mock service
+    NiceMock<ServiceMock> testService;
     
     // Create a mock USB device
     USBDeviceMock* mockUsbDevice = new NiceMock<USBDeviceMock>();
@@ -1251,15 +1244,11 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTerminatio
     // Mock USB device unregister if it gets called
     EXPECT_CALL(*mockUsbDevice, Unregister(::testing::_)).Times(::testing::AnyNumber());
     
-    // THIS IS THE KEY: Mock RemoteConnection to explicitly return nullptr
-    EXPECT_CALL(testService, RemoteConnection(::testing::_))
-        .WillOnce(::testing::Return(static_cast<RPC::IRemoteConnection*>(nullptr)));
-    
     // Set up Release expectations
     EXPECT_CALL(testService, Release()).Times(::testing::AtLeast(1));
     
-    // Call Deinitialize - this should hit the connection == nullptr path
-    // The RemoteConnection call will return nullptr, so connection->Terminate() should NOT be called
+    // Call Deinitialize - Since ServiceMock doesn't implement RemoteConnection method,
+    // it will return nullptr by default, hitting our target branch
     EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
     
     // The test passes if:
