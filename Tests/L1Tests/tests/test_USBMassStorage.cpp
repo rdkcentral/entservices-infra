@@ -1247,14 +1247,7 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTerminatio
     // THIS IS THE KEY: Mock QueryInterface to return nullptr when asked for ICOMLink
     // This will cause RemoteConnection() to return nullptr
     EXPECT_CALL(testService, QueryInterface(::testing::_))
-        .WillRepeatedly([](const uint32_t interfaceId) -> void* {
-            // Check if it's asking for ICOMLink interface
-            if (interfaceId == WPEFramework::PluginHost::IShell::ICOMLink::ID) {
-                return nullptr; // Return nullptr to trigger our test condition
-            }
-            // For other interfaces, return nullptr as well (or handle as needed)
-            return nullptr;
-        });
+        .WillRepeatedly(::testing::Return(nullptr));
     
     // Set up Release expectations
     EXPECT_CALL(testService, Release()).Times(::testing::AtLeast(1));
