@@ -75,7 +75,7 @@ endif(RIALTO_IN_DAC_FEATURE)
 add_library(${PLUGIN_IMPLEMENTATION} SHARED ${RUNTIMEMANAGER_SOURCES})
 
 if (RIALTO_IN_DAC_FEATURE)
-target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins libRialtoServerManager.so)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins libRialtoServerManager.so)
 endif(RIALTO_IN_DAC_FEATURE)
 
 include_directories(../helpers)
