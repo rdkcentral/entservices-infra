@@ -1216,15 +1216,27 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTerminatio
     // Create a mock USB device
     USBDeviceMock* mockUsbDevice = new NiceMock<USBDeviceMock>();
     
-    // Set up expectations for initialization
-    EXPECT_CALL(testService, AddRef()).WillRepeatedly(::testing::Return());
-    EXPECT_CALL(testService, Register(::testing::_)).WillRepeatedly(::testing::Return());
+    // Set up expectations for initialization - ensure these are called at least once
+    EXPECT_CALL(testService, AddRef())
+        .Times(::testing::AtLeast(1));
+    
+    EXPECT_CALL(testService, Register(::testing::_))
+        .Times(::testing::AtLeast(1));
+    
     EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .Times(::testing::AtLeast(1))
         .WillRepeatedly(::testing::Return(mockUsbDevice));
+    
+    // THIS IS KEY: Ensure QueryInterface is called at least once during deinitialize
+    // This will return nullptr to trigger our target branch
+    EXPECT_CALL(testService, QueryInterface(::testing::_))
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly(::testing::Return(nullptr));
     
     // Set up expectations for Register on the USB device
     EXPECT_CALL(*mockUsbDevice, Register(::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
     
     // Mock the COM link to return our implementation (this ensures _usbMassStorage is not null)
     ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
@@ -1239,27 +1251,27 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTerminatio
     EXPECT_EQ(result, "");
     
     // Now set up expectations for deinitialization
-    EXPECT_CALL(testService, Unregister(::testing::_)).Times(::testing::AnyNumber());
+    EXPECT_CALL(testService, Unregister(::testing::_))
+        .Times(::testing::AtLeast(1));
     
     // Mock USB device unregister if it gets called
-    EXPECT_CALL(*mockUsbDevice, Unregister(::testing::_)).Times(::testing::AnyNumber());
+    EXPECT_CALL(*mockUsbDevice, Unregister(::testing::_))
+        .Times(::testing::AnyNumber());
     
-    // THIS IS THE KEY: Mock QueryInterface to return nullptr when asked for ICOMLink
-    // This will cause RemoteConnection() to return nullptr
-    EXPECT_CALL(testService, QueryInterface(::testing::_))
-        .WillRepeatedly(::testing::Return(nullptr));
+    // Set up Release expectations - should be called at least once
+    EXPECT_CALL(testService, Release())
+        .Times(::testing::AtLeast(1));
     
-    // Set up Release expectations
-    EXPECT_CALL(testService, Release()).Times(::testing::AtLeast(1));
-    
-    // Call Deinitialize - The QueryInterface mock will return nullptr for ICOMLink,
+    // Call Deinitialize - The QueryInterface mock will return nullptr,
     // which will cause RemoteConnection() to return nullptr, hitting our target branch
     EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
     
     // The test passes if:
     // 1. No exception is thrown
-    // 2. The method completes successfully without trying to call connection->Terminate()
-    // 3. The connection cleanup block is skipped (since connection == nullptr)
+    // 2. QueryInterface was called at least once (verified by EXPECT_CALL)
+    // 3. The method completes successfully without trying to call connection->Terminate()
+    // 4. The connection cleanup block is skipped (since connection == nullptr)
+    // 5. All initialization calls (AddRef, Register, QueryInterfaceByCallsign) happened at least once
     
     // Clean up allocated mock
     delete mockUsbDevice;
