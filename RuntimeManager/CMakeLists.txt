@@ -67,13 +67,16 @@ list(APPEND RUNTIMEMANAGER_SOURCES  AIConfiguration.cpp)
 list(APPEND RUNTIMEMANAGER_SOURCES  Module.cpp)
 
 if (RIALTO_IN_DAC_FEATURE)
-  add_definitions("-DENABLE_RIALTO_FEATURE")
+  add_definitions("-DENABLE_RIALTO_IN_DAC_FEATURE")
   list(APPEND RUNTIMEMANAGER_SOURCES  RialtoConnector.cpp)
-  target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins libRialtoServerManager.so)
 endif(RIALTO_IN_DAC_FEATURE)
 
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED ${RUNTIMEMANAGER_SOURCES})
+
+if (RIALTO_IN_DAC_FEATURE)
+target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins libRialtoServerManager.so)
+endif(RIALTO_IN_DAC_FEATURE)
 
 include_directories(../helpers)
 
