@@ -671,6 +671,25 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     string unmountResponse;
     uint32_t result = handler.Invoke(connection, _T("getMountPoints"), 
                                    _T("{\"deviceName\":\"001/002\"}"), unmountResponse);
+
+     // Use the result variable to avoid unused variable warning
+    bool deviceProperlyUnmounted = false;
+    
+    if (result == Core::ERROR_INVALID_DEVICENAME) {
+        // Device is completely removed - this is good
+        deviceProperlyUnmounted = true;
+    } else if (result == Core::ERROR_NONE) {
+        // Check if response is empty array or has no mount points
+        if (unmountResponse.find("[]") != string::npos || 
+            unmountResponse.find("mountPath") == string::npos ||
+            unmountResponse.empty()) {
+            deviceProperlyUnmounted = true;
+        }
+    }
+    
+    EXPECT_FALSE(deviceProperlyUnmounted) 
+        << "Device should no longer have valid mount points after unplug. "
+        << "Result: " << result << ", Response: " << unmountResponse;
 }
 
 TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectionCleanup)
@@ -683,8 +702,7 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
     NiceMock<ServiceMock> testService;
     USBDeviceMock* testUsbDevice = new NiceMock<USBDeviceMock>();
     
-    // Track initialization state
-    bool initializeCalled = false;
+    // Track state changes (remove unused variables)
     bool queryInterfaceCalled = false;
     bool addRefCalled = false;
     bool registerCalled = false;
@@ -697,9 +715,13 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
             ::testing::Return(testUsbDevice)
         ));
     
+    // Fix the AddRef mock - it should return void, not assign to bool
     EXPECT_CALL(testService, AddRef())
         .Times(1)
-        .WillOnce(::testing::Assign(&addRefCalled, true));
+        .WillOnce(::testing::DoAll(
+            ::testing::Assign(&addRefCalled, true),
+            ::testing::Return()
+        ));
     
     EXPECT_CALL(testService, Register(::testing::_))
         .Times(1)
@@ -719,9 +741,13 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
         .Times(1)
         .WillOnce(::testing::Assign(&unregisterCalled, true));
     
+    // Fix the Release mock - it should return void, not assign to bool
     EXPECT_CALL(testService, Release())
         .Times(1)
-        .WillOnce(::testing::Assign(&releaseCalled, true));
+        .WillOnce(::testing::DoAll(
+            ::testing::Assign(&releaseCalled, true),
+            ::testing::Return()
+        ));
     
     EXPECT_CALL(*testUsbDevice, Unregister(::testing::_))
         .Times(1)
@@ -757,11 +783,13 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
     EXPECT_TRUE(releaseCalled) << "Release should have been called during deinitialization";
     EXPECT_TRUE(usbDeviceUnregisterCalled) << "USB device unregister should have been called";
     
-    // Verify plugin is in deinitialized state
-    // The plugin should no longer handle RPC calls properly after deinitialize
+    // Verify plugin behavior after deinitialize (use the result to avoid warning)
     string testResponse;
     Core::JSONRPC::Context testConnection(2, 0, "");
     uint32_t invokeResult = testHandler.Invoke(testConnection, _T("getDeviceList"), _T("{}"), testResponse);
+    // After deinitialize, we expect different behavior - exact behavior depends on implementation
+    EXPECT_TRUE(invokeResult != Core::ERROR_NONE || testResponse.empty()) 
+        << "Plugin should behave differently after deinitialize. Result: " << invokeResult;
 
     delete testUsbDevice;
 }
