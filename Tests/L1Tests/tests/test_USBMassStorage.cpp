@@ -787,6 +787,8 @@ TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
     
     // Clean up
     testPlugin->Deinitialize(&testService);
+
+    delete mockUsbDevice;
 }
 
 // TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTermination)
