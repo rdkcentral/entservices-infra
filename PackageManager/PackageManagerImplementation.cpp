@@ -93,7 +93,10 @@ namespace Plugin {
         ASSERT(notification != nullptr);
         Core::hresult result = Core::ERROR_NONE;
 
+        std::cout << "akshay unregistering download notification" << std::endl;
+        std::cout << "akshay updating done value to true" << std::endl;
         done = true;
+        std::cout << "akshay sending notify_one from unregister" << std::endl;
         cv.notify_one();
         mDownloadThreadPtr->join();
 
@@ -199,7 +202,7 @@ namespace Plugin {
         }
 
         std::lock_guard<std::mutex> lock(mMutex);
-        std::cout << "akshay lock acquired" << std::endl;
+        std::cout << "akshay lock acquired in download method" << std::endl;
         DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
         std::string filename = downloadDir + "package" + di->GetId();
         di->SetFileLocator(filename);
@@ -208,10 +211,12 @@ namespace Plugin {
         } else {
             mDownloadQueue.push_back(di);
         }
+        std::cout << "akshay added download item to queue" << std::endl;
+        std::cout << "akshay sending notify from download method" << std::endl;
         cv.notify_one();
 
         downloadId.downloadId = di->GetId();
-
+        std::cout << "akshay value of result" << result << std::endl;
         return result;
     }
 
@@ -739,15 +744,22 @@ namespace Plugin {
     void PackageManagerImplementation::downloader(int n)
     {
         InitializeState();
+        //std::unique_lock<std::mutex> lock(mMutex);
         while(!done) {
-            std::cout << "akshay using new lock" << std::endl;
+            std::cout << "akshay locking after while and new wait" << std::endl;
+            std::cout << "akshay using new wait" << std::endl;
             auto di = getNext();
             if (di == nullptr) {
                 std::cout << "akshay waiting for next download item if condition" << std::endl;
                 LOGTRACE("Waiting ... ");
                 std::unique_lock<std::mutex> lock(mMutex);
                 std::cout << "akshay acquired lock and going for wait" << std::endl;
-                cv.wait(lock);
+                sleep(20);
+                std::cout << "akshay came from sleep and going for wait" << std::endl;
+                cv.wait(lock, [this] { return done || (getNext() != nullptr); });
+                std::cout << "akshay got notification and came out wait" << std::endl;
+                std::cout << "akshay came sleep and going for next loop" << std::endl;
+
             } else {
                 std::cout << "akshay found next download item else condition" << std::endl;
                 HttpClient::Status status = HttpClient::Status::Success;
