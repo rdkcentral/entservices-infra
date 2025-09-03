@@ -201,6 +201,7 @@ namespace Plugin {
             return Core::ERROR_UNAVAILABLE;
         }
 
+        std::cout << "akshay got for lock in Download method" << std::endl;
         std::lock_guard<std::mutex> lock(mMutex);
         std::cout << "akshay lock acquired in download method" << std::endl;
         DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
@@ -743,6 +744,7 @@ namespace Plugin {
 
     void PackageManagerImplementation::downloader(int n)
     {
+        std::cout <<"akshay created thread" << std::endl;
         InitializeState();
         //std::unique_lock<std::mutex> lock(mMutex);
         while(!done) {
@@ -752,11 +754,13 @@ namespace Plugin {
             if (di == nullptr) {
                 std::cout << "akshay waiting for next download item if condition" << std::endl;
                 LOGTRACE("Waiting ... ");
+                std::cout << "akshay going for lock" << std::endl;
                 std::unique_lock<std::mutex> lock(mMutex);
-                std::cout << "akshay acquired lock and going for wait" << std::endl;
-                sleep(20);
-                std::cout << "akshay came from sleep and going for wait" << std::endl;
-                cv.wait(lock);
+                // std::cout << "akshay acquired lock and going for 20 seconds sleep" << std::endl;
+                // sleep(20);
+                // std::cout << "akshay came from sleep and going for cv wait" << std::endl;
+                std::cout << "akshay insdie lock in thread going for cv wait" <<std::endl;
+                cv.wait(lock, [this] { return done || (getNext() != nullptr); });
                 std::cout << "akshay got notification and came out wait" << std::endl;
                 std::cout << "akshay came sleep and going for next loop" << std::endl;
 
@@ -863,6 +867,7 @@ namespace Plugin {
             mInprogressDownload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
         }
+        std::cout << "akshay returting from the getNext" << std::endl;
         return mInprogressDownload;
     }
 
