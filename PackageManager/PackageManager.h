@@ -20,6 +20,7 @@
 #pragma once
 
 #include "Module.h"
+#include "PackageManagerJsonData.h"
 
 #include <interfaces/json/JPackageDownloader.h>
 #include <interfaces/json/JPackageInstaller.h>
@@ -66,11 +67,7 @@ namespace Plugin {
             {
             }
 
-            void OnAppDownloadStatus(const string& jsonresponse) override
-            {
-                LOGTRACE();
-                Exchange::JPackageDownloader::Event::OnAppDownloadStatus(mParent, jsonresponse);
-            }
+            void OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos) override;
             void OnAppInstallationStatus(const string& jsonresponse) override
             {
                 LOGTRACE();
