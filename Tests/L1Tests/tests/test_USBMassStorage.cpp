@@ -611,62 +611,6 @@ TEST_F(USBMassStorageTest, Information_ReturnsCorrectString)
     EXPECT_EQ(result, "The USBMassStorage Plugin manages device mounting and stores mount information.");
 }
 
-// // L1 Test for USBMassStorage::Notification::OnDeviceUnmounted method
-// TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_CreatesCorrectPayloadAndNotifies)
-// {
-//     // Setup device info
-//     Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-//     deviceInfo.devicePath = "/dev/sda1";
-//     deviceInfo.deviceName = "001/002";
-    
-//     // Create mount info list for the iterator
-//     std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
-//     Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo1;
-//     mountInfo1.mountPath = "/tmp/media/usb1";
-//     mountInfo1.partitionName = "/dev/sda1";
-//     mountInfo1.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT;
-//     mountInfo1.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE;
-    
-//     Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo2;
-//     mountInfo2.mountPath = "/tmp/media/usb2";
-//     mountInfo2.partitionName = "/dev/sda2";
-//     mountInfo2.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT;
-//     mountInfo2.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY;
-    
-//     mountInfoList.emplace_back(mountInfo1);
-//     mountInfoList.emplace_back(mountInfo2);
-    
-//     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
-    
-//     // Setup expectations to verify the notification is sent correctly
-//     ASSERT_TRUE(USBMassStorageImpl.IsValid());
-//     ASSERT_NE(notification, nullptr);
-    
-//     // Mock the parent's Notify method to capture what gets sent
-//     // Since we can't directly mock the parent's Notify, we'll verify through
-//     // successful execution and check that the method completes without error
-    
-//     // Test: Call OnDeviceUnmounted and verify it processes correctly
-//     EXPECT_NO_THROW(notification->OnDeviceUnmounted(deviceInfo, mockIterator));
-    
-//     // Verify the iterator can be processed again
-//     Exchange::IUSBMassStorage::USBStorageMountInfo testItem{};
-//     EXPECT_TRUE(mockIterator->Next(testItem));
-//     EXPECT_EQ(testItem.mountPath, "/tmp/media/usb1");
-//     EXPECT_EQ(testItem.partitionName, "/dev/sda1");
-//     EXPECT_EQ(testItem.fileSystem, Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT);
-//     EXPECT_EQ(testItem.mountFlags, Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE);
-    
-//     EXPECT_TRUE(mockIterator->Next(testItem));
-//     EXPECT_EQ(testItem.mountPath, "/tmp/media/usb2");
-//     EXPECT_EQ(testItem.partitionName, "/dev/sda2");
-//     EXPECT_EQ(testItem.fileSystem, Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT);
-//     EXPECT_EQ(testItem.mountFlags, Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY);
-    
-//     // Should be no more items
-//     EXPECT_FALSE(mockIterator->Next(testItem));
-// }
-
 // Alternative approach: Test the notification behavior through the implementation
 TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior)
 {
@@ -702,20 +646,37 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
     .WillRepeatedly(::testing::Return(0));
 
-    EXPECT_CALL(*p_wrapsImplMock, umount(::testing::_))
-    .WillRepeatedly(::testing::Return(0));
-
     EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(::testing::Return(0));
     
     // Trigger mount first
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
     
+    // Verify device is mounted - should be able to get mount points
+    string mountResponse;
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMountPoints"), 
+              _T("{\"deviceName\":\"001/002\"}"), mountResponse));
+    EXPECT_FALSE(mountResponse.empty());
+    EXPECT_NE(mountResponse.find("mountPath"), string::npos) << "Mount response should contain mountPath";
+    
+    // Set up expectations for unmount operations - these should be called during unplug
+    EXPECT_CALL(*p_wrapsImplMock, umount(::testing::_))
+        .Times(::testing::AtLeast(1))  // Should be called at least once
+        .WillRepeatedly(::testing::Return(0));
+    
     // Now test unmount behavior which should trigger OnDeviceUnmounted
     EXPECT_NO_THROW(USBMassStorageImpl->OnDevicePluggedOut(usbDevice1));
     
-    // This indirectly tests the OnDeviceUnmounted method through the implementation's
-    // notification system, verifying the complete flow works correctly
+    // Verify device is no longer mounted - getMountPoints should fail or return empty
+    string unmountResponse;
+    uint32_t result = handler.Invoke(connection, _T("getMountPoints"), 
+                                   _T("{\"deviceName\":\"001/002\"}"), unmountResponse);
+    
+    // Device should either be invalid (ERROR_INVALID_DEVICENAME) or have no mount points
+    EXPECT_TRUE(result == Core::ERROR_INVALID_DEVICENAME || 
+                (result == Core::ERROR_NONE && (unmountResponse.find("mountPath") == string::npos || 
+                                               unmountResponse.find("[]") != string::npos)))
+        << "Device should no longer have valid mount points after unplug. Response: " << unmountResponse;
 }
 
 // Simpler L1 Test using existing infrastructure
@@ -879,9 +840,6 @@ TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
     
     // Clean up
     testPlugin->Deinitialize(&testService);
-    
-    // Cleanup the allocated mock object
-    delete mockUsbDevice;
 }
 
 // TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTermination)
