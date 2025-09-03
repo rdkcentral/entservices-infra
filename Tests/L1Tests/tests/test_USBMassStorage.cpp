@@ -702,7 +702,7 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
     NiceMock<ServiceMock> testService;
     USBDeviceMock* testUsbDevice = new NiceMock<USBDeviceMock>();
     
-    // Track state changes (remove unused variables)
+    // Track state changes
     bool queryInterfaceCalled = false;
     bool addRefCalled = false;
     bool registerCalled = false;
@@ -715,17 +715,21 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
             ::testing::Return(testUsbDevice)
         ));
     
-    // Fix the AddRef mock - it should return void, not assign to bool
+    // FIX: AddRef() returns void, so don't use Return()
     EXPECT_CALL(testService, AddRef())
         .Times(1)
         .WillOnce(::testing::DoAll(
             ::testing::Assign(&addRefCalled, true),
-            ::testing::Return()
+            ::testing::Return()  // This is correct for void methods
         ));
     
+    // FIX: Register returns uint32_t, so return a value
     EXPECT_CALL(testService, Register(::testing::_))
         .Times(1)
-        .WillOnce(::testing::Assign(&registerCalled, true));
+        .WillOnce(::testing::DoAll(
+            ::testing::Assign(&registerCalled, true),
+            ::testing::Return(Core::ERROR_NONE)  // Return proper value
+        ));
     
     EXPECT_CALL(*testUsbDevice, Register(::testing::_))
         .Times(1)
@@ -737,16 +741,20 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
     bool usbDeviceUnregisterCalled = false;
     
     // Set up expectations for deinitialization sequence
+    // FIX: Unregister returns uint32_t, so return a value
     EXPECT_CALL(testService, Unregister(::testing::_))
         .Times(1)
-        .WillOnce(::testing::Assign(&unregisterCalled, true));
+        .WillOnce(::testing::DoAll(
+            ::testing::Assign(&unregisterCalled, true),
+            ::testing::Return(Core::ERROR_NONE)  // Return proper value
+        ));
     
-    // Fix the Release mock - it should return void, not assign to bool
+    // FIX: Release() returns void, so use Return() without value
     EXPECT_CALL(testService, Release())
         .Times(1)
         .WillOnce(::testing::DoAll(
             ::testing::Assign(&releaseCalled, true),
-            ::testing::Return()
+            ::testing::Return()  // This is correct for void methods
         ));
     
     EXPECT_CALL(*testUsbDevice, Unregister(::testing::_))
@@ -783,7 +791,7 @@ TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_CompletesWithoutConnectio
     EXPECT_TRUE(releaseCalled) << "Release should have been called during deinitialization";
     EXPECT_TRUE(usbDeviceUnregisterCalled) << "USB device unregister should have been called";
     
-    // Verify plugin behavior after deinitialize (use the result to avoid warning)
+    // Verify plugin behavior after deinitialize
     string testResponse;
     Core::JSONRPC::Context testConnection(2, 0, "");
     uint32_t invokeResult = testHandler.Invoke(testConnection, _T("getDeviceList"), _T("{}"), testResponse);
@@ -818,11 +826,17 @@ TEST_F(USBMassStorageTest, Initialize_WithExistingDevices_MountsDevicesSuccessfu
     bool getDeviceListCalled = false;
     bool mountOperationCalled = false;
     
-    // Set up service expectations
+    // Set up service expectations - FIX the return types
     EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(mockUsbDevice.get()));
-    EXPECT_CALL(testService, AddRef()).WillRepeatedly(::testing::Return());
-    EXPECT_CALL(testService, Register(::testing::_)).WillRepeatedly(::testing::Return());
+    
+    // FIX: AddRef() returns void
+    EXPECT_CALL(testService, AddRef())
+        .WillRepeatedly(::testing::Return());  // Correct for void methods
+    
+    // FIX: Register returns uint32_t
+    EXPECT_CALL(testService, Register(::testing::_))
+        .WillRepeatedly(::testing::Return(Core::ERROR_NONE));  // Return proper value
     
     // Verify GetDeviceList is called during initialization (this proves Configure is called)
     EXPECT_CALL(*mockUsbDevice, GetDeviceList(::testing::_))
@@ -884,15 +898,7 @@ TEST_F(USBMassStorageTest, Initialize_WithExistingDevices_MountsDevicesSuccessfu
     
     // Clean up
     testPlugin->Deinitialize(&testService);
-    
-    // This test now verifies:
-    // 1. Initialize() returns success
-    // 2. Configure() is called (via GetDeviceList being called)
-    // 3. MountDevicesOnBootUp() behavior (via mount operations being called)
-    // 4. Plugin becomes functional after initialization
-    // 5. Existing devices are properly discovered and mounted
 }
-
 
 // TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
 // {
