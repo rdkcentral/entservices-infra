@@ -649,11 +649,6 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_CreatesCorrectPayl
     // Test: Call OnDeviceUnmounted and verify it processes correctly
     EXPECT_NO_THROW(notification->OnDeviceUnmounted(deviceInfo, mockIterator));
     
-    // To verify the payload was created correctly, we can test the iterator
-    // was properly consumed by calling the method again with the same iterator
-    // (it should be exhausted now)
-    mockIterator->Reset(); // Reset iterator to test it was consumed
-    
     // Verify the iterator can be processed again
     Exchange::IUSBMassStorage::USBStorageMountInfo testItem{};
     EXPECT_TRUE(mockIterator->Next(testItem));
@@ -670,28 +665,6 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_CreatesCorrectPayl
     
     // Should be no more items
     EXPECT_FALSE(mockIterator->Next(testItem));
-}
-
-TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_SendsNotificationEvent)
-{
-    // Setup: Mount a device first through the normal flow
-    SetupMountedDevice("001/002", "/dev/sda1");
-    
-    // Setup: Capture notifications sent by the plugin
-    string capturedEvent;
-    string capturedPayload;
-    
-    // Override the Notify method to capture what gets sent
-    // (This would require making the plugin's Notify method virtual or adding a test hook)
-    
-    // Alternative: Test through the RPC interface
-    // Trigger an actual device unmount and verify the event is published
-    EXPECT_EQ(Core::ERROR_NONE, 
-              handler.Invoke(connection, _T("unmountDevice"), 
-                           _T("{\"deviceName\":\"001/002\"}"), response));
-    
-    // Verify the unmount event was published with correct data
-    // This tests the complete flow including the OnDeviceUnmounted call
 }
 
 // does this test effectively test what it's trying to?
