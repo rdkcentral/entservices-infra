@@ -191,6 +191,7 @@ namespace Plugin {
         const Exchange::IPackageDownloader::Options &options,
         Exchange::IPackageDownloader::DownloadId &downloadId)
     {
+        std::cout << "akshay inside Download method" << std::endl;
         Core::hresult result = Core::ERROR_NONE;
 
         if (!mCurrentservice->SubSystems()->IsActive(PluginHost::ISubSystem::INTERNET)) {
@@ -198,7 +199,7 @@ namespace Plugin {
         }
 
         std::lock_guard<std::mutex> lock(mMutex);
-
+        std::cout << "akshay lock acquired" << std::endl;
         DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
         std::string filename = downloadDir + "package" + di->GetId();
         di->SetFileLocator(filename);
@@ -739,12 +740,16 @@ namespace Plugin {
     {
         InitializeState();
         while(!done) {
+            std::cout << "akshay using new lock" << std::endl;
             auto di = getNext();
             if (di == nullptr) {
+                std::cout << "akshay waiting for next download item if condition" << std::endl;
                 LOGTRACE("Waiting ... ");
                 std::unique_lock<std::mutex> lock(mMutex);
+                std::cout << "akshay acquired lock and going for wait" << std::endl;
                 cv.wait(lock);
             } else {
+                std::cout << "akshay found next download item else condition" << std::endl;
                 HttpClient::Status status = HttpClient::Status::Success;
                 int waitTime = 1;
                 for (int i = 0; i < di->GetRetries(); i++) {
@@ -837,9 +842,12 @@ namespace Plugin {
 
     PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext()
     {
+        std::cout << "akshay inside getnext before lock" << std::endl;
         std::lock_guard<std::mutex> lock(mMutex);
+        std::cout << "akshay inside getnext after lock" << std::endl;
         LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDownload == nullptr) {
+            std::cout << "akshay inside if condition getnext after lock and before pop" << std::endl;
             mInprogressDownload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
         }
