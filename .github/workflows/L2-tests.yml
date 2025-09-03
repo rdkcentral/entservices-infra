@@ -100,7 +100,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: usersettings_testcase
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
@@ -114,7 +114,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: usersersettings_testcase
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout googletest
@@ -540,6 +540,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices/proc
           -I $GITHUB_WORKSPACE/entservices-deviceanddisplay/helpers
           -I $GITHUB_WORKSPACE/install/usr/include
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -703,6 +704,22 @@ jobs:
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           RdkServicesL2Test &&
           cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithoutValgrind.json &&
+          rm -rf $(pwd)/rdkL2TestResults.json
+
+      - name: Run unit tests with valgrind
+        if: ${{ !env.ACT }}
+        run: >
+          PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
+          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
+          valgrind
+          --tool=memcheck
+          --log-file=valgrind_log
+          --leak-check=yes
+          --show-reachable=yes
+          --track-fds=yes
+          --fair-sched=try
+          RdkServicesL2Test &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Generate coverage
