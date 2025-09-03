@@ -758,13 +758,12 @@ namespace Plugin {
                 LOGTRACE("Waiting ... ");
                 LOGINFO("akshay going for lock");
                 std::unique_lock<std::mutex> lock(mMutex);
-                LOGINFO("akshay acquired lock and going for cvwait");
+                LOGINFO("akshay acquired lock and going for cvwait and checking getnext");
                 // sleep(20);
                 // LOGINFO("akshay came from sleep and going for cv wait");
                 // LOGINFO("akshay insdie lock in thread going for cv wait");
-                cv.wait(lock, [this] { return done || (mDownloadQueue.size() > 0); });
+                cv.wait(lock, [this] { return done || (getNext() != nullptr); });
                 LOGINFO("akshay got notification and came out wait");
-                LOGINFO("akshay came sleep and going for next loop");
 
             } else {
                 LOGINFO("akshay found next download item else condition");
