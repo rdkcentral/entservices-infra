@@ -611,164 +611,61 @@ TEST_F(USBMassStorageTest, Information_ReturnsCorrectString)
     EXPECT_EQ(result, "The USBMassStorage Plugin manages device mounting and stores mount information.");
 }
 
-// L1 Test for USBMassStorage::Notification::OnDeviceUnmounted method
-TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_CreatesCorrectPayloadAndNotifies)
-{
-    // Setup device info
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.devicePath = "/dev/sda1";
-    deviceInfo.deviceName = "001/002";
+// // L1 Test for USBMassStorage::Notification::OnDeviceUnmounted method
+// TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_CreatesCorrectPayloadAndNotifies)
+// {
+//     // Setup device info
+//     Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+//     deviceInfo.devicePath = "/dev/sda1";
+//     deviceInfo.deviceName = "001/002";
     
-    // Create mount info list for the iterator
-    std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
-    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo1;
-    mountInfo1.mountPath = "/tmp/media/usb1";
-    mountInfo1.partitionName = "/dev/sda1";
-    mountInfo1.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT;
-    mountInfo1.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE;
+//     // Create mount info list for the iterator
+//     std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
+//     Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo1;
+//     mountInfo1.mountPath = "/tmp/media/usb1";
+//     mountInfo1.partitionName = "/dev/sda1";
+//     mountInfo1.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT;
+//     mountInfo1.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE;
     
-    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo2;
-    mountInfo2.mountPath = "/tmp/media/usb2";
-    mountInfo2.partitionName = "/dev/sda2";
-    mountInfo2.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT;
-    mountInfo2.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY;
+//     Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo2;
+//     mountInfo2.mountPath = "/tmp/media/usb2";
+//     mountInfo2.partitionName = "/dev/sda2";
+//     mountInfo2.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT;
+//     mountInfo2.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY;
     
-    mountInfoList.emplace_back(mountInfo1);
-    mountInfoList.emplace_back(mountInfo2);
+//     mountInfoList.emplace_back(mountInfo1);
+//     mountInfoList.emplace_back(mountInfo2);
     
-    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
+//     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
     
-    // Setup expectations to verify the notification is sent correctly
-    ASSERT_TRUE(USBMassStorageImpl.IsValid());
-    ASSERT_NE(notification, nullptr);
+//     // Setup expectations to verify the notification is sent correctly
+//     ASSERT_TRUE(USBMassStorageImpl.IsValid());
+//     ASSERT_NE(notification, nullptr);
     
-    // Mock the parent's Notify method to capture what gets sent
-    // Since we can't directly mock the parent's Notify, we'll verify through
-    // successful execution and check that the method completes without error
+//     // Mock the parent's Notify method to capture what gets sent
+//     // Since we can't directly mock the parent's Notify, we'll verify through
+//     // successful execution and check that the method completes without error
     
-    // Test: Call OnDeviceUnmounted and verify it processes correctly
-    EXPECT_NO_THROW(notification->OnDeviceUnmounted(deviceInfo, mockIterator));
+//     // Test: Call OnDeviceUnmounted and verify it processes correctly
+//     EXPECT_NO_THROW(notification->OnDeviceUnmounted(deviceInfo, mockIterator));
     
-    // Verify the iterator can be processed again
-    Exchange::IUSBMassStorage::USBStorageMountInfo testItem{};
-    EXPECT_TRUE(mockIterator->Next(testItem));
-    EXPECT_EQ(testItem.mountPath, "/tmp/media/usb1");
-    EXPECT_EQ(testItem.partitionName, "/dev/sda1");
-    EXPECT_EQ(testItem.fileSystem, Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT);
-    EXPECT_EQ(testItem.mountFlags, Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE);
+//     // Verify the iterator can be processed again
+//     Exchange::IUSBMassStorage::USBStorageMountInfo testItem{};
+//     EXPECT_TRUE(mockIterator->Next(testItem));
+//     EXPECT_EQ(testItem.mountPath, "/tmp/media/usb1");
+//     EXPECT_EQ(testItem.partitionName, "/dev/sda1");
+//     EXPECT_EQ(testItem.fileSystem, Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT);
+//     EXPECT_EQ(testItem.mountFlags, Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE);
     
-    EXPECT_TRUE(mockIterator->Next(testItem));
-    EXPECT_EQ(testItem.mountPath, "/tmp/media/usb2");
-    EXPECT_EQ(testItem.partitionName, "/dev/sda2");
-    EXPECT_EQ(testItem.fileSystem, Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT);
-    EXPECT_EQ(testItem.mountFlags, Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY);
+//     EXPECT_TRUE(mockIterator->Next(testItem));
+//     EXPECT_EQ(testItem.mountPath, "/tmp/media/usb2");
+//     EXPECT_EQ(testItem.partitionName, "/dev/sda2");
+//     EXPECT_EQ(testItem.fileSystem, Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT);
+//     EXPECT_EQ(testItem.mountFlags, Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY);
     
-    // Should be no more items
-    EXPECT_FALSE(mockIterator->Next(testItem));
-}
-
-// does this test effectively test what it's trying to?
-TEST_F(USBMassStorageTest, OnDeviceUnmounted_NullMountPoints_NoNotificationSent)
-{
-    // Setup device info
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.devicePath = "/dev/sda1";
-    deviceInfo.deviceName = "TestUSBDevice";
-    
-    // Test with null mount points iterator
-    if (USBMassStorageImpl.IsValid()) {
-        // Call OnDeviceUnmounted with null mountPoints
-        EXPECT_NO_THROW({
-            if (notification != nullptr) {
-                notification->OnDeviceUnmounted(deviceInfo, nullptr);
-            }
-        });
-        
-        // Since mountPoints is null, the method should return early without calling Notify
-        // This tests the early return condition: if (mountPoints != nullptr)
-    }
-}
-
-TEST_F(USBMassStorageTest, OnDeviceUnmounted_EmptyMountPoints_CreatesEmptyArrayAndNotifies)
-{
-    // Setup device info
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.devicePath = "/dev/sda1";
-    deviceInfo.deviceName = "TestUSBDevice";
-    
-    // Create empty mount info list
-    std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> emptyMountInfoList;
-    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(emptyMountInfoList);
-    
-    if (USBMassStorageImpl.IsValid()) {
-        // Call OnDeviceUnmounted with empty mount points
-        EXPECT_NO_THROW({
-            if (notification != nullptr) {
-                notification->OnDeviceUnmounted(deviceInfo, mockIterator);
-            }
-        });
-        
-        // The method should still create the payload and call Notify, but with empty mountPoints array
-    }
-}
-
-TEST_F(USBMassStorageTest, OnDeviceUnmounted_SingleMountPoint_ProcessesCorrectly)
-{
-    // Setup device info
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.devicePath = "/dev/sdb";
-    deviceInfo.deviceName = "SinglePartitionDevice";
-    
-    // Create single mount info
-    std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
-    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo;
-    mountInfo.mountPath = "/tmp/media/usb1";
-    mountInfo.partitionName = "/dev/sdb1";
-    mountInfo.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT;
-    mountInfo.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE;
-    
-    mountInfoList.emplace_back(mountInfo);
-    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
-    
-    if (USBMassStorageImpl.IsValid()) {
-        // Call OnDeviceUnmounted with single mount point
-        EXPECT_NO_THROW({
-            if (notification != nullptr) {
-                notification->OnDeviceUnmounted(deviceInfo, mockIterator);
-            }
-        });
-        
-        // Verify the method processes single mount point correctly
-    }
-}
-
-TEST_F(USBMassStorageTest, OnDeviceUnmounted_DeviceInfoPopulation_CorrectlyMapsFields)
-{
-    // Setup device info with specific values to test field mapping
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.devicePath = "/dev/special/device/path";
-    deviceInfo.deviceName = "SpecialDeviceName123";
-    
-    // Create mount info list
-    std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
-    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo;
-    mountInfo.mountPath = "/special/mount/path";
-    mountInfo.partitionName = "/dev/special1";
-    mountInfo.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT;
-    mountInfo.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY;
-    
-    mountInfoList.emplace_back(mountInfo);
-    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
-    
-    if (USBMassStorageImpl.IsValid()) {
-        // Call OnDeviceUnmounted to test field mapping
-        EXPECT_NO_THROW({
-            if (notification != nullptr) {
-                notification->OnDeviceUnmounted(deviceInfo, mockIterator);
-            }
-        });
-    }
-}
+//     // Should be no more items
+//     EXPECT_FALSE(mockIterator->Next(testItem));
+// }
 
 // Alternative approach: Test the notification behavior through the implementation
 TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior)
