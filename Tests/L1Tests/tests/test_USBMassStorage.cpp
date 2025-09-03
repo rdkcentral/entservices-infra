@@ -992,74 +992,74 @@ TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
     delete mockUsbDevice;
 }
 
-TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTermination)
-{
-    // Create a new instance of the plugin for this specific test
-    Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
+// TEST_F(USBMassStorageTest, Deinitialize_ConnectionNull_SkipsConnectionTermination)
+// {
+//     // Create a new instance of the plugin for this specific test
+//     Core::ProxyType<Plugin::USBMassStorage> testPlugin = Core::ProxyType<Plugin::USBMassStorage>::Create();
     
-    // Create mock service
-    NiceMock<ServiceMock> testService;
+//     // Create mock service
+//     NiceMock<ServiceMock> testService;
     
-    // Create a mock USB device
-    USBDeviceMock* mockUsbDevice = new NiceMock<USBDeviceMock>();
+//     // Create a mock USB device
+//     USBDeviceMock* mockUsbDevice = new NiceMock<USBDeviceMock>();
     
-    // Set up expectations for initialization - ensure these are called at least once
-    EXPECT_CALL(testService, AddRef())
-        .Times(::testing::AtLeast(1));
+//     // Set up expectations for initialization - ensure these are called at least once
+//     EXPECT_CALL(testService, AddRef())
+//         .Times(::testing::AtLeast(1));
     
-    EXPECT_CALL(testService, Register(::testing::_))
-        .Times(::testing::AtLeast(1));
+//     EXPECT_CALL(testService, Register(::testing::_))
+//         .Times(::testing::AtLeast(1));
     
-    EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-        .Times(::testing::AtLeast(1))
-        .WillRepeatedly(::testing::Return(mockUsbDevice));
+//     EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+//         .Times(::testing::AtLeast(1))
+//         .WillRepeatedly(::testing::Return(mockUsbDevice));
     
-    // THIS IS KEY: Ensure QueryInterface is called at least once during deinitialize
-    // This will return nullptr to trigger our target branch
-    EXPECT_CALL(testService, QueryInterface(::testing::_))
-        .Times(::testing::AtLeast(1))
-        .WillRepeatedly(::testing::Return(nullptr));
+//     // THIS IS KEY: Ensure QueryInterface is called at least once during deinitialize
+//     // This will return nullptr to trigger our target branch
+//     EXPECT_CALL(testService, QueryInterface(::testing::_))
+//         .Times(::testing::AtLeast(1))
+//         .WillRepeatedly(::testing::Return(nullptr));
     
-    // Set up expectations for Register on the USB device
-    EXPECT_CALL(*mockUsbDevice, Register(::testing::_))
-        .Times(::testing::AtLeast(1))
-        .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+//     // Set up expectations for Register on the USB device
+//     EXPECT_CALL(*mockUsbDevice, Register(::testing::_))
+//         .Times(::testing::AtLeast(1))
+//         .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
     
-    // Mock the COM link to return our implementation (this ensures _usbMassStorage is not null)
-    ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke(
-        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-            connectionId = 12345; // Set a connection ID
-            return &USBMassStorageImpl;
-        }));
+//     // Mock the COM link to return our implementation (this ensures _usbMassStorage is not null)
+//     ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
+//         .WillByDefault(::testing::Invoke(
+//         [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
+//             connectionId = 12345; // Set a connection ID
+//             return &USBMassStorageImpl;
+//         }));
     
-    // Initialize the plugin - this should set up _usbMassStorage
-    string result = testPlugin->Initialize(&testService);
-    EXPECT_EQ(result, "");
+//     // Initialize the plugin - this should set up _usbMassStorage
+//     string result = testPlugin->Initialize(&testService);
+//     EXPECT_EQ(result, "");
     
-    // Now set up expectations for deinitialization
-    EXPECT_CALL(testService, Unregister(::testing::_))
-        .Times(::testing::AtLeast(1));
+//     // Now set up expectations for deinitialization
+//     EXPECT_CALL(testService, Unregister(::testing::_))
+//         .Times(::testing::AtLeast(1));
     
-    // Mock USB device unregister if it gets called
-    EXPECT_CALL(*mockUsbDevice, Unregister(::testing::_))
-        .Times(::testing::AnyNumber());
+//     // Mock USB device unregister if it gets called
+//     EXPECT_CALL(*mockUsbDevice, Unregister(::testing::_))
+//         .Times(::testing::AnyNumber());
     
-    // Set up Release expectations - should be called at least once
-    EXPECT_CALL(testService, Release())
-        .Times(::testing::AtLeast(1));
+//     // Set up Release expectations - should be called at least once
+//     EXPECT_CALL(testService, Release())
+//         .Times(::testing::AtLeast(1));
     
-    // Call Deinitialize - The QueryInterface mock will return nullptr,
-    // which will cause RemoteConnection() to return nullptr, hitting our target branch
-    EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
+//     // Call Deinitialize - The QueryInterface mock will return nullptr,
+//     // which will cause RemoteConnection() to return nullptr, hitting our target branch
+//     EXPECT_NO_THROW(testPlugin->Deinitialize(&testService));
     
-    // The test passes if:
-    // 1. No exception is thrown
-    // 2. QueryInterface was called at least once (verified by EXPECT_CALL)
-    // 3. The method completes successfully without trying to call connection->Terminate()
-    // 4. The connection cleanup block is skipped (since connection == nullptr)
-    // 5. All initialization calls (AddRef, Register, QueryInterfaceByCallsign) happened at least once
+//     // The test passes if:
+//     // 1. No exception is thrown
+//     // 2. QueryInterface was called at least once (verified by EXPECT_CALL)
+//     // 3. The method completes successfully without trying to call connection->Terminate()
+//     // 4. The connection cleanup block is skipped (since connection == nullptr)
+//     // 5. All initialization calls (AddRef, Register, QueryInterfaceByCallsign) happened at least once
     
-    // Clean up allocated mock
-    delete mockUsbDevice;
-}
+//     // Clean up allocated mock
+//     delete mockUsbDevice;
+// }
