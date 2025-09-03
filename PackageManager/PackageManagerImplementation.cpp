@@ -756,7 +756,7 @@ namespace Plugin {
                 std::cout << "akshay acquired lock and going for wait" << std::endl;
                 sleep(20);
                 std::cout << "akshay came from sleep and going for wait" << std::endl;
-                cv.wait(lock, [this] { return done || (getNext() != nullptr); });
+                cv.wait(lock);
                 std::cout << "akshay got notification and came out wait" << std::endl;
                 std::cout << "akshay came sleep and going for next loop" << std::endl;
 
