@@ -93,10 +93,10 @@ namespace Plugin {
         ASSERT(notification != nullptr);
         Core::hresult result = Core::ERROR_NONE;
 
-        std::cout << "akshay unregistering download notification" << std::endl;
-        std::cout << "akshay updating done value to true" << std::endl;
+        LOGINFO("akshay unregistering download notification");
+        LOGINFO("akshay updating done value to true");
         done = true;
-        std::cout << "akshay sending notify_one from unregister" << std::endl;
+        LOGINFO("akshay sending notify_one from unregister");
         cv.notify_one();
         mDownloadThreadPtr->join();
 
@@ -194,16 +194,17 @@ namespace Plugin {
         const Exchange::IPackageDownloader::Options &options,
         Exchange::IPackageDownloader::DownloadId &downloadId)
     {
-        std::cout << "akshay inside Download method" << std::endl;
+        LOGINFO();
+        LOGINFO("akshay inside Download method");
         Core::hresult result = Core::ERROR_NONE;
 
         if (!mCurrentservice->SubSystems()->IsActive(PluginHost::ISubSystem::INTERNET)) {
             return Core::ERROR_UNAVAILABLE;
         }
 
-        std::cout << "akshay got for lock in Download method" << std::endl;
+        LOGINFO("akshay got for lock in Download method");
         std::lock_guard<std::mutex> lock(mMutex);
-        std::cout << "akshay lock acquired in download method" << std::endl;
+        LOGINFO("akshay lock acquired in download method");
         DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
         std::string filename = downloadDir + "package" + di->GetId();
         di->SetFileLocator(filename);
@@ -212,12 +213,12 @@ namespace Plugin {
         } else {
             mDownloadQueue.push_back(di);
         }
-        std::cout << "akshay added download item to queue" << std::endl;
-        std::cout << "akshay sending notify from download method" << std::endl;
+        LOGINFO("akshay added download item to queue");
+        LOGINFO("akshay sending notify from download method");
         cv.notify_one();
 
         downloadId.downloadId = di->GetId();
-        std::cout << "akshay value of result" << result << std::endl;
+        LOGINFO("akshay value of result: %d", result);
         return result;
     }
 
@@ -744,28 +745,29 @@ namespace Plugin {
 
     void PackageManagerImplementation::downloader(int n)
     {
-        std::cout <<"akshay created thread" << std::endl;
+        LOGINFO();
+        LOGINFO("akshay created thread");
         InitializeState();
         //std::unique_lock<std::mutex> lock(mMutex);
         while(!done) {
-            std::cout << "akshay locking after while and new wait" << std::endl;
-            std::cout << "akshay using new wait" << std::endl;
+            LOGINFO ("akshay locking after while and new wait");
+            LOGINFO("akshay using new wait");
             auto di = getNext();
             if (di == nullptr) {
-                std::cout << "akshay waiting for next download item if condition" << std::endl;
+                LOGINFO("akshay waiting for next download item if condition");
                 LOGTRACE("Waiting ... ");
-                std::cout << "akshay going for lock" << std::endl;
+                LOGINFO("akshay going for lock");
                 std::unique_lock<std::mutex> lock(mMutex);
-                std::cout << "akshay acquired lock and going for 20 seconds sleep" << std::endl;
-                sleep(20);
-                std::cout << "akshay came from sleep and going for cv wait" << std::endl;
-                std::cout << "akshay insdie lock in thread going for cv wait" <<std::endl;
-                cv.wait(lock, [this] { return done || (getNext() != nullptr); });
-                std::cout << "akshay got notification and came out wait" << std::endl;
-                std::cout << "akshay came sleep and going for next loop" << std::endl;
+                LOGINFO("akshay acquired lock and going for cvwait");
+                // sleep(20);
+                // LOGINFO("akshay came from sleep and going for cv wait");
+                // LOGINFO("akshay insdie lock in thread going for cv wait");
+                cv.wait(lock, [this] { return done || (mDownloadQueue.size() > 0); });
+                LOGINFO("akshay got notification and came out wait");
+                LOGINFO("akshay came sleep and going for next loop");
 
             } else {
-                std::cout << "akshay found next download item else condition" << std::endl;
+                LOGINFO("akshay found next download item else condition");
                 HttpClient::Status status = HttpClient::Status::Success;
                 int waitTime = 1;
                 for (int i = 0; i < di->GetRetries(); i++) {
@@ -858,16 +860,16 @@ namespace Plugin {
 
     PackageManagerImplementation::DownloadInfoPtr PackageManagerImplementation::getNext()
     {
-        std::cout << "akshay inside getnext before lock" << std::endl;
+        LOGINFO("akshay inside getnext before lock");
         std::lock_guard<std::mutex> lock(mMutex);
-        std::cout << "akshay inside getnext after lock" << std::endl;
+        LOGINFO("akshay inside getnext after lock");
         LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
         if (!mDownloadQueue.empty() && mInprogressDownload == nullptr) {
-            std::cout << "akshay inside if condition getnext after lock and before pop" << std::endl;
+            LOGINFO("akshay inside if condition getnext after lock and before pop");
             mInprogressDownload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
         }
-        std::cout << "akshay returning from the getNext" << std::endl;
+        LOGINFO("akshay returning from the getNext");
         return mInprogressDownload;
     }
 
