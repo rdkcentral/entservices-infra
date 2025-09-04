@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2024 RDK Management
+# Copyright 2025 RDK Management
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,22 +15,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME AppManager)
+set(PLUGIN_NAME TelemetryMetrics)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
-set(PLUGIN_APP_MANAGER_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
-set(PLUGIN_APP_MANAGER_AUTOSTART false CACHE STRING "Automatically start AppManager plugin")
-set(PLUGIN_APP_MANAGER_EXTRA_LIBRARIES "")
-set(PLUGIN_APP_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start AppManager plugin")
-option(AIMANAGERS_TELEMETRY_METRICS_SUPPORT "AIMANAGERS_TELEMETRY_METRICS_SUPPORT" OFF)
+set(PLUGIN_TELEMETRY_METRICS_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
+set(PLUGIN_TELEMETRY_METRICS_AUTOSTART false CACHE STRING "Automatically start TelemetryMetrics plugin")
+set(PLUGIN_TELEMETRY_METRICS_EXTRA_LIBRARIES "")
+set(PLUGIN_TELEMETRY_METRICS_STARTUPORDER "" CACHE STRING "Automatically start TelemetryMetrics plugin")
 
-add_definitions(-DAPP_MANAGER_API_VERSION_NUMBER_MAJOR=1)
-add_definitions(-DAPP_MANAGER_API_VERSION_NUMBER_MINOR=0)
-add_definitions(-DAPP_MANAGER_API_VERSION_NUMBER_PATCH=0)
+add_definitions(-DTELEMETRY_METRICS_API_VERSION_NUMBER_MAJOR=1)
+add_definitions(-DTELEMETRY_METRICS_API_VERSION_NUMBER_MINOR=0)
+add_definitions(-DTELEMETRY_METRICS_API_VERSION_NUMBER_PATCH=0)
 
-set(APP_MANAGER_IMPLEMENTATION ${PLUGIN_NAME}Implementation)
-add_definitions(-DPLUGIN_APP_MANAGER_IMPLEMENTATION_NAME="${APP_MANAGER_IMPLEMENTATION}")
+set(TELEMETRY_METRICS_IMPLEMENTATION ${PLUGIN_NAME}Implementation)
+add_definitions(-DPLUGIN_TELEMETRY_METRICS_IMPLEMENTATION_NAME="${TELEMETRY_METRICS_IMPLEMENTATION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -39,7 +38,7 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
-        AppManager.cpp
+        TelemetryMetrics.cpp
         Module.cpp
 )
 
@@ -47,7 +46,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
-set_source_files_properties(AppManager.cpp PROPERTIES COMPILE_FLAGS "-fexceptions")
+set_source_files_properties(TelemetryMetrics.cpp PROPERTIES COMPILE_FLAGS "-fexceptions")
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
@@ -57,22 +56,10 @@ target_link_libraries(${MODULE_NAME}
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
-	
-set(PLUGIN_APP_MANAGER_IMPLEMENTATION_SOURCES
-    AppManagerImplementation.cpp
-    LifecycleInterfaceConnector.cpp
-    Module.cpp)
-
-if (AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
-list( APPEND PLUGIN_APP_MANAGER_IMPLEMENTATION_SOURCES
-    AppManagerTelemetryReporting.cpp
-)
-add_definitions(-DENABLE_AIMANAGERS_TELEMETRY_METRICS)		
-endif (AIMANAGERS_TELEMETRY_METRICS_SUPPORT)	
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
-    ${PLUGIN_APP_MANAGER_IMPLEMENTATION_SOURCES}
-)
+    TelemetryMetricsImplementation.cpp
+    Module.cpp)
 
 include_directories(../helpers)
 
@@ -80,14 +67,12 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
-set(APP_MANAGER_INCLUDES $ENV{APP_MANAGER_INCLUDES})
-separate_arguments(APP_MANAGER_INCLUDES)
-include_directories(BEFORE ${APP_MANAGER_INCLUDES})
-if (RDK_SERVICES_L1_TEST)
-	target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
-endif (RDK_SERVICES_L1_TEST)
+set(TELEMETRY_METRICS_INCLUDES $ENV{TELEMETRY_METRICS_INCLUDES})
+separate_arguments(TELEMETRY_METRICS_INCLUDES)
+include_directories(BEFORE ${TELEMETRY_METRICS_INCLUDES})
+
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
-    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_APP_MANAGER_EXTRA_LIBRARIES})
+    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_TELEMETRY_METRICS_EXTRA_LIBRARIES})
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
