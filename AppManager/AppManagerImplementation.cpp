@@ -184,7 +184,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
             }
             else
             {
-                installStatus = params.HasLabel("reason") ? params["reason"].String() : "";
+                installStatus = params.HasLabel("state") ? params["state"].String() : "";
                 mAdminLock.Lock();
                 for (auto& notification : mAppManagerNotification)
                 {
