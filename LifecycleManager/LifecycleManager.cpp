@@ -49,24 +49,6 @@ namespace WPEFramework
         {
             SYSLOG(Logging::Startup, (_T("LifecycleManager Constructor")));
             LifecycleManager::sInstance = this;
-            Register("setTargetAppState", &LifecycleManager::setTargetAppStateWrapper, this);
-void LifecycleManager::setTargetAppStateWrapper(const JsonObject& parameters, JsonObject& response) {
-    string appInstanceId = parameters["appInstanceId"].String();
-    int targetState = parameters["targetLifecycleState"].Number();
-    string launchIntent = parameters.HasLabel("launchIntent") ? parameters["launchIntent"].String() : "";
-
-    auto* impl = mLifecycleManagerImplementation;
-    if (impl) {
-        auto status = impl->SetTargetAppState(appInstanceId, static_cast<Exchange::ILifecycleManager::LifecycleState>(targetState), launchIntent);
-        response["success"] = (status == Core::ERROR_NONE);
-        if (status != Core::ERROR_NONE) {
-            response["error"] = "SetTargetAppState failed";
-        }
-    } else {
-        response["success"] = false;
-        response["error"] = "Implementation not available";
-    }
-}
         }
 
         LifecycleManager::~LifecycleManager()
