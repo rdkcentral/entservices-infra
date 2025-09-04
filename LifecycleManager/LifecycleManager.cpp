@@ -50,7 +50,6 @@ namespace WPEFramework
             SYSLOG(Logging::Startup, (_T("LifecycleManager Constructor")));
             LifecycleManager::sInstance = this;
             Register("setTargetAppState", &LifecycleManager::setTargetAppStateWrapper, this);
-        }
 void LifecycleManager::setTargetAppStateWrapper(const JsonObject& parameters, JsonObject& response) {
     string appInstanceId = parameters["appInstanceId"].String();
     int targetState = parameters["targetLifecycleState"].Number();
@@ -68,6 +67,7 @@ void LifecycleManager::setTargetAppStateWrapper(const JsonObject& parameters, Js
         response["error"] = "Implementation not available";
     }
 }
+        }
 
         LifecycleManager::~LifecycleManager()
         {
