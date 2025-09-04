@@ -59,7 +59,7 @@
 #define APPMANAGER_PACKAGEID        "testPackageID"
 #define APPMANAGER_INSTALLSTATUS_INSTALLED    "INSTALLED"
 #define APPMANAGER_INSTALLSTATUS_UNINSTALLED    "UNINSTALLED"
-#define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","reason":"INSTALLED"}])"
+#define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","state":"INSTALLED"}])"
 
 typedef enum : uint32_t {
     AppManager_StateInvalid = 0x00000000,
