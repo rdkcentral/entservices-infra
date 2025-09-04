@@ -107,7 +107,9 @@ namespace WPEFramework
             public /* members */:
                 static LifecycleManager* sInstance;
 
-	    private: /* members */
+        private:
+            void setTargetAppStateWrapper(const JsonObject& parameters, JsonObject& response);
+        private: /* members */
                 PluginHost::IShell* _service{};
                 uint32_t mConnectionId;
                 Exchange::ILifecycleManager* mLifecycleManagerImplementation;
