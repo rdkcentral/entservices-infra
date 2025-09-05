@@ -62,7 +62,7 @@ namespace Plugin {
             Exchange::RuntimeConfig runtimeConfig;
             string gatewayMetadataPath;
             string unpackedPath;
-            FailReason failReason;
+            FailReason failReason = Exchange::IPackageInstaller::FailReason::NONE;
             std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
         };
 
