@@ -184,7 +184,7 @@ namespace Plugin {
 #ifdef HAS_RBUS
         void notifyT2PrivacyMode(std::string privacyMode);
         void onReportUploadStatus(const char* status);
-        void activateUserSettingsandGetPrivacyMode();
+        void getPrivacyMode();
         void setRFCReportProfiles();
 #endif
 
