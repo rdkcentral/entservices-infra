@@ -105,7 +105,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: topic/RDKEMW-5410
+          ref: develop
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-deviceanddisplay
@@ -127,7 +127,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: topic/RDKEMW-5410
+          ref: develop
 
       - name: Apply  ThunderTools
         run: |
