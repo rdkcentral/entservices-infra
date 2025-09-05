@@ -100,21 +100,21 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: topic/RDKEMW-5410
+          ref: develop
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
         with:
           repository: rdkcentral/entservices-deviceanddisplay
           path: entservices-deviceanddisplay
-          ref: topic/RDKEMW-5410
+          ref: develop
          
       - name: Checkout entservices-testframework
         uses: actions/checkout@v3
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: topic/RDKEMW-5410
+          ref: develop
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout googletest
