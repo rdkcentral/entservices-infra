@@ -184,16 +184,22 @@ namespace WPEFramework
             return mKillParams;
 	}
 
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         time_t ApplicationContext::getRequestTime()
         {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             return mRequestTime;
+#else
+            return 0;
+#endif
         }
 
         RequestType ApplicationContext::getRequestType()
         {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             return mRequestType;
-        }
+#else
+            return REQUEST_TYPE_NONE;
 #endif
+        }
     } /* namespace Plugin */
 } /* namespace WPEFramework */

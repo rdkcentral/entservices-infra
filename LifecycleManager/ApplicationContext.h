@@ -86,10 +86,8 @@ namespace WPEFramework
                 uint32_t getStateChangeId();
                 ApplicationLaunchParams& getApplicationLaunchParams();
                 ApplicationKillParams& getApplicationKillParams();
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 time_t getRequestTime();
                 RequestType getRequestType();
-#endif
 
                 sem_t mReachedLoadingStateSemaphore;
                 sem_t mAppRunningSemaphore;
