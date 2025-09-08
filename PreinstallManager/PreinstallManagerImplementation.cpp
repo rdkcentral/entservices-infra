@@ -207,7 +207,7 @@ namespace WPEFramework
         }
     }
 
-    // helper to validate version after stripping any pre-release or build-metadata specifiers
+    // helper to validate package version string after stripping any pre-release or build-metadata specifiers
     // currently expects x.y.z where x,y,z are numerical values
     bool isValidSemVer(const std::string &version)
     {
@@ -216,14 +216,19 @@ namespace WPEFramework
         {
             return false;
         }
-        for (char c : version)
-        {
-            if (!(std::isdigit(c) || c == '.'))
-            {
-                return false;
-            }
-        }
+        // for (char c : version)
+        // {
+        //     if (!(std::isdigit(c) || c == '.'))
+        //     {
+        //         return false;
+        //     }
+        // }
         return maj >= 0 && min >= 0 && patch >= 0;
+
+
+        // todo regex match
+        // static const std::regex semverRegex(R"(^\d+\.\d+\.\d+$)");
+        // return std::regex_match(version, semverRegex);
     }
 
     bool isNewerVersion(const std::string &v1, const std::string &v2)
@@ -279,7 +284,7 @@ namespace WPEFramework
 
             PackageInfo packageInfo;
             packageInfo.fileLocator = filepath;
-            //debug logs
+            // debug logs
             LOGDBG("Found package file: %s", filepath.c_str());
             LOGDBG(" Ping getconfig yet to be implemented");
             // API yet to be added
