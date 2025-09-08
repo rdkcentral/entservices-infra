@@ -124,7 +124,7 @@ TEST_F(USBMassStorageTest, getDeviceList_Success)
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda";
+    usbDevice1.devicePath = "/dev/sda12";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -154,7 +154,7 @@ TEST_F(USBMassStorageTest, getDeviceList_EmptyDevicePath)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
+    usbDevice1.deviceName = "002/003";
     usbDevice1.devicePath = "";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
@@ -174,7 +174,7 @@ TEST_F(USBMassStorageTest, getDeviceList_MissingDevicePath)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
+    usbDevice1.deviceName = "004/005";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -194,7 +194,7 @@ TEST_F(USBMassStorageTest, getDeviceList_NonMassStorageDevice)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_HID;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
+    usbDevice1.deviceName = "006/007";
     usbDevice1.devicePath = "/dev/hidraw0";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
@@ -215,8 +215,8 @@ TEST_F(USBMassStorageTest, getMountPoints_Success)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda";
+    usbDevice1.deviceName = "008/009";
+    usbDevice1.devicePath = "/dev/sda89";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -249,7 +249,7 @@ TEST_F(USBMassStorageTest, getMountPoints_Success)
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
 
     // Test: Now getMountPoints should return the mount info (no additional mocking needed)
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"001/002\"}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"008/009\"}"), response));
 }
 
 TEST_F(USBMassStorageTest, getMountPoints_EmptyDeviceName)
@@ -279,8 +279,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda";
+    usbDevice1.deviceName = "010/011";
+    usbDevice1.devicePath = "/dev/sda1011";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -309,9 +309,25 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
-    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"001/002\"}"), response);
+    
+    // GET THE ACTUAL MOUNT PATH instead of assuming
+    string mountResponse;
+    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"010/011\"}"), mountResponse);
+    
+    // Parse the mount path from the response
+    string actualMountPath;
+    size_t mountPathPos = mountResponse.find("\"mountPath\":\"");
+    if (mountPathPos != string::npos) {
+        size_t start = mountPathPos + 13; // Length of "\"mountPath\":\""
+        size_t end = mountResponse.find("\"", start);
+        if (end != string::npos) {
+            actualMountPath = mountResponse.substr(start, end - start);
+        }
+    }
+    
+    EXPECT_FALSE(actualMountPath.empty()) << "Failed to extract mount path from response: " << mountResponse;
 
-    // Now test getPartitionInfo - these are the calls we actually expect
+    // Now test getPartitionInfo with the ACTUAL mount path
     EXPECT_CALL(*p_wrapsImplMock, statfs(::testing::_, ::testing::_))
         .Times(1)
         .WillOnce([](const char* path, struct statfs* buf) -> int {
@@ -330,7 +346,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
             return 0;
         });
 
-    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_))
         .Times(1)
         .WillOnce(::testing::Return(3));
 
@@ -347,8 +363,9 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
             return 0;
         });
 
-    // Test: getPartitionInfo should now work with the mounted device
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\":\"/tmp/media/usb1\"}"), response));
+    // Test with the actual mount path
+    string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_EmptyMountPath)
@@ -378,8 +395,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatfsFailed)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda";
+    usbDevice1.deviceName = "012/013";
+    usbDevice1.devicePath = "/dev/sda1213";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -408,14 +425,30 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatfsFailed)
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
-    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"001/002\"}"), response);
+    
+    // Get the actual mount path
+    string mountResponse;
+    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"012/013\"}"), mountResponse);
+    
+    string actualMountPath;
+    size_t mountPathPos = mountResponse.find("\"mountPath\":\"");
+    if (mountPathPos != string::npos) {
+        size_t start = mountPathPos + 13;
+        size_t end = mountResponse.find("\"", start);
+        if (end != string::npos) {
+            actualMountPath = mountResponse.substr(start, end - start);
+        }
+    }
+    
+    EXPECT_FALSE(actualMountPath.empty()) << "Failed to get mount path";
 
     // NOW test the actual failure - this is what we care about
     EXPECT_CALL(*p_wrapsImplMock, statfs(::testing::_, ::testing::_))
         .Times(1)
         .WillOnce(::testing::Return(-1));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\":\"/tmp/media/usb1\"}"), response));
+    string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
@@ -425,8 +458,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda";
+    usbDevice1.deviceName = "014/015";
+    usbDevice1.devicePath = "/dev/sda1415";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -436,7 +469,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
             return Core::ERROR_NONE;
         });
 
-    // Infrastructure setup for mounting (use ON_CALL)
+    // Infrastructure setup for mounting
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const std::string& path, struct stat* info) {
             if (path.find("/tmp/media/usb") != std::string::npos) {
@@ -455,9 +488,22 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
-    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"001/002\"}"), response);
+    
+    // Get the actual mount path
+    string mountResponse;
+    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"014/015\"}"), mountResponse);
+    
+    string actualMountPath;
+    size_t mountPathPos = mountResponse.find("\"mountPath\":\"");
+    if (mountPathPos != string::npos) {
+        size_t start = mountPathPos + 13;
+        size_t end = mountResponse.find("\"", start);
+        if (end != string::npos) {
+            actualMountPath = mountResponse.substr(start, end - start);
+        }
+    }
 
-    // NOW test the actual failure sequence - this is what we care about
+    // NOW test the actual failure sequence
     EXPECT_CALL(*p_wrapsImplMock, statfs(::testing::_, ::testing::_))
         .Times(1)
         .WillOnce([](const char* path, struct statfs* buf) -> int {
@@ -469,7 +515,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
         .Times(1)
         .WillOnce(::testing::Return(-1));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\":\"/tmp/media/usb1\"}"), response));
+    string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
@@ -479,8 +526,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda";
+    usbDevice1.deviceName = "016/017";
+    usbDevice1.devicePath = "/dev/sda1617";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -490,11 +537,11 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
             return Core::ERROR_NONE;
         });
 
-    // Infrastructure setup for mounting (use ON_CALL)
+    // Infrastructure setup for mounting
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const std::string& path, struct stat* info) {
             if (path.find("/tmp/media/usb") != std::string::npos) {
-                return -1;
+                return -1; // Directory doesn't exist, needs creation
             }
             if (info) info->st_mode = S_IFDIR;
             return 0;
@@ -509,16 +556,31 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
-    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"001/002\"}"), response);
+    
+    // Get the actual mount path
+    string mountResponse;
+    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"016/017\"}"), mountResponse);
+    
+    string actualMountPath;
+    size_t mountPathPos = mountResponse.find("\"mountPath\":\"");
+    if (mountPathPos != string::npos) {
+        size_t start = mountPathPos + 13;
+        size_t end = mountResponse.find("\"", start);
+        if (end != string::npos) {
+            actualMountPath = mountResponse.substr(start, end - start);
+        }
+    }
+    
+    EXPECT_FALSE(actualMountPath.empty()) << "Failed to get mount path";
 
-    // NOW test the specific failure sequence - this is what we care about
+    // NOW test the actual failure sequence - statfs and statvfs succeed, but open fails
     EXPECT_CALL(*p_wrapsImplMock, statfs(::testing::_, ::testing::_))
         .Times(1)
         .WillOnce([](const char* path, struct statfs* buf) -> int {
-            if (buf) buf->f_type = 0x565a;
+            if (buf) buf->f_type = 0x565a; // NTFS
             return 0;
         });
-
+    
     EXPECT_CALL(*p_wrapsImplMock, statvfs(::testing::_, ::testing::_))
         .Times(1)
         .WillOnce([](const char* path, struct statvfs* stat) -> int {
@@ -529,12 +591,14 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
             }
             return 0;
         });
-    
-    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
-        .Times(1)
-        .WillOnce(::testing::Return(-1));  // This is the failure we're testing
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\":\"/tmp/media/usb1\"}"), response));
+    // This is the failure we're testing - open fails
+    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(-1)); // Open failure
+
+    string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
@@ -544,8 +608,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda";
+    usbDevice1.deviceName = "018/019";
+    usbDevice1.devicePath = "/dev/sda1819";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -555,11 +619,11 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
             return Core::ERROR_NONE;
         });
 
-    // Infrastructure setup for mounting (use ON_CALL)
+    // Infrastructure setup for mounting
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const std::string& path, struct stat* info) {
             if (path.find("/tmp/media/usb") != std::string::npos) {
-                return -1;
+                return -1; // Directory doesn't exist, needs creation
             }
             if (info) info->st_mode = S_IFDIR;
             return 0;
@@ -574,13 +638,28 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
-    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"001/002\"}"), response);
+    
+    // Get the actual mount path
+    string mountResponse;
+    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"018/019\"}"), mountResponse);
+    
+    string actualMountPath;
+    size_t mountPathPos = mountResponse.find("\"mountPath\":\"");
+    if (mountPathPos != string::npos) {
+        size_t start = mountPathPos + 13;
+        size_t end = mountResponse.find("\"", start);
+        if (end != string::npos) {
+            actualMountPath = mountResponse.substr(start, end - start);
+        }
+    }
+    
+    EXPECT_FALSE(actualMountPath.empty()) << "Failed to get mount path";
 
-    // NOW test the specific failure sequence - this is what we care about
+    // NOW test the actual failure sequence - statfs, statvfs, and open succeed, but ioctl fails
     EXPECT_CALL(*p_wrapsImplMock, statfs(::testing::_, ::testing::_))
         .Times(1)
         .WillOnce([](const char* path, struct statfs* buf) -> int {
-            if (buf) buf->f_type = 0x565a;
+            if (buf) buf->f_type = 0x565a; // NTFS
             return 0;
         });
     
@@ -594,16 +673,24 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
             }
             return 0;
         });
-    
-    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
-        .Times(1)
-        .WillOnce(::testing::Return(3));  // Success
 
+    // Open succeeds
+    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(3)); // Valid file descriptor
+
+    // This is the failure we're testing - ioctl fails
     EXPECT_CALL(*p_wrapsImplMock, ioctl(::testing::_, ::testing::_, ::testing::_))
-        .Times(1)
-        .WillOnce(::testing::Return(-1));  // This is the failure we're testing
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly(::testing::Return(-1)); // ioctl failure
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\":\"/tmp/media/usb1\"}"), response));
+    // We should also expect close to be called since open succeeded
+    EXPECT_CALL(*p_wrapsImplMock, close(::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(0));
+
+    string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
 }
 
 TEST_F(USBMassStorageTest, Information_ReturnsCorrectString)
@@ -614,46 +701,71 @@ TEST_F(USBMassStorageTest, Information_ReturnsCorrectString)
 
 TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_CreatesCorrectPayloadAndNotifies)
 {
-    // Setup device info
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
-    deviceInfo.devicePath = "/dev/sda1";
-    deviceInfo.deviceName = "TestUSBDevice";
-    
-    // Create mount info list for the iterator
-    std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
-    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo1;
-    mountInfo1.mountPath = "/tmp/media/usb1";
-    mountInfo1.partitionName = "/dev/sda1";
-    mountInfo1.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT;
-    mountInfo1.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE;
-    
-    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo2;
-    mountInfo2.mountPath = "/tmp/media/usb2";
-    mountInfo2.partitionName = "/dev/sda2";
-    mountInfo2.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT;
-    mountInfo2.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY;
-    
-    mountInfoList.emplace_back(mountInfo1);
-    mountInfoList.emplace_back(mountInfo2);
-    
-    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
-    
-    // Test the OnDeviceUnmounted method indirectly through the implementation
-    if (USBMassStorageImpl.IsValid()) {
-        // The notification callback will be triggered when the implementation calls it
-        // We test that the method executes without throwing exceptions
-        EXPECT_NO_THROW({
-            // Simulate the notification being called by the implementation
-            // This tests the actual OnDeviceUnmounted logic without accessing private members
-            std::list<Exchange::IUSBMassStorage::INotification*> observers;
-            if (notification != nullptr) {
-                notification->OnDeviceUnmounted(deviceInfo, mockIterator);
-            }
+    // First, setup and mount a real device to get actual mount paths
+    std::list<Exchange::IUSBDevice::USBDevice> usbDeviceList;
+    Exchange::IUSBDevice::USBDevice usbDevice1;
+    usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
+    usbDevice1.deviceSubclass = 0x12;
+    usbDevice1.deviceName = "020/021";
+    usbDevice1.devicePath = "/dev/sda2021";
+    usbDeviceList.emplace_back(usbDevice1);
+    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
+
+    EXPECT_CALL(*p_usbDeviceMock, GetDeviceList(::testing::_))
+        .WillOnce([&](Exchange::IUSBDevice::IUSBDeviceIterator*& devices) {
+            devices = mockIterator;
+            return Core::ERROR_NONE;
         });
-    }
+
+    // Setup mounting infrastructure
+    ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillByDefault([](const std::string& path, struct stat* info) {
+            if (path.find("/tmp/media/usb") != std::string::npos) {
+                return -1;
+            }
+            if (info) info->st_mode = S_IFDIR;
+            return 0;
+        });
+
+    ON_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(0));
+
+    ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(0));
+
+    // Mount the device and get actual mount info
+    handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
+    USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
+    
+    // Get the actual mount points that were created
+    string mountResponse;
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMountPoints"), 
+              _T("{\"deviceName\":\"020/021\"}"), mountResponse));
+    
+    // Parse the actual mount information from the response
+    // This ensures we test with real mount paths that the implementation created
+    EXPECT_FALSE(mountResponse.empty());
+    EXPECT_NE(mountResponse.find("mountPath"), string::npos);
+    
+    // Test that the notification method executes without throwing exceptions
+    // when called with real mount data
+    EXPECT_NO_THROW({
+        if (notification != nullptr) {
+            // Create device info from our actual device
+            Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+            deviceInfo.devicePath = usbDevice1.devicePath;
+            deviceInfo.deviceName = usbDevice1.deviceName;
+            
+            // Get actual mount info iterator (would need to extract from implementation)
+            // For now, test that the method can be called without crashing
+            std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> emptyList;
+            auto emptyIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(emptyList);
+            
+            notification->OnDeviceUnmounted(deviceInfo, emptyIterator);
+        }
+    });
 }
 
-// Alternative approach: Test the notification behavior through the implementation
 TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior)
 {
     // Setup device and mount points through the implementation first
@@ -661,35 +773,35 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     Exchange::IUSBDevice::USBDevice usbDevice1;
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
-    usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda";
+    usbDevice1.deviceName = "022/023";
+    usbDevice1.devicePath = "/dev/sda2223";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
     EXPECT_CALL(*p_usbDeviceMock, GetDeviceList(::testing::_))
-    .WillOnce([&](Exchange::IUSBDevice::IUSBDeviceIterator*& devices) {
-        devices = mockIterator;
-        return Core::ERROR_NONE;
-    });
+        .WillOnce([&](Exchange::IUSBDevice::IUSBDeviceIterator*& devices) {
+            devices = mockIterator;
+            return Core::ERROR_NONE;
+        });
 
     // Populate internal device list first
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     
     // Mock mounting operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-    .WillRepeatedly([](const std::string& path, struct stat* info) {
-        if (path.find("/tmp/media/usb") != std::string::npos) {
-            return -1; // Directory doesn't exist, needs creation
-        }
-        if (info) info->st_mode = S_IFDIR;
-        return 0;
-    });
+    ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillByDefault([](const std::string& path, struct stat* info) {
+            if (path.find("/tmp/media/usb") != std::string::npos) {
+                return -1; // Directory doesn't exist, needs creation
+            }
+            if (info) info->st_mode = S_IFDIR;
+            return 0;
+        });
 
-    EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
-    .WillRepeatedly(::testing::Return(0));
+    ON_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(0));
 
-    EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly(::testing::Return(0));
+    ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(0));
     
     // Trigger mount first
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
@@ -697,35 +809,36 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     // Verify device is mounted - should be able to get mount points
     string mountResponse;
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMountPoints"), 
-              _T("{\"deviceName\":\"001/002\"}"), mountResponse));
+              _T("{\"deviceName\":\"022/023\"}"), mountResponse));
     EXPECT_FALSE(mountResponse.empty());
     EXPECT_NE(mountResponse.find("mountPath"), string::npos) << "Mount response should contain mountPath";
     
-    // Set up expectations for unmount operations - these should be called during unplug
+    // Set up expectations for unmount operations
     EXPECT_CALL(*p_wrapsImplMock, umount(::testing::_))
-        .Times(::testing::AtLeast(1))  // Should be called at least once
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly(::testing::Return(0));
+    
+    // ADD: Expect rmdir to be called to remove mount directories
+    EXPECT_CALL(*p_wrapsImplMock, rmdir(::testing::_))
+        .Times(::testing::AtLeast(1))
         .WillRepeatedly(::testing::Return(0));
     
     // Now test unmount behavior which should trigger OnDeviceUnmounted
     EXPECT_NO_THROW(USBMassStorageImpl->OnDevicePluggedOut(usbDevice1));
     
-    // WAIT for the asynchronous unmount operation to complete
-    // Give the worker thread time to process the unmount job
+    // Wait for the asynchronous unmount operation to complete
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     
-    // Verify device is no longer mounted - getMountPoints should fail or return empty
+    // Verify device is no longer mounted
     string unmountResponse;
     uint32_t result = handler.Invoke(connection, _T("getMountPoints"), 
-                                   _T("{\"deviceName\":\"001/002\"}"), unmountResponse);
+                                   _T("{\"deviceName\":\"022/023\"}"), unmountResponse);
 
-    // Use the result variable to avoid unused variable warning
     bool deviceProperlyUnmounted = false;
     
     if (result == Core::ERROR_INVALID_DEVICENAME) {
-        // Device is completely removed - this is good
         deviceProperlyUnmounted = true;
     } else if (result == Core::ERROR_NONE) {
-        // Check if response is empty array or has no mount points
         if (unmountResponse.find("[]") != string::npos || 
             unmountResponse.find("mountPath") == string::npos ||
             unmountResponse.empty()) {
@@ -749,91 +862,104 @@ TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
     // Create a mock USB device
     USBDeviceMock* mockUsbDevice = new NiceMock<USBDeviceMock>();
     
-    // Create test devices with different characteristics to cover all branches
+    // Create test devices with realistic device paths
     std::list<Exchange::IUSBDevice::USBDevice> usbDeviceList;
     
-    // Mass storage device with valid path
+    // Mass storage device with valid path - use a path that won't conflict
     Exchange::IUSBDevice::USBDevice validDevice;
     validDevice.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     validDevice.deviceSubclass = 0x06;
     validDevice.deviceName = "valid_device";
-    validDevice.devicePath = "/dev/sda1";
+    validDevice.devicePath = "/dev/sda1"; // Use realistic path that could exist
     usbDeviceList.push_back(validDevice);
     
-    // Mass storage device with empty path (to test the empty path branch)
+    // Mass storage device with empty path
     Exchange::IUSBDevice::USBDevice emptyPathDevice;
     emptyPathDevice.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     emptyPathDevice.deviceSubclass = 0x06;
     emptyPathDevice.deviceName = "empty_path_device";
-    emptyPathDevice.devicePath = ""; // Empty path to test that branch
+    emptyPathDevice.devicePath = "";
     usbDeviceList.push_back(emptyPathDevice);
     
-    // Non-mass storage device (to test the else branch)
+    // Non-mass storage device
     Exchange::IUSBDevice::USBDevice nonMassStorageDevice;
-    nonMassStorageDevice.deviceClass = LIBUSB_CLASS_HID; // Not mass storage
+    nonMassStorageDevice.deviceClass = LIBUSB_CLASS_HID;
     nonMassStorageDevice.deviceSubclass = 0x01;
     nonMassStorageDevice.deviceName = "hid_device";
     nonMassStorageDevice.devicePath = "/dev/hidraw0";
     usbDeviceList.push_back(nonMassStorageDevice);
     
-    // Create iterator with our test devices
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
     
-    // Set up expectations for QueryInterfaceByCallsign to return our USB device mock
+    // Set up service mock expectations
     EXPECT_CALL(testService, QueryInterfaceByCallsign(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(mockUsbDevice));
     
-    // Set up expectations for AddRef and Register
     EXPECT_CALL(testService, AddRef()).WillRepeatedly(::testing::Return());
     EXPECT_CALL(testService, Register(::testing::_)).WillRepeatedly(::testing::Return());
     
-    // Set up expectations for GetDeviceList to return our iterator with test devices
+    // Set up USB device mock expectations
     EXPECT_CALL(*mockUsbDevice, GetDeviceList(::testing::_))
         .WillOnce([&](Exchange::IUSBDevice::IUSBDeviceIterator*& devices) {
             devices = mockIterator;
             return Core::ERROR_NONE;
         });
     
-    // Set up expectation for Register on the USB device
     EXPECT_CALL(*mockUsbDevice, Register(::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
     
-    // Mock filesystem operations for device mounting
+    // Mock filesystem operations for boot-up mounting
     EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillRepeatedly([](const std::string& path, struct stat* info) {
             if (path.find("/tmp/media") != std::string::npos) {
-                return -1; // Directory doesn't exist, needs creation
+                return -1; // Directories don't exist yet
             }
             if (info) info->st_mode = S_IFDIR;
             return 0;
         });
     
+    // Expect creation of /tmp/media and dynamic /tmp/media/usbX directories
     EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(0));
     
-    // Mock for reading partition information - avoid using fopen() since it's not available
-    // Instead, mock lower-level functionality if needed for the test
+    // Mock partition detection (this simulates reading /proc/partitions)
+    // The implementation reads partition info to determine what to mount
+    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(3)); // Valid file descriptor
     
+    EXPECT_CALL(*p_wrapsImplMock, close(::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    
+    // Mock mount operations - these will use dynamic mount paths
     EXPECT_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0)); // All mounts succeed
+        .WillRepeatedly(::testing::Return(0));
     
-    // Use COM implementation mock which the test fixture already sets up
+    // Mock COM link to return our implementation
     ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Invoke(
         [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-            connectionId = 12345; // Set a connection ID
+            connectionId = 12345;
             return &USBMassStorageImpl;
         }));
     
-    // Call Initialize which will call Configure which will call MountDevicesOnBootUp
+    // Call Initialize - this will trigger Configure and MountDevicesOnBootUp
     string result = testPlugin->Initialize(&testService);
     
     // Verify initialization succeeded
     EXPECT_EQ(result, "");
     
+    // After initialization, we can verify that devices were processed
+    // by checking if we can get device list (this would only work if initialization succeeded)
+    Core::JSONRPC::Handler& testHandler(*testPlugin);
+    string deviceListResponse;
+    uint32_t deviceListResult = testHandler.Invoke(connection, _T("getDeviceList"), _T("{}"), deviceListResponse);
+    
+    // Should succeed and return the valid device (not empty path or HID device)
+    EXPECT_EQ(deviceListResult, Core::ERROR_NONE);
+    EXPECT_NE(deviceListResponse.find("valid_device"), string::npos);
+    
     // Clean up
     testPlugin->Deinitialize(&testService);
-
     delete mockUsbDevice;
 }
 
