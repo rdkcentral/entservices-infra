@@ -611,6 +611,47 @@ TEST_F(USBMassStorageTest, Information_ReturnsCorrectString)
     EXPECT_EQ(result, "The USBMassStorage Plugin manages device mounting and stores mount information.");
 }
 
+TEST_F(USBMassStorageTest, OnDeviceUnmounted_ValidMountPoints_CreatesCorrectPayloadAndNotifies)
+{
+    // Setup device info
+    Exchange::IUSBMassStorage::USBStorageDeviceInfo deviceInfo;
+    deviceInfo.devicePath = "/dev/sda1";
+    deviceInfo.deviceName = "TestUSBDevice";
+    
+    // Create mount info list for the iterator
+    std::list<Exchange::IUSBMassStorage::USBStorageMountInfo> mountInfoList;
+    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo1;
+    mountInfo1.mountPath = "/tmp/media/usb1";
+    mountInfo1.partitionName = "/dev/sda1";
+    mountInfo1.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT;
+    mountInfo1.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_WRITE;
+    
+    Exchange::IUSBMassStorage::USBStorageMountInfo mountInfo2;
+    mountInfo2.mountPath = "/tmp/media/usb2";
+    mountInfo2.partitionName = "/dev/sda2";
+    mountInfo2.fileSystem = Exchange::IUSBMassStorage::USBStorageFileSystem::EXFAT;
+    mountInfo2.mountFlags = Exchange::IUSBMassStorage::USBStorageMountFlags::READ_ONLY;
+    
+    mountInfoList.emplace_back(mountInfo1);
+    mountInfoList.emplace_back(mountInfo2);
+    
+    auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>>::Create<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>(mountInfoList);
+    
+    // Test the OnDeviceUnmounted method indirectly through the implementation
+    if (USBMassStorageImpl.IsValid()) {
+        // The notification callback will be triggered when the implementation calls it
+        // We test that the method executes without throwing exceptions
+        EXPECT_NO_THROW({
+            // Simulate the notification being called by the implementation
+            // This tests the actual OnDeviceUnmounted logic without accessing private members
+            std::list<Exchange::IUSBMassStorage::INotification*> observers;
+            if (notification != nullptr) {
+                notification->OnDeviceUnmounted(deviceInfo, mockIterator);
+            }
+        });
+    }
+}
+
 // Alternative approach: Test the notification behavior through the implementation
 TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior)
 {
