@@ -203,6 +203,10 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
                         LOGINFO("OnAppUninstalled appId %s", appId.c_str());
                         notification->OnAppUninstalled(appId);
                     }
+                    else
+                    {
+                        LOGWARN("install status '%s' for appId %s", installStatus.c_str(), appId.c_str());
+                    }
                 }
                 mAdminLock.Unlock();
             }
