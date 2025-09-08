@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cstdio>
+#include <chrono>
 #include "USBMassStorage.h"
 #include "USBMassStorageImplementation.h"
 #include "WorkerPoolImplementation.h"
@@ -708,12 +709,16 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     // Now test unmount behavior which should trigger OnDeviceUnmounted
     EXPECT_NO_THROW(USBMassStorageImpl->OnDevicePluggedOut(usbDevice1));
     
+    // WAIT for the asynchronous unmount operation to complete
+    // Give the worker thread time to process the unmount job
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    
     // Verify device is no longer mounted - getMountPoints should fail or return empty
     string unmountResponse;
     uint32_t result = handler.Invoke(connection, _T("getMountPoints"), 
                                    _T("{\"deviceName\":\"001/002\"}"), unmountResponse);
 
-     // Use the result variable to avoid unused variable warning
+    // Use the result variable to avoid unused variable warning
     bool deviceProperlyUnmounted = false;
     
     if (result == Core::ERROR_INVALID_DEVICENAME) {
@@ -728,7 +733,7 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
         }
     }
     
-    EXPECT_FALSE(deviceProperlyUnmounted) 
+    EXPECT_TRUE(deviceProperlyUnmounted) 
         << "Device should no longer have valid mount points after unplug. "
         << "Result: " << result << ", Response: " << unmountResponse;
 }
