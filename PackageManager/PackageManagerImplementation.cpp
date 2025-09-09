@@ -738,11 +738,11 @@ namespace Plugin {
     void PackageManagerImplementation::downloader(int n)
     {
         InitializeState();
+        std::unique_lock<std::mutex> lock(mMutex);
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
                 LOGTRACE("Waiting ... ");
-                std::unique_lock<std::mutex> lock(mMutex);
                 cv.wait(lock);
             } else {
                 HttpClient::Status status = HttpClient::Status::Success;
