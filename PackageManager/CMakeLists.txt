@@ -43,8 +43,6 @@ endif()
 
 if (JSONCPP_FOUND)
     message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
-    message(STATUS "JSONCPP_INCLUDE_DIR: ${JSONCPP_INCLUDE_DIR}")
-    message(STATUS "JSONCPP_LIBRARY: ${JSONCPP_LIBRARY}")
 endif()
 
 add_library(${MODULE_NAME} SHARED
@@ -68,7 +66,7 @@ target_link_libraries(${MODULE_NAME} PRIVATE
     ${NAMESPACE}Definitions::${NAMESPACE}Definitions
     ${NAMESPACE}Plugins::${NAMESPACE}Plugins
     ${CURL_LIBRARY}
-    JsonCpp::JsonCpp
+    ${JSONCPP_LIBRARY}
     ${LIB_PACKAGE_LIBRARY}
     )
 
