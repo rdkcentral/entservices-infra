@@ -912,7 +912,7 @@ TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
     
     // Mock partition detection (this simulates reading /proc/partitions)
     // The implementation reads partition info to determine what to mount
-    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_))
+    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(3)); // Valid file descriptor
 
     // Mock mount operations - these will use dynamic mount paths
