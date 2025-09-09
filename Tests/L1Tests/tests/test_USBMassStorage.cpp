@@ -580,7 +580,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
     
     // Get the actual mount path
     string mountResponse;
-    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"016/017\"}"), mountResponse);
+    uint32_t mountResult = handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"016/017\"}"), mountResponse);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
