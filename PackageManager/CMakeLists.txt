@@ -41,6 +41,12 @@ if (CURL_FOUND)
     message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
 endif()
 
+if (JSONCPP_FOUND)
+    message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
+    message(STATUS "JSONCPP_INCLUDE_DIR: ${JSONCPP_INCLUDE_DIR}")
+    message(STATUS "JSONCPP_LIBRARY: ${JSONCPP_LIBRARY}")
+endif()
+
 add_library(${MODULE_NAME} SHARED
     PackageManager.cpp
     PackageManagerImplementation.cpp
@@ -62,7 +68,7 @@ target_link_libraries(${MODULE_NAME} PRIVATE
     ${NAMESPACE}Definitions::${NAMESPACE}Definitions
     ${NAMESPACE}Plugins::${NAMESPACE}Plugins
     ${CURL_LIBRARY}
-    ${JSONCPP_LIBRARY}
+    JsonCpp::JsonCpp
     ${LIB_PACKAGE_LIBRARY}
     )
 
