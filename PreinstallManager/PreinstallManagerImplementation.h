@@ -57,18 +57,39 @@ namespace WPEFramework
             END_INTERFACE_MAP
 
         public:
-        typedef struct _PackageInfo
-        {
-            string fileLocator;
-            string packageId;
-            string version;
-            WPEFramework::Exchange::RuntimeConfig configMetadata;
-        } PackageInfo;
+            typedef struct _PackageInfo
+            {
+                string fileLocator;
+                string packageId;
+                string version;
+                WPEFramework::Exchange::RuntimeConfig configMetadata;
+            } PackageInfo;
 
             enum EventNames {
             PREINSTALL_MANAGER_UNKNOWN = 0,
             PREINSTALL_MANAGER_APP_INSTALLATION_STATUS
             };
+
+        private:
+        class PackageManagerNotification : public Exchange::IPackageInstaller::INotification {
+
+        public:
+            PackageManagerNotification(PreinstallManagerImplementation& parent) : mParent(parent){}
+            ~PackageManagerNotification(){}
+
+        void OnAppInstallationStatus(const string& jsonresponse)
+        {
+            LOGINFO("Received Installation Status event from PackageManager");
+            mParent.handleOnAppInstallationStatus(jsonresponse);
+        }
+
+        BEGIN_INTERFACE_MAP(PackageManagerNotification)
+        INTERFACE_ENTRY(Exchange::IPackageInstaller::INotification)
+        END_INTERFACE_MAP
+
+        private:
+            PreinstallManagerImplementation& mParent;
+        };
 
         private:
             class EXTERNAL Job : public Core::IDispatch
@@ -120,7 +141,7 @@ namespace WPEFramework
             Core::hresult Register(Exchange::IPreinstallManager::INotification *notification) override;
             Core::hresult Unregister(Exchange::IPreinstallManager::INotification *notification) override;
             Core::hresult StartPreinstall(bool forceInstall) override;
-            void handleOnAppInstallationStatus(std::list<AppInstallInfo> &appInstallInfoList);
+            void handleOnAppInstallationStatus(const std::string &jsonresponse);
 
             // // IConfiguration methods
             uint32_t Configure(PluginHost::IShell *service) override;

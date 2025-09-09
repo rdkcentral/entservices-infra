@@ -139,9 +139,20 @@ namespace WPEFramework
         {
         case PREINSTALL_MANAGER_APP_INSTALLATION_STATUS:
         {
-            LOGINFO("Preinstall Manager App Installation Status Dispatch "); //remove
-
-            // handle dispatchEvent() here if necessary
+            if( params.HasLabel("jsonresponse") == false)
+            {
+                LOGERR("jsonresponse not found in params");
+                break;
+            }
+            std::string jsonresponse = params["jsonresponse"].String();
+            LOGINFO("Preinstall Manager App Installation Status Dispatch : %s", jsonresponse.c_str());
+            mAdminLock.Lock();
+            for (auto notification : mPreinstallManagerNotifications)
+            {
+                notification->OnAppInstallationStatus(jsonresponse);
+                LOGTRACE();
+            }
+            mAdminLock.Unlock();
             break;
         }
         default:
@@ -150,28 +161,18 @@ namespace WPEFramework
         }
     }
 
-    void PreinstallManagerImplementation::handleOnAppInstallationStatus(std::list<AppInstallInfo> &appInstallInfoList)
+    void PreinstallManagerImplementation::handleOnAppInstallationStatus(const std::string &jsonresponse);
     {
-        JsonArray appInfoJsonArray;
-        for (const auto& appInstallInfo : appInstallInfoList)
+        if (!jsonresponse.empty())
         {
-            JsonObject appInfoJson;
-            appInfoJson["packageId"] = appInstallInfo.packageId;
-            appInfoJson["version"] = appInstallInfo.version;
-            appInfoJson["PreinstallState"] = static_cast<int>(appInstallInfo.state);
-            appInfoJson["PreinstallFailReason"] = static_cast<int>(appInstallInfo.failReason);
-            appInfoJsonArray.Add(appInfoJson);
+            JsonObject eventDetails;
+            eventDetails["jsonresponse"] = jsonresponse;
+            dispatchEvent(PREINSTALL_MANAGER_APP_INSTALLATION_STATUS, eventDetails);
         }
-        std::string appInstallInfoArrayString;
-        appInfoJsonArray.ToString(appInstallInfoArrayString); //converting back to string
-
-        mAdminLock.Lock();
-        for (auto notification: mPreinstallManagerNotifications) {
-            notification->OnAppInstallationStatus(appInstallInfoArrayString); //move to dispatchEvent() if necessary?
-            LOGTRACE();
+        else
+        {
+            LOGERR("jsonresponse string from package manager is empty");
         }
-        mAdminLock.Unlock();
-
     }
 
     Core::hresult PreinstallManagerImplementation::createPackageManagerObject()
