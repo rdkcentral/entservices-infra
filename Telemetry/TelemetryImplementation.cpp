@@ -151,37 +151,29 @@ namespace Plugin {
     }
 
 #ifdef HAS_RBUS
-    void TelemetryImplementation::activateUserSettingsandGetPrivacyMode()
+    void TelemetryImplementation::getPrivacyMode()
     {
-        PluginHost::IShell::state state;
+         ASSERT(_service != nullptr);
 
-        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
-            Utils::activatePlugin(_service, USERSETTINGS_CALLSIGN);
-            
-        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
-        {
-            ASSERT(_service != nullptr);
-
-            _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
-            if (_userSettingsPlugin)
-            {
-                _userSettingsPlugin->Register(&_userSettingsNotification);
+         _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
+         if (_userSettingsPlugin)
+         {
+             _userSettingsPlugin->Register(&_userSettingsNotification);
                 
-                std::string privacyMode;
-                if (_userSettingsPlugin->GetPrivacyMode(privacyMode) == Core::ERROR_NONE)
-                {
-                    notifyT2PrivacyMode(privacyMode);
-                }
-                else
-                {
-                    LOGERR("Failed to get privacy mode");
-                }
-            }
-        }
-        else
-        {
-            LOGERR("Failed to activate %s", USERSETTINGS_CALLSIGN);
-        }
+             std::string privacyMode;
+             if (_userSettingsPlugin->GetPrivacyMode(privacyMode) == Core::ERROR_NONE)
+             {
+                 notifyT2PrivacyMode(privacyMode);
+             }
+             else
+             {
+                LOGERR("Failed to get privacy mode");
+             }
+         }
+		 else
+         {
+                LOGERR("Failed to get _userSettingsPlugin handle");
+         }
     }
     
     static void t2EventHandler(rbusHandle_t handle, char const* methodName, rbusError_t error, rbusObject_t param)
@@ -342,7 +334,7 @@ namespace Plugin {
         InitializePowerManager();
 
 #ifdef HAS_RBUS        
-        activateUserSettingsandGetPrivacyMode();
+        getPrivacyMode();
 #endif        
         setRFCReportProfiles();
         
