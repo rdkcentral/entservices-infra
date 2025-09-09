@@ -256,6 +256,8 @@ TEST_F(USBMassStorageTest, getMountPoints_Success)
 
     // Test: Now getMountPoints should return the mount info (no additional mocking needed)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"008/009\"}"), response));
+
+    USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
 }
 
 TEST_F(USBMassStorageTest, getMountPoints_EmptyDeviceName)
@@ -317,6 +319,9 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
 
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
+    // check if device list is empty
+    std::cout << "Device List: " << response << std::endl;
+
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
     
     // GET THE ACTUAL MOUNT PATH instead of assuming
@@ -373,6 +378,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
     // Test with the actual mount path
     string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
+
+    USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_EmptyMountPath)
@@ -462,6 +469,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatfsFailed)
     string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
     std::cout << actualMountPath << std::endl;
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
+
+    USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
@@ -535,6 +544,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
 
     string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
+
+    USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
@@ -625,6 +636,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
 
     string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
+
+    USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
 }
 
 TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
@@ -721,6 +734,8 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
 
     string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
+
+    USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
 }
 
 TEST_F(USBMassStorageTest, Information_ReturnsCorrectString)
@@ -847,8 +862,6 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     string mountResponse;
     uint32_t mountResult = handler.Invoke(connection, _T("getMountPoints"), 
               _T("{\"deviceName\":\"022/023\"}"), mountResponse);
-
-    std::cout << "Mount Response before pluggedOut: " << mountResponse << std::endl;
     
     // ADD: Verify mounting succeeded before proceeding
     EXPECT_EQ(Core::ERROR_NONE, mountResult) << "Mount failed, response: " << mountResponse;
@@ -869,28 +882,16 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
     
     // Wait for the asynchronous unmount operation to complete
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     
     // Verify device is no longer mounted
-    string unmountResponse;
-    uint32_t result = handler.Invoke(connection, _T("getMountPoints"), 
-                                   _T("{\"deviceName\":\"022/023\"}"), unmountResponse);
-
-    bool deviceProperlyUnmounted = false;
+    string deviceListResponse;
+    uint32_t deviceListResult = handler.Invoke(connection, _T("getDeviceList"), _T("{}"), deviceListResponse);
     
-    if (result == Core::ERROR_INVALID_DEVICENAME) {
-        deviceProperlyUnmounted = true;
-    } else if (result == Core::ERROR_NONE) {
-        if (unmountResponse.find("[]") != string::npos || 
-            unmountResponse.find("mountPath") == string::npos ||
-            unmountResponse.empty()) {
-            deviceProperlyUnmounted = true;
-        }
-    }
-    
-    EXPECT_TRUE(deviceProperlyUnmounted) 
-        << "Device should no longer have valid mount points after unplug. "
-        << "Result: " << result << ", Response: " << unmountResponse;
+    EXPECT_EQ(Core::ERROR_NONE, deviceListResult);
+    // Device "022/023" should not be in the response anymore
+    EXPECT_EQ(deviceListResponse.find("022/023"), string::npos) 
+        << "Device should be removed from device list after unplug. Response: " << deviceListResponse;
 }
 
 TEST_F(USBMassStorageTest, Initialize_CallsConfigure_AndMountDevicesOnBootUp)
