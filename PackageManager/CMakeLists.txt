@@ -35,6 +35,8 @@ endif()
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package( Curl REQUIRED)
+find_package( jsoncpp REQUIRED)
+
 if (CURL_FOUND)
     message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
 endif()
@@ -52,6 +54,7 @@ endif()
 target_include_directories(${MODULE_NAME} PRIVATE
     ../helpers
     ${CURL_INCLUDE_DIR}
+    ${JSONCPP_INCLUDE_DIR}
     ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/${NAMESPACE}/interfaces
     )
 
@@ -59,6 +62,7 @@ target_link_libraries(${MODULE_NAME} PRIVATE
     ${NAMESPACE}Definitions::${NAMESPACE}Definitions
     ${NAMESPACE}Plugins::${NAMESPACE}Plugins
     ${CURL_LIBRARY}
+    ${JSONCPP_LIBRARY}
     ${LIB_PACKAGE_LIBRARY}
     )
 

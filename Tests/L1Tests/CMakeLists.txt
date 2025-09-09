@@ -23,7 +23,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(jsoncpp REQUIRED)
 
 set (TEST_SRC
     tests/test_UtilsFile.cpp
@@ -162,9 +161,7 @@ include_directories(${TEST_INC})
 
 target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins)
 
-target_link_libraries(${MODULE_NAME} PRIVATE ${TEST_LIB})
-
-target_link_libraries(${MODULE_NAME} PRIVATE jsoncpp_lib)
+target_link_libraries(${MODULE_NAME} ${TEST_LIB})
 
 target_include_directories(${MODULE_NAME}
         PUBLIC
@@ -175,8 +172,6 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/thunder
         ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
         )
-
-target_include_directories(${MODULE_NAME} PRIVATE ${jsoncpp_INCLUDE_DIRS})
 
 #install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
