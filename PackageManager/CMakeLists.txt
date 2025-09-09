@@ -35,7 +35,7 @@ endif()
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package( Curl REQUIRED)
-find_package( jsoncpp REQUIRED)
+find_package( JsonCpp REQUIRED)
 
 if (CURL_FOUND)
     message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
