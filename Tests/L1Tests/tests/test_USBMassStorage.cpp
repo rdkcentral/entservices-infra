@@ -244,9 +244,15 @@ TEST_F(USBMassStorageTest, getMountPoints_Success)
     ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
 
+    ON_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(3)); // Valid file descriptor
+
     // Execute: Setup the device and mount it
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
+
+    // ADD: Wait for asynchronous mounting to complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // Test: Now getMountPoints should return the mount info (no additional mocking needed)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"008/009\"}"), response));
@@ -305,6 +311,9 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
 
     ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
+    
+    ON_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(3)); // Valid file descriptor
 
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
@@ -314,7 +323,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
     string mountResponse;
     handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"010/011\"}"), mountResponse);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // Parse the mount path from the response
     string actualMountPath;
@@ -420,6 +429,9 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatfsFailed)
     ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
 
+    ON_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(3)); // Valid file descriptor
+
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
@@ -427,7 +439,9 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatfsFailed)
     // Get the actual mount path
     string mountResponse;
     handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"012/013\"}"), mountResponse);
-    
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
     string actualMountPath;
     size_t mountPathPos = mountResponse.find("\"mountPath\":\"");
     if (mountPathPos != string::npos) {
@@ -446,6 +460,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatfsFailed)
         .WillOnce(::testing::Return(-1));
 
     string testJson = "{\"mountPath\":\"" + actualMountPath + "\"}";
+    std::cout << actualMountPath << std::endl;
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPartitionInfo"), testJson.c_str(), response));
 }
 
@@ -483,10 +498,15 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
     ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
 
+    ON_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(3)); // Valid file descriptor
+
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
-    
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
     // Get the actual mount path
     string mountResponse;
     handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"014/015\"}"), mountResponse);
@@ -551,6 +571,9 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
     ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
 
+    ON_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(3)); // Valid file descriptor for mounting
+
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
@@ -558,6 +581,11 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
     // Get the actual mount path
     string mountResponse;
     handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"016/017\"}"), mountResponse);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    // ADD: Verify mounting succeeded before proceeding
+    EXPECT_EQ(Core::ERROR_NONE, mountResult) << "Mount failed, response: " << mountResponse;
     
     string actualMountPath;
     size_t mountPathPos = mountResponse.find("\"mountPath\":\"");
@@ -633,13 +661,23 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
     ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
 
+    // ADD: Mock open() for partition detection during mounting
+    ON_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(3)); // Valid file descriptor for mounting
+
     // Setup the device and create mount points
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
     
+    // ADD: Wait for asynchronous mounting to complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
     // Get the actual mount path
     string mountResponse;
-    handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"018/019\"}"), mountResponse);
+    uint32_t mountResult = handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\":\"018/019\"}"), mountResponse);
+    
+    // ADD: Verify mounting succeeded before proceeding
+    EXPECT_EQ(Core::ERROR_NONE, mountResult) << "Mount failed, response: " << mountResponse;
     
     string actualMountPath;
     size_t mountPathPos = mountResponse.find("\"mountPath\":\"");
@@ -672,7 +710,11 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
             return 0;
         });
 
-    // This is the failure we're testing - ioctl fails
+    // This is the failure we're testing - open succeeds but ioctl fails
+    EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(4)); // Valid FD for getPartitionInfo
+
     EXPECT_CALL(*p_wrapsImplMock, ioctl(::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AtLeast(1))
         .WillRepeatedly(::testing::Return(-1)); // ioctl failure
@@ -791,13 +833,23 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     ON_CALL(*p_wrapsImplMock, mount(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
     
+    // ADD: Mock open() for partition detection during mounting
+    ON_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(3)); // Valid file descriptor for mounting
+
     // Trigger mount first
     USBMassStorageImpl->OnDevicePluggedIn(usbDevice1);
     
+    // ADD: Wait for asynchronous mounting to complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
     // Verify device is mounted - should be able to get mount points
     string mountResponse;
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMountPoints"), 
-              _T("{\"deviceName\":\"022/023\"}"), mountResponse));
+    uint32_t mountResult = handler.Invoke(connection, _T("getMountPoints"), 
+              _T("{\"deviceName\":\"022/023\"}"), mountResponse);
+    
+    // ADD: Verify mounting succeeded before proceeding
+    EXPECT_EQ(Core::ERROR_NONE, mountResult) << "Mount failed, response: " << mountResponse;
     EXPECT_FALSE(mountResponse.empty());
     EXPECT_NE(mountResponse.find("mountPath"), string::npos) << "Mount response should contain mountPath";
     
