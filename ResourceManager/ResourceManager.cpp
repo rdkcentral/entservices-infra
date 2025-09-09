@@ -136,6 +136,9 @@ namespace WPEFramework {
         {
             LOGINFOMETHOD();
 
+	    std::cout<<"Resourcemanager : adding 2sec delay" << std::endl;
+	    sleep(2);
+
             bool status = true;
             if ((nullptr != mEssRMgr) && (false == mDisableBlacklist))
             {
