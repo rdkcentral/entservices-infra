@@ -847,6 +847,8 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     string mountResponse;
     uint32_t mountResult = handler.Invoke(connection, _T("getMountPoints"), 
               _T("{\"deviceName\":\"022/023\"}"), mountResponse);
+
+    std::cout << "Mount Response before pluggedOut: " << mountResponse << std::endl;
     
     // ADD: Verify mounting succeeded before proceeding
     EXPECT_EQ(Core::ERROR_NONE, mountResult) << "Mount failed, response: " << mountResponse;
@@ -864,7 +866,7 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
         .WillRepeatedly(::testing::Return(0));
     
     // Now test unmount behavior which should trigger OnDeviceUnmounted
-    EXPECT_NO_THROW(USBMassStorageImpl->OnDevicePluggedOut(usbDevice1));
+    USBMassStorageImpl->OnDevicePluggedOut(usbDevice1);
     
     // Wait for the asynchronous unmount operation to complete
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
