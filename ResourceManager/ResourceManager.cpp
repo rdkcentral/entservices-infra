@@ -136,9 +136,6 @@ namespace WPEFramework {
         {
             LOGINFOMETHOD();
 
-	    std::cout<<"Resourcemanager : adding 2sec delay" << std::endl;
-	    sleep(2);
-
             bool status = true;
             if ((nullptr != mEssRMgr) && (false == mDisableBlacklist))
             {
@@ -149,6 +146,11 @@ namespace WPEFramework {
                     std::cout<<"appid : "<< app << std::endl;
                     std::cout<<"blocked  : "<<std::boolalpha << blockAV << std::endl;
 
+		    if(blockAV)
+		    {
+			std::cout<<"Resourcemanager : adding 2sec delay" << std::endl;
+			sleep(2);
+		    }
                     status = (status && setAVBlocked(app, blockAV));
                     std::cout<< "Resourcemanager : EssRMgrAddToBlackList returned : "<<std::boolalpha <<status<< std::endl;
                 }
