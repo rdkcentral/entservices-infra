@@ -124,7 +124,7 @@ TEST_F(USBMassStorageTest, getDeviceList_Success)
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "001/002";
-    usbDevice1.devicePath = "/dev/sda12";
+    usbDevice1.devicePath = "/dev/sda";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -216,7 +216,7 @@ TEST_F(USBMassStorageTest, getMountPoints_Success)
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "008/009";
-    usbDevice1.devicePath = "/dev/sda89";
+    usbDevice1.devicePath = "/dev/sda";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -286,7 +286,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_Success)
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "010/011";
-    usbDevice1.devicePath = "/dev/sda1011";
+    usbDevice1.devicePath = "/dev/sda";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -403,7 +403,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatfsFailed)
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "012/013";
-    usbDevice1.devicePath = "/dev/sda1213";
+    usbDevice1.devicePath = "/dev/sda";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -472,7 +472,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_StatvfsFailed)
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "014/015";
-    usbDevice1.devicePath = "/dev/sda1415";
+    usbDevice1.devicePath = "/dev/sda";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -545,7 +545,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_OpenFailed)
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "016/017";
-    usbDevice1.devicePath = "/dev/sda1617";
+    usbDevice1.devicePath = "/dev/sda";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -635,7 +635,7 @@ TEST_F(USBMassStorageTest, getPartitionInfo_IoctlFailed)
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "018/019";
-    usbDevice1.devicePath = "/dev/sda1819";
+    usbDevice1.devicePath = "/dev/sda";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
@@ -804,7 +804,7 @@ TEST_F(USBMassStorageTest, OnDeviceUnmounted_ThroughImplementation_ValidBehavior
     usbDevice1.deviceClass = LIBUSB_CLASS_MASS_STORAGE;
     usbDevice1.deviceSubclass = 0x12;
     usbDevice1.deviceName = "022/023";
-    usbDevice1.devicePath = "/dev/sda2223";
+    usbDevice1.devicePath = "/dev/sda";
     usbDeviceList.emplace_back(usbDevice1);
     auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IUSBDevice::IUSBDeviceIterator>>::Create<Exchange::IUSBDevice::IUSBDeviceIterator>(usbDeviceList);
 
