@@ -260,6 +260,13 @@ namespace WPEFramework
         return false; // equal
     }
 
+    // bool packageWgtExists(const std::string& folderPath) //required??
+    // {
+    //     std::string packageWgtPath = folderPath + "/package.wgt";
+    //     struct stat st;
+    //     return (stat(packageWgtPath.c_str(), &st) == 0) && S_ISREG(st.st_mode);
+    // }
+
     bool PreinstallManagerImplementation::readPreinstallDirectory(std::list<PackageInfo> &packages)
     {
         ASSERT(nullptr != mPackageManagerInstallerObject);
@@ -284,19 +291,16 @@ namespace WPEFramework
 
             PackageInfo packageInfo;
             packageInfo.fileLocator = filepath;
-            // debug logs
-            LOGDBG("Found package file: %s", filepath.c_str());
-            LOGDBG(" Ping getconfig yet to be implemented");
-            // API yet to be added
-            // if (mPackageManagerInstallerObject->GetConfigForPackage(packageInfo.fileLocator, packageInfo.packageId, packageInfo.version, packageInfo.configMetadata) == Core::ERROR_NONE)
-            // {
-            //     LOGINFO("Found package: %s, version: %s", packageInfo.packageId.c_str(), packageInfo.version.c_str());
-            // }
-            // else
-            // {
-            //     LOGINFO("Skipping invalid package file: %s", filename.c_str());
-            //     continue;
-            // }
+            LOGDBG("Found package folder: %s", filepath.c_str());
+            if (mPackageManagerInstallerObject->GetConfigForPackage(packageInfo.fileLocator, packageInfo.packageId, packageInfo.version, packageInfo.configMetadata) == Core::ERROR_NONE)
+            {
+                LOGINFO("Found package: %s, version: %s", packageInfo.packageId.c_str(), packageInfo.version.c_str());
+            }
+            else
+            {
+                LOGINFO("Skipping invalid package file: %s", filename.c_str());
+                continue;
+            }
             packages.push_back(packageInfo);
         }
 
@@ -394,6 +398,7 @@ namespace WPEFramework
         int  failedApps   = 0;
         int  totalApps    = preinstallPackages.size();
         int  skippedApps  = 0;
+        std::list<std::string> failedAppsList;
 
         for (const auto &pkg : preinstallPackages)
         {
@@ -407,12 +412,19 @@ namespace WPEFramework
             // todo multi threading ??
             LOGINFO("Installing package: %s, version: %s", pkg.packageId.c_str(), pkg.version.c_str());
             Exchange::IPackageInstaller::FailReason failReason;
-            Core::hresult installResult = mPackageManagerInstallerObject->Install(pkg.packageId, pkg.version, nullptr, pkg.fileLocator, failReason); // todo additionalMetadata null
+            // install the package.wgt file inside the folder
+            // packageWgtExists(pkg.fileLocator) //required??
+            std::string packageLocator = pkg.fileLocator + "/package.wgt";
+            // std::list<Exchange::IPackageInstaller::KeyValue> keyValues;
+            Exchange::IPackageInstaller::IKeyValueIterator* additionalMetadata = nullptr; // todo add additionalMetadata if needed
+            // additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(keyValues);
+            Core::hresult installResult = mPackageManagerInstallerObject->Install(pkg.packageId, pkg.version, additionalMetadata, packageLocator, failReason);
             if (installResult != Core::ERROR_NONE)
             {
                 LOGERR("Failed to install package: %s, version: %s, failReason: %d", pkg.packageId.c_str(), pkg.version.c_str(), failReason);
                 installError = true;
                 failedApps++;
+                failedAppsList.push_back(pkg.packageId + "_" + pkg.version);
                 continue;
             }
             else
@@ -422,6 +434,19 @@ namespace WPEFramework
         }
 
         LOGINFO("Installation summary: %d/%d packages installed successfully. %d apps failed. %d apps skipped.", totalApps - failedApps - skippedApps, totalApps, failedApps, skippedApps);
+        if(failedApps > 0)
+        {
+            std::string failedAppsStr;
+            for (const auto &app : failedAppsList)
+            {
+                if (!failedAppsStr.empty())
+                {
+                    failedAppsStr += ", ";
+                }
+                failedAppsStr += app;
+            }
+            LOGERR("Failed apps: %s", failedAppsStr.c_str());
+        }
         // LOGINFO("Installation summary: Skipped packages: %d", skippedApps);
 
         //cleanup
