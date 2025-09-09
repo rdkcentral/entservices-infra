@@ -189,10 +189,14 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Proc"
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/RBus"
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Rfc"
+          mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/PowerManagerHal"
+          mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Mfr"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IIarm.h" "$GITHUB_WORKSPACE/entservices-apis/apis/IARM/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IProc.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Proc/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IRBus.h" "$GITHUB_WORKSPACE/entservices-apis/apis/RBus/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IRfc.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Rfc/"
+          cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IPowerManagerHal.h" "$GITHUB_WORKSPACE/entservices-apis/apis/PowerManagerHal/"
+          cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IMfr.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Mfr/"
 
       - name: Build entservices-apis
         run: >
