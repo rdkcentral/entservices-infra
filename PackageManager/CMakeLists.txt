@@ -35,14 +35,9 @@ endif()
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package( Curl REQUIRED)
-find_package( JsonCpp REQUIRED)
 
 if (CURL_FOUND)
     message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
-endif()
-
-if (JSONCPP_FOUND)
-    message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
 endif()
 
 add_library(${MODULE_NAME} SHARED
@@ -58,7 +53,6 @@ endif()
 target_include_directories(${MODULE_NAME} PRIVATE
     ../helpers
     ${CURL_INCLUDE_DIR}
-    ${JSONCPP_INCLUDE_DIR}
     ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/${NAMESPACE}/interfaces
     )
 
@@ -66,9 +60,17 @@ target_link_libraries(${MODULE_NAME} PRIVATE
     ${NAMESPACE}Definitions::${NAMESPACE}Definitions
     ${NAMESPACE}Plugins::${NAMESPACE}Plugins
     ${CURL_LIBRARY}
-    ${JSONCPP_LIBRARY}
     ${LIB_PACKAGE_LIBRARY}
     )
+
+if(RDK_SERVICES_L1_TEST)
+    find_package( JsonCpp REQUIRED)
+    if (JSONCPP_FOUND)
+    message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
+    endif()
+    target_include_directories(${MODULE_NAME} PRIVATE ${JSONCPP_INCLUDE_DIR})
+    target_link_libraries(${MODULE_NAME} PRIVATE ${JSONCPP_LIBRARY})
+endif()
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
