@@ -1158,22 +1158,27 @@ Core::hresult AppManagerImplementation::IsInstalled(const std::string& appId, bo
     installed = false;
 
     mAdminLock.Lock();
-
-    std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
-    status = fetchAppPackageList(packageList);
-    if (status == Core::ERROR_NONE)
+    if(appId.empty())
     {
-        checkIsInstalled(appId, installed, packageList);
-        if(installed)
+        LOGERR("appId not present or empty");
+    }
+    else
+    {
+        std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
+        status = fetchAppPackageList(packageList);
+        if (status == Core::ERROR_NONE)
         {
-            LOGINFO("%s is installed ",appId.c_str());
-        }
-        else
-        {
-            LOGINFO("%s is not installed ",appId.c_str());
+            checkIsInstalled(appId, installed, packageList);
+            if(installed)
+            {
+                LOGINFO("%s is installed ",appId.c_str());
+            }
+            else
+            {
+                LOGINFO("%s is not installed ",appId.c_str());
+            }
         }
     }
-
     mAdminLock.Unlock();
     return status;
 }

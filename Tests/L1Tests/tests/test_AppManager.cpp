@@ -809,15 +809,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailureEmptyAppID)
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
 
-    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-    .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-        auto mockIterator = FillPackageIterator(); // Fill the package Info
-        packages = mockIterator;
-        return Core::ERROR_NONE;
-    });
-
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->IsInstalled("", installed));
-    EXPECT_EQ(installed, false);
+    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->IsInstalled("", installed));
 
     if(status == Core::ERROR_NONE)
     {
