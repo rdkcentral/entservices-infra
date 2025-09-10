@@ -24,6 +24,7 @@
 #include "UtilsController.h"
 
 #include "rfcapi.h"
+#include <fstream>
 
 #ifdef HAS_RBUS
 #include "rbus.h"
