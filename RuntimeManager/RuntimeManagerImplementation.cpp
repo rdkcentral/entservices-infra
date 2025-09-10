@@ -46,6 +46,11 @@ namespace WPEFramework
             {
                 RuntimeManagerImplementation::_instance = this;
             }
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+        LOGWARN("Creating rialto connector");
+        RialtoConnector *rialtoBridge = new RialtoConnector();
+        rialtoConnector = std::shared_ptr<RialtoConnector>(rialtoBridge);
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
         }
 
         RuntimeManagerImplementation* RuntimeManagerImplementation::getInstance()
@@ -558,6 +563,23 @@ err_ret:
                 config.mWesterosSocketPath = westerosSocket;
             }
 
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+                    if (!rialtoConnector->initialized())
+                    {
+                        LOGWARN("Initializing rialto connector....");
+                        rialtoConnector->initialize();
+                    }
+                    if (!rialtoConnector->createAppSession(appId,westerosSocket, appId))
+                    {
+                       LOGWARN(" Rialto app session initialisation failed ");
+                       status = Core::ERROR_GENERAL;
+                    }
+                    if (!rialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
+                    {
+                       LOGWARN(" Rialto app session not ready. ");
+                       status = Core::ERROR_GENERAL;
+                    }
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             if (xdgRuntimeDir.empty() || waylandDisplay.empty())
             {
                 LOGERR("Missing required environment variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s",
@@ -735,6 +757,14 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Suspend.");
             }
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+            rialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
+            if (!rialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
+            {
+               LOGERR( "Rialto app session could not be set inactive.");
+               status = Core::ERROR_GENERAL;
+            }
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
@@ -767,6 +797,14 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Resume.");
             }
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+            rialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
+            if (!rialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
+            {
+               LOGERR("Rialto app session not ready. ");
+	       status = Core::ERROR_GENERAL;
+            }
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
@@ -813,6 +851,14 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
             }
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+            rialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
+            if (!rialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
+            {
+               LOGERR("Rialto app session not ready. ");
+               status = Core::ERROR_GENERAL;
+            }
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
@@ -853,6 +899,14 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Kill.");
             }
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+            rialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
+            if (!rialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
+            {
+               LOGERR("Rialto app session not ready. ");
+	       status = Core::ERROR_GENERAL;
+            }
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
