@@ -148,7 +148,7 @@ add_plugin_test_ex(PLUGIN_STORAGE_MANAGER tests/test_StorageManager.cpp "${STORA
 
 #PLUGIN_PACKAGE_MANAGER
 set (PACKAGEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PackageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-set (PACKAGEMANAGER_LIBS ${NAMESPACE}PackageManager ${NAMESPACE}PackageManagerImplementation)
+set (PACKAGEMANAGER_LIBS ${NAMESPACE}PackageManagerRDKEMS)
 add_plugin_test_ex(PLUGIN_PACKAGE_MANAGER tests/test_PackageManager.cpp "${PACKAGEMANAGER_INC}" "${PACKAGEMANAGER_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
