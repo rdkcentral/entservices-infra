@@ -78,7 +78,7 @@ jobs:
         run: >
           sudo apt update
           &&
-          sudo apt install -y libsqlite3-dev libcurl4-openssl-dev valgrind lcov clang libsystemd-dev libboost-all-dev libwebsocketpp-dev meson libcunit1 libcunit1-dev curl protobuf-compiler-grpc libgrpc-dev libgrpc++-dev libjsoncpp-dev libdrm-dev
+          sudo apt install -y libsqlite3-dev libcurl4-openssl-dev valgrind lcov clang libsystemd-dev libboost-all-dev libwebsocketpp-dev meson libcunit1 libcunit1-dev curl protobuf-compiler-grpc libgrpc-dev libgrpc++-dev libjsoncpp-dev
 
       - name: Install GStreamer
         run: |
@@ -476,7 +476,8 @@ jobs:
           -DDS_FOUND=ON
           -DHAS_FRONT_PANEL=ON
           -DRDK_SERVICES_L1_TEST=ON
-          -DUSE_THUNDER_R4=ON
+          -DUSE_LIBPACKAGE=ON
+          -DUSE_THUNDER_R4=OFF
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           -DPLUGIN_TELEMETRY=ON
           -DPLUGIN_USBDEVICE=ON
