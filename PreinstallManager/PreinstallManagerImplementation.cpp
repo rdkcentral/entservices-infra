@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include <chrono>
+
 #include "PreinstallManagerImplementation.h"
 
 #define AI_PREINSTALL_DIRECTORY "/opt/preinstall" //temporary directory for preinstall packages
@@ -300,7 +302,8 @@ namespace WPEFramework
             else
             {
                 LOGINFO("Skipping invalid package file: %s", filename.c_str());
-                continue;
+                packageInfo.installStatus = "SKIPPED: getConfig failed for [" + filename + "]";
+                // continue; -> so that it is printed as skipped and not go undetected
             }
             packages.push_back(packageInfo);
         }
@@ -318,6 +321,7 @@ namespace WPEFramework
     Core::hresult PreinstallManagerImplementation::StartPreinstall(bool forceInstall)
     {
         Core::hresult result = Core::ERROR_GENERAL;
+        auto installStart = std::chrono::steady_clock::now();
 
         if (nullptr == mPackageManagerInstallerObject)
         {
@@ -385,6 +389,7 @@ namespace WPEFramework
 
                 if (remove)
                 {
+                    LOGINFO("Newer version check failed, skipping package: %s, version: %s , existing_version : %s", toBeInstalledApp->packageId.c_str(), toBeInstalledApp->version.c_str(), found->version.c_str());
                     toBeInstalledApp = preinstallPackages.erase(toBeInstalledApp); // advances to next
                 }
                 else
@@ -398,60 +403,81 @@ namespace WPEFramework
         bool installError = false;
         int  failedApps   = 0;
         int  totalApps    = preinstallPackages.size();
-        int  skippedApps  = 0;
-        std::list<std::string> failedAppsList;
+        // std::list<std::string> failedAppsList;
 
-        for (const auto &pkg : preinstallPackages)
+        for (auto &pkg : preinstallPackages)
         {
             if((pkg.packageId.empty() || pkg.version.empty() || pkg.fileLocator.empty()) /*&& !forceInstall */) // force install anyway
             {
                 LOGERR("Skipping invalid package with empty fields: %s", pkg.fileLocator.empty() ? "NULL" : pkg.fileLocator.c_str());
-                skippedApps++;
-                //continue;  todo removed for testing
+                if(pkg.installStatus.empty()) // do not overwrite if already set to skipped
+                {
+                    pkg.installStatus = "FAILED: empty fields";
+                }
+                //populate empty fields to avoid null errors
+                pkg.fileLocator = pkg.fileLocator.empty() ? "NULL" : pkg.fileLocator;
+                pkg.packageId = pkg.packageId.empty() ? pkg.fileLocator : pkg.packageId; // use fileLocator if packageId is empty for logging
+                pkg.version = pkg.version.empty() ? "NULL" : pkg.version;
+                // installError = true; //required??
+                failedApps++;
+                continue; // do not install with empty fields
             }
 
-            // todo multi threading ??
             LOGINFO("Installing package: %s, version: %s", pkg.packageId.c_str(), pkg.version.c_str());
-            Exchange::IPackageInstaller::FailReason failReason;
-            // install the package.wgt file inside the folder
-            // packageWgtExists(pkg.fileLocator) //required??
+
+                // install the package.wgt file inside the folder
+                // packageWgtExists(pkg.fileLocator) //required??
             std::string packageLocator = pkg.fileLocator + "/package.wgt";
-            // std::list<Exchange::IPackageInstaller::KeyValue> keyValues;
+            FailReason failReason;
             Exchange::IPackageInstaller::IKeyValueIterator* additionalMetadata = nullptr; // todo add additionalMetadata if needed
-            // additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(keyValues);
+                // additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(keyValues);
+
+
             Core::hresult installResult = mPackageManagerInstallerObject->Install(pkg.packageId, pkg.version, additionalMetadata, packageLocator, failReason);
             if (installResult != Core::ERROR_NONE)
             {
-                LOGERR("Failed to install package: %s, version: %s, failReason: %d", pkg.packageId.c_str(), pkg.version.c_str(), failReason);
+                LOGERR("Failed to install package: %s, version: %s, failReason: %s", pkg.packageId.c_str(), pkg.version.c_str(), getFailReason(failReason).c_str());
                 installError = true;
                 failedApps++;
-                failedAppsList.push_back(pkg.packageId + "_" + pkg.version);
+                // failedAppsList.push_back(pkg.packageId + "_" + pkg.version);
+                pkg.installStatus = "FAILED: reason " + getFailReason(failReason);
                 continue;
             }
             else
             {
                 LOGINFO("Successfully installed package: %s, version: %s, fileLocator: %s", pkg.packageId.c_str(), pkg.version.c_str(), pkg.fileLocator.c_str());
+                pkg.installStatus = "SUCCESS";
             }
+        }
+        auto installEnd = std::chrono::steady_clock::now();
+        auto installDuration = std::chrono::duration_cast<std::chrono::seconds>(installEnd - installStart).count();
+        auto installDurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(installEnd - installStart).count();
+        LOGDBG("StartPreinstall() process completed in %lld seconds (%lld ms)", installDuration, installDurationMs);
+        LOGINFO("Installation summary: %d/%d packages installed successfully. %d apps failed.", totalApps - failedApps, totalApps, failedApps);
+        // print package wise result
+        for (const auto &pkg : preinstallPackages)
+        {
+            LOGINFO("Package: %s [version:%s]............status:[ %s ]", pkg.packageId.c_str(), pkg.version.c_str(), pkg.installStatus.c_str());
         }
 
-        LOGINFO("Installation summary: %d/%d packages installed successfully. %d apps failed. %d apps skipped.", totalApps - failedApps - skippedApps, totalApps, failedApps, skippedApps);
-        if(failedApps > 0)
-        {
-            std::string failedAppsStr;
-            for (const auto &app : failedAppsList)
-            {
-                if (!failedAppsStr.empty())
-                {
-                    failedAppsStr += ", ";
-                }
-                failedAppsStr += app;
-            }
-            LOGERR("Failed apps: %s", failedAppsStr.c_str());
-        }
+        // print failed apps separately if required.
+        // if(failedApps > 0)
+        // {
+        //     std::string failedAppsStr;
+        //     for (const auto &app : failedAppsList)
+        //     {
+        //         if (!failedAppsStr.empty())
+        //         {
+        //             failedAppsStr += ", ";
+        //         }
+        //         failedAppsStr += app;
+        //     }
+        //     LOGERR("Failed apps: %s", failedAppsStr.c_str());
+        // }
         // LOGINFO("Installation summary: Skipped packages: %d", skippedApps);
 
         //cleanup
-        // releasePackageManagerObject();
+        releasePackageManagerObject();
 
         if(!installError)
         {

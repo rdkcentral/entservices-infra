@@ -63,12 +63,15 @@ namespace WPEFramework
                 string packageId;
                 string version;
                 WPEFramework::Exchange::RuntimeConfig configMetadata;
+                string installStatus; // optional field to store install status for logging purpose
             } PackageInfo;
 
             enum EventNames {
             PREINSTALL_MANAGER_UNKNOWN = 0,
             PREINSTALL_MANAGER_APP_INSTALLATION_STATUS
             };
+
+            typedef Exchange::IPackageInstaller::FailReason FailReason;
 
         private:
         class PackageManagerNotification : public Exchange::IPackageInstaller::INotification {
@@ -150,6 +153,15 @@ namespace WPEFramework
             Core::hresult createPackageManagerObject();
             void releasePackageManagerObject();
             bool readPreinstallDirectory(std::list<PackageInfo> &packages);
+            string getFailReason(FailReason reason) {
+            switch (reason) {
+                case FailReason::SIGNATURE_VERIFICATION_FAILURE : return "SIGNATURE_VERIFICATION_FAILURE";
+                case FailReason::PACKAGE_MISMATCH_FAILURE : return "PACKAGE_MISMATCH_FAILURE";
+                case FailReason::INVALID_METADATA_FAILURE : return "INVALID_METADATA_FAILURE";
+                case FailReason::PERSISTENCE_FAILURE : return "PERSISTENCE_FAILURE";
+                default: return "NONE";
+            }
+        }
 
         private:
             mutable Core::CriticalSection mAdminLock;
