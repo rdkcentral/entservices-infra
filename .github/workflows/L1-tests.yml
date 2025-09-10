@@ -1,6 +1,8 @@
 name: L1-tests
 
 on:
+  push:
+    branches: ['topic/scenesetl1']
   workflow_call:
     inputs:
       caller_source:
@@ -127,7 +129,6 @@ jobs:
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
-        if: ${{ inputs.caller_source == 'local' }}
         uses: actions/checkout@v3
         with:
           path: entservices-infra
@@ -138,7 +139,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: topic/scenesetl1
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
@@ -494,6 +495,7 @@ jobs:
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_SCENESET=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -575,6 +577,7 @@ jobs:
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_SCENESET=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
