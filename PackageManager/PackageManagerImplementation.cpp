@@ -294,12 +294,12 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, Percent &percent)
+    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, Progress &progress)
     {
         Core::hresult result = Core::ERROR_NONE;
 
         if (mInprogressDownload.get() != nullptr) {
-            percent.percent = mHttpClient->getProgress();
+            progress.progress = mHttpClient->getProgress();
         } else {
             result = Core::ERROR_GENERAL;
         }
@@ -307,7 +307,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB)
+    Core::hresult PackageManagerImplementation::GetStorageDetails(string &quotaKB, string &usedKB)
     {
         Core::hresult result = Core::ERROR_NONE;
         return result;
