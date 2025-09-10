@@ -166,6 +166,10 @@ namespace WPEFramework
             Exchange::ILifecycleManager::LifecycleState lifecycleState = request.mTargetState;
             ApplicationContext* context = request.mContext;
 
+            if (context == nullptr) {
+                errorReason = "ApplicationContext is null";
+                return false;
+            }
             if (context == nullptr)
             {
                 errorReason = "ApplicationContext is null";
