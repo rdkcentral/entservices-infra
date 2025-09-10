@@ -79,7 +79,7 @@ namespace WPEFramework
 
         void OnAppInstallationStatus(const string& jsonresponse)
         {
-            LOGINFO("Received Installation Status event from PackageManager");
+            // LOGINFO("Received Installation Status event from PackageManager");
             mParent.handleOnAppInstallationStatus(jsonresponse);
         }
 
@@ -156,6 +156,7 @@ namespace WPEFramework
             std::list<Exchange::IPreinstallManager::INotification*> mPreinstallManagerNotifications;
             PluginHost::IShell *mCurrentservice;
             Exchange::IPackageInstaller* mPackageManagerInstallerObject;
+            Core::Sink<PackageManagerNotification> mPackageManagerNotification;
             void dispatchEvent(EventNames, const JsonObject &params);
             void Dispatch(EventNames event, const JsonObject params);
             friend class Job;

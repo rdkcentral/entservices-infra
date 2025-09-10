@@ -31,7 +31,7 @@ namespace WPEFramework
 
     PreinstallManagerImplementation::PreinstallManagerImplementation()
         : mAdminLock(), mPreinstallManagerNotifications(), mCurrentservice(nullptr),
-          mPackageManagerInstallerObject(nullptr)
+          mPackageManagerInstallerObject(nullptr), mPackageManagerNotification(*this)
     {
         LOGINFO("Create PreinstallManagerImplementation Instance");
         if (nullptr == PreinstallManagerImplementation::_instance)
@@ -145,7 +145,7 @@ namespace WPEFramework
                 break;
             }
             std::string jsonresponse = params["jsonresponse"].String();
-            LOGINFO("Preinstall Manager App Installation Status Dispatch : %s", jsonresponse.c_str());
+            LOGINFO("Sending OnAppInstallationStatus event : %s", jsonresponse.c_str());
             mAdminLock.Lock();
             for (auto notification : mPreinstallManagerNotifications)
             {
@@ -161,7 +161,7 @@ namespace WPEFramework
         }
     }
 
-    void PreinstallManagerImplementation::handleOnAppInstallationStatus(const std::string &jsonresponse);
+    void PreinstallManagerImplementation::handleOnAppInstallationStatus(const std::string &jsonresponse)
     {
         if (!jsonresponse.empty())
         {
@@ -191,7 +191,7 @@ namespace WPEFramework
         {
             LOGINFO("created PackageInstaller Object\n");
             mPackageManagerInstallerObject->AddRef();
-            // mPackageManagerInstallerObject->Register(&mPackageManagerNotification);
+            mPackageManagerInstallerObject->Register(&mPackageManagerNotification);
             status = Core::ERROR_NONE;
         }
         return status;
@@ -202,7 +202,7 @@ namespace WPEFramework
         ASSERT(nullptr != mPackageManagerInstallerObject);
         if (mPackageManagerInstallerObject)
         {
-            // mPackageManagerInstallerObject->Unregister(&mPackageManagerNotification);
+            mPackageManagerInstallerObject->Unregister(&mPackageManagerNotification);
             mPackageManagerInstallerObject->Release();
             mPackageManagerInstallerObject = nullptr;
         }
