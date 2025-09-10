@@ -184,7 +184,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
             }
             else
             {
-                installStatus = params.HasLabel("reason") ? params["reason"].String() : "";
+                installStatus = params.HasLabel("state") ? params["state"].String() : "";
                 mAdminLock.Lock();
                 for (auto& notification : mAppManagerNotification)
                 {
@@ -202,6 +202,10 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
                     {
                         LOGINFO("OnAppUninstalled appId %s", appId.c_str());
                         notification->OnAppUninstalled(appId);
+                    }
+                    else
+                    {
+                        LOGWARN("install status '%s' for appId %s", installStatus.c_str(), appId.c_str());
                     }
                 }
                 mAdminLock.Unlock();
@@ -1154,22 +1158,27 @@ Core::hresult AppManagerImplementation::IsInstalled(const std::string& appId, bo
     installed = false;
 
     mAdminLock.Lock();
-
-    std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
-    status = fetchAppPackageList(packageList);
-    if (status == Core::ERROR_NONE)
+    if(appId.empty())
     {
-        checkIsInstalled(appId, installed, packageList);
-        if(installed)
+        LOGERR("appId not present or empty");
+    }
+    else
+    {
+        std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
+        status = fetchAppPackageList(packageList);
+        if (status == Core::ERROR_NONE)
         {
-            LOGINFO("%s is installed ",appId.c_str());
-        }
-        else
-        {
-            LOGINFO("%s is not installed ",appId.c_str());
+            checkIsInstalled(appId, installed, packageList);
+            if(installed)
+            {
+                LOGINFO("%s is installed ",appId.c_str());
+            }
+            else
+            {
+                LOGINFO("%s is not installed ",appId.c_str());
+            }
         }
     }
-
     mAdminLock.Unlock();
     return status;
 }
