@@ -817,8 +817,8 @@ namespace Plugin {
         obj["packageId"] = id;
         obj["version"] = version;
         obj["state"] = getInstallState(state.installState);
-        if (!((state.installState != InstallState::INSTALLED) || (state.installState != InstallState::UNINSTALLED) ||
-            (state.installState != InstallState::INSTALLING) || (state.installState != InstallState::UNINSTALLING))) {
+        if (!((state.installState == InstallState::INSTALLED) || (state.installState == InstallState::UNINSTALLED) ||
+            (state.installState == InstallState::INSTALLING) || (state.installState == InstallState::UNINSTALLING))) {
             obj["failReason"] = getFailReason(state.failReason);
         }
         list.Add(obj);
