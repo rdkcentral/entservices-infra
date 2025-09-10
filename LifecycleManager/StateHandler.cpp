@@ -166,6 +166,11 @@ namespace WPEFramework
             Exchange::ILifecycleManager::LifecycleState lifecycleState = request.mTargetState;
             ApplicationContext* context = request.mContext;
 
+            if (context == nullptr)
+            {
+                errorReason = "ApplicationContext is null";
+                return false;
+            }
             Exchange::ILifecycleManager::LifecycleState currentLifecycleState = context->getCurrentLifecycleState();
 
             if ((context->mPendingStateTransition) && (Exchange::ILifecycleManager::LifecycleState::TERMINATING != currentLifecycleState))
@@ -188,7 +193,7 @@ namespace WPEFramework
             }
 
             bool isStateTerminating = false;
-            size_t lastStateIndex = 0;
+            size_t lastStateIndex = static_cast<size_t>(-1); 
             context->mPendingStateTransition = false;
 
             // start from next state
@@ -245,9 +250,12 @@ namespace WPEFramework
             if (true == context->mPendingStateTransition)
             {
                 context->mPendingStates.clear();
-                for (size_t stateIndex = lastStateIndex; stateIndex < statePath.size() ; stateIndex++)
+                if (lastStateIndex < statePath.size())
                 {
-                    context->mPendingStates.push_back(statePath[stateIndex]);
+                    for (size_t stateIndex = lastStateIndex; stateIndex < statePath.size() ; stateIndex++)
+                    {
+                        context->mPendingStates.push_back(statePath[stateIndex]);
+                    }
                 }
             }
             else 
