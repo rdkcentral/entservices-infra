@@ -59,7 +59,7 @@
 #define APPMANAGER_PACKAGEID        "testPackageID"
 #define APPMANAGER_INSTALLSTATUS_INSTALLED    "INSTALLED"
 #define APPMANAGER_INSTALLSTATUS_UNINSTALLED    "UNINSTALLED"
-#define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","reason":"INSTALLED"}])"
+#define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","state":"INSTALLED"}])"
 
 typedef enum : uint32_t {
     AppManager_StateInvalid = 0x00000000,
@@ -809,15 +809,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailureEmptyAppID)
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
 
-    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-    .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-        auto mockIterator = FillPackageIterator(); // Fill the package Info
-        packages = mockIterator;
-        return Core::ERROR_NONE;
-    });
-
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->IsInstalled("", installed));
-    EXPECT_EQ(installed, false);
+    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->IsInstalled("", installed));
 
     if(status == Core::ERROR_NONE)
     {

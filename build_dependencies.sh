@@ -158,6 +158,7 @@ touch rbus.h
 touch telemetry_busmessage_sender.h
 touch maintenanceMGR.h
 touch pkg.h
+touch edid-parser.hpp
 touch secure_wrapper.h
 touch wpa_ctrl.h
 touch proc/readproc.h
