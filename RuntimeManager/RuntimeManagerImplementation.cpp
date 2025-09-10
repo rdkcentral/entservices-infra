@@ -757,14 +757,6 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Suspend.");
             }
-#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
-            rialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
-            if (!rialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
-            {
-               LOGERR( "Rialto app session could not be set inactive.");
-               status = Core::ERROR_GENERAL;
-            }
-#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
@@ -797,14 +789,6 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Resume.");
             }
-#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
-            rialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
-            if (!rialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
-            {
-               LOGERR("Rialto app session not ready. ");
-	       status = Core::ERROR_GENERAL;
-            }
-#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
@@ -899,14 +883,6 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Kill.");
             }
-#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
-            rialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
-            if (!rialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
-            {
-               LOGERR("Rialto app session not ready. ");
-	       status = Core::ERROR_GENERAL;
-            }
-#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
