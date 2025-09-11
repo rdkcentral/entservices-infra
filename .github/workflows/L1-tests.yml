@@ -140,6 +140,13 @@ jobs:
           path: googletest
           ref: v1.15.0
 
+      - name: Checkout libpackage
+        uses: actions/checkout@v3
+        with:
+          repository: rdkcentral/libpackage
+          path: libpackage
+          ref: develop
+
       # Fetching only the required essos-resmgr.h file from the Westeros repo to avoid full repo clone and to remove header file dependency
       - name: Fetch only essos-resmgr.h from Westeros repo using sparse-checkout
         run: |
@@ -399,6 +406,19 @@ jobs:
           cmake --build build/mocks -j8
           &&
           cmake --install build/mocks
+
+      - name: Build libpackage
+        run: >
+          cmake -G Ninja
+          -S "$GITHUB_WORKSPACE/libpackage"
+          -B build/libpackage
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DCMAKE_BUILD_TYPE=Debug
+          &&
+          cmake --build build/libpackage -j8
+          &&
+          cmake --install build/libpackage
 
       - name: Build entservices-infra
         run: >
