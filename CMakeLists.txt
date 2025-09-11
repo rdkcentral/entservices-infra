@@ -136,6 +136,10 @@ if(PLUGIN_PACKAGE_MANAGER)
     add_subdirectory(PackageManager)
 endif()
 
+if(PLUGIN_DOWNLOADMANAGER)
+    add_subdirectory(DownloadManager)
+endif()
+
 if(PLUGIN_NATIVEJS)
     add_subdirectory(NativeJS)
 endif()
