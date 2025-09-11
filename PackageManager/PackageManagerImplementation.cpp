@@ -294,7 +294,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, Exchange::IPackageDownloader::Progress &progress)
+    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, uint8_t &progress)
     {
         Core::hresult result = Core::ERROR_NONE;
 
