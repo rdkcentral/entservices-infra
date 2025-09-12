@@ -522,7 +522,7 @@ namespace WPEFramework
                 else
                 {
                     LOGINFO("Received state change event for app Onterminated event ");
-                    sem_post(&context->mAppTerminatingSemaphore);
+                    addStateTransitionRequest(context, "onAppTerminating");
                 }
             }
             else if (eventName.compare("onStateChanged") == 0)
@@ -539,7 +539,7 @@ namespace WPEFramework
                     else
                     {
                         LOGINFO("Received state change event for app which is available ie running");
-                        sem_post(&context->mAppRunningSemaphore);
+                        addStateTransitionRequest(context, "onAppRunning");
                     }
                 }
             }
@@ -608,9 +608,25 @@ namespace WPEFramework
             ApplicationContext* context = getContext(appInstanceId, "");
             if (nullptr != context)
 	    {
-                sem_post(&context->mFirstFrameSemaphore);
+                addStateTransitionRequest(context, "onFirstFrame");
 	    }
 	}
+    }
+
+    void LifecycleManagerImplementation::addStateTransitionRequest(ApplicationContext* context, std::string event)
+    {
+        if (context->mPendingStateTransition && (0 == context->mPendingEventName.compare(event)))
+        {
+            std::string errorReason("");
+            bool success = RequestHandler::getInstance()->updateState(context, context->getTargetLifecycleState(), errorReason);
+            printf("added state transition request [%d] [%s] \n", success, event.c_str());
+            fflush(stdout);
+        }
+        else
+        {
+            printf("received wrong state transition request\n");
+            fflush(stdout);
+        }
     }
 
     } /* namespace Plugin */
