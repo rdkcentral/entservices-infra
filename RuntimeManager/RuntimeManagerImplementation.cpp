@@ -563,23 +563,26 @@ err_ret:
                 config.mWesterosSocketPath = westerosSocket;
             }
 
+            bool legacyContainer = true;
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
-                    if (!rialtoConnector->initialized())
-                    {
-                        LOGWARN("Initializing rialto connector....");
-                        rialtoConnector->initialize();
-                    }
-                    if (!rialtoConnector->createAppSession(appId,westerosSocket, appId))
-                    {
-                       LOGWARN(" Rialto app session initialisation failed ");
-                       status = Core::ERROR_GENERAL;
-                    }
-                    if (!rialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
-                    {
-                       LOGWARN(" Rialto app session not ready. ");
-                       status = Core::ERROR_GENERAL;
-                    }
+            if (!rialtoConnector->initialized())
+            {
+               LOGWARN("Initializing rialto connector....");
+               rialtoConnector->initialize();
+            }
+            if (!rialtoConnector->createAppSession(appId,westerosSocket, appId))
+            {
+               LOGWARN(" Rialto app session initialisation failed ");
+               status = Core::ERROR_GENERAL;
+            }
+            if (!rialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
+            {
+               LOGWARN(" Rialto app session not ready. ");
+               status = Core::ERROR_GENERAL;
+            }
+            legacyContainer = false;
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
+            LOGINFO("legacyContainer: %s", legacyContainer ? "true" : "false");
             if (xdgRuntimeDir.empty() || waylandDisplay.empty())
             {
                 LOGERR("Missing required environment variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s",
@@ -588,7 +591,7 @@ err_ret:
                 status = Core::ERROR_GENERAL;
             }
             /* Generate dobbySpec */
-            else if (false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
+            else if (legacyContainer && false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
             {
                 LOGERR("Failed to generate dobbySpec");
                 status = Core::ERROR_GENERAL;
@@ -601,12 +604,18 @@ err_ret:
                 LOGINFO("Environment Variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s",
                      xdgRuntimeDir.c_str(), waylandDisplay.c_str());
                 std::string command = "";
+                LOGINFO("app path : %s ", runtimeConfigObject.unpackedPath.c_str());
+                std::string appPath = runtimeConfigObject.unpackedPath;
                 if(isOCIPluginObjectValid())
                 {
                     string containerId = getContainerId(appInstanceId);
                     if (!containerId.empty())
                     {
-                        status =  mOciContainerObject->StartContainerFromDobbySpec(containerId, dobbySpec, command, westerosSocket, descriptor, success, errorReason);
+                        if(legacyContainer)
+                            status =  mOciContainerObject->StartContainerFromDobbySpec(containerId, dobbySpec, command, westerosSocket, descriptor, success, errorReason);
+                        else
+                            status = mOciContainerObject->StartContainer(containerId, appPath, command, westerosSocket, descriptor, success, errorReason);
+
                         if ((success == false) || (status != Core::ERROR_NONE))
                         {
                             LOGERR("Failed to Run Container %s",errorReason.c_str());
