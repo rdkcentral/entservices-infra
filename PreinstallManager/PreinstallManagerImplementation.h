@@ -36,9 +36,9 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-        typedef Exchange::IPreinstallManager::PreinstallState PreinstallState;
-        typedef Exchange::IPreinstallManager::PreinstallFailReason PreinstallFailReason;
-        typedef Exchange::IPreinstallManager::AppInstallInfo AppInstallInfo;
+        // typedef Exchange::IPreinstallManager::PreinstallState PreinstallState;
+        // typedef Exchange::IPreinstallManager::PreinstallFailReason PreinstallFailReason;
+        // typedef Exchange::IPreinstallManager::AppInstallInfo AppInstallInfo;
 
         class PreinstallManagerImplementation : public Exchange::IPreinstallManager, public Exchange::IConfiguration
         {
@@ -71,6 +71,7 @@ namespace WPEFramework
             PREINSTALL_MANAGER_APP_INSTALLATION_STATUS
             };
 
+            typedef Exchange::IPackageInstaller::InstallState InstallState;
             typedef Exchange::IPackageInstaller::FailReason FailReason;
 
         private:
@@ -156,7 +157,6 @@ namespace WPEFramework
             bool isNewerVersion(const std::string &v1, const std::string &v2);
             bool readPreinstallDirectory(std::list<PackageInfo> &packages);
             string getFailReason(FailReason reason);
-        }
 
         private:
             mutable Core::CriticalSection mAdminLock;
