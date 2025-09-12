@@ -569,7 +569,6 @@ namespace Plugin {
     Core::hresult TelemetryImplementation::IsOptOutTelemetry(bool& optOut, bool& success)
     {
         string optOutStatus;
-        uint32_t result = Core::ERROR_GENERAL;
 
         bool retVal = getFileContent(OPTOUT_TELEMETRY_STATUS, optOutStatus);
         if (retVal && optOutStatus.length()) {
@@ -578,14 +577,9 @@ namespace Plugin {
             } else {
                 optOut = false;
             }
-            result = Core::ERROR_NONE;
         }
-        else
-        {
-            optOut = false;
-        }
-        success = optOut ? true : false;
-        return result;
+        success = true;
+        return Core::ERROR_NONE;
     }
 } // namespace Plugin
 } // namespace WPEFramework
