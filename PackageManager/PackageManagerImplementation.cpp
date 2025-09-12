@@ -765,7 +765,7 @@ namespace Plugin {
             if (di == nullptr) {
                 LOGTRACE("Waiting ... ");
                 std::unique_lock<std::mutex> lock(mMutex);
-                cv.wait(lock);
+                cv.wait(lock, [this] { return done || (mDownloadQueue.size() > 0); });
             } else {
                 HttpClient::Status status = HttpClient::Status::Success;
                 int waitTime = 1;
