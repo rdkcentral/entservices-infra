@@ -149,7 +149,7 @@ namespace Plugin {
         Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
         Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::InstallState &state) override;
-        Core::hresult GetConfigForPackage(const string &fileLocator, string& packageId, string &version, Exchange::RuntimeConfig& metadata) override;
+        Core::hresult GetConfigForPackage(const string &fileLocator, string& packageId, string &version, Exchange::RuntimeConfig& config) override;
 
         Core::hresult Register(Exchange::IPackageInstaller::INotification *sink) override;
         Core::hresult Unregister(Exchange::IPackageInstaller::INotification *sink) override;
