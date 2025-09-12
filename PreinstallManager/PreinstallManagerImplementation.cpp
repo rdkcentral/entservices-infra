@@ -216,30 +216,6 @@ namespace WPEFramework
         }
     }
 
-    // helper to validate package version string after stripping any pre-release or build-metadata specifiers
-    // currently expects x.y.z where x,y,z are numerical values
-    bool PreinstallManagerImplementation::isValidSemVer(const std::string &version)
-    {
-        int maj = -1, min = -1, patch = -1;
-        if (std::sscanf(version.c_str(), "%d.%d.%d", &maj, &min, &patch) != 3)
-        {
-            return false;
-        }
-        // for (char c : version)
-        // {
-        //     if (!(std::isdigit(c) || c == '.'))
-        //     {
-        //         return false;
-        //     }
-        // }
-        return maj >= 0 && min >= 0 && patch >= 0;
-
-
-        // todo regex match
-        // static const std::regex semverRegex(R"(^\d+\.\d+\.\d+$)");
-        // return std::regex_match(version, semverRegex);
-    }
-
     //compare package versions
     bool PreinstallManagerImplementation::isNewerVersion(const std::string &v1, const std::string &v2)
     {
@@ -250,16 +226,19 @@ namespace WPEFramework
         std::string base1 = (pos1 == std::string::npos) ? v1 : v1.substr(0, pos1);
         std::string base2 = (pos2 == std::string::npos) ? v2 : v2.substr(0, pos2);
 
-        if (!isValidSemVer(base1) || !isValidSemVer(base2))
-        {
-            //LOGINFO("Invalid version strings: %s or %s", base1.c_str(), base2.c_str());
-            return false; // invalid versions are treated as not newer
-        }
+        int maj1 = 0, min1 = 0, patch1 = 0, build1 = 0;
+        int maj2 = 0, min2 = 0, patch2 = 0, build2 = 0;
 
-        int maj1 = 0, min1 = 0, patch1 = 0;
-        int maj2 = 0, min2 = 0, patch2 = 0;
-        std::sscanf(base1.c_str(), "%d.%d.%d", &maj1, &min1, &patch1);
-        std::sscanf(base2.c_str(), "%d.%d.%d", &maj2, &min2, &patch2);
+        if (std::sscanf(base1.c_str(), "%d.%d.%d.%d", &maj1, &min1, &patch1, &build1) < 3)
+        {
+            LOGERR("Version string '%s' is not in valid format", v1.c_str());
+            return false;
+        }
+        if (std::sscanf(base2.c_str(), "%d.%d.%d.%d", &maj2, &min2, &patch2, &build2) < 3)
+        {
+            LOGERR("Version string '%s' is not in valid format", v2.c_str());
+            return false;
+        }
 
         if (maj1 != maj2)
             return maj1 > maj2;
@@ -267,6 +246,8 @@ namespace WPEFramework
             return min1 > min2;
         if (patch1 != patch2)
             return patch1 > patch2;
+        if (build1 != build2)
+            return build1 > build2;
 
         return false; // equal
     }
@@ -305,7 +286,7 @@ namespace WPEFramework
             std::string filepath = preinstallDir + "/" + filename;
 
             PackageInfo packageInfo;
-            packageInfo.fileLocator = filepath;
+            packageInfo.fileLocator = filepath + "/package.wgt";
             LOGDBG("Found package folder: %s", filepath.c_str());
             if (mPackageManagerInstallerObject->GetConfigForPackage(packageInfo.fileLocator, packageInfo.packageId, packageInfo.version, packageInfo.configMetadata) == Core::ERROR_NONE)
             {
@@ -325,14 +306,14 @@ namespace WPEFramework
     }
 
     string PreinstallManagerImplementation::getFailReason(FailReason reason) {
-            switch (reason) {
-                case FailReason::SIGNATURE_VERIFICATION_FAILURE : return "SIGNATURE_VERIFICATION_FAILURE";
-                case FailReason::PACKAGE_MISMATCH_FAILURE : return "PACKAGE_MISMATCH_FAILURE";
-                case FailReason::INVALID_METADATA_FAILURE : return "INVALID_METADATA_FAILURE";
-                case FailReason::PERSISTENCE_FAILURE : return "PERSISTENCE_FAILURE";
-                default: return "NONE";
-            }
+        switch (reason) {
+            case FailReason::SIGNATURE_VERIFICATION_FAILURE : return "SIGNATURE_VERIFICATION_FAILURE";
+            case FailReason::PACKAGE_MISMATCH_FAILURE : return "PACKAGE_MISMATCH_FAILURE";
+            case FailReason::INVALID_METADATA_FAILURE : return "INVALID_METADATA_FAILURE";
+            case FailReason::PERSISTENCE_FAILURE : return "PERSISTENCE_FAILURE";
+            default: return "NONE";
         }
+    }
 
     /*
      * @brief Checks the preinstall directory for packages to be preinstalled and installs them as needed.
@@ -366,8 +347,7 @@ namespace WPEFramework
 
         if (!forceInstall)  // if false, we need to check installed packages
         {
-
-            std::list<WPEFramework::Exchange::IPackageInstaller::Package> existingApps;
+            LOGWARN("forceInstall is disabled");
             Exchange::IPackageInstaller::IPackageIterator *packageList = nullptr;
 
             // fetch installed packages
@@ -375,52 +355,60 @@ namespace WPEFramework
             {
                 LOGERR("ListPackage is returning Error or Packages is nullptr");
                 return result;
-                // goto End;
             }
+
             WPEFramework::Exchange::IPackageInstaller::Package package;
-            while (packageList->Next(package))
+            std::unordered_map<std::string, std::string> existingApps; // packageId -> version
+
+            while (packageList->Next(package) && package.state == InstallState::INSTALLED) // only consider installed apps
             {
-                existingApps.push_back(package);
+                existingApps[package.packageId] = package.version;
+                // todo check for installState if needed
+                // multiple apps possible with same packageId but different version
             }
-            // filter to-be-installed apps and removes ones not to be installed based on version
-            // check if each to-be-installed app exists already in existingApps
-            // if not installed , need to install anyway
-            // if installed already, install only if higher version
+
+            // filter to-be-installed apps
             for (auto toBeInstalledApp = preinstallPackages.begin(); toBeInstalledApp != preinstallPackages.end(); /* skip */)
             {
-                // check if app is already installed
-                auto found = std::find_if(
-                    existingApps.begin(), existingApps.end(),
-                    [&](const WPEFramework::Exchange::IPackageInstaller::Package &installed)
-                    {
-                        return installed.packageId == toBeInstalledApp->packageId;
-                    });
-
                 bool remove = false;
-                if (found != existingApps.end())
+
+                // check if app is already installed
+                auto it = existingApps.find(toBeInstalledApp->packageId);
+                if (it != existingApps.end())
                 {
-                    // Found a matching installed package
-                    // check if newer version
-                    // remove from to-be-installed list if newer version already exists in existingApps
-                    if (!isNewerVersion(toBeInstalledApp->version, found->version)) // if to-be-installed app is newer than existing
+                    const std::string &installedVersion = it->second;
+
+                    // check if to-be-installed version is newer
+                    if (!isNewerVersion(toBeInstalledApp->version, installedVersion))
                     {
-                        // older than existing
+                        // not newer (equal or older) → skip install
+                        LOGINFO("Not installing package: %s, version: %s (installed version: %s)",
+                                    toBeInstalledApp->packageId.c_str(),
+                                    toBeInstalledApp->version.c_str(),
+                                    installedVersion.c_str());
                         remove = true;
                     }
+                    else
+                    {
+                        LOGINFO("Installing newer version of package: %s, version: %s (installed version: %s)",
+                                    toBeInstalledApp->packageId.c_str(),
+                                    toBeInstalledApp->version.c_str(),
+                                    installedVersion.c_str());
+                    }
+                    // todo uninstall older version if needed
                 }
 
                 if (remove)
                 {
-                    LOGINFO("Newer version check failed, skipping package: %s, version: %s , existing_version : %s", toBeInstalledApp->packageId.c_str(), toBeInstalledApp->version.c_str(), found->version.c_str());
-                    toBeInstalledApp = preinstallPackages.erase(toBeInstalledApp); // advances to next
+                    toBeInstalledApp = preinstallPackages.erase(toBeInstalledApp); // advances automatically
                 }
                 else
                 {
                     ++toBeInstalledApp;
                 }
             }
-        }
 
+        }
         // install the apps
         bool installError = false;
         int  failedApps   = 0;
@@ -447,15 +435,12 @@ namespace WPEFramework
 
             LOGINFO("Installing package: %s, version: %s", pkg.packageId.c_str(), pkg.version.c_str());
 
-                // install the package.wgt file inside the folder
-                // packageWgtExists(pkg.fileLocator) //required??
-            std::string packageLocator = pkg.fileLocator + "/package.wgt";
             FailReason failReason;
             Exchange::IPackageInstaller::IKeyValueIterator* additionalMetadata = nullptr; // todo add additionalMetadata if needed
                 // additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(keyValues);
 
 
-            Core::hresult installResult = mPackageManagerInstallerObject->Install(pkg.packageId, pkg.version, additionalMetadata, packageLocator, failReason);
+            Core::hresult installResult = mPackageManagerInstallerObject->Install(pkg.packageId, pkg.version, additionalMetadata, pkg.fileLocator, failReason);
             if (installResult != Core::ERROR_NONE)
             {
                 LOGERR("Failed to install package: %s, version: %s, failReason: %s", pkg.packageId.c_str(), pkg.version.c_str(), getFailReason(failReason).c_str());
@@ -474,29 +459,13 @@ namespace WPEFramework
         auto installEnd = std::chrono::steady_clock::now();
         auto installDuration = std::chrono::duration_cast<std::chrono::seconds>(installEnd - installStart).count();
         auto installDurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(installEnd - installStart).count();
-        LOGDBG("StartPreinstall() process completed in %lld seconds (%lld ms)", installDuration, installDurationMs);
+        LOGDBG("Process completed in %lld seconds (%lld ms)", installDuration, installDurationMs);
         LOGINFO("Installation summary: %d/%d packages installed successfully. %d apps failed.", totalApps - failedApps, totalApps, failedApps);
         // print package wise result
         for (const auto &pkg : preinstallPackages)
         {
             LOGINFO("Package: %s [version:%s]............status:[ %s ]", pkg.packageId.c_str(), pkg.version.c_str(), pkg.installStatus.c_str());
         }
-
-        // print failed apps separately if required.
-        // if(failedApps > 0)
-        // {
-        //     std::string failedAppsStr;
-        //     for (const auto &app : failedAppsList)
-        //     {
-        //         if (!failedAppsStr.empty())
-        //         {
-        //             failedAppsStr += ", ";
-        //         }
-        //         failedAppsStr += app;
-        //     }
-        //     LOGERR("Failed apps: %s", failedAppsStr.c_str());
-        // }
-        // LOGINFO("Installation summary: Skipped packages: %d", skippedApps);
 
         //cleanup
         releasePackageManagerObject();
@@ -505,7 +474,6 @@ namespace WPEFramework
         {
             result = Core::ERROR_NONE; // return error if any app install fails todo required??
         }
-
 
         return result;
     }
