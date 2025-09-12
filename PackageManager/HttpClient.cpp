@@ -44,7 +44,7 @@ HttpClient::~HttpClient() {
 HttpClient::Status
 HttpClient::downloadFile(const std::string & url, const std::string & fileName, uint32_t rateLimit) {
     Status status = Status::Success;
-    CURLcode cc;
+    CURLcode cc = CURLE_OK;
     FILE *fp;
     bCancel = false;
     httpCode = 0;
@@ -67,8 +67,12 @@ HttpClient::downloadFile(const std::string & url, const std::string & fileName, 
             if (cc == CURLE_OK) {
                 LOGDBG("Download %s Success", fileName.c_str());
             } else {
-                LOGERR("Download %s Failed error: %s code: %ld", fileName.c_str(), curl_easy_strerror(cc), httpCode);
-                status = Status::HttpError;
+                LOGERR("Download %s Failed error: %s curl code: %d http code: %ld", fileName.c_str(), curl_easy_strerror(cc), cc, httpCode);
+                if ( cc == CURLE_WRITE_ERROR ) {
+                    status = Status::DiskError;
+                } else {
+                    status = Status::HttpError;
+                }
             }
             fclose(fp);
         } else {

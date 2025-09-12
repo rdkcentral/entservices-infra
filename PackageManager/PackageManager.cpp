@@ -146,7 +146,6 @@ namespace Plugin
 
     void PackageManager::Deactivated(RPC::IRemoteConnection* connection)
     {
-        LOGINFO();
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
         if (mConnectionId == connection->Id()) {
