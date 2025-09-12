@@ -50,7 +50,8 @@ namespace WPEFramework
      **/
     SERVICE_REGISTRATION(USBMassStorage, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
 
-    USBMassStorage::USBMassStorage() : _service(nullptr), _connectionId(0), _usbMassStorage(nullptr), _usbStoragesNotification(this)
+    USBMassStorage::USBMassStorage() : PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::FunctionCallbackType>(USBMassStorage::OnJSONRPCError),
+    _service(nullptr), _connectionId(0), _usbMassStorage(nullptr), _usbStoragesNotification(this)
     {
         SYSLOG(Logging::Startup, (_T("USBMassStorage Constructor")));
     }
@@ -236,6 +237,11 @@ namespace WPEFramework
 
             _parent.Notify(_T("onDeviceUnmounted"), eventPayload);
         }
+    }
+    uint32_t USBMassStorage::OnJSONRPCError(const Core::JSONRPC::Context&, const string& method, const string& parameters, const uint32_t errorcode, string& errormessage) {
+              if(IS_ENTSERVICES_ERRORCODE(errorcode))
+               errormessage = ERROR_MESSAGE(errorcode);
+           return errorcode;
     }
 } // namespace Plugin
 } // namespace WPEFramework
