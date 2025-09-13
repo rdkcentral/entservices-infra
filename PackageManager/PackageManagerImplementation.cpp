@@ -706,6 +706,28 @@ namespace Plugin {
         return result;
     }
 
+    Core::hresult PackageManagerImplementation::GetConfigForPackage(const string &fileLocator, string& id, string &version, Exchange::RuntimeConfig& config)
+    {
+        CHECK_CACHE()
+        Core::hresult result = Core::ERROR_GENERAL;
+
+        if (fileLocator.empty())
+        {
+            return Core::ERROR_INVALID_SIGNATURE;
+        }
+
+        #ifdef USE_LIBPACKAGE
+        packagemanager::ConfigMetaData metadata;
+        packagemanager::Result pmResult = packageImpl->GetFileMetadata(fileLocator, id, version, metadata);
+        if (pmResult == packagemanager::SUCCESS)
+        {
+            getRuntimeConfig(metadata, config);
+            result = Core::ERROR_NONE;
+        }
+        #endif
+        return result;
+    }
+
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
