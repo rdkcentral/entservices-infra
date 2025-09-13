@@ -706,7 +706,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::GetConfigForPackage(const string &fileLocator, string& packageId, string &version, Exchange::RuntimeConfig& config)
+    Core::hresult PackageManagerImplementation::GetConfigForPackage(const string &fileLocator, string& id, string &version, Exchange::RuntimeConfig& config)
     {
         CHECK_CACHE()
         Core::hresult result = Core::ERROR_GENERAL;
@@ -718,7 +718,7 @@ namespace Plugin {
 
         #ifdef USE_LIBPACKAGE
         packagemanager::ConfigMetaData metadata;
-        packagemanager::Result pmResult = packageImpl->GetFileMetadata(fileLocator, packageId, version, metadata);
+        packagemanager::Result pmResult = packageImpl->GetFileMetadata(fileLocator, id, version, metadata);
         if (pmResult == packagemanager::SUCCESS)
         {
             getRuntimeConfig(metadata, config);
