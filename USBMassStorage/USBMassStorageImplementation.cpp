@@ -440,7 +440,7 @@ namespace Plugin {
             emptyList = true;
 
             LOGINFO("usbStorageDeviceInfo list is Empty, Getting from USBDevice Plugin");
-
+            printf("_remoteUSBDeviceObject: %p\n", (void*)_remoteUSBDeviceObject);
             if (nullptr == _remoteUSBDeviceObject)
             {
                 LOGERR("USBDeviceObject is null");
@@ -513,7 +513,8 @@ namespace Plugin {
                 auto itr = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [deviceName](const USBStorageDeviceInfo& item){
                             return item.deviceName == deviceName;
                 });
-
+                printf("Device not found in mount info list, so trying to mount the device %s\n",deviceName.c_str());
+                printf("Device Name: %s, Device Path: %s\n", itr->deviceName.c_str(), itr->devicePath.c_str());
                 if (itr != usbStorageDeviceInfo.end())
                 {
                     USBStorageDeviceInfo storageDeviceInfo = *itr;
