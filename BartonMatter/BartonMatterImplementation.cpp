@@ -41,13 +41,13 @@ namespace WPEFramework
 			std::cout<<"Hello world from Barton Plugin";
 		}
 
-		Core::hresult BartonMatterImplementation:Initialize()
+		Core::hresult BartonMatterImplementation::Initialize()
 		{
 			std::cout<<"Plugin init called";
 			 return (Core::ERROR_NONE);
 		}
 
-		Core::hresult BartonMatterImplementation:Deinitialize()
+		Core::hresult BartonMatterImplementation::Deinitialize()
 		{
 			LOGINFO("deinitializing BartonMatter process");
 			 return (Core::ERROR_NONE);
