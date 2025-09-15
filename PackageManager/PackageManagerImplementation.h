@@ -133,7 +133,7 @@ namespace Plugin {
         Core::hresult Resume(const string &downloadId) override;
         Core::hresult Cancel(const string &downloadId) override;
         Core::hresult Delete(const string &fileLocator) override;
-        Core::hresult Progress(const string &downloadId, uint8_t &progress);
+        Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::ProgressInfo &progress);
         Core::hresult GetStorageDetails(string &quotaKB, string &usedKB);
         Core::hresult RateLimit(const string &downloadId, const uint64_t &limit);
 

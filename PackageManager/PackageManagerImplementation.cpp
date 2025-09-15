@@ -294,12 +294,12 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, uint8_t &progress)
+    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, ProgressInfo &progress)
     {
         Core::hresult result = Core::ERROR_NONE;
 
         if (mInprogressDownload.get() != nullptr) {
-            progress = mHttpClient->getProgress();
+            progress.progress = mHttpClient->getProgress();
         } else {
             result = Core::ERROR_GENERAL;
         }
