@@ -140,6 +140,8 @@ if(PLUGIN_NATIVEJS)
 	add_subdirectory(NativeJS)
 endif()
 
+add_subdirectory(BartonMatter)
+
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
