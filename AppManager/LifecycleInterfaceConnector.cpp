@@ -752,26 +752,22 @@ End:
                         break;
                     }
                 }
+                shouldNotify = ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_LOADING) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_HIBERNATED) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED));
 
+                LOGINFO("shouldNotify %d for Appstate %u",shouldNotify, newAppState);
+
+                if(shouldNotify)
+                {
+                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+                }
                 if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
                 {
                     appManagerImplInstance->handleOnAppUnloaded(appId, appInstanceId);
-                }
-
-                if (it != appManagerImplInstance->mAppInfo.end())
-                {
-                    shouldNotify = ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_LOADING) ||
-                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE) ||
-                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED) ||
-                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED) ||
-                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_HIBERNATED));
-
-                    LOGINFO("shouldNotify %d for Appstate %u",shouldNotify, newAppState);
-
-                    if(shouldNotify)
-                    {
-                        appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
-                    }
                 }
             }
         }
