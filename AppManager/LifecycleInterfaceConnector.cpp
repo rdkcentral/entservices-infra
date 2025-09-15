@@ -762,8 +762,9 @@ End:
                 {
                     shouldNotify = ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_LOADING) ||
                                            (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE) ||
-                                           ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED) &&
-                                            (it->second.currentAction == AppManagerImplementation::APP_ACTION_CLOSE)));
+                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED) ||
+                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED) ||
+                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_HIBERNATED));
 
                     LOGINFO("shouldNotify %d for Appstate %u",shouldNotify, newAppState);
 
