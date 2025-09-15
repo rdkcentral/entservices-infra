@@ -541,7 +541,7 @@ namespace Plugin {
                 else
                 {
                     LOGERR("Mount info not found for device %s",deviceName.c_str());
-                    errorCode = Core::ERROR_INVALID_DEVICENAME;
+                    errorCode = ERROR_INVALID_DEVICENAME;
                 }
             }
             else
@@ -585,7 +585,7 @@ namespace Plugin {
 
             if (devicePath.empty())
             {
-                errorCode = Core::ERROR_INVALID_MOUNTPOINT;
+                errorCode = ERROR_INVALID_MOUNTPOINT;
                 LOGERR("device path is not found in list");
             }
             else
