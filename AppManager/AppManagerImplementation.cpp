@@ -21,6 +21,7 @@
 #include "AppManagerImplementation.h"
 
 #define TIME_DATA_SIZE           200
+static bool sRunning = false;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -37,6 +38,7 @@ AppManagerImplementation::AppManagerImplementation()
 , mPackageManagerInstallerObject(nullptr)
 , mCurrentservice(nullptr)
 , mPackageManagerNotification(*this)
+, mAppManagerWorkerThread()
 {
     LOGINFO("Create AppManagerImplementation Instance");
     if (nullptr == AppManagerImplementation::_instance)
@@ -54,6 +56,14 @@ AppManagerImplementation::~AppManagerImplementation()
 {
     LOGINFO("Delete AppManagerImplementation Instance");
     _instance = nullptr;
+    sRunning = false;
+    mAppRequestListCV.notify_all();
+    if (mAppManagerWorkerThread.joinable())
+    {
+        mAppManagerWorkerThread.join();
+        LOGINFO("App Manager Worker Thread joined successfully");
+    }
+
     if (nullptr != mLifecycleInterfaceConnector)
     {
         mLifecycleInterfaceConnector->releaseLifecycleManagerRemoteObject();
@@ -68,6 +78,13 @@ AppManagerImplementation::~AppManagerImplementation()
        mCurrentservice->Release();
        mCurrentservice = nullptr;
     }
+    mAppManagerLock.lock();
+    if (!mAppRequestList.empty())
+    {
+        mAppRequestList.clear();
+    }
+    mAppManagerLock.unlock();
+
 }
 
 /**
@@ -89,6 +106,75 @@ Core::hresult AppManagerImplementation::Register(Exchange::IAppManager::INotific
     mAdminLock.Unlock();
 
     return Core::ERROR_NONE;
+}
+
+void AppManagerImplementation::AppManagerWorkerThread(void)
+{
+    while (sRunning)
+    {
+        std::shared_ptr<AppManagerLaunchInfo> request = nullptr;
+        if (mAppRequestList.empty())
+        {
+            LOGTRACE("Waiting ... ");
+            std::unique_lock<std::mutex> lock(mAppManagerLock);
+            mAppRequestListCV.wait(lock, [this] {return !mAppRequestList.empty() || !sRunning;});
+        }
+        else
+        {
+            Core::hresult status = Core::ERROR_GENERAL;
+            PackageInfo packageData;
+            Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
+            request = mAppRequestList.front();
+            string appId = request->GetAppId();
+
+            status = packageLock(appId, packageData, lockReason);
+            if (status == Core::ERROR_NONE)
+            {
+                WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
+                runtimeConfig.unpackedPath = packageData.unpackedPath;
+                getCustomValues(runtimeConfig);
+                CurrentAction action = request->GetCurrentAction();
+                string launchArgs = request->GetLaunchArgs();
+
+                if (action == APP_ACTION_LAUNCH)
+                {
+                    status = mLifecycleInterfaceConnector->launch(appId, request->GetIntent(), request->GetLaunchArgs(), runtimeConfig);
+                    LOGINFO("Application Launch from thread returns with status %d", status);
+
+                    if (status != Core::ERROR_NONE)
+                    {
+                        LOGERR("launch failed status %d", status);
+                    }
+                }
+                else if (action == APP_ACTION_PRELOAD)
+                {
+                    string errorReason;
+                    status = mLifecycleInterfaceConnector->preLoadApp(appId, request->GetLaunchArgs(), runtimeConfig, errorReason);
+                    LOGINFO("Application preLoad from thread returns with status %d error %s", status, errorReason.c_str());
+
+                    if ((!errorReason.empty()) || (status != Core::ERROR_NONE))
+                    {
+                        LOGERR("preLoadApp failed reason %s status %d", errorReason.c_str(), status);
+                    }
+                }
+                else
+                {
+                    LOGERR("action type is invalid");
+                }
+
+            }
+            else
+            {
+                LOGERR("Failed to PackageManager Lock %s", appId.c_str());
+                handleOnAppLifecycleStateChanged(appId, appId,
+                    Exchange::IAppManager::APP_STATE_UNKNOWN,
+                    Exchange::IAppManager::APP_STATE_UNLOADED,
+                    Exchange::IAppManager::APP_ERROR_UNKNOWN);
+            }
+            mAppRequestList.pop_front();
+            request.reset();
+        }
+    }
 }
 
 /**
@@ -401,6 +487,18 @@ uint32_t AppManagerImplementation::Configure(PluginHost::IShell* service)
         else
         {
             LOGINFO("created createStorageManagerRemoteObject");
+        }
+
+        sRunning = true;
+        /* Create the worker thread */
+        try
+        {
+            mAppManagerWorkerThread = std::thread(&AppManagerImplementation::AppManagerWorkerThread, AppManagerImplementation::getInstance());
+            LOGINFO("App Manager Worker thread created");
+        }
+        catch (const std::system_error& e)
+        {
+            LOGERR("Failed to create App Manager worker thread: %s", e.what());
         }
 
         result = Core::ERROR_NONE;
@@ -737,20 +835,27 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
 Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const string& intent , const string& launchArgs)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
-    LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
-    if (nullptr != mLifecycleInterfaceConnector)
+    if (appId.empty())
     {
-        status = packageLock(appId, packageData, lockReason);
-        WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
-        runtimeConfig.unpackedPath = packageData.unpackedPath;
-        getCustomValues(runtimeConfig);
-        if (status == Core::ERROR_NONE)
+        LOGERR("application Id is empty");
+    }
+    else if (nullptr != mLifecycleInterfaceConnector)
+    {
+        AppLaunchInfoPtr appInfo = AppLaunchInfoPtr(new AppManagerLaunchInfo(appId, intent, launchArgs, APP_ACTION_LAUNCH));
+        if (appInfo != nullptr)
         {
-            status = mLifecycleInterfaceConnector->launch(appId, intent, launchArgs, runtimeConfig);
+            LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
+            mAppManagerLock.lock();
+            mAppRequestList.push_back(appInfo);
+            mAppManagerLock.unlock();
+            mAppRequestListCV.notify_one();
+            status = Core::ERROR_NONE;
+        }
+        else
+        {
+            LOGERR("application info is null");
         }
     }
     mAdminLock.Unlock();
@@ -900,21 +1005,29 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
 {
     Core::hresult status = Core::ERROR_GENERAL;
 
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
-    LOGINFO(" PreloadApp enter with appId %s", appId.c_str());
-
     mAdminLock.Lock();
-    if (nullptr != mLifecycleInterfaceConnector)
+    if (appId.empty())
     {
-        status = packageLock(appId, packageData, lockReason);
-        WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
-        runtimeConfig.unpackedPath = packageData.unpackedPath;
-        getCustomValues(runtimeConfig);
+        LOGERR("application Id is empty");
+        error = "application Id is empty";
+    }
+    else if (nullptr != mLifecycleInterfaceConnector)
+    {
+        AppLaunchInfoPtr appInfo = AppLaunchInfoPtr(new AppManagerLaunchInfo(appId, "", launchArgs, APP_ACTION_PRELOAD));
 
-        if (status == Core::ERROR_NONE)
+        if (appInfo != nullptr)
         {
-            status = mLifecycleInterfaceConnector->preLoadApp(appId, launchArgs, runtimeConfig, error);
+            LOGINFO(" PreloadApp enter with appId %s", appId.c_str());
+            mAppManagerLock.lock();
+            mAppRequestList.push_back(appInfo);
+            mAppManagerLock.unlock();
+            mAppRequestListCV.notify_one();
+            status = Core::ERROR_NONE;
+        }
+        else
+        {
+            LOGERR("application info is null");
+            error = "application info is null";
         }
     }
     mAdminLock.Unlock();

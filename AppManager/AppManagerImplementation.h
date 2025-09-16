@@ -111,6 +111,30 @@ namespace Plugin {
             APP_EVENT_UNLOADED
         };
 
+        class AppManagerLaunchInfo {
+            public:
+                AppManagerLaunchInfo(const string& appId, const string& intent, const string& launchArgs,CurrentAction currentAction)
+                : appId(appId)
+                , intent(intent)
+                , launchArgs(launchArgs)
+                , currentAction(currentAction)
+                {
+                }
+                string GetAppId() { return appId; }
+                string GetIntent() { return intent; }
+                string GetLaunchArgs() { return launchArgs; }
+                CurrentAction GetCurrentAction() { return currentAction; }
+
+            private:
+                string appId;
+                string intent;
+                string launchArgs;
+                CurrentAction currentAction;
+        };
+        
+        typedef std::shared_ptr<AppManagerLaunchInfo> AppLaunchInfoPtr;
+        typedef std::list<AppLaunchInfoPtr> AppManagerList;
+
         private:
         class PackageManagerNotification : public Exchange::IPackageInstaller::INotification {
 
@@ -220,6 +244,10 @@ namespace Plugin {
         Exchange::IStorageManager* mStorageManagerRemoteObject;
         PluginHost::IShell* mCurrentservice;
         Core::Sink<PackageManagerNotification> mPackageManagerNotification;
+        std::thread mAppManagerWorkerThread;
+        std::mutex mAppManagerLock;
+        std::condition_variable mAppRequestListCV;
+        AppManagerList mAppRequestList;
         Core::hresult fetchAppPackageList(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         void checkIsInstalled(const std::string& appId, bool& installed, const std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         Core::hresult packageLock(const string& appId, PackageInfo &packageData, Exchange::IPackageHandler::LockReason lockReason);
@@ -228,6 +256,7 @@ namespace Plugin {
         bool removeAppInfoByAppId(const string &appId);
         void OnAppInstallationStatus(const string& jsonresponse);
         std::string getInstallAppType(ApplicationType type);
+        void  AppManagerWorkerThread(void);
 
 
         void dispatchEvent(EventNames, const JsonObject &params);
