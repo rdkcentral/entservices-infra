@@ -1020,6 +1020,7 @@ TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::SUSPENDED);
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, struct stat* info) {
+            TEST_LOG("Enter to stat wrapsImplMock");
             // Simulate a successful stat call
             if (info != nullptr) {
                 info->st_mode = S_IFREG | 0644; // Regular file with read/write permissions
