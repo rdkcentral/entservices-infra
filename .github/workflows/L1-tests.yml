@@ -138,7 +138,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: topic/test-issue
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
