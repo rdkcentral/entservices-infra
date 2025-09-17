@@ -397,7 +397,7 @@ err_ret:
             return status;
         }
 
-        bool RuntimeManagerImplementation::generate(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, std::string& dobbySpec)
+        bool RuntimeManagerImplementation::generate(ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, std::string& dobbySpec)
         {
             DobbySpecGenerator generator;
             generator.generate(config, runtimeConfigObject, dobbySpec);
