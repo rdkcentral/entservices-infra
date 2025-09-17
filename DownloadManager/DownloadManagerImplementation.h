@@ -34,12 +34,14 @@
 
 #include "DownloadManagerHttpClient.h"
 
+#define DOWNLOAD_REASON_NONE    (0xFF)
+
 namespace WPEFramework {
 namespace Plugin {
     typedef Exchange::IDownloadManager::FailReason DownloadReason;
 
     class DownloadManagerImplementation
-    : public Exchange::IDownloadManager
+        : public Exchange::IDownloadManager
     {
         class Configuration : public Core::JSON::Container {
             public:
@@ -80,7 +82,8 @@ namespace Plugin {
                 string  getUrl() { return url; }
                 bool    getPriority() { return priority; }
                 uint8_t getRetries() { return retries; }
-                long    getRateLimit() { return rateLimit; }
+                void    setRateLimit(uint32_t limit) { rateLimit = limit; }
+                uint32_t getRateLimit() { return rateLimit; }
                 string  getFileLocator() { return fileLocator; }
                 void    setFileLocator(string &locator) { fileLocator = locator; }
                 void    cancel() { isCancelled = true; }
@@ -91,7 +94,7 @@ namespace Plugin {
                 string  url;
                 bool    priority;
                 uint8_t retries;
-                long    rateLimit;
+                uint32_t rateLimit;
                 string  fileLocator;
                 bool    isCancelled;
         };
@@ -104,14 +107,14 @@ namespace Plugin {
         virtual ~DownloadManagerImplementation();
 
         // IDownloadManager methods
-        Core::hresult Download(const string& url, const Exchange::IDownloadManager::Options &options, Exchange::IDownloadManager::DownloadId &downloadId) override;
+        Core::hresult Download(const string &url, const Exchange::IDownloadManager::Options &options, string &downloadId) override;
         Core::hresult Pause(const string &downloadId) override;
         Core::hresult Resume(const string &downloadId) override;
         Core::hresult Cancel(const string &downloadId) override;
         Core::hresult Delete(const string &fileLocator) override;
-        Core::hresult Progress(const string &downloadId, Exchange::IDownloadManager::Percent &percent);
+        Core::hresult Progress(const string &downloadId, uint8_t &percent);
         Core::hresult GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB);
-        Core::hresult RateLimit(const string &downloadId, const uint64_t &limit);
+        Core::hresult RateLimit(const string &downloadId, const uint32_t &limit);
 
         Core::hresult Register(Exchange::IDownloadManager::INotification* notification) override;
         Core::hresult Unregister(Exchange::IDownloadManager::INotification* notification) override;
@@ -138,15 +141,14 @@ namespace Plugin {
         string getDownloadReason(DownloadReason reason) {
             switch (reason)
             {
-                case DownloadReason::NONE:
-                    return "NONE";
-
                 case DownloadReason::DISK_PERSISTENCE_FAILURE:
                     return "DISK_PERSISTENCE_FAILURE";
 
                 case DownloadReason::DOWNLOAD_FAILURE:
-                default:
                     return "DOWNLOAD_FAILURE";
+
+                 default:
+                    return "";
             }
         }
 

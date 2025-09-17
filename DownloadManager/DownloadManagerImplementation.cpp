@@ -18,7 +18,6 @@
 **/
 
 #include <chrono>
-#include <inttypes.h> // Required for PRIu64
 
 #include "DownloadManagerImplementation.h"
 
@@ -80,31 +79,6 @@ namespace Plugin {
         LOGINFO();
         ASSERT(notification != nullptr);
         Core::hresult result = Core::ERROR_NONE;
-
-        /* Stop the downloader thread */
-        mDownloaderRunFlag = false;
-        mDownloadThreadCV.notify_one();
-        if (mDownloadThreadPtr && mDownloadThreadPtr->joinable())
-        {
-            mDownloadThreadPtr->join();
-            mDownloadThreadPtr.reset();
-        }
-
-        /* Clear download queues */
-        {
-            std::lock_guard<std::mutex> lock(mQueueMutex);
-            /* Clear priority queue */
-            while (!mPriorityDownloadQueue.empty())
-            {
-                mPriorityDownloadQueue.pop();
-            }
-
-            /* Clear regular queue */
-            while (!mRegularDownloadQueue.empty())
-            {
-                mRegularDownloadQueue.pop();
-            }
-        }
 
         /* Remove the notification from the list */
         mAdminLock.Lock();
@@ -174,6 +148,31 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
 
+        /* Stop the downloader thread */
+        mDownloaderRunFlag = false;
+        mDownloadThreadCV.notify_one();
+        if (mDownloadThreadPtr && mDownloadThreadPtr->joinable())
+        {
+            mDownloadThreadPtr->join();
+            mDownloadThreadPtr.reset();
+        }
+
+        /* Clear download queues */
+        {
+            std::lock_guard<std::mutex> lock(mQueueMutex);
+            /* Clear priority queue */
+            while (!mPriorityDownloadQueue.empty())
+            {
+                mPriorityDownloadQueue.pop();
+            }
+
+            /* Clear regular queue */
+            while (!mRegularDownloadQueue.empty())
+            {
+                mRegularDownloadQueue.pop();
+            }
+        }
+
         mCurrentservice->Release();
         mCurrentservice = nullptr;
 
@@ -183,19 +182,20 @@ namespace Plugin {
     // IDownloadManager methods
     Core::hresult DownloadManagerImplementation::Download(const string& url,
         const Exchange::IDownloadManager::Options &options,
-        Exchange::IDownloadManager::DownloadId &downloadId)
+        string &downloadId)
     {
         Core::hresult result = Core::ERROR_GENERAL;
 
+        mAdminLock.Lock();
         if (!mCurrentservice->SubSystems()->IsActive(PluginHost::ISubSystem::INTERNET))
         {
-            LOGERR("DM: Download failed - no internet! url=%s priority=%d retries=%u rateLimit=%" PRIu64,
+            LOGERR("DM: Download failed - no internet! url=%s priority=%d retries=%u rateLimit=%u",
                    url.c_str(), options.priority, options.retries, options.rateLimit);
             result = Core::ERROR_UNAVAILABLE;
         }
         else if (url.empty())
         {
-            LOGERR("DM: Download failed - empty URL! priority=%d retries=%u rateLimit=%" PRIu64,
+            LOGERR("DM: Download failed - empty URL! priority=%d retries=%u rateLimit=%u",
                    options.priority, options.retries, options.rateLimit);
         }
         else
@@ -220,21 +220,23 @@ namespace Plugin {
                     mRegularDownloadQueue.push(newDownload);
                 }
                 mDownloadThreadCV.notify_one();
-                LOGINFO("DM: Download Request: id=%s url=%s priority=%d retries=%u rateLimit=%ld",
+                LOGINFO("DM: Download Request: id=%s url=%s priority=%d retries=%u rateLimit=%u",
                         newDownload->getId().c_str(), newDownload->getUrl().c_str(),
                         newDownload->getPriority(), newDownload->getRetries(),
                         newDownload->getRateLimit());
 
                 /* Returning queued download id */
-                downloadId.downloadId = newDownload->getId();
+                downloadId = newDownload->getId();
                 result = Core::ERROR_NONE;
             }
             else
             {
-                LOGERR("DM: Failed to create new download - url=%s priority=%d retries=%u rateLimit=%" PRIu64,
+                LOGERR("DM: Failed to create new download - url=%s priority=%d retries=%u rateLimit=%u",
                        url.c_str(), options.priority, options.retries, options.rateLimit);
             }
         }
+        mAdminLock.Unlock();
+
         return result;
     }
 
@@ -242,6 +244,7 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_GENERAL;
 
+        mAdminLock.Lock();
         if (!downloadId.empty() && (mCurrentDownload.get() != nullptr) && mHttpClient)
         {
             if (downloadId.compare(mCurrentDownload->getId()) == 0)
@@ -262,6 +265,7 @@ namespace Plugin {
             LOGERR("DM: Pause failed - downloadId=%s mCurrentDownload=%p mHttpClient=%p",
                    downloadId.c_str(), mCurrentDownload.get(), mHttpClient.get());
         }
+        mAdminLock.Unlock();
 
         return result;
     }
@@ -270,6 +274,7 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_GENERAL;
 
+        mAdminLock.Lock();
         if (!downloadId.empty() && (mCurrentDownload.get() != nullptr) && mHttpClient)
         {
             if (downloadId.compare(mCurrentDownload->getId()) == 0)
@@ -290,6 +295,7 @@ namespace Plugin {
             LOGERR("DM: Resume failed - downloadId=%s mCurrentDownload=%p mHttpClient=%p",
                    downloadId.c_str(), mCurrentDownload.get(), mHttpClient.get());
         }
+        mAdminLock.Unlock();
 
         return result;
     }
@@ -298,6 +304,7 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_GENERAL;
 
+        mAdminLock.Lock();
         if (!downloadId.empty() && (mCurrentDownload.get() != nullptr) && mHttpClient)
         {
             if (downloadId.compare(mCurrentDownload->getId()) == 0)
@@ -319,6 +326,7 @@ namespace Plugin {
             LOGERR("DM: Cancel failed - downloadId=%s mCurrentDownload=%p mHttpClient=%p",
                    downloadId.c_str(), mCurrentDownload.get(), mHttpClient.get());
         }
+        mAdminLock.Unlock();
 
         return result;
     }
@@ -327,6 +335,7 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_GENERAL;
 
+        mAdminLock.Lock();
         if (!fileLocator.empty() && (mCurrentDownload.get() != nullptr) && \
             (fileLocator.compare(mCurrentDownload->getFileLocator()) == 0))
         {
@@ -344,20 +353,22 @@ namespace Plugin {
                 LOGERR("DM: fileLocator '%s' delete failed", fileLocator.c_str());
             }
         }
+        mAdminLock.Unlock();
 
         return result;
     }
 
-    Core::hresult DownloadManagerImplementation::Progress(const string &downloadId, Percent &percent)
+    Core::hresult DownloadManagerImplementation::Progress(const string &downloadId, uint8_t &percent)
     {
         Core::hresult result = Core::ERROR_GENERAL;
 
+        mAdminLock.Lock();
         if (!downloadId.empty() && (mCurrentDownload.get() != nullptr) && mHttpClient)
         {
             if (downloadId.compare(mCurrentDownload->getId()) == 0)
             {
-                percent.percent = mHttpClient->getProgress();
-                LOGINFO("DM: Download Progress percent %d", percent.percent);
+                percent = mHttpClient->getProgress();
+                LOGINFO("DM: Download Progress percent %u", percent);
                 result = Core::ERROR_NONE;
             }
             else
@@ -370,6 +381,7 @@ namespace Plugin {
             LOGERR("DM: Progress failed - downloadId=%s mCurrentDownload=%p mHttpClient=%p",
                    downloadId.c_str(), mCurrentDownload.get(), mHttpClient.get());
         }
+        mAdminLock.Unlock();
 
         return result;
     }
@@ -381,20 +393,23 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult DownloadManagerImplementation::RateLimit(const string &downloadId, const uint64_t &limit)
+    Core::hresult DownloadManagerImplementation::RateLimit(const string &downloadId, const uint32_t &limit)
     {
         Core::hresult result = Core::ERROR_GENERAL;
+
+        mAdminLock.Lock();
         if (!downloadId.empty() && (mCurrentDownload.get() != nullptr) && mHttpClient)
         {
             if (downloadId.compare(mCurrentDownload->getId()) == 0)
             {
-                LOGINFO("DM: '%s' RateLimit=%" PRIu64, downloadId.c_str(), limit);
+                LOGINFO("DM: downloadId='%s' limit=%u", downloadId.c_str(), limit);
+                mCurrentDownload->setRateLimit(limit);
                 mHttpClient->setRateLimit(limit);
                 result = Core::ERROR_NONE;
             }
             else
             {
-                LOGWARN("DM: '%s' download is not active - unable to set rateLimit!", downloadId.c_str());
+                LOGWARN("DM: '%s' download is not active - unable to set rate limit=%u!", downloadId.c_str(), limit);
                 result = Core::ERROR_UNKNOWN_KEY;
             }
         }
@@ -402,6 +417,8 @@ namespace Plugin {
         {
             LOGERR("DM: Set RateLimit Failed - mCurrentDownload=%p", mCurrentDownload.get());
         }
+        mAdminLock.Unlock();
+
         return result;
     }
 
@@ -435,7 +452,7 @@ namespace Plugin {
             DownloadManagerHttpClient::Status status = DownloadManagerHttpClient::Status::Success;
             int attemptCount = 0;
 
-            LOGINFO("DM: Starting downloadId=%s url=%s file=%s retries=%d rateLimit=%ld",
+            LOGINFO("DM: Starting downloadId=%s url=%s file=%s retries=%d rateLimit=%u",
                     downloadRequest->getId().c_str(), downloadRequest->getUrl().c_str(),
                     downloadRequest->getFileLocator().c_str(), downloadRequest->getRetries(),
                     downloadRequest->getRateLimit());
@@ -457,7 +474,7 @@ namespace Plugin {
                     }
                 }
 
-                LOGDBG("DM: Attempting download (%d/%d): id=%s url=%s file=%s rateLimit=%ld",
+                LOGDBG("DM: Attempting download (%d/%d): id=%s url=%s file=%s rateLimit=%u",
                         attemptCount, downloadRequest->getRetries(),
                         downloadRequest->getId().c_str(),
                         downloadRequest->getUrl().c_str(),
@@ -473,7 +490,7 @@ namespace Plugin {
                 long httpCode = mHttpClient->getStatusCode();
                 if (status == DownloadManagerHttpClient::Status::Success)
                 {
-                    LOGINFO("DM: Download succeeded (took %lldms): id=%s url=%s file=%s retries=%d rateLimit=%ld http_code=%ld",
+                    LOGINFO("DM: Download succeeded (took %lldms): id=%s url=%s file=%s retries=%d rateLimit=%u http_code=%ld",
                     elapsed, downloadRequest->getId().c_str(), downloadRequest->getUrl().c_str(),
                     downloadRequest->getFileLocator().c_str(), downloadRequest->getRetries(),
                     downloadRequest->getRateLimit(), httpCode);
@@ -498,7 +515,7 @@ namespace Plugin {
                        attemptCount, downloadRequest->getRetries(), downloadRequest->getId().c_str(), status);
             }
 
-            DownloadReason reason = DownloadReason::NONE;
+            DownloadReason reason = static_cast<DownloadReason>(DOWNLOAD_REASON_NONE);
             switch (status)
             {
                 case DownloadManagerHttpClient::Status::DiskError:
@@ -527,7 +544,7 @@ namespace Plugin {
         JsonObject obj;
         obj["downloadId"] = id;
         obj["fileLocator"] = locator;
-        if (reason != DownloadReason::NONE)
+        if (reason != (DownloadReason)DOWNLOAD_REASON_NONE)
         {
             obj["failReason"] = getDownloadReason(reason);
         }
@@ -559,7 +576,7 @@ namespace Plugin {
                 /* Priority queue download request */
                 mCurrentDownload = mPriorityDownloadQueue.front();
                 mPriorityDownloadQueue.pop();
-                LOGINFO("DM: PriorityQ Job: DownloadId=%s url=%s file=%s rateLimit=%ld",
+                LOGINFO("DM: PriorityQ Job: DownloadId=%s url=%s file=%s rateLimit=%u",
                         mCurrentDownload->getId().c_str(), mCurrentDownload->getUrl().c_str(),
                         mCurrentDownload->getFileLocator().c_str(), mCurrentDownload->getRateLimit());
             }
@@ -570,7 +587,7 @@ namespace Plugin {
                 {
                     mCurrentDownload = mRegularDownloadQueue.front();
                     mRegularDownloadQueue.pop();
-                    LOGINFO("DM: RegularQ Job: DownloadId=%s url=%s file=%s rateLimit=%ld",
+                    LOGINFO("DM: RegularQ Job: DownloadId=%s url=%s file=%s rateLimit=%u",
                             mCurrentDownload->getId().c_str(), mCurrentDownload->getUrl().c_str(),
                             mCurrentDownload->getFileLocator().c_str(), mCurrentDownload->getRateLimit());
                 }
