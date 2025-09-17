@@ -377,10 +377,16 @@ namespace Plugin {
             if (nullptr != mStorageManagerObject) {
                 string path = "";
                 string errorReason = "";
+                auto check1 = std::chrono::steady_clock::now();
+
                 if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
                     LOGINFO("CreateStorage path [%s]", path.c_str());
                     state.installState = InstallState::INSTALLING;
+                    auto check2 = std::chrono::steady_clock::now();
                     NotifyInstallStatus(packageId, version, state);
+                    auto check3 = std::chrono::steady_clock::now();
+                    auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(check3 - check2).count();
+                    LOGINFO("shreyas pkg install 1st notifyinstall time diff=%lld", diff);
                     #ifdef USE_LIBPACKAGE
                     packagemanager::ConfigMetaData config;
                     packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
@@ -398,7 +404,13 @@ namespace Plugin {
                     LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
                     state.failReason = FailReason::PERSISTENCE_FAILURE;
                 }
+                auto check4 = std::chrono::steady_clock::now();
                 NotifyInstallStatus(packageId, version, state);
+                auto check5 = std::chrono::steady_clock::now();
+                auto diff1 = std::chrono::duration_cast<std::chrono::milliseconds>(check5 - check4).count();
+                auto diff2 = std::chrono::duration_cast<std::chrono::milliseconds>(check5 - check1).count();
+                LOGINFO("shreyas pkg install 2nd notifyinstall time diff1=%lld", diff1);
+                LOGINFO("shreyas pkg install time diff2=%lld", diff2);
             }
         } else {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
