@@ -36,6 +36,7 @@ AppcLifecycleManager::AppcLifecycleManager() :
     _lifecycleManager(nullptr),
     _connectionId(0) 
 {
+    SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager Constructor"))));
     if (_instance == nullptr) {
         _instance = this;
     }
@@ -43,6 +44,7 @@ AppcLifecycleManager::AppcLifecycleManager() :
 
 AppcLifecycleManager::~AppcLifecycleManager()
 {
+    SYSLOG(Logging::Shutdown, (string(_T("AppcLifecycleManager Destructor"))));
     _instance = nullptr;
 }
 
@@ -53,6 +55,8 @@ const string AppcLifecycleManager::Initialize(PluginHost::IShell* service)
     ASSERT(nullptr == _currentService);
     ASSERT(nullptr == _lifecycleManager);
     ASSERT(0 == _connectionId);
+
+    SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager::Initialize called."))));
 
     _currentService = service;
     if (_currentService) {
@@ -65,10 +69,12 @@ const string AppcLifecycleManager::Initialize(PluginHost::IShell* service)
             // Register JSON-RPC bridge
             Exchange::JLifecycleManager::Register(*this, _lifecycleManager);
         } else {
-            message = "AppcLifecycleManager: Failed to acquire ILifecycleManager interface";
+            SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager: Successfully acquired ILifecycleManager interface"))));
+            message = T_("AppcLifecycleManager: Failed to acquire ILifecycleManager interface");
         }
     } else {
-        message = "AppcLifecycleManager: IShell service is null";
+        SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager: IShell service is null"))));
+        message = T_("AppcLifecycleManager: IShell service is null");
     }
 
     if (!message.empty()) {
@@ -80,7 +86,7 @@ const string AppcLifecycleManager::Initialize(PluginHost::IShell* service)
 void AppcLifecycleManager::Deinitialize(PluginHost::IShell* service)
 {
     ASSERT(_currentService == service);
-
+    SYSLOG(Logging::Shutdown, (string(_T("AppcLifecycleManager::Deinitialize"))));
     // Unregister JSON-RPC bridge
     Exchange::JLifecycleManager::Unregister(*this);
 
@@ -99,11 +105,14 @@ void AppcLifecycleManager::Deinitialize(PluginHost::IShell* service)
 
 string AppcLifecycleManager::Information() const
 {
+    SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager::Information called."))));
     return string();
 }
 
 void AppcLifecycleManager::Deactivated(RPC::IRemoteConnection* connection)
 {
+    SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager::Deactivated called."))));
+
     if (connection->Id() == _connectionId) {
         ASSERT(_currentService != nullptr);
         Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_currentService, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
@@ -112,7 +121,10 @@ void AppcLifecycleManager::Deactivated(RPC::IRemoteConnection* connection)
 
 void AppcLifecycleManager::get_settargetappstate(const JsonObject& params, JsonObject& response)
 {
+    SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager::get_settargetappstate called."))));
+
     if (!_lifecycleManager) {
+        SYSLOG(Logging::Error, (string(_T("ILifecycleManager not available"))));
         response["success"] = false;
         response["message"] = "ILifecycleManager not available";
         return;
@@ -127,7 +139,14 @@ void AppcLifecycleManager::get_settargetappstate(const JsonObject& params, JsonO
     const auto targetState = inputParams.TargetLifecycleState.Value();
     const string launchIntent = inputParams.LaunchIntent.Value();
 
+    SYSLOG(Logging::Information, (string(_T("SetTargetAppState called with AppInstanceId: ")) + appInstanceId +
+                                  string(_T(", TargetLifecycleState: ")) + std::to_string(targetState) +
+                                  string(_T(", LaunchIntent: ")) + launchIntent));
+
     auto result = _lifecycleManager->SetTargetAppState(appInstanceId, targetState, launchIntent);
+
+    SYSLOG(Logging::Information, (string(_T("SetTargetAppState result: ")) + std::to_string(result)));
+
     response["success"] = (result == Core::ERROR_NONE);
     response["result"] = result;
 }
