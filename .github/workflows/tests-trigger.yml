@@ -4,9 +4,9 @@ name: main-workflow
 
 on:
   push:
-    branches: [ main, develop, 'sprint/**', 'release/**', topic/RDKEMW-7402_7403 ]
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
   pull_request:
-    branches: [ main, develop, 'sprint/**', 'release/**', topic/RDKEMW-7402_7403 ]
+    branches: [ main, develop, 'sprint/**', 'release/**' ]
 
 jobs:
   trigger-L1:
