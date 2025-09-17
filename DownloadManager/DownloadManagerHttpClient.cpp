@@ -24,6 +24,10 @@
 #include "DownloadManagerHttpClient.h"
 
 DownloadManagerHttpClient::DownloadManagerHttpClient()
+    : curl(nullptr)
+    , httpCode(0)
+    , bCancel(false)
+    , progress(0)
 {
     //curl_global_init(CURL_GLOBAL_ALL);
     curl = curl_easy_init();
@@ -39,6 +43,7 @@ DownloadManagerHttpClient::DownloadManagerHttpClient()
 
 DownloadManagerHttpClient::~DownloadManagerHttpClient()
 {
+    std::lock_guard<std::mutex> lock(mHttpClientMutex);
     if (curl)
     {
         curl_easy_cleanup(curl);
@@ -51,13 +56,17 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
     Status status = Status::Success;
     CURLcode cc;
     FILE *fp;
+
+    std::unique_lock<std::mutex> lock(mHttpClientMutex);
     bCancel = false;
+    progress = 0;
     httpCode = 0;
 
     if (curl)
     {
         (void) curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        setRateLimit(rateLimit);
+        LOGDBG("curl rateLimit set to %u", rateLimit);
+        curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, (curl_off_t)rateLimit);
 
         fp = fopen(fileName.c_str(), "wb");
         if (fp != NULL)
@@ -69,7 +78,11 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
             (void) curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, this);
             (void) curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCb);
 
+            /* Unlock before blocking call */
+            lock.unlock();
             cc = curl_easy_perform(curl);
+            /* Re-lock mutex after curl call */
+            lock.lock();
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpCode);
             if (cc == CURLE_OK)
             {
@@ -95,12 +108,16 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
 size_t DownloadManagerHttpClient::progressCb(void *ptr, double dltotal, double dlnow, double ultotal, double ulnow)
 {
     DownloadManagerHttpClient *pHttpClient = static_cast<DownloadManagerHttpClient *>(ptr);
+    std::lock_guard<std::mutex> lock(pHttpClient->mHttpClientMutex);
+    if (dltotal > 0.0)
+    {
+        uint8_t percent = static_cast<uint8_t>((dlnow * 100) / dltotal);
+        pHttpClient->progress = percent;
+        //LOGDBG("%u%% completed dlnow=%f / dltotal=%f ulnow=%f / ultotal=%f", percent, dlnow, dltotal, ulnow, ultotal);
+    }
 
-    int percent = (int)(dlnow * 100 / dltotal);
-    pHttpClient->progress = percent;
-    // LOGTRACE("%d completed", percent);
-
-    return pHttpClient->bCancel;
+    /* If cancel requested, return non-zero to abort curl_easy_perform */
+    return pHttpClient->bCancel ? 1 : 0;
 }
 
 size_t DownloadManagerHttpClient::write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {

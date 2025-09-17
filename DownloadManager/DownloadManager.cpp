@@ -78,7 +78,7 @@ namespace Plugin
         return (message);
     }
 
-    void DownloadManager::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
+    void DownloadManager::Deinitialize(PluginHost::IShell* service)
     {
         LOGINFO();
         if (mService != nullptr)
@@ -89,6 +89,11 @@ namespace Plugin
             {
                 mDownloadManagerImpl->Unregister(&mNotificationSink);
                 Exchange::JDownloadManager::Unregister(*this);
+
+                if (nullptr != mService)
+                {
+                    mDownloadManagerImpl->Deinitialize(mService);
+                }
 
                 RPC::IRemoteConnection* connection(mService->RemoteConnection(mConnectionId));
                 if (mDownloadManagerImpl->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED)
