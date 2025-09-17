@@ -86,7 +86,7 @@ Json::Value DobbySpecGenerator::getWorkingDir(const ApplicationConfiguration& co
     return Json::Value(workingDir);
 }
 
-bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig, string& resultSpec)
+bool DobbySpecGenerator::generate(ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig, string& resultSpec)
 {
     LOGINFO("DobbySpecGenerator::generate()");
     resultSpec = "";
@@ -231,7 +231,7 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     return true;
 }
 
-Json::Value DobbySpecGenerator::createEnvVars(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
+Json::Value DobbySpecGenerator::createEnvVars(ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
 {
     Json::Value env(Json::arrayValue);
     env.append(std::string("APPLICATION_NAME=") + config.mAppId);
