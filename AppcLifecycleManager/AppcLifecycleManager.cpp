@@ -70,11 +70,11 @@ const string AppcLifecycleManager::Initialize(PluginHost::IShell* service)
             Exchange::JLifecycleManager::Register(*this, _lifecycleManager);
         } else {
             SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager: Successfully acquired ILifecycleManager interface"))));
-            message = T_("AppcLifecycleManager: Failed to acquire ILifecycleManager interface");
+            message = "AppcLifecycleManager: Failed to acquire ILifecycleManager interface";
         }
     } else {
         SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager: IShell service is null"))));
-        message = T_("AppcLifecycleManager: IShell service is null");
+        message = "AppcLifecycleManager: IShell service is null";
     }
 
     if (!message.empty()) {
@@ -139,13 +139,12 @@ void AppcLifecycleManager::get_settargetappstate(const JsonObject& params, JsonO
     const auto targetState = inputParams.TargetLifecycleState.Value();
     const string launchIntent = inputParams.LaunchIntent.Value();
 
-    SYSLOG(Logging::Information, (string(_T("SetTargetAppState called with AppInstanceId: ")) + appInstanceId +
-                                  string(_T(", TargetLifecycleState: ")) + std::to_string(targetState) +
-                                  string(_T(", LaunchIntent: ")) + launchIntent));
-
+     LOGINFO("SetTargetAppState called with AppInstanceId: %s, TargetLifecycleState: %d, LaunchIntent: %s",
+            appInstanceId.c_str(), targetState, launchIntent.c_str());
+   
     auto result = _lifecycleManager->SetTargetAppState(appInstanceId, targetState, launchIntent);
 
-    SYSLOG(Logging::Information, (string(_T("SetTargetAppState result: ")) + std::to_string(result)));
+    LOGINFO("SetTargetAppState returned: %d", result);
 
     response["success"] = (result == Core::ERROR_NONE);
     response["result"] = result;
