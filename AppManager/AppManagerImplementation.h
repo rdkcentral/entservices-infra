@@ -263,7 +263,6 @@ namespace Plugin {
         bool createOrUpdatePackageInfoByAppId(const string& appId, PackageInfo &packageData);
         bool removeAppInfoByAppId(const string &appId);
         void OnAppInstallationStatus(const string& jsonresponse);
-        std::string getInstallAppType(ApplicationType type);
         void  AppManagerWorkerThread(void);
         void dispatchEvent(EventNames, const JsonObject &params);
         void Dispatch(EventNames event, const JsonObject params);
