@@ -124,6 +124,10 @@ if(PLUGIN_APPMANAGER)
     add_subdirectory(AppManager)
 endif()
 
+if(PLUGIN_APPCLIFECYCLEMANAGER)
+    add_subdirectory(AppcLifecycleManager)
+endif()
+
 if(PLUGIN_RUNTIME_MANAGER)
 	add_subdirectory(RuntimeManager)
 endif()
