@@ -60,14 +60,14 @@ namespace WPEFramework
             {
                 LOGERR("BootType is not present");
             }
-	    return (status ? static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) : static_cast<uint32_t>(ERROR_FILE_IO));
+	        return (status ? static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) : static_cast<uint32_t>(ERROR_FILE_IO));
         }
 
         Core::hresult MigrationImplementation::SetMigrationStatus(const string& status, bool& success)
         {
             std::unordered_set<std::string> Status_Set = {"NOT_STARTED","NOT_NEEDED","STARTED","PRIORITY_SETTINGS_MIGRATED","DEVICE_SETTINGS_MIGRATED","CLOUD_SETTINGS_MIGRATED","APP_DATA_MIGRATED","MIGRATION_COMPLETED"};
 
-	    if(Status_Set.find(status) != Status_Set.end())
+            if(Status_Set.find(status) != Status_Set.end())
             {
                 // if file exists, it will be truncated, otherwise it will be created
                 std::ofstream file(MIGRATIONSTATUS, std::ios::trunc);
@@ -77,21 +77,20 @@ namespace WPEFramework
                     LOGINFO("Current ENTOS Migration Status is %s\n", status.c_str());
                 } else {
                     LOGERR("Failed to open or create file %s\n", MIGRATIONSTATUS);
-		    return (ERROR_FILE_IO);
+		            return (ERROR_FILE_IO);
                 }
                 // Close the file
                 file.close();
             }
             else {
-		LOGERR("Invalid Migration Status\n");
-		return (WPEFramework::Core::ERROR_INVALID_PARAMETER);
+		        LOGERR("Invalid Migration Status\n");
+		        return (WPEFramework::Core::ERROR_INVALID_PARAMETER);
             }
-
             success = true;
             return WPEFramework::Core::ERROR_NONE;
         }
 
-        Core::hresult MigrationImplementation::GetMigrationStatus(string& migrationStatus)
+        Core::hresult MigrationImplementation::GetMigrationStatus(string& migrationStatus, bool& success)
         {
             bool status = false;
             RFC_ParamData_t param = {0};
@@ -104,6 +103,7 @@ namespace WPEFramework
             else {
                 LOGINFO("Failed to get RFC parameter for Migration Status \n");
             }
+			success = status;
             return (status ?  static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) :  static_cast<uint32_t>(ERROR_FILE_IO));
         }
     
