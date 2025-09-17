@@ -1087,7 +1087,7 @@ TEST_F(AppManagerTest, GetLoadedAppsSuccessCaseUsingJsonRpc)
     JsonObject resultJson;
     Core::JSON::String resultString;
     string apps = "";
-    string expectedApps = "\"[{\\\"appId\\\":\\\"com.example.myapp\\\",\\\"type\\\":1,\\\"lifecycleState\\\":0,\\\"targetLifecycleState\\\":2,\\\"activeSessionId\\\":\\\"\\\",\\\"appInstanceId\\\":\\\"\\\"}]\"";
+    string expectedApps = "\"[{\\\"appId\\\":\\\"com.example.myapp\\\",\\\"type\\\":\\\"INTERACTIVE_APP\\\",\\\"lifecycleState\\\":0,\\\"targetLifecycleState\\\":2,\\\"activeSessionId\\\":\\\"\\\",\\\"appInstanceId\\\":\\\"\\\"}]\"";
 
     TEST_LOG("Testing GetLoadedAppsSuccessCaseUsingJsonRpc ");
 
@@ -1301,7 +1301,7 @@ TEST_F(AppManagerTest, PreLoadLaunchCloseAndTerminateAppComRpcConnectionSuccessC
 
                 TEST_LOG("Calling GetLoadedApps");
                 string appData = "";
-                string expectedApps = "[{\"appId\":\"com.example.myapp\",\"type\":1,\"lifecycleState\":0,\"targetLifecycleState\":2,\"activeSessionId\":\"\",\"appInstanceId\":\"\"}]";
+                string expectedApps = "[{\"appId\":\"com.example.myapp\",\"type\":\"INTERACTIVE_APP\",\"lifecycleState\":0,\"targetLifecycleState\":2,\"activeSessionId\":\"\",\"appInstanceId\":\"\"}]";
                 status = mAppmanagerPlugin->GetLoadedApps(appData);
                 EXPECT_EQ(status,Core::ERROR_NONE);
                 if (status != Core::ERROR_NONE)
@@ -1408,7 +1408,7 @@ TEST_F(AppManagerTest, PreLoadLaunchCloseAppComRpcConnectionSuccessCase)
 
                 TEST_LOG("Calling GetLoadedApps");
                 string appDataAfterLaunch = "";
-                string expectedAppData = "[{\"appId\":\"com.example.myapp\",\"type\":1,\"lifecycleState\":0,\"targetLifecycleState\":2,\"activeSessionId\":\"\",\"appInstanceId\":\"\"}]";
+                string expectedAppData = "[{\"appId\":\"com.example.myapp\",\"type\":\"INTERACTIVE_APP\",\"lifecycleState\":0,\"targetLifecycleState\":2,\"activeSessionId\":\"\",\"appInstanceId\":\"\"}]";
                 status = mAppmanagerPlugin->GetLoadedApps(appDataAfterLaunch);
                 EXPECT_EQ(status,Core::ERROR_NONE);
                 if (status != Core::ERROR_NONE)
@@ -1433,7 +1433,7 @@ TEST_F(AppManagerTest, PreLoadLaunchCloseAppComRpcConnectionSuccessCase)
 
                 TEST_LOG("Calling GetLoadedApps");
                 string appDataAfterClose = "";
-                string expectedAppDataAfterClose = "[{\"appId\":\"com.example.myapp\",\"type\":1,\"lifecycleState\":0,\"targetLifecycleState\":3,\"activeSessionId\":\"\",\"appInstanceId\":\"\"}]";
+                string expectedAppDataAfterClose = "[{\"appId\":\"com.example.myapp\",\"type\":\"INTERACTIVE_APP\",\"lifecycleState\":0,\"targetLifecycleState\":3,\"activeSessionId\":\"\",\"appInstanceId\":\"\"}]";
                 status = mAppmanagerPlugin->GetLoadedApps(appDataAfterClose);
                 EXPECT_EQ(status,Core::ERROR_NONE);
                 if (status != Core::ERROR_NONE)
