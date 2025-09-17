@@ -8,6 +8,8 @@
 #include <string>
 #include <interfaces/json/JsonData_LifecycleManager.h>
 #include <interfaces/json/JLifecycleManager.h>
+#include "UtilsLogging.h"
+#include "tracing/Logging.h"
 
 
 namespace WPEFramework {
