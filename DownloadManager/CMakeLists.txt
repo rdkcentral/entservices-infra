@@ -49,7 +49,6 @@ install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
-    DownloadManager.cpp
     DownloadManagerImplementation.cpp
     Module.cpp
     DownloadManagerHttpClient.cpp)
