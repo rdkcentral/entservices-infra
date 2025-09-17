@@ -216,6 +216,7 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     populateClassicPlugins(config, runtimeConfig, spec);
     spec["rdkPlugins"] = createRdkPlugins(config, runtimeConfig);
     spec["mounts"] = createMounts(config, runtimeConfig);
+	config.mPorts.push_back(9001);
     spec["env"] = createEnvVars(config, runtimeConfig);
 
     Json::FastWriter writer;
@@ -238,7 +239,13 @@ Json::Value DobbySpecGenerator::createEnvVars(const ApplicationConfiguration& co
      //TODO YET TO ANALYZE SUPPORT APPLICATION_LAUNCH_PARAMETERS
      //TODO YET TO ANALYZE SUPPORT APPLICATION_LAUNCH_METHOD
      //TODO YET TO ANALYZE SUPPORT APPLICATION_TOKEN
-
+    env.append("APPLICATION_LAUNCH_PARAMETERS=eyJHV19JUCI6IiIsImFyZ3MiOnt9LCJvcmlnaW4iOiJFUEcifQ==");
+    //TODO YET TO ANALYZE SUPPORT APPLICATION_LAUNCH_METHOD
+    env.append("APPLICATION_LAUNCH_METHOD=EPG");
+    //TODO YET TO ANALYZE SUPPORT APPLICATION_TOKEN
+    env.append("APPLICATION_TOKEN=41172d0d-1d02-44c9-9e76-bf30a877727a");
+    //TODO DEVICE FRIENDLY NAME
+    env.append("APPLICATION_SECRET=iOnt9LCJvcmlnaW4iOiJF");
    JsonArray envInputArray;
    envInputArray.FromString(runtimeConfig.envVariables);
    for (unsigned int i = 0; i < envInputArray.Length(); ++i)
