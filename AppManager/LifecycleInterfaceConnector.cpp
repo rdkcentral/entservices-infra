@@ -706,8 +706,8 @@ namespace WPEFramework
                 }
 
                 auto getIntJsonField = [&](JsonObject& obj, const char* key) -> int {
-	                return obj.HasLabel(key) ? static_cast<int>(obj[key].Number()) : 0;
-	            };
+                    return obj.HasLabel(key) ? static_cast<int>(obj[key].Number()) : 0;
+                };
 
                 // Iterate through each app JSON object in the array
                 for (size_t i = 0; i < loadedAppsJsonArray.Length(); ++i)
@@ -727,8 +727,8 @@ namespace WPEFramework
                     loadedAppJson["targetLifecycleState"] = static_cast<int>(appInfo.targetAppState);
                     appInfo.appNewState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
-                            getIntJsonField(loadedAppsObject, "currentLifecycleState")));
-                    loadedAppJson["currentLifecycleState"] = static_cast<int>(appInfo.appNewState);
+                            getIntJsonField(loadedAppsObject, "lifecycleState")));
+                    loadedAppJson["lifecycleState"] = static_cast<int>(appInfo.appNewState);
 
                     loadedAppsArray.Add(loadedAppJson);
                 }
