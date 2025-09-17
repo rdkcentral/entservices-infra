@@ -719,6 +719,7 @@ namespace WPEFramework
 
                     JsonObject loadedAppJson;
                     loadedAppJson["appId"] = appId;
+                    loadedAppJson["type"] = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);
                     loadedAppJson["appInstanceId"] = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
                     loadedAppJson["activeSessionId"] = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
                     appInfo.targetAppState = mapAppLifecycleState(

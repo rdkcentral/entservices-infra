@@ -47,7 +47,7 @@
 #define APPMANAGER_APP_VERSION      "1.2.8"
 #define APPMANAGER_APP_DIGEST       ""
 #define APPMANAGER_APP_STATE        Exchange::IPackageInstaller::InstallState::INSTALLED
-#define APPMANAGER_APP_STATE_STR    "APPLICATION_TYPE_INTERACTIVE"
+#define APPMANAGER_APP_STATE_STR    "INTERACTIVE_APP"
 #define APPMANAGER_APP_SIZE         0
 #define APPMANAGER_WRONG_APP_ID     "com.wrongtest.app"
 #define APPMANAGER_APP_INTENT       "test.intent"
@@ -633,7 +633,7 @@ TEST_F(AppManagerTest, GetInstalledAppsUsingJSONRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getInstalledApps"), _T("{\"apps\": \"\"}"), mJsonRpcResponse));
     jsonStr = GetPackageInfoInJSON();
     EXPECT_STREQ(
-    "[{\"appId\":\"com.test.app\",\"versionString\":\"1.2.8\",\"type\":\"APPLICATION_TYPE_INTERACTIVE\",\"lastActiveTime\":\"\",\"lastActiveIndex\":\"\"}]",
+    "[{\"appId\":\"com.test.app\",\"versionString\":\"1.2.8\",\"type\":\"INTERACTIVE_APP\",\"lastActiveTime\":\"\",\"lastActiveIndex\":\"\"}]",
     mJsonRpcResponse.c_str());
 
     if(status == Core::ERROR_NONE)
@@ -3005,15 +3005,15 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
     EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
     ).WillOnce([&](const bool verbose, std::string &apps) {
         apps = R"([
-            {"appId":"NexTennis","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
-            {"appId":"uktv","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6}
+            {"appId":"NexTennis","type":"INTERACTIVE_APP","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
+            {"appId":"uktv","type":"INTERACTIVE_APP","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6}
         ])";
         return Core::ERROR_NONE;
     });
     // Simulate a JSON-RPC call
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getLoadedApps"), _T("{}"), mJsonRpcResponse));
     EXPECT_STREQ(mJsonRpcResponse.c_str(),
-    "\"[{\\\"appId\\\":\\\"NexTennis\\\",\\\"appInstanceId\\\":\\\"0295effd-2883-44ed-b614-471e3f682762\\\",\\\"activeSessionId\\\":\\\"\\\",\\\"targetLifecycleState\\\":8,\\\"lifecycleState\\\":8},{\\\"appId\\\":\\\"uktv\\\",\\\"appInstanceId\\\":\\\"67fa75b6-0c85-43d4-a591-fd29e7214be5\\\",\\\"activeSessionId\\\":\\\"\\\",\\\"targetLifecycleState\\\":8,\\\"lifecycleState\\\":8}]\"");
+    "\"[{\\\"appId\\\":\\\"NexTennis\\\",\\\"type\\\":\\\"INTERACTIVE_APP\\\",\\\"appInstanceId\\\":\\\"0295effd-2883-44ed-b614-471e3f682762\\\",\\\"activeSessionId\\\":\\\"\\\",\\\"targetLifecycleState\\\":8,\\\"lifecycleState\\\":8},{\\\"appId\\\":\\\"uktv\\\",\\\"appInstanceId\\\":\\\"67fa75b6-0c85-43d4-a591-fd29e7214be5\\\",\\\"activeSessionId\\\":\\\"\\\",\\\"targetLifecycleState\\\":8,\\\"lifecycleState\\\":8}]\"");
      if(status == Core::ERROR_NONE)
     {
         releaseResources();
@@ -3035,28 +3035,28 @@ TEST_F(AppManagerTest, GetLoadedAppsCOMRPCSuccess)
     EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
     ).WillOnce([&](bool verbose, string& apps) {
         apps = R"([
-            {"appId":"NTV","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":7,"lifecycleState":7},
-            {"appId":"NexTennis","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
-            {"appId":"uktv","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":5,"lifecycleState":5},
-            {"appId":"YouTube","appInstanceID":"12345678-1234-1234-1234-123456789012","activeSessionId":"","targetLifecycleState":4,"lifecycleState":4},
-            {"appId":"Netflix","appInstanceID":"87654321-4321-4321-4321-210987654321","activeSessionId":"","targetLifecycleState":3,"lifecycleState":3},
-            {"appId":"Spotify","appInstanceID":"abcdefab-cdef-abcd-efab-cdefabcdefab","activeSessionId":"","targetLifecycleState":2,"lifecycleState":2},
-            {"appId":"Hulu","appInstanceID":"fedcbafe-dcba-fedc-ba98-7654321fedcb","activeSessionId":"","targetLifecycleState":1,"lifecycleState":1},
-            {"appId":"AmazonPrime","appInstanceID":"12345678-90ab-cdef-1234-567890abcdef","activeSessionId":"","targetLifecycleState":0,"lifecycleState":0}
+            {"appId":"NTV","type":"INTERACTIVE_APP","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":7,"lifecycleState":7},
+            {"appId":"NexTennis","type":"INTERACTIVE_APP","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
+            {"appId":"uktv","type":"INTERACTIVE_APP","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":5,"lifecycleState":5},
+            {"appId":"YouTube","type":"INTERACTIVE_APP","appInstanceID":"12345678-1234-1234-1234-123456789012","activeSessionId":"","targetLifecycleState":4,"lifecycleState":4},
+            {"appId":"Netflix","type":"INTERACTIVE_APP","appInstanceID":"87654321-4321-4321-4321-210987654321","activeSessionId":"","targetLifecycleState":3,"lifecycleState":3},
+            {"appId":"Spotify","type":"INTERACTIVE_APP","appInstanceID":"abcdefab-cdef-abcd-efab-cdefabcdefab","activeSessionId":"","targetLifecycleState":2,"lifecycleState":2},
+            {"appId":"Hulu","type":"INTERACTIVE_APP","appInstanceID":"fedcbafe-dcba-fedc-ba98-7654321fedcb","activeSessionId":"","targetLifecycleState":1,"lifecycleState":1},
+            {"appId":"AmazonPrime","type":"INTERACTIVE_APP","appInstanceID":"12345678-90ab-cdef-1234-567890abcdef","activeSessionId":"","targetLifecycleState":0,"lifecycleState":0}
         ])";
         return Core::ERROR_NONE;
     });
     std::string apps;
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetLoadedApps(apps));
     EXPECT_STREQ(apps.c_str(),
-        "[{\"appId\":\"NTV\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":9,\"lifecycleState\":9},"
-        "{\"appId\":\"NexTennis\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":8,\"lifecycleState\":8},"
-        "{\"appId\":\"uktv\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"targetLifecycleState\":7,\"lifecycleState\":7},"
-        "{\"appId\":\"YouTube\",\"appInstanceId\":\"12345678-1234-1234-1234-123456789012\",\"activeSessionId\":\"\",\"targetLifecycleState\":6,\"lifecycleState\":6},"
-        "{\"appId\":\"Netflix\",\"appInstanceId\":\"87654321-4321-4321-4321-210987654321\",\"activeSessionId\":\"\",\"targetLifecycleState\":4,\"lifecycleState\":4},"
-        "{\"appId\":\"Spotify\",\"appInstanceId\":\"abcdefab-cdef-abcd-efab-cdefabcdefab\",\"activeSessionId\":\"\",\"targetLifecycleState\":3,\"lifecycleState\":3},"
-        "{\"appId\":\"Hulu\",\"appInstanceId\":\"fedcbafe-dcba-fedc-ba98-7654321fedcb\",\"activeSessionId\":\"\",\"targetLifecycleState\":2,\"lifecycleState\":2},"
-        "{\"appId\":\"AmazonPrime\",\"appInstanceId\":\"12345678-90ab-cdef-1234-567890abcdef\",\"activeSessionId\":\"\",\"targetLifecycleState\":1,\"lifecycleState\":1}]");
+        "[{\"appId\":\"NTV\",\"type\":\"INTERACTIVE_APP\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":9,\"lifecycleState\":9},"
+        "{\"appId\":\"NexTennis\",\"type\":\"INTERACTIVE_APP\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":8,\"lifecycleState\":8},"
+        "{\"appId\":\"uktv\",\"type\":\"INTERACTIVE_APP\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"targetLifecycleState\":7,\"lifecycleState\":7},"
+        "{\"appId\":\"YouTube\",\"type\":\"INTERACTIVE_APP\",\"appInstanceId\":\"12345678-1234-1234-1234-123456789012\",\"activeSessionId\":\"\",\"targetLifecycleState\":6,\"lifecycleState\":6},"
+        "{\"appId\":\"Netflix\",\"type\":\"INTERACTIVE_APP\",\"appInstanceId\":\"87654321-4321-4321-4321-210987654321\",\"activeSessionId\":\"\",\"targetLifecycleState\":4,\"lifecycleState\":4},"
+        "{\"appId\":\"Spotify\",\"type\":\"INTERACTIVE_APP\",\"appInstanceId\":\"abcdefab-cdef-abcd-efab-cdefabcdefab\",\"activeSessionId\":\"\",\"targetLifecycleState\":3,\"lifecycleState\":3},"
+        "{\"appId\":\"Hulu\",\"type\":\"INTERACTIVE_APP\",\"appInstanceId\":\"fedcbafe-dcba-fedc-ba98-7654321fedcb\",\"activeSessionId\":\"\",\"targetLifecycleState\":2,\"lifecycleState\":2},"
+        "{\"appId\":\"AmazonPrime\",\"type\":\"INTERACTIVE_APP\",\"appInstanceId\":\"12345678-90ab-cdef-1234-567890abcdef\",\"activeSessionId\":\"\",\"targetLifecycleState\":1,\"lifecycleState\":1}]");
 
     if(status == Core::ERROR_NONE)
     {
