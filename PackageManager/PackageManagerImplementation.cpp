@@ -790,21 +790,19 @@ namespace Plugin {
 
     void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason)
     {
-        JsonArray list = JsonArray();
-        JsonObject obj;
-        obj["downloadId"] = id;
-        obj["fileLocator"] = locator;
-        if (reason != DownloadReason::NONE)
-            obj["failReason"] = getDownloadReason(reason);
-        list.Add(obj);
-        std::string jsonstr;
-        if (!list.ToString(jsonstr)) {
-            LOGERR("Failed to  stringify JsonArray");
-        }
+
+        std::list<Exchange::IPackageDownloader::PackageInfo> packageInfoList;
+        Exchange::IPackageDownloader::PackageInfo packageInfo;
+        packageInfo.downloadId = id;
+        packageInfo.fileLocator = locator;
+        packageInfo.reason = reason;
+        packageInfoList.emplace_back(packageInfo);
+
+        Exchange::IPackageDownloader::IPackageInfoIterator* packageInfoIterator = Core::Service<RPC::IteratorType<Exchange::IPackageDownloader::IPackageInfoIterator>>::Create<Exchange::IPackageDownloader::IPackageInfoIterator>(packageInfoList);
 
         mAdminLock.Lock();
         for (auto notification: mDownloaderNotifications) {
-            notification->OnAppDownloadStatus(jsonstr);
+            notification->OnAppDownloadStatus(packageInfoIterator);
             LOGTRACE();
         }
         mAdminLock.Unlock();

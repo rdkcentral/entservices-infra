@@ -27,6 +27,7 @@
 #include <interfaces/json/JsonData_PackageDownloader.h>
 #include <interfaces/json/JsonData_PackageInstaller.h>
 #include <interfaces/json/JsonData_PackageHandler.h>
+#include <chrono>
 
 #include "UtilsLogging.h"
 
@@ -66,11 +67,7 @@ namespace Plugin {
             {
             }
 
-            void OnAppDownloadStatus(const string& jsonresponse) override
-            {
-                LOGTRACE();
-                Exchange::JPackageDownloader::Event::OnAppDownloadStatus(mParent, jsonresponse);
-            }
+            void OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos) override;
             void OnAppInstallationStatus(const string& jsonresponse) override
             {
                 LOGTRACE();
