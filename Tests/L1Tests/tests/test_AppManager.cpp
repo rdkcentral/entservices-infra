@@ -187,7 +187,7 @@ protected:
                 }));
 
        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-           .WillByDefault(Return(-1));
+           .WillByDefault(::testing::Return(-1));
         
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mAppManagerImpl = Plugin::AppManagerImplementation::getInstance();
