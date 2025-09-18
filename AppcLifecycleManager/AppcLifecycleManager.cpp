@@ -68,8 +68,9 @@ const string AppcLifecycleManager::Initialize(PluginHost::IShell* service)
             _lifecycleManager->AddRef();
             // Register JSON-RPC bridge
             Exchange::JLifecycleManager::Register(*this, _lifecycleManager);
-        } else {
             SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager: Successfully acquired ILifecycleManager interface"))));
+        } else {
+            SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager: Failed to acquired ILifecycleManager interface"))));
             message = "AppcLifecycleManager: Failed to acquire ILifecycleManager interface";
         }
     } else {
@@ -119,9 +120,10 @@ void AppcLifecycleManager::Deactivated(RPC::IRemoteConnection* connection)
     }
 }
 
-void AppcLifecycleManager::get_settargetappstate(const JsonObject& params, JsonObject& response)
+
+void AppcLifecycleManager::SetTargetAppState(const std::string& appInstanceId, int32_t targetState, const std::string& launchIntent, JsonObject& response)
 {
-    SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager::get_settargetappstate called."))));
+    SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager::SetTargetAppState called."))));
 
     if (!_lifecycleManager) {
         SYSLOG(Logging::Error, (string(_T("ILifecycleManager not available"))));
@@ -130,25 +132,16 @@ void AppcLifecycleManager::get_settargetappstate(const JsonObject& params, JsonO
         return;
     }
 
-    WPEFramework::JsonData::LifecycleManager::SetTargetAppStateParamsData inputParams;
-    std::string jsonString;
-    params.ToString(jsonString);
-    inputParams.FromString(jsonString);
-
-    const string appInstanceId = inputParams.AppInstanceId.Value();
-    const auto targetState = inputParams.TargetLifecycleState.Value();
-    const string launchIntent = inputParams.LaunchIntent.Value();
-
-     LOGINFO("SetTargetAppState called with AppInstanceId: %s, TargetLifecycleState: %d, LaunchIntent: %s",
+    LOGINFO("SetTargetAppState called with AppInstanceId: %s, TargetLifecycleState: %d, LaunchIntent: %s",
             appInstanceId.c_str(), targetState, launchIntent.c_str());
-   
-    auto result = _lifecycleManager->SetTargetAppState(appInstanceId, targetState, launchIntent);
 
+    uint32_t result = _lifecycleManager->SetTargetAppState(appInstanceId, targetState, launchIntent);
     LOGINFO("SetTargetAppState returned: %d", result);
 
     response["success"] = (result == Core::ERROR_NONE);
     response["result"] = result;
 }
+
 
 } // namespace Plugin
 } // namespace WPEFramework
