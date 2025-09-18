@@ -511,6 +511,7 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DDS_FOUND=ON
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DPLUGIN_SCENESET=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
