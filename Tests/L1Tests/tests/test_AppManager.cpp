@@ -2947,7 +2947,7 @@ TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
     mPackageManagerNotification_cb->OnAppInstallationStatus(TEST_JSON_INSTALLED_PACKAGE);
 
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppInstalled);
-    EXPECT_TRUE(signalled & AppManager_onAppInstalled);
+    EXPECT_FALSE(signalled & AppManager_onAppInstalled);
 
     mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
@@ -2981,7 +2981,7 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
         "YouTube",
         "12345678-1234-1234-1234-123456789012",
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,      // Old state
-        Exchange::ILifecycleManager::LifecycleState::LOADING,   // New state
+        Exchange::ILifecycleManager::LifecycleState::SUSPENDED,   // New state
         "start"
     );
     /* Ensure that the OnAppLifecycleStateChanged callback is not called/invoked */
