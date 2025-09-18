@@ -120,8 +120,7 @@ void AppcLifecycleManager::Deactivated(RPC::IRemoteConnection* connection)
     }
 }
 
-
-void AppcLifecycleManager::SetTargetAppState(const std::string& appInstanceId, int32_t targetState, const std::string& launchIntent, JsonObject& response)
+void AppcLifecycleManager::SetTargetAppState(const std::string& appInstanceId, Exchange::ILifecycleManager::LifecycleState targetState, const std::string& launchIntent, JsonObject& response)
 {
     SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager::SetTargetAppState called."))));
 
