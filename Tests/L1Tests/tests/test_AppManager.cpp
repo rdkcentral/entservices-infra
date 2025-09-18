@@ -2947,7 +2947,7 @@ TEST_F(AppManagerTest, OnAppInstallationStatusChangedSuccess)
     mPackageManagerNotification_cb->OnAppInstallationStatus(TEST_JSON_INSTALLED_PACKAGE);
 
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppInstalled);
-    EXPECT_FALSE(signalled & AppManager_onAppInstalled);
+    EXPECT_TRUE(signalled & AppManager_onAppInstalled);
 
     mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
