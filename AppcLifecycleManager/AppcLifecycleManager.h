@@ -37,7 +37,7 @@ public:
 
 private:
     // JSON-RPC handler
-    void SetTargetAppState(const std::string& appInstanceId, int32_t targetState, const std::string& launchIntent, JsonObject& response);
+    void SetTargetAppState(const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState targetState, const std::string& launchIntent, JsonObject& response);
 
     PluginHost::IShell* _currentService;
     Exchange::ILifecycleManager* _lifecycleManager;
