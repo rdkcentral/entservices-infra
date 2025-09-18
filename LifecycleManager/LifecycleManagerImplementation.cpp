@@ -614,13 +614,44 @@ namespace WPEFramework
                         addStateTransitionRequest(context, "onAppRunning");
                     }
                 }
+                else if (Exchange::IRuntimeManager::RuntimeState::RUNTIME_STATE_TERMINATED == runtimeState) //container failed after starting and has terminated.
+                {
+                    ApplicationContext* context = getContext(appInstanceId, "");
+                    if (nullptr == context)
+                    {
+                        LOGERR("Received state change event for app which is not available");
+                    }
+                    else
+                    {
+                        //ignore failure event if app is already terminating
+                        if (context->getCurrentLifecycleState() != Exchange::ILifecycleManager::LifecycleState::TERMINATING)
+                        {
+                            LOGINFO("Received container stopped event from runtime manager for app[%s] unexpectedly", appInstanceId.c_str());
+                            addStateTransitionRequest(context, "onAppTerminating");
+                        }
+                    }
+                }
             }
             else if (eventName.compare("onFailure") == 0)
             {
                 string appInstanceId = data["appInstanceId"];
                 string errorCode = data["errorCode"];
                 LOGINFO("Received container failure event from runtime manager for app[%s] error[%s]", appInstanceId.c_str(), errorCode.c_str());
-                notifyOnFailure(appInstanceId, errorCode);
+                notifyOnFailure(appInstanceId, errorCode); //notify listeners
+                ApplicationContext* context = getContext(appInstanceId, "");
+                if (nullptr == context)
+                {
+                    LOGERR("Received failure event [%s] for app [%s] which is not available", errorCode.c_str(), appInstanceId.c_str());
+                }
+                else
+                {
+                    //ignore failure event if app is already terminating
+                    if (context->getCurrentLifecycleState() != Exchange::ILifecycleManager::LifecycleState::TERMINATING)
+                    {
+                        LOGINFO("Received container failure event from runtime manager for app[%s] error[%s]", appInstanceId.c_str(), errorCode.c_str());
+                        addStateTransitionRequest(context, "onAppTerminating");
+                    }
+                }
             }
             else if (eventName.compare("onStarted") == 0)
             {
