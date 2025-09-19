@@ -400,9 +400,7 @@ err_ret:
         bool RuntimeManagerImplementation::generate(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, std::string& dobbySpec)
         {
             DobbySpecGenerator generator;
-            generator.generate(config, runtimeConfigObject, dobbySpec);
-
-            return true;
+            return generator.generate(config, runtimeConfigObject, dobbySpec);
         }
 
         Exchange::IRuntimeManager::RuntimeState RuntimeManagerImplementation::getRuntimeState(const string& appInstanceId)
@@ -461,6 +459,7 @@ err_ret:
             ApplicationConfiguration config;
             config.mAppId = appId;
             config.mAppInstanceId = appInstanceId;
+            bool displayResult = false;
 
             JsonObject eventData;
             eventData["containerId"] = appInstanceId;
@@ -534,7 +533,7 @@ err_ret:
             {
 
                 mWindowManagerConnector->getDisplayInfo(appInstanceId, xdgRuntimeDir, waylandDisplay);
-                bool displayResult = mWindowManagerConnector->createDisplay(appInstanceId, waylandDisplay, uid, gid);
+                displayResult = mWindowManagerConnector->createDisplay(appInstanceId, waylandDisplay, uid, gid);
                 if(false == displayResult)
                 {
                     LOGERR("Failed to create display");
@@ -558,18 +557,19 @@ err_ret:
                 config.mWesterosSocketPath = westerosSocket;
             }
 
-            if (xdgRuntimeDir.empty() || waylandDisplay.empty())
+            if (xdgRuntimeDir.empty() || waylandDisplay.empty() || !displayResult)
             {
-                LOGERR("Missing required environment variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s",
+                LOGERR("Missing required environment variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s createDisplay %s",
                     xdgRuntimeDir.empty() ? "NOT FOUND" : xdgRuntimeDir.c_str(),
-                    waylandDisplay.empty() ? "NOT FOUND" : waylandDisplay.c_str());
-                status = Core::ERROR_GENERAL;
+                    waylandDisplay.empty() ? "NOT FOUND" : waylandDisplay.c_str(),
+                    displayResult ? "Success" : "Failed");
+                status = Core::ERROR_INVALID_PARAMETER;
             }
             /* Generate dobbySpec */
             else if (false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
             {
                 LOGERR("Failed to generate dobbySpec");
-                status = Core::ERROR_GENERAL;
+                status = Core::ERROR_INVALID_PARAMETER;
             }
             else
             {
@@ -607,6 +607,7 @@ err_ret:
                     else
                     {
                         LOGERR("appInstanceId is not found ");
+                        status = Core::ERROR_INVALID_PARAMETER;
                     }
                 }
                 else
@@ -615,6 +616,11 @@ err_ret:
                 }
             }
             mRuntimeManagerImplLock.Unlock();
+            if(status == Core::ERROR_INVALID_PARAMETER)
+            {
+                status = Core::ERROR_GENERAL;
+                notifyParameterValidationFailure(appInstanceId);
+            }
             return status;
         }
 
@@ -971,6 +977,15 @@ err_ret:
         void RuntimeManagerImplementation::onOCIContainerStateChangedEvent(std::string name, JsonObject& data)
         {
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_STATECHANGED, data);
+        }
+
+        void RuntimeManagerImplementation::notifyParameterValidationFailure(const string& appInstanceId)
+        {
+            JsonObject data;
+            data["containerId"] = getContainerId(appInstanceId);
+            data["errorCode"] = "ERROR_INVALID_PARAM";
+            data["eventName"] = "onInvalidParams";
+            dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERFAILED, data);
         }
 
     } /* namespace Plugin */
