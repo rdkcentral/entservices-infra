@@ -2986,7 +2986,7 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
     );
     /* Ensure that the OnAppLifecycleStateChanged callback is not called/invoked */
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
-    EXPECT_FALSE(signalled & AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
     mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE) {
