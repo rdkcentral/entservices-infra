@@ -36,10 +36,10 @@ namespace WPEFramework
     class RialtoConnector : public IStateObserver, public std::enable_shared_from_this<RialtoConnector>
     {
     public:
-        RialtoConnector() : isInitialized(false) {}
+        RialtoConnector() : m_isInitialized(false) {}
         virtual ~RialtoConnector() = default;
         void initialize();
-        bool initialized() { return isInitialized; }
+        bool initialized() { return m_isInitialized; }
         bool waitForStateChange(const std::string &appid, const RialtoServerStates &state, int timeoutMillis);
         bool createAppSession(const std::string &callsign, const std::string &displayName, const std::string &appId);
         bool resumeSession(const std::string &callsign);
@@ -52,7 +52,7 @@ namespace WPEFramework
         RialtoConnector &operator=(const RialtoConnector &) = delete; // No assignment
 
     private:
-        bool isInitialized;
+        bool m_isInitialized;
         std::mutex m_stateMutex;
         std::condition_variable m_stateCond;
         std::unique_ptr<IServerManagerService> m_serverManagerService;
