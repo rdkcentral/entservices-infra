@@ -4,10 +4,11 @@
 #include "Module.h"
 
 #include <interfaces/ILifecycleManager.h>
+#include <interfaces/IAppcLifecycleManager.h>
+#include <interfaces/json/JsonData_AppcLifecycleManager.h>
+#include <interfaces/json/JAppcLifecycleManager.h>
 #include <core/JSON.h>
 #include <string>
-#include <interfaces/json/JsonData_LifecycleManager.h>
-#include <interfaces/json/JLifecycleManager.h>
 #include "UtilsLogging.h"
 #include "tracing/Logging.h"
 
@@ -15,8 +16,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-
-class AppcLifecycleManager : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+class AppcLifecycleManager : public PluginHost::IPlugin, public PluginHost::JSONRPC, public Exchange::IAppcLifecycleManager {
 public:
     AppcLifecycleManager();
     ~AppcLifecycleManager() override;
@@ -26,19 +26,19 @@ public:
     void Deinitialize(PluginHost::IShell* service) override;
     string Information() const override;
     void Deactivated(RPC::IRemoteConnection* connection);
+    void SetTargetAppState(const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState targetState, const std::string& launchIntent, JsonObject& response) override;
 
     static AppcLifecycleManager* Instance() { return _instance; }
 
     BEGIN_INTERFACE_MAP(AppcLifecycleManager)
     INTERFACE_ENTRY(PluginHost::IPlugin)
     INTERFACE_ENTRY(PluginHost::IDispatcher)
+    INTERFACE_ENTRY(Exchange::IAppcLifecycleManager)
     END_INTERFACE_MAP
 
 
 private:
     // JSON-RPC handler
-    void SetTargetAppState(const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState targetState, const std::string& launchIntent, JsonObject& response);
-
     PluginHost::IShell* _currentService;
     Exchange::ILifecycleManager* _lifecycleManager;
     uint32_t _connectionId;
