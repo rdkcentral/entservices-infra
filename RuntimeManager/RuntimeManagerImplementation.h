@@ -34,6 +34,11 @@
 #include "DobbyEventListener.h"
 #include "UserIdManager.h"
 
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+#include "RialtoConnector.h"
+#define RIALTO_TIMEOUT_MILLIS 5000
+#endif
+
 namespace WPEFramework
 {
     namespace Plugin
@@ -164,6 +169,9 @@ namespace WPEFramework
                 WindowManagerConnector* mWindowManagerConnector;
                 DobbyEventListener *mDobbyEventListener;
                 UserIdManager* mUserIdManager;
+#ifdef  RIALTO_IN_DAC_FEATURE_ENABLED
+                std::shared_ptr<RialtoConnector>  rialtoConnector;
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
 
             private: /* internal methods */
                 void dispatchEvent(RuntimeEventType, const JsonValue &params);
