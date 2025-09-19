@@ -28,15 +28,12 @@ namespace WPEFramework
         {
 	}
 
-        ApplicationContext::ApplicationContext (std::string appId): mAppInstanceId(""), mAppId(std::move(appId)), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
+        ApplicationContext::ApplicationContext (std::string appId): mPendingStateTransition(false), mPendingStates(), mPendingEventName(""), mAppInstanceId(""), mAppId(std::move(appId)), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
         {
             mState = (void*) new UnloadedState(this);
             sem_init(&mReachedLoadingStateSemaphore, 0, 0);
-            sem_init(&mAppRunningSemaphore, 0, 0);
             sem_init(&mAppReadySemaphore, 0, 0);
-            sem_init(&mFirstFrameSemaphore, 0, 0);
             sem_init(&mFirstFrameAfterResumeSemaphore, 0, 0);
-            sem_init(&mAppTerminatingSemaphore, 0, 0);
         }
 
 	ApplicationKillParams::ApplicationKillParams(): mForce(false)
@@ -157,5 +154,6 @@ namespace WPEFramework
 	{
             return mKillParams;
 	}
+
     } /* namespace Plugin */
 } /* namespace WPEFramework */

@@ -3,6 +3,7 @@
 #include "ApplicationContext.h"
 #include <thread>
 #include <semaphore>
+#include <vector>
 
 namespace WPEFramework
 {
@@ -10,11 +11,12 @@ namespace WPEFramework
     {
         struct StateTransitionRequest
         {
-            StateTransitionRequest(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState state): mContext(context), mTargetState(state)
+            StateTransitionRequest(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState state): mContext(context), mTargetState(state), mStatePath()
             {
             }
             ApplicationContext* mContext;
             Exchange::ILifecycleManager::LifecycleState mTargetState;
+            std::vector<Exchange::ILifecycleManager::LifecycleState> mStatePath;
         };
     }
 }
