@@ -46,16 +46,23 @@ namespace WPEFramework
         firebolt::rialto::common::ServerManagerConfig config;
         config.sessionServerEnvVars = getEnvironmentVariables();
         m_serverManagerService = create(shared_from_this(), config);
-        isInitialized = true;
+        m_isInitialized = true;
     }
     bool RialtoConnector::createAppSession(const std::string &callsign, const std::string &displayName, const std::string &appId)
     {
-        LOGINFO(" Creating app session with callsign : '%s', display name : '%s', appid : '%s'", callsign.c_str(), displayName.c_str(), appId.c_str());
-
-        firebolt::rialto::common::AppConfig config = {appId, displayName};
-        return m_serverManagerService->initiateApplication(callsign,
+        LOGINFO("Creating app session with callsign : '%s', display name : '%s', appid : '%s'", callsign.c_str(), displayName.c_str(), appId.c_str());
+        if (!callsign.empty() && !displayName.empty() && ! appId.empty())
+        {
+           firebolt::rialto::common::AppConfig config = {appId, displayName};
+           return m_serverManagerService->initiateApplication(callsign,
                                                            RialtoServerStates::ACTIVE,
                                                            config);
+        }
+        else
+        {
+           LOGERR("Create app session failed..");
+           return false;
+        }
     }
     bool RialtoConnector::resumeSession(const std::string &callsign)
     {

@@ -570,12 +570,15 @@ err_ret:
                LOGWARN("Initializing rialto connector....");
                rialtoConnector->initialize();
             }
-            if (!rialtoConnector->createAppSession(appId,westerosSocket, appId))
+            if (rialtoConnector->createAppSession(appId,westerosSocket, appId))
             {
-               LOGWARN(" Rialto app session initialisation failed ");
-               status = Core::ERROR_GENERAL;
+               if (!rialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
+                {
+                  LOGWARN(" Rialto app session not ready. ");
+                  status = Core::ERROR_GENERAL;
+                }
             }
-            if (!rialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
+            else
             {
                LOGWARN(" Rialto app session not ready. ");
                status = Core::ERROR_GENERAL;
