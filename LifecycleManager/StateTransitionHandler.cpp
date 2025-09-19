@@ -76,7 +76,7 @@ namespace WPEFramework
                         bool success = StateHandler::changeState(*request, errorReason);
                         if (!success)
                         {
-                            printf("MADANA ERROR IN STATE TRANSITION ... %s\n",errorReason.c_str());
+                            printf("ERROR IN STATE TRANSITION ... %s\n",errorReason.c_str());
 			    fflush(stdout);
                             //TODO: Decide on what to do on state transition error
                             break;
