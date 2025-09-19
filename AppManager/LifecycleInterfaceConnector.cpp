@@ -52,6 +52,7 @@ namespace WPEFramework
         : mLifecycleManagerRemoteObject(nullptr),
           mLifecycleManagerStateRemoteObject(nullptr),
           mNotification(*this),
+          mAppStateChangeNotification(*this),
           mCurrentservice(nullptr),
           mAppIdAwaitingPause("")
         {
@@ -94,6 +95,7 @@ namespace WPEFramework
             {
                 LOGINFO("Created LifecycleManager Remote Object \n");
                 mLifecycleManagerRemoteObject->AddRef();
+                mLifecycleManagerRemoteObject->Register(&mAppStateChangeNotification);
 
                 LOGINFO("Created LifecycleManagerState Remote Object \n");
                 mLifecycleManagerStateRemoteObject->AddRef();
@@ -110,6 +112,7 @@ namespace WPEFramework
             ASSERT(nullptr != mLifecycleManagerRemoteObject );
             if(mLifecycleManagerRemoteObject )
             {
+                mLifecycleManagerRemoteObject->Unregister(&mAppStateChangeNotification);
                 mLifecycleManagerRemoteObject ->Release();
                 mLifecycleManagerRemoteObject = nullptr;
             }
@@ -771,6 +774,38 @@ End:
                     {
                         appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
                     }
+                }
+            }
+        }
+
+        void LifecycleInterfaceConnector::OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason)
+        {
+            string appInstanceId = "";
+            Exchange::IAppManager::AppLifecycleState currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+            AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
+            LOGINFO("OnAppStateChanged event triggered for appId %s: state=%d, errorReason=%s", appId.c_str(), static_cast<int>(state), errorReason.c_str());
+
+            if(nullptr == appManagerImplInstance)
+            {
+                LOGERR("Invalid AppManager Implementation Instance");
+            }
+            else
+            {
+                if (!appId.empty())
+                {
+                    auto it = appManagerImplInstance->mAppInfo.find(appId);
+                    if(it != appManagerImplInstance->mAppInfo.end())
+                    {
+                        appInstanceId = it->second.appInstanceId;
+                        currentAppState = it->second.appNewState;
+                    }
+                }
+
+                if(!errorReason.compare("ERROR_INVALID_PARAM"))
+                {
+                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
+                        currentAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN);
+                    LOGINFO("Notifyied error event for appId %s: currentAppState=%d", appId.c_str(), static_cast<int>(currentAppState));
                 }
             }
         }

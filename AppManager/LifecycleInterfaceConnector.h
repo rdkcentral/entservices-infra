@@ -63,6 +63,24 @@ namespace WPEFramework
                 private:
                     LifecycleInterfaceConnector& mParent;
             };
+            class AppStateChangeNotificationHandler : public Exchange::ILifecycleManager::INotification {
+
+                public:
+                    AppStateChangeNotificationHandler(LifecycleInterfaceConnector& parent) : mParent(parent){}
+                    ~AppStateChangeNotificationHandler(){}
+
+                    void OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason)
+                    {
+                        mParent.OnAppStateChanged(appId, state, errorReason);
+                    }
+
+                    BEGIN_INTERFACE_MAP(AppStateChangeNotificationHandler)
+                    INTERFACE_ENTRY(Exchange::ILifecycleManager::INotification)
+                    END_INTERFACE_MAP
+
+                private:
+                    LifecycleInterfaceConnector& mParent;
+            };
 
                 public/*members*/:
                     static LifecycleInterfaceConnector* _instance;
@@ -80,6 +98,7 @@ namespace WPEFramework
                     Core::hresult sendIntent(const string& appId, const string& intent);
                     Core::hresult getLoadedApps(string& apps);
                     void OnAppLifecycleStateChanged(const string& appId, const string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState newState, const Exchange::ILifecycleManager::LifecycleState oldState, const string& navigationIntent);
+                    void OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason);
                     Exchange::IAppManager::AppLifecycleState mapAppLifecycleState(Exchange::ILifecycleManager::LifecycleState state);
                     string GetAppInstanceId(const string& appId) const;
                     Core::hresult isAppLoaded(const string& appId, bool& loaded);
@@ -90,6 +109,7 @@ namespace WPEFramework
                     Exchange::ILifecycleManager *mLifecycleManagerRemoteObject;
                     Exchange::ILifecycleManagerState *mLifecycleManagerStateRemoteObject;
                     Core::Sink<NotificationHandler> mNotification;
+                    Core::Sink<AppStateChangeNotificationHandler> mAppStateChangeNotification;
                     PluginHost::IShell* mCurrentservice;
                     std::condition_variable mStateChangedCV;
                     std::mutex mStateMutex;
