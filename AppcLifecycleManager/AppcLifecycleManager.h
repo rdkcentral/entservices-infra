@@ -26,8 +26,7 @@ public:
     void Deinitialize(PluginHost::IShell* service) override;
     string Information() const override;
     void Deactivated(RPC::IRemoteConnection* connection);
-    void SetTargetAppState(const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState targetState, const std::string& launchIntent, JsonObject& response) override;
-
+        Core::hresult SetTargetAppState(const std::string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState targetState, const std::string& launchIntent) override;
     static AppcLifecycleManager* Instance() { return _instance; }
 
     BEGIN_INTERFACE_MAP(AppcLifecycleManager)

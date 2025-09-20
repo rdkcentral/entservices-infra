@@ -67,7 +67,7 @@ const string AppcLifecycleManager::Initialize(PluginHost::IShell* service)
         if (_lifecycleManager) {
             _lifecycleManager->AddRef();
             // Register JSON-RPC bridge
-            Exchange::JLifecycleManager::Register(*this, _lifecycleManager);
+            Exchange::JAppcLifecycleManager::Register(*this, _lifecycleManager);
             SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager: Successfully acquired ILifecycleManager interface"))));
         } else {
             SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager: Failed to acquired ILifecycleManager interface"))));
@@ -120,15 +120,13 @@ void AppcLifecycleManager::Deactivated(RPC::IRemoteConnection* connection)
     }
 }
 
-void AppcLifecycleManager::SetTargetAppState(const std::string& appInstanceId, Exchange::ILifecycleManager::LifecycleState targetState, const std::string& launchIntent, JsonObject& response)
+Core::hresult AppcLifecycleManager::SetTargetAppState(const std::string& appInstanceId, Exchange::ILifecycleManager::LifecycleState targetState, const std::string& launchIntent)
 {
     SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager::SetTargetAppState called."))));
 
     if (!_lifecycleManager) {
         SYSLOG(Logging::Error, (string(_T("ILifecycleManager not available"))));
-        response["success"] = false;
-        response["message"] = "ILifecycleManager not available";
-        return;
+        return Core::ERROR_UNAVAILABLE;
     }
 
     LOGINFO("SetTargetAppState called with AppInstanceId: %s, TargetLifecycleState: %d, LaunchIntent: %s",
@@ -137,8 +135,7 @@ void AppcLifecycleManager::SetTargetAppState(const std::string& appInstanceId, E
     uint32_t result = _lifecycleManager->SetTargetAppState(appInstanceId, targetState, launchIntent);
     LOGINFO("SetTargetAppState returned: %d", result);
 
-    response["success"] = (result == Core::ERROR_NONE);
-    response["result"] = result;
+    return (result == Core::ERROR_NONE) ? Core::ERROR_NONE : result;
 }
 
 
