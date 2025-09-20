@@ -107,9 +107,20 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
    
     Json::Value spec;
     spec["version"] = "1.1";
-    spec["memLimit"] = getSysMemoryLimit(config, runtimeConfig);
+    ssize_t memLimit = getSysMemoryLimit(config, runtimeConfig);
+    if(memLimit <= 0)
+    {
+        return false;
+    }
+    spec["memLimit"] = std::move(memLimit);
 
     Json::Value args(Json::arrayValue);
+
+    if (runtimeConfig.command.empty())
+    {
+        return false;
+    }
+
     std::string command ="";
     if(!runtimeConfig.runtimePath.empty())
     {
@@ -206,6 +217,11 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     else
     {
         spec["network"] = "private";
+    }
+
+    if ((config.mUserId ==0) || (config.mUserId >= 65535) || (config.mGroupId >= 65535))
+    {
+        return false;
     }
     Json::Value userObj;
     userObj["uid"] = config.mUserId;

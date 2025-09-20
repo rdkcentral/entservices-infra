@@ -168,6 +168,7 @@ namespace WPEFramework
             private: /* internal methods */
                 void dispatchEvent(RuntimeEventType, const JsonValue &params);
                 void Dispatch(RuntimeEventType event, const JsonValue params);
+                void notifyParameterValidationFailure(const string& appInstanceId);
 
                 friend class Job;
 
