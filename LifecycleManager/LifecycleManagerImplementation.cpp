@@ -575,7 +575,7 @@ namespace WPEFramework
             }
             eventData["appId"] = appId;
             eventData["appInstanceId"] = appInstanceId;
-            eventData["newLifecycleState"] = (uint32_t)Exchange::ILifecycleManager::LifecycleState::UNLOADED;
+            eventData["newLifecycleState"] = static_cast<uint32_t>(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
             eventData["errorReason"] = errorCode;
             dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_ONFAILURE, eventData);
             LOGINFO("Notify error event for appId[%s] appInstanceId[%s] error[%s]", appId.c_str(), appInstanceId.c_str(), errorCode.c_str());

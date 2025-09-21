@@ -799,13 +799,24 @@ End:
                         appInstanceId = it->second.appInstanceId;
                         currentAppState = it->second.appNewState;
                     }
+                    else
+                    {
+                        LOGERR("appId not found in database");
+                    }
                 }
 
-                if(!errorReason.compare("ERROR_INVALID_PARAM"))
+                if (!errorReason.empty())
                 {
-                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
-                        currentAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN);
-                    LOGINFO("Notifyied error event for appId %s: currentAppState=%d", appId.c_str(), static_cast<int>(currentAppState));
+                    if(!errorReason.compare("ERROR_INVALID_PARAM"))
+                    {
+                        appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
+                            currentAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN);
+                        LOGINFO("Notified error event for appId %s: currentAppState=%d", appId.c_str(), static_cast<int>(currentAppState));
+                    }
+                    else
+                    {
+                        LOGERR("Unhandled error : %s", errorReason.c_str());
+                    }
                 }
             }
         }

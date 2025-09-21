@@ -460,6 +460,7 @@ err_ret:
             config.mAppId = appId;
             config.mAppInstanceId = appInstanceId;
             bool displayResult = false;
+            bool notifyParamValidationError = false;
 
             JsonObject eventData;
             eventData["containerId"] = appInstanceId;
@@ -563,13 +564,15 @@ err_ret:
                     xdgRuntimeDir.empty() ? "NOT FOUND" : xdgRuntimeDir.c_str(),
                     waylandDisplay.empty() ? "NOT FOUND" : waylandDisplay.c_str(),
                     displayResult ? "Success" : "Failed");
-                status = Core::ERROR_INVALID_PARAMETER;
+                status = Core::ERROR_GENERAL;
+                notifyParamValidationError = true;
             }
             /* Generate dobbySpec */
             else if (false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
             {
                 LOGERR("Failed to generate dobbySpec");
-                status = Core::ERROR_INVALID_PARAMETER;
+                status = Core::ERROR_GENERAL;
+                notifyParamValidationError = true;
             }
             else
             {
@@ -607,7 +610,7 @@ err_ret:
                     else
                     {
                         LOGERR("appInstanceId is not found ");
-                        status = Core::ERROR_INVALID_PARAMETER;
+                        notifyParamValidationError = true;
                     }
                 }
                 else
@@ -616,9 +619,8 @@ err_ret:
                 }
             }
             mRuntimeManagerImplLock.Unlock();
-            if(status == Core::ERROR_INVALID_PARAMETER)
+            if(notifyParamValidationError)
             {
-                status = Core::ERROR_GENERAL;
                 notifyParameterValidationFailure(appInstanceId);
             }
             return status;

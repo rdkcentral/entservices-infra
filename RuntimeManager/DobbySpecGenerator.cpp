@@ -36,7 +36,7 @@ namespace WPEFramework
 namespace Plugin
 {
 
-namespace 
+namespace
 {
     #define XDG_RUNTIME_DIR "/tmp"
 }
@@ -104,23 +104,20 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
         parameters.FromString(resultSpec.c_str());
         return true;
     }
-   
-    Json::Value spec;
-    spec["version"] = "1.1";
+
     ssize_t memLimit = getSysMemoryLimit(config, runtimeConfig);
-    if(memLimit <= 0)
+    /*mandatory parameter check*/
+    if((memLimit <= 0) || runtimeConfig.command.empty() || (config.mUserId ==0))
     {
+        LOGERR("Invalid mandatory parameter: Mem Limit=%d, Command=%s UserId %d", memLimit, runtimeConfig.command.c_str(), config.mUserId);
         return false;
     }
+
+    Json::Value spec;
+    spec["version"] = "1.1";
     spec["memLimit"] = std::move(memLimit);
 
     Json::Value args(Json::arrayValue);
-
-    if (runtimeConfig.command.empty())
-    {
-        return false;
-    }
-
     std::string command ="";
     if(!runtimeConfig.runtimePath.empty())
     {
@@ -146,9 +143,9 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     Json::Value vpuObj;
     vpuObj["enable"] = getVpuEnabled(config, runtimeConfig);
     spec["vpu"] = std::move(vpuObj);
-    
+
     //TODO CHECK FOR OPTIMIZATION
-    std::list<std::string> dbusRequiringApps = mAIConfiguration->getAppsRequiringDBus(); 
+    std::list<std::string> dbusRequiringApps = mAIConfiguration->getAppsRequiringDBus();
     for (auto it = dbusRequiringApps.begin(); it != dbusRequiringApps.end(); ++it)
     {
         std::string appId = *it;
@@ -218,11 +215,6 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     {
         spec["network"] = "private";
     }
-
-    if ((config.mUserId ==0) || (config.mUserId >= 65535) || (config.mGroupId >= 65535))
-    {
-        return false;
-    }
     Json::Value userObj;
     userObj["uid"] = config.mUserId;
     userObj["gid"] = config.mGroupId;
@@ -250,7 +242,7 @@ Json::Value DobbySpecGenerator::createEnvVars(const ApplicationConfiguration& co
 {
     Json::Value env(Json::arrayValue);
     env.append(std::string("APPLICATION_NAME=") + config.mAppId);
-    
+
      //TODO YET TO ANALYZE SUPPORT APPLICATION_LAUNCH_PARAMETERS
      //TODO YET TO ANALYZE SUPPORT APPLICATION_LAUNCH_METHOD
      //TODO YET TO ANALYZE SUPPORT APPLICATION_TOKEN
@@ -288,7 +280,7 @@ Json::Value DobbySpecGenerator::createEnvVars(const ApplicationConfiguration& co
        {
            env.append("WESTEROS_SINK_USE_ESSRMGR=1");
        }
-   }	     
+   }
 
    if (runtimeConfig.dial)
    {
@@ -352,7 +344,7 @@ Json::Value DobbySpecGenerator::createMounts(const ApplicationConfiguration& con
                                (MS_BIND | MS_RDONLY | MS_NOSUID | MS_NODEV)));
 
     mounts.append(createPrivateDataMount(runtimeConfig));
-    
+
     createFkpsMounts(config, runtimeConfig, mounts);
 
     if (!config.mWesterosSocketPath.empty())
@@ -444,7 +436,7 @@ Json::Value DobbySpecGenerator::createBindMount(const std::string& source,
     }
 
     mount["options"] = std::move(mountOptions);
-    
+
     return mount;
 }
 
@@ -501,7 +493,7 @@ bool DobbySpecGenerator::getVpuEnabled(const ApplicationConfiguration& config, c
         if ((*it).compare(config.mAppId) == 0)
 	{
             isBlackListed = true;
-            break;	    
+            break;
 	}
     }
     return !isBlackListed;
@@ -683,7 +675,7 @@ void DobbySpecGenerator::populateClassicPlugins(const ApplicationConfiguration& 
     Json::Value pluginsArray(Json::arrayValue);
     // enable the logging plugin
     pluginsArray.append(createEthanLogPlugin(config, runtimeConfig));
-    
+
     //TODO SUPPORT Runtime config need to have requiresDrm parameter
     /*
     if (!usingRialto)
@@ -694,7 +686,7 @@ void DobbySpecGenerator::populateClassicPlugins(const ApplicationConfiguration& 
             pluginsArray.append(createOpenCDMPlugin(config, runtimeConfig));
         }
     }
-    */    
+    */
     pluginsArray.append(createOpenCDMPlugin(config, runtimeConfig));
 
     //TODO SUPPORT Runtime config need to have multicastSocket, multicastForward,NatHolePunch capability parameter
@@ -924,7 +916,7 @@ void DobbySpecGenerator::createFkpsMounts(const ApplicationConfiguration& config
     const std::string fkpsPathPrefix("/opt/drm/");
     for (std::list<std::string>::iterator it=fkpsFiles.begin(); it!=fkpsFiles.end(); ++it)
     {
-	std::string fkpsFile = *it;      
+	std::string fkpsFile = *it;
         const std::string fkpsFilePath = fkpsPathPrefix + fkpsFile;
 
         // check if the file exists
