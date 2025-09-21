@@ -195,6 +195,7 @@ namespace WPEFramework
 
     void USBMassStorage::Notification::OnDeviceMounted(const Exchange::IUSBMassStorage::USBStorageDeviceInfo &deviceInfo, Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator* const mountPoints)
     {
+        printf("OnDeviceMounted called for Device: %s\n", deviceInfo.deviceName.c_str());
         Core::JSON::ArrayType<JsonData::USBMassStorage::USBStorageMountInfoData> mountPointsArray;
         JsonData::USBMassStorage::USBStorageDeviceInfoData jsonDeviceInfo;
 
