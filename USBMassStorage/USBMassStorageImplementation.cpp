@@ -524,6 +524,7 @@ namespace Plugin {
                 if (itr != usbStorageDeviceInfo.end())
                 {
                     USBStorageDeviceInfo storageDeviceInfo = *itr;
+                    printf("Device path[%s] Name[%s]\n",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str());
                     if ( nullptr == USBMassStorageImplementation::_instance )
                     {
                         LOGERR("instance is null");
