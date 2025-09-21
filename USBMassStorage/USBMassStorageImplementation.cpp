@@ -179,6 +179,7 @@ namespace Plugin {
 
     bool USBMassStorageImplementation::DeviceMount(const USBStorageDeviceInfo &storageDeviceInfo)
     {
+        printf("3.DeviceMount:Getting Mount Points for Device: %s\n", storageDeviceInfo.deviceName.c_str());
         ifstream partitionsFile("/proc/partitions");
         std::vector<std::string> partitions;
         USBStorageMountFlags mountFlags = USBStorageMountFlags::READ_WRITE;
@@ -512,6 +513,7 @@ namespace Plugin {
         {
             printf("1.GetMountPoints:Getting Mount Points for Device: %s\n", deviceName.c_str());
             auto it = USBMassStorageImplementation::_instance->usbStorageMountInfo.find(deviceName);
+            printf("Mount info list size: %zu\n", USBMassStorageImplementation::_instance->usbStorageMountInfo.size());
             if (it == USBMassStorageImplementation::_instance->usbStorageMountInfo.end())
             {
                 auto itr = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [deviceName](const USBStorageDeviceInfo& item){
