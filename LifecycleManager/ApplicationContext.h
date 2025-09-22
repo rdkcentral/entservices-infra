@@ -95,9 +95,6 @@ namespace WPEFramework
                 sem_t mFirstFrameSemaphore;
                 sem_t mFirstFrameAfterResumeSemaphore;
                 sem_t mAppTerminatingSemaphore;
-                sem_t mReachedLoadingStateSemaphore;
-                sem_t mAppReadySemaphore;
-                sem_t mFirstFrameAfterResumeSemaphore;
                 bool mPendingStateTransition;
                 std::vector<Exchange::ILifecycleManager::LifecycleState> mPendingStates; 
                 Exchange::ILifecycleManager::LifecycleState mPendingOldState; 

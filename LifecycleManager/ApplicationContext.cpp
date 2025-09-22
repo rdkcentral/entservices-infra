@@ -29,20 +29,20 @@ namespace WPEFramework
 	}
 
         ApplicationContext::ApplicationContext (std::string appId)
-        : mPendingStateTransition(false),
-	  mPendingStates(),
-	  mPendingEventName(""),
-	  mAppInstanceId(""),
-          mAppId(std::move(appId)),
-          mLastLifecycleStateChangeTime(),
-          mActiveSessionId(""),
-          mTargetLifecycleState(),
-          mMostRecentIntent(""),
-          mState(nullptr),
-          mStateChangeId(0),
+        : mPendingStateTransition(false)
+        , mPendingStates()
+        , mPendingEventName("")
+        , mAppInstanceId("")
+        , mAppId(std::move(appId))
+        , mLastLifecycleStateChangeTime()
+        , mActiveSessionId("")
+        , mTargetLifecycleState()
+        , mMostRecentIntent("")
+        , mState(nullptr)
+        , mStateChangeId(0)
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-          mRequestTime(0),
-          mRequestType(REQUEST_TYPE_NONE)
+        , mRequestTime(0)
+        , mRequestType(REQUEST_TYPE_NONE)
 #endif
         {
             mState = (void*) new UnloadedState(this);
