@@ -243,12 +243,15 @@ TEST_F(USBMassStorageInitializedTest, OnDeviceMounted_EventDispatch) {
     // Subscribe
     EVENT_SUBSCRIBE(0, _T("onDeviceMounted"), _T("org.rdk.USBMassStorage"), message);
 
-    // Create a temporary implementation instance and dispatch a synthetic mount event.
+    // Create a temporary implementation instance and dispatch a synthetic mount event using Job helper
     auto impl = Core::Service<Plugin::USBMassStorageImplementation>::Create<Plugin::USBMassStorageImplementation>();
     Plugin::USBMassStorageImplementation::USBStorageDeviceInfo storageInfo{}; // adjust to correct nested type if needed
     storageInfo.deviceName = "devMock";
     storageInfo.devicePath = "/dev/sdx";
-    impl->Dispatch(Plugin::USBMassStorageImplementation::USB_STORAGE_EVENT_MOUNT, storageInfo);
+
+    // Indirectly invoke private Dispatch via Job (friend access)
+    auto job = Plugin::USBMassStorageImplementation::Job::Create(impl, Plugin::USBMassStorageImplementation::USB_STORAGE_EVENT_MOUNT, storageInfo);
+    job->Dispatch();
 
     eventTriggered.Lock(100);
 
