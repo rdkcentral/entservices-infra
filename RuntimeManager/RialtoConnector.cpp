@@ -21,32 +21,19 @@
 #include <cstdlib>
 #include "RialtoConnector.h"
 
-extern char **environ;
 
 namespace WPEFramework
 {
-    namespace
-    {
-        std::list<std::string> getEnvironmentVariables()
-        {
-            std::list<std::string> environmentVariables;
-            char **envList = environ;
-            
-            for(;*envList;envList++)
-            {
-                environmentVariables.emplace_back(*envList);
-            }             
-           return environmentVariables;
-        }
-    } //anonymous namespace to contain private function.
- 
     void RialtoConnector::initialize()
     {
         LOGINFO(" Rialto Bridge version 1.1");
         firebolt::rialto::common::ServerManagerConfig config;
-        config.sessionServerEnvVars = getEnvironmentVariables();
+        mAIConfiguration = new WPEFramework::Plugin::AIConfiguration();
+        mAIConfiguration->initialize();
+        config.sessionServerEnvVars = mAIConfiguration->getEnvs();
         m_serverManagerService = create(shared_from_this(), config);
         m_isInitialized = true;
+        delete mAIConfiguration;
     }
     bool RialtoConnector::createAppSession(const std::string &callsign, const std::string &displayName, const std::string &appId)
     {
