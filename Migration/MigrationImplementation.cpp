@@ -97,7 +97,7 @@ namespace WPEFramework
             WDMP_STATUS wdmpstatus = getRFCParameter((char*)"thunderapi", TR181_MIGRATIONSTATUS, &param);
             if (WDMP_SUCCESS == wdmpstatus) {
                 migrationStatusInfo.migrationStatus = param.value;
-                LOGINFO("Current ENTOS Migration Status is: %s\n", migrationStatus.c_str());
+                LOGINFO("Current ENTOS Migration Status is: %s\n", migrationStatusInfo.migrationStatus.c_str());
                 status = true;
             }
             else {
