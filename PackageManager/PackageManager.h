@@ -66,11 +66,7 @@ namespace Plugin {
             {
             }
 
-            void OnAppDownloadStatus(const string& jsonresponse) override
-            {
-                LOGTRACE();
-                Exchange::JPackageDownloader::Event::OnAppDownloadStatus(mParent, jsonresponse);
-            }
+            void OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos) override;
             void OnAppInstallationStatus(const string& jsonresponse) override
             {
                 LOGTRACE();
