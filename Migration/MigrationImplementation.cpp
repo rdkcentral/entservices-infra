@@ -45,15 +45,15 @@ namespace WPEFramework
             LOGINFO("MigrationImplementation Destructor called");
         }
 
-        Core::hresult MigrationImplementation::GetBootTypeInfo(string& bootType)
+        Core::hresult MigrationImplementation::GetBootTypeInfo(BootTypeInfo& bootTypeInfo)
         {
             bool status = false;
             const char* filename = "/tmp/bootType";
             string propertyName = "BOOT_TYPE";
 
-            if (Utils::readPropertyFromFile(filename, propertyName, bootType))
+            if (Utils::readPropertyFromFile(filename, propertyName, bootTypeInfo.bootType))
             {
-                LOGINFO("Boot type changed to: %s, current OS Class: rdke\n", bootType.c_str());
+                LOGINFO("Boot type changed to: %s, current OS Class: rdke\n", bootTypeInfo.bootType.c_str());
                 status = true;
             }
             else
@@ -63,7 +63,7 @@ namespace WPEFramework
 	        return (status ? static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) : static_cast<uint32_t>(ERROR_FILE_IO));
         }
 
-        Core::hresult MigrationImplementation::SetMigrationStatus(const string& status, bool& success)
+        Core::hresult MigrationImplementation::SetMigrationStatus(const string& status, MigrationResult& migrationResult)
         {
             std::unordered_set<std::string> Status_Set = {"NOT_STARTED","NOT_NEEDED","STARTED","PRIORITY_SETTINGS_MIGRATED","DEVICE_SETTINGS_MIGRATED","CLOUD_SETTINGS_MIGRATED","APP_DATA_MIGRATED","MIGRATION_COMPLETED"};
 
@@ -86,24 +86,24 @@ namespace WPEFramework
 		        LOGERR("Invalid Migration Status\n");
 		        return (WPEFramework::Core::ERROR_INVALID_PARAMETER);
             }
-            success = true;
+            migrationResult.success = true;
             return WPEFramework::Core::ERROR_NONE;
         }
 
-        Core::hresult MigrationImplementation::GetMigrationStatus(string& migrationStatus, bool& success)
+        Core::hresult MigrationImplementation::GetMigrationStatus(MigrationStatusInfo& migrationStatusInfo)
         {
             bool status = false;
             RFC_ParamData_t param = {0};
             WDMP_STATUS wdmpstatus = getRFCParameter((char*)"thunderapi", TR181_MIGRATIONSTATUS, &param);
             if (WDMP_SUCCESS == wdmpstatus) {
-                migrationStatus = param.value;
+                migrationStatusInfo.migrationStatus = param.value;
                 LOGINFO("Current ENTOS Migration Status is: %s\n", migrationStatus.c_str());
                 status = true;
             }
             else {
                 LOGINFO("Failed to get RFC parameter for Migration Status \n");
             }
-			success = status;
+
             return (status ?  static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) :  static_cast<uint32_t>(ERROR_FILE_IO));
         }
     
