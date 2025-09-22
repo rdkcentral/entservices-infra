@@ -856,31 +856,22 @@ End:
 
                 LOGINFO("shouldNotify %d for Appstate %u",shouldNotify, newAppState);
 
+                if(shouldNotify)
+                {
+                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+                }
+
                 if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
                 {
                     appManagerImplInstance->handleOnAppUnloaded(appId, appInstanceId);
                 }
 
-                if (it != appManagerImplInstance->mAppInfo.end())
-                {
-                    shouldNotify = ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_LOADING) ||
-                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE) ||
-                                           ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED) &&
-                                            (it->second.currentAction == AppManagerImplementation::APP_ACTION_CLOSE)));
-
-                    LOGINFO("shouldNotify %d for Appstate %u",shouldNotify, newAppState);
-
-                    if(shouldNotify)
-                    {
-                        appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
-                    }
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                    AppManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(appId, newState);
+                AppManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(appId, newState);
 #endif
-                    if(Exchange::ILifecycleManager::LifecycleState::UNLOADED == newState)
-                    {
-                        removeAppInfoByAppId(appId);
-                    }
+                if(Exchange::ILifecycleManager::LifecycleState::UNLOADED == newState)
+                {
+                    removeAppInfoByAppId(appId);
                 }
             }
         }
