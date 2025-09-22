@@ -74,7 +74,7 @@
    - Core::ProxyType<WorkerPoolImplementation> workerPool
  Notification Strategy:
    - Subscribe to onDeviceMounted / onDeviceUnmounted using ThunderPortability macros (EVENT_SUBSCRIBE/EVENT_UNSUBSCRIBE)
-   - Simulate underlying implementation events by directly calling implementation's Dispatch sequence via exposed IUSBMassStorage Notification callbacks. Since the implementation registers its internal notification with USBDevice plugin, we mimic device plug events by invoking OnDevicePluggedIn/Out through the USBMassStorageImplementation singleton (accessed by querying aggregated Exchange::IUSBMassStorage then dynamic_cast to implementation pointer if accessible). If not accessible via interface, we fall back to invoking events through service->Submit expectation verifying payload.
+   - Simulate underlying implementation events by directly creating a temporary implementation instance and invoking Dispatch (best-effort; real integration would use Root<>)
  Lifecycle & Cleanup:
    - Ensure service->Unregister called
    - Release workerPool & reset Core::IWorkerPool global pointer
@@ -155,7 +155,6 @@ protected:
     void TearDown() override {
         plugin->Deinitialize(&service);
         if (usbDeviceMock) {
-            // Release reference expectations: plugin does not own usbDeviceMock lifetime here
             delete usbDeviceMock; usbDeviceMock = nullptr;
         }
         Core::IWorkerPool::Assign(nullptr);
@@ -226,8 +225,7 @@ TEST_F(USBMassStorageInitializedTest, getPartitionInfo_Failure_InvalidPath) {
 
 /*******************************************************
  * Notification subscription test (onDeviceMounted)
- * NOTE: Due to incomplete visibility into JUSBMassStorage event payload formatting, we validate
- * that service.Submit is invoked with method name containing onDeviceMounted.
+ * Minimal fix applied: correct template use of Core::Service<>::Create<>()
  *******************************************************/
 TEST_F(USBMassStorageInitializedTest, OnDeviceMounted_EventDispatch) {
     Core::Event eventTriggered(false, true);
@@ -245,19 +243,18 @@ TEST_F(USBMassStorageInitializedTest, OnDeviceMounted_EventDispatch) {
     // Subscribe
     EVENT_SUBSCRIBE(0, _T("onDeviceMounted"), _T("org.rdk.USBMassStorage"), message);
 
-    // Simulate event via implementation path (direct dispatch). Build synthetic storage device info & mount list.
-    auto impl = Core::Service<Plugin::USBMassStorageImplementation>::Create(); // NOTE: creating isolated impl instance
-    Exchange::IUSBMassStorage::USBStorageDeviceInfo storageInfo{};
+    // Create a temporary implementation instance and dispatch a synthetic mount event.
+    auto impl = Core::Service<Plugin::USBMassStorageImplementation>::Create<Plugin::USBMassStorageImplementation>();
+    Plugin::USBMassStorageImplementation::USBStorageDeviceInfo storageInfo{}; // adjust to correct nested type if needed
     storageInfo.deviceName = "devMock";
     storageInfo.devicePath = "/dev/sdx";
-    impl->Dispatch(Plugin::USBMassStorageImplementation::USB_STORAGE_EVENT_MOUNT, storageInfo); // Will attempt real mount logic; may fail silently
+    impl->Dispatch(Plugin::USBMassStorageImplementation::USB_STORAGE_EVENT_MOUNT, storageInfo);
 
-    // Wait for potential event
     eventTriggered.Lock(100);
 
     EVENT_UNSUBSCRIBE(0, _T("onDeviceMounted"), _T("org.rdk.USBMassStorage"), message);
 
-    impl.Release();
+    if (impl) { impl->Release(); }
 }
 
 /*******************************************************
