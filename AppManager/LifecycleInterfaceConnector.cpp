@@ -856,10 +856,6 @@ End:
 
                 LOGINFO("shouldNotify %d for Appstate %u",shouldNotify, newAppState);
 
-                if(shouldNotify)
-                {
-                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
-                }
                 if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
                 {
                     appManagerImplInstance->handleOnAppUnloaded(appId, appInstanceId);
