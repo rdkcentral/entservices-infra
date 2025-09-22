@@ -38,6 +38,17 @@
 
 #include "HttpClient.h"
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+#include <interfaces/ITelemetryMetrics.h>
+
+#define TELEMETRY_MARKER_LAUNCH_TIME             "OverallLaunchTime_split"
+#define TELEMETRY_MARKER_CLOSE_TIME              "AppCloseTime_split"
+#define TELEMETRY_MARKER_INSTALL_TIME            "InstallTime_split"
+#define TELEMETRY_MARKER_INSTALL_ERROR           "InstallError_split"
+#define TELEMETRY_MARKER_UNINSTALL_TIME          "UninstallTime_split"
+#define TELEMETRY_MARKER_UNINSTALL_ERROR         "UninstallError_split"
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
 namespace WPEFramework {
 namespace Plugin {
     typedef Exchange::IPackageDownloader::Reason DownloadReason;
@@ -124,6 +135,17 @@ namespace Plugin {
         typedef std::list<DownloadInfoPtr> DownloadQueue;
 
     public:
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        enum PackageFailureErrorCode{
+            ERROR_NONE,
+            ERROR_SIGNATURE_VERIFICATION_FAILURE,
+            ERROR_PACKAGE_MISMATCH_FAILURE,
+            ERROR_INVALID_METADATA_FAILURE,
+            ERROR_PERSISTENCE_FAILURE,
+            ERROR_VERSION_NOT_FOUND
+        };
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         PackageManagerImplementation();
         virtual ~PackageManagerImplementation();
 
@@ -225,6 +247,12 @@ namespace Plugin {
     Core::hresult createStorageManagerObject();
     void releaseStorageManagerObject();
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+    void recordAndPublishTelemetryData(const std::string& marker, const std::string& appId, time_t requestTime, PackageManagerImplementation::PackageFailureErrorCode errorCode);
+    time_t getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
+
     private:
         mutable Core::CriticalSection mAdminLock;
         std::list<Exchange::IPackageDownloader::INotification*> mDownloaderNotifications;
@@ -250,6 +278,9 @@ namespace Plugin {
         #endif
         PluginHost::IShell* mCurrentservice;
         Exchange::IStorageManager* mStorageManagerObject;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
     };
 } // namespace Plugin
 } // namespace WPEFramework
