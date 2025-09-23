@@ -24,6 +24,7 @@
 #include <time.h>
 #include <string>
 #include <semaphore>
+#include <vector>
 
 namespace WPEFramework
 {
@@ -72,13 +73,14 @@ namespace WPEFramework
                 uint32_t getStateChangeId();
                 ApplicationLaunchParams& getApplicationLaunchParams();
                 ApplicationKillParams& getApplicationKillParams();
-                sem_t mReachedLoadingStateSemaphore;
-                sem_t mAppRunningSemaphore;
-                sem_t mAppReadySemaphore;
-                sem_t mFirstFrameSemaphore;
-                sem_t mFirstFrameAfterResumeSemaphore;
-                sem_t mAppTerminatingSemaphore;
 
+                sem_t mReachedLoadingStateSemaphore;
+                sem_t mAppReadySemaphore;
+                sem_t mFirstFrameAfterResumeSemaphore;
+                bool mPendingStateTransition;
+                std::vector<Exchange::ILifecycleManager::LifecycleState> mPendingStates; 
+                Exchange::ILifecycleManager::LifecycleState mPendingOldState; 
+                std::string mPendingEventName;
 
 	    private:
                 std::string mAppInstanceId;

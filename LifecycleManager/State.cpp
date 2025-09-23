@@ -54,10 +54,9 @@ namespace WPEFramework
                 ApplicationContext* context = getContext();
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
                 ret = runtimeManagerHandler->run(context->getAppId(), context->getAppInstanceId(), launchParams.mLaunchArgs, launchParams.mTargetState, launchParams.mRuntimeConfigObject, errorReason);
-                printf("MADANA APPLICATION RUN RETURNS [%d] \n", ret);
-		fflush(stdout);
                 ret = true;
-                sem_wait(&context->mAppRunningSemaphore);
+                context->mPendingEventName = "onAppRunning";
+                context->mPendingStateTransition = true;
 	    }
             return ret;
         }
@@ -69,6 +68,8 @@ namespace WPEFramework
             if (Exchange::ILifecycleManager::LifecycleState::INITIALIZING == context->getCurrentLifecycleState())
 	    {
                 //TODO : Remove wait for now
+                //context->mPendingEventName = "";
+                //context->mPendingStateTransition = true;
                 //sem_wait(&context->mAppReadySemaphore);
                 ret = true;
 	    }
@@ -113,7 +114,8 @@ namespace WPEFramework
 		    }
 		    else
 		    {
-                        sem_wait(&context->mFirstFrameSemaphore);
+                        context->mPendingEventName = "onFirstFrame";
+                        context->mPendingStateTransition = true;
 		    }
                 }
 		else
@@ -199,7 +201,8 @@ namespace WPEFramework
                 }
                 if(success)
                 {
-                    sem_wait(&context->mAppTerminatingSemaphore);
+                    context->mPendingEventName = "onAppTerminating";
+                    context->mPendingStateTransition = true;
                 }
             }
             return success;
