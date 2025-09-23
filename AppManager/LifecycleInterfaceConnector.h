@@ -103,6 +103,7 @@ namespace WPEFramework
                     string GetAppInstanceId(const string& appId) const;
                     Core::hresult isAppLoaded(const string& appId, bool& loaded);
                     bool fileExists(const char* pFileName);
+                    Exchange::IAppManager::AppErrorReason mapErrorReason(const string& errorReason);
 
                 private:
                     mutable Core::CriticalSection mAdminLock;

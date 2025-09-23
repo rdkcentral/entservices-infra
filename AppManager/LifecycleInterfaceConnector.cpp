@@ -783,6 +783,7 @@ End:
             string appInstanceId = "";
             Exchange::IAppManager::AppLifecycleState currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
             AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
+            Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
             LOGINFO("OnAppStateChanged event triggered for appId %s: state=%d, errorReason=%s", appId.c_str(), static_cast<int>(state), errorReason.c_str());
 
             if(nullptr == appManagerImplInstance)
@@ -807,19 +808,39 @@ End:
 
                 if (!errorReason.empty())
                 {
-                    if(!errorReason.compare("ERROR_INVALID_PARAM"))
-                    {
-                        appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
-                            currentAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN);
-                        LOGINFO("Notified error event for appId %s: currentAppState=%d", appId.c_str(), static_cast<int>(currentAppState));
-                    }
-                    else
-                    {
-                        LOGERR("Unhandled error : %s", errorReason.c_str());
-                    }
+                    errorCode = mapErrorReason(errorReason);
+                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
+                        currentAppState, errorCode);
+                    LOGINFO("Notified error event for appId %s: currentAppState=%d errorCode %d", appId.c_str(), static_cast<int>(currentAppState), static_cast<int>(errorCode));
                 }
             }
         }
+
+        Exchange::IAppManager::AppErrorReason LifecycleInterfaceConnector::mapErrorReason(const string& errorReason)
+        {
+            Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+            if(!errorReason.empty())
+            {
+                if(!errorReason.compare("ERROR_CREATEDISPLAY"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
+                }
+                else if(!errorReason.compare("ERROR_DOBBYSPEC"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
+                }
+                else if(!errorReason.compare("ERROR_INVALIDPARAM"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
+                }
+                else
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
+                }
+            }
+            return errorCode;
+        }
+
 
         /* Returns appInstanceId for appId. Does not synchronize access to LoadedAppInfo.
          * Caller should take care about the synchronization.

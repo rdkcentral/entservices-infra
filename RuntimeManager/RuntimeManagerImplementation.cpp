@@ -460,7 +460,8 @@ err_ret:
             config.mAppId = appId;
             config.mAppInstanceId = appInstanceId;
             bool displayResult = false;
-            bool notifyParamValidationError = false;
+            bool notifyParamCheckFailure = false;
+            std::string errorCode = "";
 
             JsonObject eventData;
             eventData["containerId"] = appInstanceId;
@@ -565,14 +566,16 @@ err_ret:
                     waylandDisplay.empty() ? "NOT FOUND" : waylandDisplay.c_str(),
                     displayResult ? "Success" : "Failed");
                 status = Core::ERROR_GENERAL;
-                notifyParamValidationError = true;
+                errorCode = "ERROR_CREATEDISPLAY";
+                notifyParamCheckFailure = true;
             }
             /* Generate dobbySpec */
             else if (false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
             {
                 LOGERR("Failed to generate dobbySpec");
                 status = Core::ERROR_GENERAL;
-                notifyParamValidationError = true;
+                errorCode = "ERROR_DOBBYSPEC";
+                notifyParamCheckFailure = true;
             }
             else
             {
@@ -610,7 +613,8 @@ err_ret:
                     else
                     {
                         LOGERR("appInstanceId is not found ");
-                        notifyParamValidationError = true;
+                        errorCode = "ERROR_INVALIDPARAM";
+                        notifyParamCheckFailure = true;
                     }
                 }
                 else
@@ -619,9 +623,9 @@ err_ret:
                 }
             }
             mRuntimeManagerImplLock.Unlock();
-            if(notifyParamValidationError)
+            if(notifyParamCheckFailure)
             {
-                notifyParameterValidationFailure(appInstanceId);
+                notifyParameterCheckFailure(appInstanceId, errorCode);
             }
             return status;
         }
@@ -981,12 +985,12 @@ err_ret:
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_STATECHANGED, data);
         }
 
-        void RuntimeManagerImplementation::notifyParameterValidationFailure(const string& appInstanceId)
+        void RuntimeManagerImplementation::notifyParameterCheckFailure(const string& appInstanceId, const string& errorCode)
         {
             JsonObject data;
             data["containerId"] = getContainerId(appInstanceId);
-            data["errorCode"] = "ERROR_INVALID_PARAM";
-            data["eventName"] = "onInvalidParams";
+            data["errorCode"] = errorCode;
+            data["eventName"] = "onParameterCheckFailed";
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERFAILED, data);
         }
 
