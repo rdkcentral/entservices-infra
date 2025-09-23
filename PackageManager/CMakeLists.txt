@@ -51,6 +51,7 @@ endif()
 
 target_include_directories(${MODULE_NAME} PRIVATE
     ../helpers
+    ../common
     ${CURL_INCLUDE_DIR}
     ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/${NAMESPACE}/interfaces
     )
