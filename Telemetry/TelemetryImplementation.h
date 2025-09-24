@@ -173,10 +173,13 @@ namespace Plugin {
         Core::hresult LogApplicationEvent(const string& eventName, const string& eventValue) override;
         Core::hresult UploadReport() override;
         Core::hresult AbortReport() override;
+        Core::hresult SetOptOutTelemetry(const bool optOut, TelemetrySuccess& successResult) override;
+        Core::hresult IsOptOutTelemetry(bool& optOut, bool& success) override;
 
         void InitializePowerManager();
         void onPowerModeChanged(const PowerState currentState, const PowerState newState);
         void registerEventHandlers();
+        bool getFileContent(std::string fileName, std::string& fileContent);
 
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
