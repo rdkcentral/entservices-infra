@@ -29,23 +29,17 @@ namespace Plugin
 
 SERVICE_REGISTRATION(AppcLifecycleManager, APPC_LIFECYCLEMANAGER_API_VERSION_MAJOR, APPC_LIFECYCLEMANAGER_API_VERSION_MINOR, APPC_LIFECYCLEMANAGER_API_VERSION_PATCH);
 
-AppcLifecycleManager* AppcLifecycleManager::_instance = nullptr;
-
 AppcLifecycleManager::AppcLifecycleManager() :
     _currentService(nullptr), 
     _lifecycleManager(nullptr),
     _connectionId(0) 
 {
     SYSLOG(Logging::Startup, (string(_T("AppcLifecycleManager Constructor"))));
-    if (_instance == nullptr) {
-        _instance = this;
-    }
 }
 
 AppcLifecycleManager::~AppcLifecycleManager()
 {
     SYSLOG(Logging::Shutdown, (string(_T("AppcLifecycleManager Destructor"))));
-    _instance = nullptr;
 }
 
 const string AppcLifecycleManager::Initialize(PluginHost::IShell* service)

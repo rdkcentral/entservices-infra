@@ -27,7 +27,7 @@ public:
     string Information() const override;
     void Deactivated(RPC::IRemoteConnection* connection);
     Core::hresult SetTargetAppState(const string& appInstanceId, const Exchange::IAppcLifecycleManager::LifecycleState &targetState, const string& launchIntent) override;
-    static AppcLifecycleManager* Instance() { return _instance; }
+    // Removed singleton accessor
 
     BEGIN_INTERFACE_MAP(AppcLifecycleManager)
     INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -41,7 +41,6 @@ private:
     PluginHost::IShell* _currentService;
     Exchange::ILifecycleManager* _lifecycleManager;
     uint32_t _connectionId;
-    static AppcLifecycleManager* _instance;
 };
 
 } // namespace Plugin
