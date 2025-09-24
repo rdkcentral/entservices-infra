@@ -821,15 +821,15 @@ End:
             Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
             if(!errorReason.empty())
             {
-                if(!errorReason.compare("ERROR_CREATEDISPLAY"))
+                if(!errorReason.compare("ERROR_CREATE_DISPLAY"))
                 {
                     errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
                 }
-                else if(!errorReason.compare("ERROR_DOBBYSPEC"))
+                else if(!errorReason.compare("ERROR_DOBBY_SPEC"))
                 {
                     errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
                 }
-                else if(!errorReason.compare("ERROR_INVALIDPARAM"))
+                else if(!errorReason.compare("ERROR_INVALID_PARAM"))
                 {
                     errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
                 }

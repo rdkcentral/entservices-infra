@@ -566,7 +566,7 @@ err_ret:
                     waylandDisplay.empty() ? "NOT FOUND" : waylandDisplay.c_str(),
                     displayResult ? "Success" : "Failed");
                 status = Core::ERROR_GENERAL;
-                errorCode = "ERROR_CREATEDISPLAY";
+                errorCode = "ERROR_CREATE_DISPLAY";
                 notifyParamCheckFailure = true;
             }
             /* Generate dobbySpec */
@@ -574,7 +574,7 @@ err_ret:
             {
                 LOGERR("Failed to generate dobbySpec");
                 status = Core::ERROR_GENERAL;
-                errorCode = "ERROR_DOBBYSPEC";
+                errorCode = "ERROR_DOBBY_SPEC";
                 notifyParamCheckFailure = true;
             }
             else
@@ -613,7 +613,7 @@ err_ret:
                     else
                     {
                         LOGERR("appInstanceId is not found ");
-                        errorCode = "ERROR_INVALIDPARAM";
+                        errorCode = "ERROR_INVALID_PARAM";
                         notifyParamCheckFailure = true;
                     }
                 }
