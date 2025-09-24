@@ -144,6 +144,10 @@ if(PLUGIN_SCENESET)
     add_subdirectory(SceneSet)
 endif()
 
+if(PLUGIN_MIGRATION)
+	add_subdirectory(Migration)
+endif()
+
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
