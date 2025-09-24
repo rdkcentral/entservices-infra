@@ -286,7 +286,7 @@ namespace WPEFramework
             std::string filepath = preinstallDir + "/" + filename;
 
             PackageInfo packageInfo;
-            packageInfo.fileLocator = filepath;
+            packageInfo.fileLocator = filepath + "/package.wgt";
             LOGDBG("Found package folder: %s", filepath.c_str());
             if (mPackageManagerInstallerObject->GetConfigForPackage(packageInfo.fileLocator, packageInfo.packageId, packageInfo.version, packageInfo.configMetadata) == Core::ERROR_NONE)
             {
@@ -435,15 +435,12 @@ namespace WPEFramework
 
             LOGINFO("Installing package: %s, version: %s", pkg.packageId.c_str(), pkg.version.c_str());
 
-                // install the package.wgt file inside the folder
-                // packageWgtExists(pkg.fileLocator) //required??
-            std::string packageLocator = pkg.fileLocator + "/package.wgt";
             FailReason failReason;
             Exchange::IPackageInstaller::IKeyValueIterator* additionalMetadata = nullptr; // todo add additionalMetadata if needed
                 // additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(keyValues);
 
 
-            Core::hresult installResult = mPackageManagerInstallerObject->Install(pkg.packageId, pkg.version, additionalMetadata, packageLocator, failReason);
+            Core::hresult installResult = mPackageManagerInstallerObject->Install(pkg.packageId, pkg.version, additionalMetadata, pkg.fileLocator, failReason);
             if (installResult != Core::ERROR_NONE)
             {
                 LOGERR("Failed to install package: %s, version: %s, failReason: %s", pkg.packageId.c_str(), pkg.version.c_str(), getFailReason(failReason).c_str());
