@@ -18,7 +18,6 @@
 **/
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <mntent.h>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -676,14 +675,14 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     eventSignal();
 
     // TC-14: Set the target state of a loaded app with only required parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, ""));
     
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     eventSignal();
 
@@ -755,7 +754,7 @@ TEST_F(LifecycleManagerTest, unloadApp_onSpawnAppSuccess)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);  
     
@@ -825,7 +824,7 @@ TEST_F(LifecycleManagerTest, killApp_onSpawnAppSuccess)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);  
     
@@ -895,7 +894,7 @@ TEST_F(LifecycleManagerTest, closeApp_onUserExit)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore); 
 
@@ -944,7 +943,7 @@ TEST_F(LifecycleManagerTest, closeApp_onError)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);
 
@@ -993,7 +992,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);
 
@@ -1003,7 +1002,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandRun)
 
     eventSignal();
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
 
@@ -1061,7 +1060,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     sem_post(&context->mAppTerminatingSemaphore);
 
@@ -1071,7 +1070,7 @@ TEST_F(LifecycleManagerTest, closeApp_onKillandActivate)
 
     eventSignal();
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     sem_post(&context->mFirstFrameSemaphore);
 
@@ -1130,7 +1129,7 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl("", appId);
 
-    sem_post(&context->mAppRunningSemaphore);
+    sem_post(&context->mReachedLoadingStateSemaphore);
 
     sem_post(&context->mFirstFrameSemaphore);
 
@@ -1171,7 +1170,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
     
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
-    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mReachedLoadingStateSemaphore); 
 
     eventSignal();
 
@@ -1217,7 +1216,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
-    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mReachedLoadingStateSemaphore); 
 
     eventSignal();
  
@@ -1230,7 +1229,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 	// TC-27: Signal the Runtime Manager Event - onStateChanged
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
-    sem_wait(&context->mAppRunningSemaphore); 
+    sem_wait(&context->mReachedLoadingStateSemaphore); 
     
     releaseResources();
 } 
@@ -1264,7 +1263,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
-    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mReachedLoadingStateSemaphore); 
 
     eventSignal();
 
@@ -1309,7 +1308,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
-    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mReachedLoadingStateSemaphore); 
 
     eventSignal();
 
@@ -1360,7 +1359,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
-    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mReachedLoadingStateSemaphore); 
     sem_post(&context->mFirstFrameSemaphore); 
 
     eventSignal();
@@ -1411,7 +1410,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
-    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mReachedLoadingStateSemaphore); 
     sem_post(&context->mFirstFrameSemaphore); 
 
     eventSignal();
@@ -1462,7 +1461,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
 
     Plugin::ApplicationContext* context = mLifecycleManagerImpl->getContextImpl(appInstanceId, appId);
 
-    sem_post(&context->mAppRunningSemaphore); 
+    sem_post(&context->mReachedLoadingStateSemaphore); 
     sem_post(&context->mFirstFrameSemaphore); 
 
     eventSignal();
