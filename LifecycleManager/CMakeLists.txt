@@ -22,6 +22,7 @@ set(PLUGIN_LIFECYCLE_MANAGER_MODE "Local" CACHE STRING "Controls if the plugin s
 set(PLUGIN_LIFECYCLE_MANAGER_AUTOSTART false CACHE STRING "Automatically start LifecycleManager plugin")
 set(PLUGIN_LIFECYCLE_MANAGER_EXTRA_LIBRARIES "")
 set(PLUGIN_LIFECYCLE_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start LifecycleManager plugin")
+option(AIMANAGERS_TELEMETRY_METRICS_SUPPORT "AIMANAGERS_TELEMETRY_METRICS_SUPPORT" OFF)
 
 add_definitions(-DLIFECYCLE_MANAGER_API_VERSION_NUMBER_MAJOR=1)
 add_definitions(-DLIFECYCLE_MANAGER_API_VERSION_NUMBER_MINOR=0)
@@ -33,19 +34,29 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_library(${MODULE_NAME} SHARED
-        LifecycleManager.cpp
+set(PLUGIN_LIFECYCLE_MANAGER_SOURCES
+	LifecycleManager.cpp
 	LifecycleManagerImplementation.cpp
-        Module.cpp
-        ApplicationContext.cpp
-        RequestHandler.cpp
-        RippleHandler.cpp
-        RuntimeManagerHandler.cpp
-        WindowManagerHandler.cpp
-        State.cpp
+	Module.cpp
+	ApplicationContext.cpp
+	RequestHandler.cpp
+	RippleHandler.cpp
+	RuntimeManagerHandler.cpp
+	WindowManagerHandler.cpp
+	State.cpp
 	StateHandler.cpp
-        StateTransitionHandler.cpp
-        WebSocket.cpp
+	StateTransitionHandler.cpp
+	WebSocket.cpp )
+
+if (AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
+list( APPEND PLUGIN_LIFECYCLE_MANAGER_SOURCES
+	LifecycleManagerTelemetryReporting.cpp
+)
+add_definitions(-DENABLE_AIMANAGERS_TELEMETRY_METRICS)		
+endif (AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
+
+add_library(${MODULE_NAME} SHARED
+    ${PLUGIN_LIFECYCLE_MANAGER_SOURCES}
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
