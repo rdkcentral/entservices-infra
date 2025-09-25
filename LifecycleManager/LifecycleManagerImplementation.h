@@ -43,7 +43,8 @@ namespace WPEFramework
                 {
                     LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED,
                     LIFECYCLE_MANAGER_EVENT_RUNTIME,
-                    LIFECYCLE_MANAGER_EVENT_WINDOW
+                    LIFECYCLE_MANAGER_EVENT_WINDOW,
+                    LIFECYCLE_MANAGER_EVENT_ONFAILURE
                 };
 
                 class EXTERNAL Job : public Core::IDispatch
@@ -144,6 +145,7 @@ namespace WPEFramework
                 void dispatchEvent(EventNames, const JsonValue &params);
                 void Dispatch(EventNames event, const JsonValue params);
                 void handleRuntimeManagerEvent(const JsonObject &data);
+                void notifyOnFailure(const string& appInstanceId, const string& errorCode);
                 void handleStateChangeEvent(const JsonObject &data);
                 void handleWindowManagerEvent(const JsonObject &data);
                 ApplicationContext* getContext(const string& appInstanceId, const string& appId) const;
