@@ -49,7 +49,7 @@ namespace WPEFramework
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
         LOGWARN("Creating rialto connector");
         RialtoConnector *rialtoBridge = new RialtoConnector();
-        rialtoConnector = std::shared_ptr<RialtoConnector>(rialtoBridge);
+        mRialtoConnector = std::shared_ptr<RialtoConnector>(rialtoBridge);
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
         }
 
@@ -565,14 +565,10 @@ err_ret:
 
             bool legacyContainer = true;
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
-            if (!rialtoConnector->initialized())
+             mRialtoConnector->initialize();
+            if (mRialtoConnector->createAppSession(appId,westerosSocket, appId))
             {
-               LOGWARN("Initializing rialto connector....");
-               rialtoConnector->initialize();
-            }
-            if (rialtoConnector->createAppSession(appId,westerosSocket, appId))
-            {
-               if (!rialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
+               if (!mRialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
                 {
                   LOGWARN(" Rialto app session not ready. ");
                   status = Core::ERROR_GENERAL;
@@ -848,8 +844,8 @@ err_ret:
                 LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
             }
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
-            rialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
-            if (!rialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
+            mRialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
+            if (!mRialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
             {
                LOGERR("Rialto app session not ready. ");
                status = Core::ERROR_GENERAL;

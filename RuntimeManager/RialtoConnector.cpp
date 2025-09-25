@@ -26,14 +26,18 @@ namespace WPEFramework
 {
     void RialtoConnector::initialize()
     {
-        LOGINFO(" Rialto Bridge version 1.1");
+     if (!mInitialized)
+     {
+        WPEFramework::Plugin::AIConfiguration* mAIConfiguration;
+        LOGWARN("Initializing rialto connector.... Rialto Bridge version 1.1");
         firebolt::rialto::common::ServerManagerConfig config;
         mAIConfiguration = new WPEFramework::Plugin::AIConfiguration();
         mAIConfiguration->initialize();
         config.sessionServerEnvVars = mAIConfiguration->getEnvs();
-        m_serverManagerService = create(shared_from_this(), config);
-        m_isInitialized = true;
+        mServerManagerService  = create(shared_from_this(), config);
+        mInitialized = true;
         delete mAIConfiguration;
+     }
     }
     bool RialtoConnector::createAppSession(const std::string &callsign, const std::string &displayName, const std::string &appId)
     {
@@ -41,7 +45,7 @@ namespace WPEFramework
         if (!callsign.empty() && !displayName.empty() && ! appId.empty())
         {
            firebolt::rialto::common::AppConfig config = {appId, displayName};
-           return m_serverManagerService->initiateApplication(callsign,
+           return mServerManagerService ->initiateApplication(callsign,
                                                            RialtoServerStates::ACTIVE,
                                                            config);
         }
@@ -54,14 +58,14 @@ namespace WPEFramework
     bool RialtoConnector::resumeSession(const std::string &callsign)
     {
         if (RialtoServerStates::INACTIVE == getCurrentAppState(callsign))
-            return m_serverManagerService->changeSessionServerState(callsign,
+            return mServerManagerService ->changeSessionServerState(callsign,
                                                                     RialtoServerStates::ACTIVE);
         return false;
     }
     bool RialtoConnector::suspendSession(const std::string &callsign)
     {
         if (RialtoServerStates::ACTIVE == getCurrentAppState(callsign))
-            return m_serverManagerService->changeSessionServerState(callsign,
+            return mServerManagerService ->changeSessionServerState(callsign,
                                                                     RialtoServerStates::INACTIVE);
         return false;
     }
@@ -81,7 +85,7 @@ namespace WPEFramework
         RialtoServerStates state = getCurrentAppState(callsign);
         if (RialtoServerStates::ACTIVE == state ||
             RialtoServerStates::INACTIVE == state)
-            return m_serverManagerService->changeSessionServerState(callsign,
+            return mServerManagerService ->changeSessionServerState(callsign,
                                                                     RialtoServerStates::NOT_RUNNING);
         LOGINFO("Rialto server is not in active or running state. ");
         return false;
