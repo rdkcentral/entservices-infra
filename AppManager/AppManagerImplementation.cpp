@@ -875,16 +875,11 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
 Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const string& intent , const string& launchArgs)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-<<<<<<< HEAD
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
     time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
 #endif
     LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
-=======
->>>>>>> 3af5e12 (RDKEMW-7853 :[AI2.0]Error codes for launch/preload)
 
     mAdminLock.Lock();
     if (appId.empty())
@@ -1102,18 +1097,12 @@ Core::hresult AppManagerImplementation::SendIntent(const string& appId , const s
 Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const string& launchArgs ,string& error)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-
-<<<<<<< HEAD
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting = AppManagerTelemetryReporting::getInstance();
     time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
 #endif
     LOGINFO(" PreloadApp enter with appId %s", appId.c_str());
 
-=======
->>>>>>> 3af5e12 (RDKEMW-7853 :[AI2.0]Error codes for launch/preload)
     mAdminLock.Lock();
     if (appId.empty())
     {
