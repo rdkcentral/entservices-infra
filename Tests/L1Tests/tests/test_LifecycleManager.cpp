@@ -1101,7 +1101,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
                 return Core::ERROR_NONE;
           }));
 
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::TERMINATING;
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
     
