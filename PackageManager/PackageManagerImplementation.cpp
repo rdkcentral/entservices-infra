@@ -40,6 +40,9 @@ namespace Plugin {
         , mNextDownloadId(1000)
         , mCurrentservice(nullptr)
         , mStorageManagerObject(nullptr)
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        , mTelemetryMetricsObject(nullptr)
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
     {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
         mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
@@ -125,6 +128,17 @@ namespace Plugin {
                 result = Core::ERROR_NONE;
             }
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+            {
+                LOGERR("mTelemetryMetricsObject is null \n");
+            }
+            else
+            {
+                LOGINFO("created TelemetryMetrics Object");
+            }
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
             configStr = service->ConfigLine().c_str();
             LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
             PackageManagerImplementation::Configuration config;
@@ -156,6 +170,15 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        if (nullptr != mTelemetryMetricsObject)
+        {
+            LOGINFO("TelemetryMetrics object released\n");
+            mTelemetryMetricsObject->Release();
+            mTelemetryMetricsObject = nullptr;
+        }
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         mCurrentservice->Release();
         mCurrentservice = nullptr;
 
@@ -185,6 +208,91 @@ namespace Plugin {
             mStorageManagerObject = nullptr;
         }
     }
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+    time_t PackageManagerImplementation::getCurrentTimestamp()
+    {
+        timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (((time_t)ts.tv_sec * 1000) + ((time_t)ts.tv_nsec / 1000000));
+    }
+
+    void PackageManagerImplementation::recordAndPublishTelemetryData(const std::string& marker, const std::string& appId,
+                                                                     time_t requestTime, PackageManagerImplementation::PackageFailureErrorCode errorCode)
+    {
+        std::string telemetryMetrics = "";
+        JsonObject jsonParam;
+        int duration = 0;
+        bool shouldProcessMarker = true;
+        bool publish = true;
+
+        if (marker.empty()) {
+            LOGERR("Telemetry marker is empty");
+        }
+        else {
+            if (mTelemetryMetricsObject == nullptr) {
+                LOGINFO("mTelemetryMetricsObject is null, recreate it");
+                mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics");
+
+                if (mTelemetryMetricsObject == nullptr) {
+                    LOGERR("mTelemetryMetricsObject is still null");
+                }
+            }
+
+            if (mTelemetryMetricsObject != nullptr) {
+                time_t currentTime = getCurrentTimestamp();
+                duration = static_cast<int>(currentTime - requestTime);
+                LOGINFO("End time for %s: %lu", marker.c_str(), currentTime);
+
+                if (marker == TELEMETRY_MARKER_LAUNCH_TIME) {
+                    jsonParam["packageManagerLockTime"] = duration;
+                    publish = false;
+                }
+                else if (marker == TELEMETRY_MARKER_CLOSE_TIME) {
+                    jsonParam["packageManagerUnlockTime"] = duration;
+                    publish = false;
+                }
+                else if (marker == TELEMETRY_MARKER_INSTALL_TIME) {
+                    jsonParam["installTime"] = duration;
+                }
+                else if (marker == TELEMETRY_MARKER_UNINSTALL_TIME) {
+                    jsonParam["uninstallTime"] = duration;
+                }
+                else if (marker == TELEMETRY_MARKER_INSTALL_ERROR || marker == TELEMETRY_MARKER_UNINSTALL_ERROR) {
+                    jsonParam["errorCode"] = static_cast<int>(errorCode);
+                }
+                else {
+                    LOGERR("Unknown telemetry marker: %s", marker.c_str());
+                    shouldProcessMarker = false;
+                }
+
+                if (true == shouldProcessMarker) {
+                    jsonParam["appId"] = appId;
+
+                    if (jsonParam.ToString(telemetryMetrics)) {
+                        LOGINFO("Record appId %s marker %s duration %d", appId.c_str(), marker.c_str(), duration);
+
+                        if (mTelemetryMetricsObject->Record(appId, telemetryMetrics, marker) != Core::ERROR_NONE) {
+                            LOGERR("Telemetry Record Failed");
+                        }
+
+                        if (publish) {
+                            LOGINFO("Publish appId %s marker %s", appId.c_str(), marker.c_str());
+
+                            if (mTelemetryMetricsObject->Publish(appId, marker) != Core::ERROR_NONE) {
+                                LOGERR("Telemetry Publish Failed");
+                            }
+                        }
+                    } else {
+                        LOGERR("Failed to serialize telemetry metrics");
+                    }
+                }
+            }
+        }
+
+        return;
+    }
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
     // IPackageDownloader methods
     Core::hresult PackageManagerImplementation::Download(const string& url,
@@ -334,10 +442,18 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason)
     {
         Core::hresult result = Core::ERROR_GENERAL;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        PackageManagerImplementation::PackageFailureErrorCode packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE;
+        /* Get current timestamp at the start of Install for telemetry */
+        time_t requestTime = getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("Installing '%s' ver:'%s' fileLocator: '%s'", packageId.c_str(), version.c_str(), fileLocator.c_str());
         CHECK_CACHE()
         if (fileLocator.empty()) {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            recordAndPublishTelemetryData(TELEMETRY_MARKER_INSTALL_ERROR, packageId, requestTime, PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE);
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
             return Core::ERROR_INVALID_SIGNATURE;
         }
 
@@ -384,17 +500,35 @@ namespace Plugin {
                         state.failReason = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
                             FailReason::PACKAGE_MISMATCH_FAILURE : FailReason::SIGNATURE_VERIFICATION_FAILURE;
                         LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
+                            PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
                     }
                     #endif
                 } else {
                     LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
                     state.failReason = FailReason::PERSISTENCE_FAILURE;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
                 }
                 NotifyInstallStatus(packageId, version, state);
             }
         } else {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_VERSION_NOT_FOUND;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
         }
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        recordAndPublishTelemetryData(((PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE == packageFailureErrorCode) ? TELEMETRY_MARKER_INSTALL_TIME : TELEMETRY_MARKER_INSTALL_ERROR),
+                                                    packageId,
+                                                    requestTime,
+                                                    packageFailureErrorCode);
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         return result;
     }
@@ -403,6 +537,12 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_GENERAL;
         string version = GetVersion(packageId);
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        PackageManagerImplementation::PackageFailureErrorCode packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE;
+        /* Get current timestamp at the start of Uninstall for telemetry */
+        time_t requestTime = getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("Uninstalling id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
         CHECK_CACHE()
@@ -429,17 +569,37 @@ namespace Plugin {
                     if (pmResult == packagemanager::SUCCESS) {
                         result = Core::ERROR_NONE;
                     }
+                    else{
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
+                            PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+                    }
                     #endif
                     state.installState = InstallState::UNINSTALLED;
                     NotifyInstallStatus(packageId, version, state);
                 } else {
                     LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
                 }
             }
         } else {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_VERSION_NOT_FOUND;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         }
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        recordAndPublishTelemetryData(((PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE == packageFailureErrorCode) ? TELEMETRY_MARKER_UNINSTALL_TIME : TELEMETRY_MARKER_UNINSTALL_ERROR),
+                                                    packageId,
+                                                    requestTime,
+                                                    packageFailureErrorCode);
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
         return result;
     }
 
@@ -547,6 +707,11 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        /* Get current timestamp at the start of Lock for telemetry */
+        time_t requestTime = getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
         CHECK_CACHE()
 
@@ -587,6 +752,14 @@ namespace Plugin {
                 getRuntimeConfig(state.runtimeConfig, runtimeConfig);
                 unpackedPath = state.unpackedPath;
                 appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(state.additionalLocks);
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                recordAndPublishTelemetryData(TELEMETRY_MARKER_LAUNCH_TIME,
+                                                            packageId,
+                                                            requestTime,
+                                                            PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE);
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
             }
             #endif
 
@@ -656,6 +829,11 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        /* Get current timestamp at the start of Lock for telemetry */
+        time_t requestTime = getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
         CHECK_CACHE()
 
@@ -681,6 +859,16 @@ namespace Plugin {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
         }
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        if (Core::ERROR_NONE == result)
+        {
+            recordAndPublishTelemetryData(TELEMETRY_MARKER_CLOSE_TIME,
+                                                       packageId,
+                                                       requestTime,
+                                                       PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE);
+        }
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         return result;
     }
