@@ -59,14 +59,26 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-add_library(${PLUGIN_IMPLEMENTATION} SHARED
-    RuntimeManagerImplementation.cpp
-    DobbySpecGenerator.cpp
-    WindowManagerConnector.cpp
-    DobbyEventListener.cpp
-    UserIdManager.cpp
-    AIConfiguration.cpp
-    Module.cpp)
+set (RUNTIMEMANAGER_SOURCES)
+list(APPEND RUNTIMEMANAGER_SOURCES  RuntimeManagerImplementation.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  DobbySpecGenerator.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  WindowManagerConnector.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  DobbyEventListener.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  UserIdManager.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  AIConfiguration.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  Module.cpp)
+
+if (RIALTO_IN_DAC_FEATURE)
+  add_definitions("-DRIALTO_IN_DAC_FEATURE_ENABLED")
+  list(APPEND RUNTIMEMANAGER_SOURCES  RialtoConnector.cpp)
+endif(RIALTO_IN_DAC_FEATURE)
+
+
+add_library(${PLUGIN_IMPLEMENTATION} SHARED ${RUNTIMEMANAGER_SOURCES})
+
+if (RIALTO_IN_DAC_FEATURE)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins RialtoServerManager)
+endif(RIALTO_IN_DAC_FEATURE)
 
 if(AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
     message(STATUS "AIMANAGERS_TELEMETRY_METRICS_SUPPORT is enabled")
