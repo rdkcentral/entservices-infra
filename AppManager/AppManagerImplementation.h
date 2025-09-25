@@ -131,6 +131,17 @@ namespace Plugin {
             APP_EVENT_UNLOADED
         };
 
+        struct AppLaunchRequestParam{
+            string appId;
+            string launchArgs;
+            string intent;
+        };
+
+        struct AppManagerRequest{
+            CurrentAction mRequestAction;
+            std::shared_ptr<void> mRequestParam;
+        };
+
         private:
         class PackageManagerNotification : public Exchange::IPackageInstaller::INotification {
 
@@ -240,6 +251,10 @@ namespace Plugin {
         Exchange::IStorageManager* mStorageManagerRemoteObject;
         PluginHost::IShell* mCurrentservice;
         Core::Sink<PackageManagerNotification> mPackageManagerNotification;
+        std::thread mAppManagerWorkerThread;
+        std::mutex mAppManagerLock;
+        std::condition_variable mAppRequestListCV;
+        std::list<std::shared_ptr<AppManagerRequest>> mAppRequestList;
         Core::hresult fetchAppPackageList(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         void checkIsInstalled(const std::string& appId, bool& installed, const std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         Core::hresult packageLock(const string& appId, PackageInfo &packageData, Exchange::IPackageHandler::LockReason lockReason);
@@ -248,6 +263,7 @@ namespace Plugin {
         bool removeAppInfoByAppId(const string &appId);
         void OnAppInstallationStatus(const string& jsonresponse);
         std::string getInstallAppType(ApplicationType type);
+        void  AppManagerWorkerThread(void);
 
 
         void dispatchEvent(EventNames, const JsonObject &params);
