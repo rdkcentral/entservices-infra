@@ -37,6 +37,10 @@
 #include "DobbyEventListener.h"
 #include "UserIdManager.h"
 
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+#include "RialtoConnector.h"
+#define RIALTO_TIMEOUT_MILLIS 5000
+#endif
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
 #define TELEMETRY_MARKER_LAUNCH_TIME                         "OverallLaunchTime_split"
 #define TELEMETRY_MARKER_CLOSE_TIME                          "AppCloseTime_split"
@@ -206,6 +210,9 @@ namespace WPEFramework
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
 #endif
+#ifdef  RIALTO_IN_DAC_FEATURE_ENABLED
+                std::shared_ptr<RialtoConnector>  mRialtoConnector;
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
 
             private: /* internal methods */
                 void dispatchEvent(RuntimeEventType, const JsonValue &params);
