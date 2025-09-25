@@ -120,7 +120,7 @@ Core::hresult WindowManagerHandler::enableDisplayRender(std::string appInstanceI
 
 void WindowManagerHandler::WindowManagerNotification::OnReady(const std::string &client)
 {
-    printf("MADANA Received onReady event for app[%s] \n", client.c_str());
+    printf("Received onReady event for app[%s] \n", client.c_str());
     fflush(stdout);
     JsonObject eventData;
     eventData["appInstanceId"] = client;

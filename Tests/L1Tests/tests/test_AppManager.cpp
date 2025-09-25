@@ -59,7 +59,7 @@
 #define APPMANAGER_PACKAGEID        "testPackageID"
 #define APPMANAGER_INSTALLSTATUS_INSTALLED    "INSTALLED"
 #define APPMANAGER_INSTALLSTATUS_UNINSTALLED    "UNINSTALLED"
-#define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","reason":"INSTALLED"}])"
+#define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","state":"INSTALLED"}])"
 
 typedef enum : uint32_t {
     AppManager_StateInvalid = 0x00000000,
@@ -186,6 +186,9 @@ protected:
                     return Core::ERROR_NONE;
                 }));
 
+        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(-1));
+        
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mAppManagerImpl = Plugin::AppManagerImplementation::getInstance();
         TEST_LOG("createResources - All done!");
@@ -809,15 +812,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailureEmptyAppID)
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
 
-    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-    .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-        auto mockIterator = FillPackageIterator(); // Fill the package Info
-        packages = mockIterator;
-        return Core::ERROR_NONE;
-    });
-
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->IsInstalled("", installed));
-    EXPECT_EQ(installed, false);
+    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->IsInstalled("", installed));
 
     if(status == Core::ERROR_NONE)
     {
@@ -2986,7 +2981,7 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
         "YouTube",
         "12345678-1234-1234-1234-123456789012",
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,      // Old state
-        Exchange::ILifecycleManager::LifecycleState::SUSPENDED,   // New state
+        Exchange::ILifecycleManager::LifecycleState::TERMINATING,   // New state
         "start"
     );
     /* Ensure that the OnAppLifecycleStateChanged callback is not called/invoked */

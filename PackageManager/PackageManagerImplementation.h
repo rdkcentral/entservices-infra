@@ -62,7 +62,7 @@ namespace Plugin {
             Exchange::RuntimeConfig runtimeConfig;
             string gatewayMetadataPath;
             string unpackedPath;
-            FailReason failReason;
+            FailReason failReason = Exchange::IPackageInstaller::FailReason::NONE;
             std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
         };
 
@@ -133,8 +133,8 @@ namespace Plugin {
         Core::hresult Resume(const string &downloadId) override;
         Core::hresult Cancel(const string &downloadId) override;
         Core::hresult Delete(const string &fileLocator) override;
-        Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::Percent &percent);
-        Core::hresult GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB);
+        Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::ProgressInfo &progress);
+        Core::hresult GetStorageDetails(string &quotaKB, string &usedKB);
         Core::hresult RateLimit(const string &downloadId, const uint64_t &limit);
 
         Core::hresult Register(Exchange::IPackageDownloader::INotification* notification) override;
@@ -149,6 +149,7 @@ namespace Plugin {
         Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
         Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::InstallState &state) override;
+        Core::hresult GetConfigForPackage(const string &fileLocator, string& id, string &version, Exchange::RuntimeConfig& config) override;
 
         Core::hresult Register(Exchange::IPackageInstaller::INotification *sink) override;
         Core::hresult Unregister(Exchange::IPackageInstaller::INotification *sink) override;

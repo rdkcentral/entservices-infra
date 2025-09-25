@@ -294,12 +294,12 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, Percent &percent)
+    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, ProgressInfo &progress)
     {
         Core::hresult result = Core::ERROR_NONE;
 
         if (mInprogressDownload.get() != nullptr) {
-            percent.percent = mHttpClient->getProgress();
+            progress.progress = mHttpClient->getProgress();
         } else {
             result = Core::ERROR_GENERAL;
         }
@@ -307,7 +307,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB)
+    Core::hresult PackageManagerImplementation::GetStorageDetails(string &quotaKB, string &usedKB)
     {
         Core::hresult result = Core::ERROR_NONE;
         return result;
@@ -706,6 +706,28 @@ namespace Plugin {
         return result;
     }
 
+    Core::hresult PackageManagerImplementation::GetConfigForPackage(const string &fileLocator, string& id, string &version, Exchange::RuntimeConfig& config)
+    {
+        CHECK_CACHE()
+        Core::hresult result = Core::ERROR_GENERAL;
+
+        if (fileLocator.empty())
+        {
+            return Core::ERROR_INVALID_SIGNATURE;
+        }
+
+        #ifdef USE_LIBPACKAGE
+        packagemanager::ConfigMetaData metadata;
+        packagemanager::Result pmResult = packageImpl->GetFileMetadata(fileLocator, id, version, metadata);
+        if (pmResult == packagemanager::SUCCESS)
+        {
+            getRuntimeConfig(metadata, config);
+            result = Core::ERROR_NONE;
+        }
+        #endif
+        return result;
+    }
+
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
@@ -743,7 +765,7 @@ namespace Plugin {
             if (di == nullptr) {
                 LOGTRACE("Waiting ... ");
                 std::unique_lock<std::mutex> lock(mMutex);
-                cv.wait(lock);
+                cv.wait(lock, [this] { return done || (mDownloadQueue.size() > 0); });
             } else {
                 HttpClient::Status status = HttpClient::Status::Success;
                 int waitTime = 1;
@@ -790,21 +812,19 @@ namespace Plugin {
 
     void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason)
     {
-        JsonArray list = JsonArray();
-        JsonObject obj;
-        obj["downloadId"] = id;
-        obj["fileLocator"] = locator;
-        if (reason != DownloadReason::NONE)
-            obj["failReason"] = getDownloadReason(reason);
-        list.Add(obj);
-        std::string jsonstr;
-        if (!list.ToString(jsonstr)) {
-            LOGERR("Failed to  stringify JsonArray");
-        }
+
+        std::list<Exchange::IPackageDownloader::PackageInfo> packageInfoList;
+        Exchange::IPackageDownloader::PackageInfo packageInfo;
+        packageInfo.downloadId = id;
+        packageInfo.fileLocator = locator;
+        packageInfo.reason = reason;
+        packageInfoList.emplace_back(packageInfo);
+
+        Exchange::IPackageDownloader::IPackageInfoIterator* packageInfoIterator = Core::Service<RPC::IteratorType<Exchange::IPackageDownloader::IPackageInfoIterator>>::Create<Exchange::IPackageDownloader::IPackageInfoIterator>(packageInfoList);
 
         mAdminLock.Lock();
         for (auto notification: mDownloaderNotifications) {
-            notification->OnAppDownloadStatus(jsonstr);
+            notification->OnAppDownloadStatus(packageInfoIterator);
             LOGTRACE();
         }
         mAdminLock.Unlock();
@@ -817,8 +837,8 @@ namespace Plugin {
         obj["packageId"] = id;
         obj["version"] = version;
         obj["state"] = getInstallState(state.installState);
-        if (!((state.installState != InstallState::INSTALLED) || (state.installState != InstallState::UNINSTALLED) ||
-            (state.installState != InstallState::INSTALLING) || (state.installState != InstallState::UNINSTALLING))) {
+        if (!((state.installState == InstallState::INSTALLED) || (state.installState == InstallState::UNINSTALLED) ||
+            (state.installState == InstallState::INSTALLING) || (state.installState == InstallState::UNINSTALLING))) {
             obj["failReason"] = getFailReason(state.failReason);
         }
         list.Add(obj);
