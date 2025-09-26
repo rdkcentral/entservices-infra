@@ -1067,9 +1067,11 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
 
     string intent = "test.intent";
 
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
-
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::ACTIVE, launchIntent));
 
     eventSignal();
 
