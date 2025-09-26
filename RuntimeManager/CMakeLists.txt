@@ -24,6 +24,8 @@ set(PLUGIN_RUNTIME_MANAGER_AUTOSTART false CACHE STRING "Automatically start Run
 set(PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES "")
 set(PLUGIN_RUNTIME_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start RuntimeManager plugin")
 
+option(AIMANAGERS_TELEMETRY_METRICS_SUPPORT "AIMANAGERS_TELEMETRY_METRICS_SUPPORT" OFF)
+
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_MAJOR=1)
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_MINOR=0)
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_PATCH=0)
@@ -66,6 +68,11 @@ add_library(${PLUGIN_IMPLEMENTATION} SHARED
     AIConfiguration.cpp
     Module.cpp)
 
+if(AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
+    message(STATUS "AIMANAGERS_TELEMETRY_METRICS_SUPPORT is enabled")
+    add_definitions(-DENABLE_AIMANAGERS_TELEMETRY_METRICS)
+endif(AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
+
 include_directories(../helpers)
 
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
@@ -87,7 +94,14 @@ separate_arguments(RUNTIME_MANAGER_INCLUDES)
 include_directories(BEFORE ${RUNTIME_MANAGER_INCLUDES})
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
-    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES})
+    CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  
+    ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES})
+
+if(RDK_SERVICES_L1_TEST)
+    set(JSONCPP_INCLUDE_PATH "/usr/include/jsoncpp" CACHE PATH "Path to jsoncpp includes")
+    include_directories(BEFORE ${JSONCPP_INCLUDE_PATH})
+    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE jsoncpp curl)
+endif()
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)

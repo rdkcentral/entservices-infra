@@ -137,7 +137,15 @@ if(PLUGIN_PACKAGE_MANAGER)
 endif()
 
 if(PLUGIN_NATIVEJS)
-	add_subdirectory(NativeJS)
+    add_subdirectory(NativeJS)
+endif()
+
+if(PLUGIN_SCENESET)
+    add_subdirectory(SceneSet)
+endif()
+
+if(PLUGIN_TELEMETRYMETRICS)
+    add_subdirectory(TelemetryMetrics)
 endif()
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)

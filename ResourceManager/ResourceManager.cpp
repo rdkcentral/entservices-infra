@@ -29,6 +29,7 @@ static std::string sThunderSecurityToken;
 const string WPEFramework::Plugin::ResourceManager::RESOURCE_MANAGER_METHOD_SET_AV_BLOCKED = "setAVBlocked";
 const string WPEFramework::Plugin::ResourceManager::RESOURCE_MANAGER_METHOD_GET_BLOCKED_AV_APPLICATIONS = "getBlockedAVApplications";
 const string WPEFramework::Plugin::ResourceManager::RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE = "reserveTTSResource";
+const string WPEFramework::Plugin::ResourceManager::RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE_FOR_APPS = "reserveTTSResourceForApps";
 
 namespace WPEFramework {
     namespace {
@@ -55,6 +56,7 @@ namespace WPEFramework {
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_SET_AV_BLOCKED), &ResourceManager::setAVBlockedWrapper, this);
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_GET_BLOCKED_AV_APPLICATIONS), &ResourceManager::getBlockedAVApplicationsWrapper, this);
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE), &ResourceManager::reserveTTSResourceWrapper, this);
+	    Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE_FOR_APPS), &ResourceManager::reserveTTSResourceWrapperForApps, this);
             mEssRMgr = nullptr;
 
 #ifdef ENABLE_ERM
@@ -190,6 +192,43 @@ namespace WPEFramework {
                 response["message"] = "ERM not enabled";
             }
             response["clients"]=appsList;
+            returnResponse(status);
+        }
+
+	uint32_t ResourceManager::reserveTTSResourceWrapperForApps(const JsonObject &parameters, JsonObject &response)
+        {
+            LOGINFOMETHOD();
+            bool status = false;
+
+            if ((parameters.HasLabel("appids")) && (false == mDisableReserveTTS))
+            {
+                std::vector<std::string> apps;
+		auto appArray = parameters["appids"].Array();
+                for (uint32_t i = 0; i < appArray.Length(); ++i) {
+                     apps.push_back(appArray[i].String());
+                }
+                for (const auto& s : apps) {
+		     std::cout << s << " ";
+		}
+		std::cout << std::endl;
+
+                status = reserveTTSResourceForApps(apps);
+            }
+            else
+            {
+                if (mDisableReserveTTS)
+                {
+                    status = true;
+                    response["message"] = "ReserveTTS RFC is disabled";
+                }
+                else
+                {
+                    std::string jsonstr;
+                    parameters.ToString(jsonstr);
+                    std::cout<<"ERROR: appids are required in "<< jsonstr << std::endl;
+                }
+            }
+
             returnResponse(status);
         }
 
@@ -451,6 +490,39 @@ namespace WPEFramework {
             std::cout<<"setACL response : "<< jsonstr << std::endl;
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
             
+            return (status);
+        }
+
+	bool ResourceManager::reserveTTSResourceForApps(const std::vector<std::string>& clients)
+        {
+            uint32_t ret = Core::ERROR_NONE;
+            bool status = false;
+
+            JsonObject params;
+            JsonObject result;
+            JsonArray accessList;
+            JsonObject clientParam;
+            JsonArray clientList;
+            for (const auto& client : clients) {
+                 clientList.Add(client);
+            }
+            clientParam.Set("method", "speak");
+            clientParam["apps"] = clientList;
+            accessList.Add(clientParam);
+            params["accesslist"] = accessList;
+
+            std::string jsonstr;
+            params.ToString(jsonstr);
+            std::cout<<"Resourcemanager : about to call setACL : "<< jsonstr << std::endl;
+
+            ret =  JSONRPCDirectLink(mCurrentService, "org.rdk.TextToSpeech").Invoke<JsonObject, JsonObject>(20000, "setACL", params, result);
+
+            status = ((Core::ERROR_NONE == ret) && (result.HasLabel("success")) && (result["success"].Boolean()));
+
+            result.ToString(jsonstr);
+            std::cout<<"setACL response : "<< jsonstr << std::endl;
+            std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
+
             return (status);
         }
 

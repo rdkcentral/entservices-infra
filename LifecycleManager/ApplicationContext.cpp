@@ -24,17 +24,30 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-	ApplicationLaunchParams::ApplicationLaunchParams(): mAppId(""), mAppPath(""), mAppConfig(""), mRuntimeAppId(""), mRuntimePath(""), mRuntimeConfig(""), mLaunchIntent(""), mEnvironmentVars(""), mEnableDebugger(false), mLaunchArgs(""), mTargetState(Exchange::ILifecycleManager::LifecycleState::UNLOADED), mRuntimeConfigObject()
+	ApplicationLaunchParams::ApplicationLaunchParams(): mAppId(""), mLaunchIntent(""), mLaunchArgs(""), mTargetState(Exchange::ILifecycleManager::LifecycleState::UNLOADED), mRuntimeConfigObject()
         {
 	}
 
-        ApplicationContext::ApplicationContext (std::string appId): mAppInstanceId(""), mAppId(std::move(appId)), mLastLifecycleStateChangeTime(), mActiveSessionId(""), mTargetLifecycleState(), mMostRecentIntent(""), mState(nullptr), mStateChangeId(0)
+        ApplicationContext::ApplicationContext (std::string appId)
+        : mPendingStateTransition(false)
+        , mPendingStates()
+        , mPendingEventName("")
+        , mAppInstanceId("")
+        , mAppId(std::move(appId))
+        , mLastLifecycleStateChangeTime()
+        , mActiveSessionId("")
+        , mTargetLifecycleState()
+        , mMostRecentIntent("")
+        , mState(nullptr)
+        , mStateChangeId(0)
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        , mRequestTime(0)
+        , mRequestType(REQUEST_TYPE_NONE)
+#endif
         {
             mState = (void*) new UnloadedState(this);
             sem_init(&mReachedLoadingStateSemaphore, 0, 0);
-            sem_init(&mAppRunningSemaphore, 0, 0);
             sem_init(&mAppReadySemaphore, 0, 0);
-            sem_init(&mFirstFrameSemaphore, 0, 0);
             sem_init(&mFirstFrameAfterResumeSemaphore, 0, 0);
         }
 
@@ -87,17 +100,10 @@ namespace WPEFramework
             mStateChangeId = id;		
 	}
 
-        void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject)
+        void ApplicationContext::setApplicationLaunchParams(const string& appId, const string& launchIntent, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject)
 	{
             mLaunchParams.mAppId = appId;
-            mLaunchParams.mAppPath = appPath;
-            mLaunchParams.mAppConfig = appConfig;
-            mLaunchParams.mRuntimeAppId = runtimeAppId;
-            mLaunchParams.mRuntimePath = runtimePath;
-            mLaunchParams.mRuntimeConfig = runtimeConfig;
             mLaunchParams.mLaunchIntent = launchIntent;
-            mLaunchParams.mEnvironmentVars = environmentVars;
-            mLaunchParams.mEnableDebugger = enableDebugger;
             mLaunchParams.mLaunchArgs = launchArgs;
             mLaunchParams.mTargetState = targetState;
             mLaunchParams.mRuntimeConfigObject = runtimeConfigObject;
@@ -107,6 +113,20 @@ namespace WPEFramework
 	{
             mKillParams.mForce = force;
         }
+
+        void ApplicationContext::setRequestTime(time_t requestTime)
+        {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            mRequestTime = requestTime;
+#endif
+        }
+        void ApplicationContext::setRequestType(RequestType requestType)
+        {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            mRequestType = requestType;
+#endif
+        }
+
 
 	std::string ApplicationContext::getAppId()
 	{
@@ -163,5 +183,23 @@ namespace WPEFramework
 	{
             return mKillParams;
 	}
+
+        time_t ApplicationContext::getRequestTime()
+        {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            return mRequestTime;
+#else
+            return 0;
+#endif
+        }
+
+        RequestType ApplicationContext::getRequestType()
+        {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            return mRequestType;
+#else
+            return REQUEST_TYPE_NONE;
+#endif
+        }
     } /* namespace Plugin */
 } /* namespace WPEFramework */

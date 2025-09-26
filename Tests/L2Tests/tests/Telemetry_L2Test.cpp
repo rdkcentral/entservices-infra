@@ -21,6 +21,11 @@
 #include <gmock/gmock.h>
 #include "L2Tests.h"
 #include "L2TestsMock.h"
+#include "deepSleepMgr.h"
+#include "PowerManagerMock.h"
+#include "PowerManagerHalMock.h"
+#include "MfrMock.h"
+
 #include <mutex>
 #include <condition_variable>
 #include <fstream>
@@ -105,7 +110,6 @@ class TelemetryNotificationHandler : public Exchange::ITelemetry::INotification 
 /* Telemetry L2 test class declaration */
 class Telemetry_L2test : public L2TestMocks {
 protected:
-    IARM_EventHandler_t powerEventHandler = nullptr;
 
     Telemetry_L2test();
     virtual ~Telemetry_L2test() override;
@@ -150,15 +154,64 @@ Telemetry_L2test::Telemetry_L2test()
     Core::hresult status = Core::ERROR_GENERAL;
     m_event_signalled = Telemetry_StateInvalid;
 
-    ON_CALL(*p_iarmBusImplMock, IARM_Bus_RegisterEventHandler(::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke(
-            [&](const char* ownerName, IARM_EventId_t eventId, IARM_EventHandler_t handler) {
-                if ((string(IARM_BUS_PWRMGR_NAME) == string(ownerName)) && (eventId == IARM_BUS_PWRMGR_EVENT_MODECHANGED)) {
-                    EXPECT_TRUE(handler != nullptr);
-                    powerEventHandler = handler;
-                }
-                return IARM_RESULT_SUCCESS;
-            }));
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_DS_INIT())
+    .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
+
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_INIT())
+    .WillRepeatedly(::testing::Return(PWRMGR_SUCCESS));
+
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_API_SetWakeupSrc(::testing::_, ::testing::_))
+    .WillRepeatedly(::testing::Return(PWRMGR_SUCCESS));
+
+    ON_CALL(*p_rfcApiImplMock, getRFCParameter(::testing::_, ::testing::_, ::testing::_))
+    .WillByDefault(::testing::Invoke(
+    [](char* pcCallerID, const char* pcParameterName, RFC_ParamData_t* pstParamData) {
+       if (strcmp("RFC_DATA_ThermalProtection_POLL_INTERVAL", pcParameterName) == 0) {
+           strcpy(pstParamData->value, "2");
+           return WDMP_SUCCESS;
+       } else if (strcmp("RFC_ENABLE_ThermalProtection", pcParameterName) == 0) {
+           strcpy(pstParamData->value, "true");
+           return WDMP_SUCCESS;
+       } else if (strcmp("RFC_DATA_ThermalProtection_DEEPSLEEP_GRACE_INTERVAL", pcParameterName) == 0) {
+           strcpy(pstParamData->value, "6");
+           return WDMP_SUCCESS;
+       } else {
+           /* The default threshold values will assign, if RFC call failed */
+           return WDMP_FAILURE;
+       }
+    }));
+
+    EXPECT_CALL(*p_mfrMock, mfrSetTempThresholds(::testing::_, ::testing::_))
+    .WillRepeatedly(::testing::Invoke(
+    [](int high, int critical) {
+       EXPECT_EQ(high, 100);
+       EXPECT_EQ(critical, 110);
+       return mfrERR_NONE;
+    }));
+
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_API_GetPowerState(::testing::_))
+    .WillRepeatedly(::testing::Invoke(
+    [](PWRMgr_PowerState_t* powerState) {
+       *powerState = PWRMGR_POWERSTATE_OFF; // by default over boot up, return PowerState OFF
+       return PWRMGR_SUCCESS;
+    }));
+
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_API_SetPowerState(::testing::_))
+    .WillRepeatedly(::testing::Invoke(
+    [](PWRMgr_PowerState_t powerState) {
+       // All tests are run without settings file
+       // so default expected power state is ON
+       return PWRMGR_SUCCESS;
+    }));
+
+    EXPECT_CALL(*p_mfrMock, mfrGetTemperature(::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly(::testing::Invoke(
+        [&](mfrTemperatureState_t* curState, int* curTemperature, int* wifiTemperature) {
+            *curTemperature  = 90; // safe temperature
+            *curState        = (mfrTemperatureState_t)0;
+            *wifiTemperature = 25;
+            return mfrERR_NONE;
+    }));
 
     /* Activate plugin in constructor */
     status = ActivateService("org.rdk.PowerManager");
@@ -178,7 +231,6 @@ Telemetry_L2test::Telemetry_L2test()
 	{
             EXPECT_TRUE(m_telemetryplugin != nullptr);
             if (m_telemetryplugin) {
-                m_telemetryplugin->AddRef();
                 m_telemetryplugin->Register(&notify);
             } else {
                     TEST_LOG("m_telemetryplugin is NULL");
@@ -197,6 +249,15 @@ Telemetry_L2test::~Telemetry_L2test()
     Core::hresult status = Core::ERROR_GENERAL;
     m_event_signalled = Telemetry_StateInvalid;
 
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_TERM())
+    .WillOnce(::testing::Return(PWRMGR_SUCCESS));
+
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_DS_TERM())
+    .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
+
+    //Deactivate PowerMgr
+    status = DeactivateService("org.rdk.PowerManager");
+
     if (m_telemetryplugin) {
         m_telemetryplugin->Unregister(&notify);
         m_telemetryplugin->Release();
@@ -204,8 +265,7 @@ Telemetry_L2test::~Telemetry_L2test()
 
     status = DeactivateService("org.rdk.Telemetry");
     EXPECT_EQ(Core::ERROR_NONE, status);
-    //Deactivate PowerMgr
-    status = DeactivateService("org.rdk.PowerManager");
+
 }
 
 
@@ -461,12 +521,6 @@ TEST_F(Telemetry_L2test, UploadReportFailureCaseUsingComrpc)
         std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
         TEST_LOG("Err: %s", errorMsg.c_str());
     }
-
-    /* UploadReport is called by powerEventHandler internally in the below case */
-    IARM_Bus_PWRMgr_EventData_t param;
-    param.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-    param.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_LIGHT_SLEEP;
-    powerEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, &param, 0);
 }
 
 /************Test case Details **************************
@@ -521,21 +575,11 @@ TEST_F(Telemetry_L2test, TelemetryAbortReportFailureCaseUsingJsonrpc)
        & again returns "RBUS_ERROR_BUS_ERROR" for "ERROR_RPC_CALL_FAILED" Errorcheck**/
 
     EXPECT_CALL(*p_rBusApiImplMock, rbusMethod_InvokeAsync(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .Times(2)
-        .WillOnce(::testing::Invoke(
-            [&](rbusHandle_t handle, char const* methodName, rbusObject_t inParams, rbusMethodAsyncRespHandler_t callback, int timeout) {
-                return RBUS_ERROR_BUS_ERROR;
-            }))
         .WillOnce(::testing::Invoke(
             [&](rbusHandle_t handle, char const* methodName, rbusObject_t inParams, rbusMethodAsyncRespHandler_t callback, int timeout) {
                 return RBUS_ERROR_BUS_ERROR;
             }));
 
-    /* abortReport is called by powerEventHandler internally in the below case */
-    IARM_Bus_PWRMgr_EventData_t param;
-    param.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-    param.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    powerEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, &param, 0);
 
     /* "ERROR_RPC_CALL_FAILED" -- ErrorCheck */
     status = InvokeServiceMethod("org.rdk.Telemetry.1", "abortReport", params, result);
@@ -597,11 +641,6 @@ TEST_F(Telemetry_L2test, AbortReportFailurecaseUsingComrpc)
         TEST_LOG("Err: %s", errorMsg.c_str());
     }
 
-    /* AbortReport is called by powerEventHandler internally in the below case */
-    IARM_Bus_PWRMgr_EventData_t param;
-    param.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-    param.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    powerEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, &param, sizeof(param));
 
 }
 

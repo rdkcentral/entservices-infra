@@ -1,10 +1,15 @@
 name: L2-tests-OOP
 
 on:
-  push:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
-  pull_request:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+  workflow_call:
+    inputs:
+      caller_source:
+        description: "Specifies the source type (e.g., local or test framework) for the workflow."
+        required: true
+        type: string
+    secrets:
+      RDKCM_RDKE:
+        required: true
 
 env:
   BUILD_TYPE: Debug
@@ -35,6 +40,11 @@ jobs:
         with:
           python-version: '3.x'
       - run: pip install jsonref
+
+      - name: ACK External Trigger
+        run: |
+           echo "Message: External Trigger Received for L2-OOP Tests"
+           echo "Trigger Source: ${{ inputs.caller_source }}"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
@@ -101,13 +111,23 @@ jobs:
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
         with:
+          repository: rdkcentral/entservices-deviceanddisplay
           path: entservices-deviceanddisplay
           ref: develop
 
       - name: Checkout entservices-infra
+        if: ${{ inputs.caller_source == 'local' }}
         uses: actions/checkout@v3
         with:
           path: entservices-infra
+
+      - name: Checkout entservices-infra-testframework
+        if: ${{ inputs.caller_source == 'testframework' }}
+        uses: actions/checkout@v3
+        with:
+          repository: rdkcentral/entservices-infra
+          path: entservices-infra
+          ref: develop
 
       - name: Apply  ThunderTools
         run: |
@@ -136,6 +156,7 @@ jobs:
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/error_code_R4_4.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/1004-Add-support-for-project-dir.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-733-Add-ENTOS-IDS.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Jsonrpc_dynamic_error_handling.patch
           cd -
       - name: Build Thunder
         run: >
@@ -169,10 +190,14 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Proc"
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/RBus"
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Rfc"
+          mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/PowerManagerHal"
+          mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Mfr"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IIarm.h" "$GITHUB_WORKSPACE/entservices-apis/apis/IARM/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IProc.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Proc/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IRBus.h" "$GITHUB_WORKSPACE/entservices-apis/apis/RBus/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IRfc.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Rfc/"
+          cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IPowerManagerHal.h" "$GITHUB_WORKSPACE/entservices-apis/apis/PowerManagerHal/"
+          cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IMfr.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Mfr/"
 
       - name: Build entservices-apis
         run: >
@@ -222,6 +247,9 @@ jobs:
           rdk/ds/manager.hpp
           rdk/ds/dsTypes.h
           rdk/ds/dsUtl.h
+          rdk/ds/audioOutputPortType.hpp
+          rdk/ds/audioOutputPortConfig.hpp
+          rdk/ds/pixelResolution.hpp
           rdk/iarmbus/libIARM.h
           rdk/iarmbus/libIBus.h
           rdk/iarmbus/libIBusDaemon.h
@@ -237,6 +265,7 @@ jobs:
           systemaudioplatform.h
           maintenanceMGR.h
           pkg.h
+          edid-parser.hpp
           btmgr.h
           tvError.h
           tvTypes.h
@@ -252,7 +281,7 @@ jobs:
           rdk/ds/VideoDFC.hpp
           dsRpc.h
           &&
-          cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h .
+          cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h /usr/include/libdrm/drm.h /usr/include/libdrm/drm_mode.h /usr/include/xf86drm.h .
 
       - name: Set clang toolchain
         if: ${{ matrix.compiler == 'clang' }}
@@ -261,6 +290,24 @@ jobs:
       - name: Set gcc/with-coverage toolchain
         if: ${{ matrix.compiler == 'gcc' && matrix.coverage == 'with-coverage' && !env.ACT }}
         run: echo "TOOLCHAIN_FILE=$GITHUB_WORKSPACE/entservices-testframework/Tests/gcc-with-coverage.cmake" >> $GITHUB_ENV
+
+      - name: Build googletest
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: >
+          cmake -G Ninja
+          -S "$GITHUB_WORKSPACE/googletest"
+          -B build/googletest
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DBUILD_TYPE=Debug
+          -DBUILD_GMOCK=ON
+          -DBUILD_SHARED_LIBS=OFF
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          &&
+          cmake --build build/googletest -j8
+          &&
+          cmake --install build/googletest
 
       - name: Build mocks
         run: >
@@ -274,27 +321,12 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           -DL2_TEST_OOP_RPC=ON
           -DCMAKE_CXX_FLAGS="
-          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers"
+          -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers
+          -I $GITHUB_WORKSPACE/install/usr/include"
           &&
           cmake --build build/mocks -j8
           &&
           cmake --install build/mocks
-
-      - name: Build googletest
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: >
-          cmake -G Ninja
-          -S "$GITHUB_WORKSPACE/googletest"
-          -B build/googletest
-          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
-          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          -DBUILD_TYPE=Debug
-          -DBUILD_GMOCK=ON
-          &&
-          cmake --build build/googletest -j8
-          &&
-          cmake --install build/googletest
 
       - name: Build entservices-infra
         run: >
@@ -324,6 +356,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices/proc
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/libusb
           -I $GITHUB_WORKSPACE/install/usr/include
+          -I ./usr/include/libdrm
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -343,26 +376,7 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsExtODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvTypes.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/videoOutputPortType.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/videoOutputPortConfig.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/videoResolution.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/sleepMode.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/frontPanelConfig.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/frontPanelTextDisplay.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/audioOutputPortType.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/frontPanelConfig.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/frontPanelTextDisplay.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/manager.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/audioOutputPortConfig.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/iarmbus/iarmUtil.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemaudioplatform.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/list.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/dsDisplay.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/AudioStereoMode.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/VideoDFC.hpp
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/dsRpc.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/dsError.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds/dsUtl.h
+          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/essos-resmgr.h
           -Werror -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format=
           -DUSE_IARMBUS
           -DHAS_RBUS
@@ -424,6 +438,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices/proc
           -I $GITHUB_WORKSPACE/entservices-deviceanddisplay/helpers
           -I $GITHUB_WORKSPACE/install/usr/include
+          -I ./usr/include/libdrm
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -572,7 +587,7 @@ jobs:
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           RdkServicesL2Test &&
-          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithoutValgrind.json &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithoutValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Run unit tests with valgrind
@@ -588,7 +603,7 @@ jobs:
           --track-fds=yes
           --fair-sched=try
           RdkServicesL2Test &&
-          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestResultsWithValgrind.json &&
+          cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
           
       - name: Generate coverage
@@ -624,11 +639,11 @@ jobs:
         if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-L2-oop-infra
           path: |
             coverage/
             valgrind_log
-            rdkL2TestResultsWithoutValgrind.json
-            rdkL2TestResultsWithValgrind.json
+            rdkL2TestOOPResultsWithoutValgrind.json
+            rdkL2TestOOPResultsWithValgrind.json
           if-no-files-found: warn
 

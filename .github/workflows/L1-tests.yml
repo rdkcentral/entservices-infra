@@ -1,10 +1,15 @@
 name: L1-tests
 
 on:
-  push:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
-  pull_request:
-    branches: [ main, develop, 'sprint/**', 'release/**' ]
+  workflow_call:
+    inputs:
+      caller_source:
+        description: "Specifies the source type (e.g., local or test framework) for the workflow."
+        required: true
+        type: string
+    secrets:
+      RDKCM_RDKE:
+        required: true
 
 env:
   BUILD_TYPE: Debug
@@ -66,6 +71,11 @@ jobs:
           python-version: '3.x'
       - run: pip install jsonref
 
+      - name: ACK External Trigger
+        run: |
+           echo "Message: External Trigger Received for L1 Tests"
+           echo "Trigger Source: ${{ inputs.caller_source }}"
+
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
@@ -75,7 +85,7 @@ jobs:
         run: >
           sudo apt update
           &&
-          sudo apt install -y libsqlite3-dev libcurl4-openssl-dev valgrind lcov clang libsystemd-dev libboost-all-dev libwebsocketpp-dev meson libcunit1 libcunit1-dev curl protobuf-compiler-grpc libgrpc-dev libgrpc++-dev
+          sudo apt install -y libsqlite3-dev libcurl4-openssl-dev valgrind lcov clang libsystemd-dev libboost-all-dev libwebsocketpp-dev meson libcunit1 libcunit1-dev curl protobuf-compiler-grpc libgrpc-dev libgrpc++-dev libjsoncpp-dev
 
       - name: Install GStreamer
         run: |
@@ -117,9 +127,18 @@ jobs:
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
+        if: ${{ inputs.caller_source == 'local' }}
         uses: actions/checkout@v3
         with:
           path: entservices-infra
+
+      - name: Checkout entservices-infra-testframework
+        if: ${{ inputs.caller_source == 'testframework' }}
+        uses: actions/checkout@v3
+        with:
+          repository: rdkcentral/entservices-infra
+          path: entservices-infra
+          ref: develop
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
@@ -169,6 +188,7 @@ jobs:
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/error_code_R4_4.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/1004-Add-support-for-project-dir.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-733-Add-ENTOS-IDS.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Jsonrpc_dynamic_error_handling.patch
           cd -
 
       - name: Build Thunder
@@ -266,6 +286,9 @@ jobs:
           rdk/ds/frontPanelIndicator.hpp
           rdk/ds/frontPanelConfig.hpp
           rdk/ds/frontPanelTextDisplay.hpp
+          rdk/ds/audioOutputPortType.hpp
+          rdk/ds/audioOutputPortConfig.hpp
+          rdk/ds/pixelResolution.hpp
           rdk/iarmbus/libIARM.h
           rdk/iarmbus/libIBus.h
           rdk/iarmbus/libIBusDaemon.h
@@ -283,6 +306,7 @@ jobs:
           telemetry_busmessage_sender.h
           maintenanceMGR.h
           pkg.h
+          edid-parser.hpp
           secure_wrapper.h
           wpa_ctrl.h
           proc/readproc.h
@@ -294,7 +318,7 @@ jobs:
           Dobby/Public/Dobby/IDobbyProxy.h
           Dobby/IpcService/IpcFactory.h
           &&
-          cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h .
+          cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h /usr/include/libdrm/drm.h /usr/include/libdrm/drm_mode.h /usr/include/xf86drm.h .
 
       - name: Set clang toolchain
         if: ${{ matrix.compiler == 'clang' }}
@@ -303,6 +327,24 @@ jobs:
       - name: Set gcc/with-coverage toolchain
         if: ${{ matrix.compiler == 'gcc' && matrix.coverage == 'with-coverage' && !env.ACT }}
         run: echo "TOOLCHAIN_FILE=$GITHUB_WORKSPACE/entservices-testframework/Tests/gcc-with-coverage.cmake" >> $GITHUB_ENV
+
+      - name: Build googletest
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: >
+          cmake -G Ninja
+          -S "$GITHUB_WORKSPACE/googletest"
+          -B build/googletest
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DBUILD_TYPE=Debug
+          -DBUILD_GMOCK=ON
+          -DBUILD_SHARED_LIBS=OFF
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          &&
+          cmake --build build/googletest -j8
+          &&
+          cmake --install build/googletest
 
       - name: Build mocks
         run: >
@@ -331,8 +373,11 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/ccec/drivers
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/network
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests
+          -I $GITHUB_WORKSPACE/entservices-infra/helpers
           -I $GITHUB_WORKSPACE/Thunder/Source
           -I $GITHUB_WORKSPACE/Thunder/Source/core
+          -I $GITHUB_WORKSPACE/install/usr/include
+          -I ./usr/include/libdrm
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -363,22 +408,6 @@ jobs:
           cmake --build build/mocks -j8
           &&
           cmake --install build/mocks
-
-      - name: Build googletest
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: >
-          cmake -G Ninja
-          -S "$GITHUB_WORKSPACE/googletest"
-          -B build/googletest
-          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
-          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          -DGENERIC_CMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
-          -DBUILD_TYPE=Debug
-          -DBUILD_GMOCK=ON
-          &&
-          cmake --build build/googletest -j8
-          &&
-          cmake --install build/googletest
 
       - name: Build entservices-infra
         run: >
@@ -463,6 +492,9 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_APPMANAGER=ON
+          -DPLUGIN_STORAGE_MANAGER=ON
+          -DPLUGIN_RUNTIME_MANAGER=ON
           &&
           cmake --build build/entservices-infra -j8
           &&
@@ -496,6 +528,7 @@ jobs:
           -I $GITHUB_WORKSPACE/Thunder/Source
           -I $GITHUB_WORKSPACE/Thunder/Source/core
           -I $GITHUB_WORKSPACE/install/usr/include
+          -I ./usr/include/libdrm
           -I $GITHUB_WORKSPACE/install/usr/include/WPEFramework
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
@@ -540,6 +573,9 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_APPMANAGER=ON
+          -DPLUGIN_STORAGE_MANAGER=ON
+          -DPLUGIN_RUNTIME_MANAGER=ON
           &&
           cmake --build build/entservices-testframework -j8
           &&
@@ -554,6 +590,7 @@ jobs:
           /opt/secure/reboot
           /opt/secure/persistent
           /opt/secure/persistent/System
+          /opt/persistent/storageManager
           /opt/logs
           /lib/rdk
           /run/media/sda1/logs/PreviousLogs
@@ -685,11 +722,10 @@ jobs:
         if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-L1-infra
           path: |
             coverage/
             valgrind_log
             rdkL1TestResultsWithoutValgrind.json
             rdkL1TestResultsWithValgrind.json
           if-no-files-found: warn
-

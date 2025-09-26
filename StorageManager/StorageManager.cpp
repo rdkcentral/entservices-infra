@@ -119,6 +119,11 @@ namespace WPEFramework
 
         SYSLOG(Logging::Shutdown, (string(_T("StorageManager::Deinitialize"))));
 
+        if (mConfigure != nullptr)
+        {
+            mConfigure->Release();
+            mConfigure = nullptr;
+        }
         if (nullptr != mStorageManagerImpl)
         {
             Exchange::JStorageManager::Unregister(*this);
@@ -159,15 +164,6 @@ namespace WPEFramework
     {
         // No additional info to report
         return (string());
-    }
-
-    void StorageManager::Deactivated(RPC::IRemoteConnection* connection)
-    {
-        if (connection->Id() == mConnectionId)
-        {
-            ASSERT(nullptr != mCurrentService);
-            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(mCurrentService, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
-        }
     }
 } /* namespace Plugin */
 } /* namespace WPEFramework */

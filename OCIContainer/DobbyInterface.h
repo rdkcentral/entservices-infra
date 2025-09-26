@@ -24,7 +24,7 @@
 #include <interfaces/IOCIContainer.h>
 #include <vector>
 #include <map>
-#include <i_omi_proxy.hpp>
+#include <omi_proxy.hpp>
 #include "IEventHandler.h"
 
 namespace WPEFramework

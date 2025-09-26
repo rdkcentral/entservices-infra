@@ -453,8 +453,9 @@ namespace WPEFramework {
                 INTERFACE_ENTRY(Exchange::ICapture)
                 END_INTERFACE_MAP
 
-                virtual void AddRef() const {}
-                virtual uint32_t Release() const { return 0; }
+                virtual uint32_t AddRef() const override { return 0; }
+                virtual uint32_t Release() const override { return 0; }
+
                 virtual const TCHAR* Name() const override { return "ScreenCapture"; }
 
                 virtual bool Capture(ICapture::IStore& storer) override;
@@ -464,6 +465,22 @@ namespace WPEFramework {
                 ScreenCapture() = delete;
                 RDKShell* mShell;
                 std::vector<ICapture::IStore *>mCaptureStorers;
+            };
+
+            class TaskQueue {
+            public:
+                using Task = std::function<void(void)>;
+            public:
+                TaskQueue() = default;
+                ~TaskQueue() = default;
+                TaskQueue(const TaskQueue&) = delete;
+                TaskQueue& operator=(const TaskQueue&) = delete;
+
+                void push(Task task);
+                bool pop(Task& outTask);
+            private:
+                std::queue<Task> mQueue;
+                std::mutex mMutex;
             };
 
         private/*members*/:
@@ -480,6 +497,7 @@ namespace WPEFramework {
             bool mEnableEasterEggs;
             ScreenCapture mScreenCapture;
             bool mErmEnabled;
+            TaskQueue mTaskQueue;
 #ifdef ENABLE_RIALTO_FEATURE
         std::shared_ptr<RialtoConnector>  rialtoConnector;
 #endif //ENABLE_RIALTO_FEATURE

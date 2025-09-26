@@ -18,6 +18,7 @@
 **/
 
 #include <chrono>
+#include <inttypes.h> // Required for PRIu64
 
 #include "PackageManagerImplementation.h"
 
@@ -29,12 +30,19 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(PackageManagerImplementation, 1, 0);
 
+    #define CHECK_CACHE() { if ((packageImpl.get() == nullptr) || (!cacheInitialized)) { \
+        return Core::ERROR_UNAVAILABLE; \
+    }}
+
     PackageManagerImplementation::PackageManagerImplementation()
         : mDownloaderNotifications()
         , mInstallNotifications()
         , mNextDownloadId(1000)
         , mCurrentservice(nullptr)
         , mStorageManagerObject(nullptr)
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        , mTelemetryMetricsObject(nullptr)
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
     {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
         mHttpClient = std::unique_ptr<HttpClient>(new HttpClient);
@@ -120,6 +128,17 @@ namespace Plugin {
                 result = Core::ERROR_NONE;
             }
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+            {
+                LOGERR("mTelemetryMetricsObject is null \n");
+            }
+            else
+            {
+                LOGINFO("created TelemetryMetrics Object");
+            }
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
             configStr = service->ConfigLine().c_str();
             LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
             PackageManagerImplementation::Configuration config;
@@ -137,18 +156,7 @@ namespace Plugin {
                 LOGDBG("created dir '%s'", downloadDir.c_str());
             }
 
-            #ifdef USE_LIBPACKAGE
-            packageImpl = packagemanager::IPackageImpl::instance();
-            #endif
-
-            InitializeState();
-            PluginHost::ISubSystem* subSystem = service->SubSystems();
-            if (subSystem != nullptr) {
-                LOGDBG("ISubSystem::INTERNET is %s", subSystem->IsActive(PluginHost::ISubSystem::INTERNET)? "Active" : "Inactive");
-                LOGDBG("ISubSystem::INSTALLATION is %s", subSystem->IsActive(PluginHost::ISubSystem::INSTALLATION)? "Active" : "Inactive");
-            }
             mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&PackageManagerImplementation::downloader, this, 1));
-
         } else {
             LOGERR("service is null \n");
         }
@@ -161,6 +169,15 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        if (nullptr != mTelemetryMetricsObject)
+        {
+            LOGINFO("TelemetryMetrics object released\n");
+            mTelemetryMetricsObject->Release();
+            mTelemetryMetricsObject = nullptr;
+        }
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         mCurrentservice->Release();
         mCurrentservice = nullptr;
@@ -192,6 +209,91 @@ namespace Plugin {
         }
     }
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+    time_t PackageManagerImplementation::getCurrentTimestamp()
+    {
+        timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return (((time_t)ts.tv_sec * 1000) + ((time_t)ts.tv_nsec / 1000000));
+    }
+
+    void PackageManagerImplementation::recordAndPublishTelemetryData(const std::string& marker, const std::string& appId,
+                                                                     time_t requestTime, PackageManagerImplementation::PackageFailureErrorCode errorCode)
+    {
+        std::string telemetryMetrics = "";
+        JsonObject jsonParam;
+        int duration = 0;
+        bool shouldProcessMarker = true;
+        bool publish = true;
+
+        if (marker.empty()) {
+            LOGERR("Telemetry marker is empty");
+        }
+        else {
+            if (mTelemetryMetricsObject == nullptr) {
+                LOGINFO("mTelemetryMetricsObject is null, recreate it");
+                mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics");
+
+                if (mTelemetryMetricsObject == nullptr) {
+                    LOGERR("mTelemetryMetricsObject is still null");
+                }
+            }
+
+            if (mTelemetryMetricsObject != nullptr) {
+                time_t currentTime = getCurrentTimestamp();
+                duration = static_cast<int>(currentTime - requestTime);
+                LOGINFO("End time for %s: %lu", marker.c_str(), currentTime);
+
+                if (marker == TELEMETRY_MARKER_LAUNCH_TIME) {
+                    jsonParam["packageManagerLockTime"] = duration;
+                    publish = false;
+                }
+                else if (marker == TELEMETRY_MARKER_CLOSE_TIME) {
+                    jsonParam["packageManagerUnlockTime"] = duration;
+                    publish = false;
+                }
+                else if (marker == TELEMETRY_MARKER_INSTALL_TIME) {
+                    jsonParam["installTime"] = duration;
+                }
+                else if (marker == TELEMETRY_MARKER_UNINSTALL_TIME) {
+                    jsonParam["uninstallTime"] = duration;
+                }
+                else if (marker == TELEMETRY_MARKER_INSTALL_ERROR || marker == TELEMETRY_MARKER_UNINSTALL_ERROR) {
+                    jsonParam["errorCode"] = static_cast<int>(errorCode);
+                }
+                else {
+                    LOGERR("Unknown telemetry marker: %s", marker.c_str());
+                    shouldProcessMarker = false;
+                }
+
+                if (true == shouldProcessMarker) {
+                    jsonParam["appId"] = appId;
+
+                    if (jsonParam.ToString(telemetryMetrics)) {
+                        LOGINFO("Record appId %s marker %s duration %d", appId.c_str(), marker.c_str(), duration);
+
+                        if (mTelemetryMetricsObject->Record(appId, telemetryMetrics, marker) != Core::ERROR_NONE) {
+                            LOGERR("Telemetry Record Failed");
+                        }
+
+                        if (publish) {
+                            LOGINFO("Publish appId %s marker %s", appId.c_str(), marker.c_str());
+
+                            if (mTelemetryMetricsObject->Publish(appId, marker) != Core::ERROR_NONE) {
+                                LOGERR("Telemetry Publish Failed");
+                            }
+                        }
+                    } else {
+                        LOGERR("Failed to serialize telemetry metrics");
+                    }
+                }
+            }
+        }
+
+        return;
+    }
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
     // IPackageDownloader methods
     Core::hresult PackageManagerImplementation::Download(const string& url,
         const Exchange::IPackageDownloader::Options &options,
@@ -199,10 +301,11 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        std::lock_guard<std::mutex> lock(mMutex);
+        if (!mCurrentservice->SubSystems()->IsActive(PluginHost::ISubSystem::INTERNET)) {
+            return Core::ERROR_UNAVAILABLE;
+        }
 
-        // XXX: Check Network here ???
-        // Utils::isPluginActivated(NETWORK_PLUGIN_CALLSIGN)
+        std::lock_guard<std::mutex> lock(mMutex);
 
         DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
         std::string filename = downloadDir + "package" + di->GetId();
@@ -224,15 +327,15 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("Pausing '%s'", downloadId.c_str());
-        if (mInprogressDowload.get() != nullptr) {
-            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+        if (mInprogressDownload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
                 mHttpClient->pause();
                 LOGDBG("%s paused", downloadId.c_str());
             } else {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
         } else {
-            LOGERR("Pause Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            LOGERR("Pause Failed, mInprogressDownload=%p", mInprogressDownload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -244,15 +347,15 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("Resuming '%s'", downloadId.c_str());
-        if (mInprogressDowload.get() != nullptr) {
-            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
+        if (mInprogressDownload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
                 mHttpClient->resume();
                 LOGDBG("%s resumed", downloadId.c_str());
             } else {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
         } else {
-            LOGERR("Resume Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            LOGERR("Resume Failed, mInprogressDownload=%p", mInprogressDownload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -264,16 +367,16 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("Cancelling '%s'", downloadId.c_str());
-        if (mInprogressDowload.get() != nullptr) {
-            if (downloadId.compare(mInprogressDowload->GetId()) == 0) {
-                mInprogressDowload->Cancel();
+        if (mInprogressDownload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
+                mInprogressDownload->Cancel();
                 mHttpClient->cancel();
                 LOGDBG("%s cancelled", downloadId.c_str());
             } else {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
         } else {
-            LOGERR("Cancel Failed, mInprogressDowload=%p", mInprogressDowload.get());
+            LOGERR("Cancel Failed, mInprogressDownload=%p", mInprogressDownload.get());
             result = Core::ERROR_GENERAL;
         }
 
@@ -284,7 +387,7 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if ((mInprogressDowload.get() != nullptr) && (fileLocator.compare(mInprogressDowload->GetFileLocator()) == 0)) {
+        if ((mInprogressDownload.get() != nullptr) && (fileLocator.compare(mInprogressDownload->GetFileLocator()) == 0)) {
             LOGWARN("%s in in progress", fileLocator.c_str());
             result = Core::ERROR_GENERAL;
         } else {
@@ -299,12 +402,12 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, Percent &percent)
+    Core::hresult PackageManagerImplementation::Progress(const string &downloadId, ProgressInfo &progress)
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        if (mInprogressDowload.get() != nullptr) {
-            percent.percent = mHttpClient->getProgress();
+        if (mInprogressDownload.get() != nullptr) {
+            progress.progress = mHttpClient->getProgress();
         } else {
             result = Core::ERROR_GENERAL;
         }
@@ -312,15 +415,26 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB)
+    Core::hresult PackageManagerImplementation::GetStorageDetails(string &quotaKB, string &usedKB)
     {
         Core::hresult result = Core::ERROR_NONE;
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::RateLimit(const string &downloadId, uint64_t &limit)
+    Core::hresult PackageManagerImplementation::RateLimit(const string &downloadId, const uint64_t &limit)
     {
         Core::hresult result = Core::ERROR_NONE;
+        LOGDBG("'%s' limit=%" PRIu64, downloadId.c_str(), limit);
+        if (mInprogressDownload.get() != nullptr) {
+            if (downloadId.compare(mInprogressDownload->GetId()) == 0) {
+                mHttpClient->setRateLimit(limit);
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
+        } else {
+            LOGERR("set RateLimit Failed, mInprogressDownload=%p", mInprogressDownload.get());
+            result = Core::ERROR_GENERAL;
+        }
         return result;
     }
 
@@ -328,16 +442,26 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason)
     {
         Core::hresult result = Core::ERROR_GENERAL;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        PackageManagerImplementation::PackageFailureErrorCode packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE;
+        /* Get current timestamp at the start of Install for telemetry */
+        time_t requestTime = getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("Installing '%s' ver:'%s' fileLocator: '%s'", packageId.c_str(), version.c_str(), fileLocator.c_str());
+        CHECK_CACHE()
         if (fileLocator.empty()) {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            recordAndPublishTelemetryData(TELEMETRY_MARKER_INSTALL_ERROR, packageId, requestTime, PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE);
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
             return Core::ERROR_INVALID_SIGNATURE;
         }
+
 
         packagemanager::NameValues keyValues;
         struct IPackageInstaller::KeyValue kv;
         while (additionalMetadata->Next(kv) == true) {
-            LOGTRACE("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
+            LOGDBG("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
             keyValues.push_back(std::make_pair(kv.name, kv.value));
         }
 
@@ -376,17 +500,35 @@ namespace Plugin {
                         state.failReason = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
                             FailReason::PACKAGE_MISMATCH_FAILURE : FailReason::SIGNATURE_VERIFICATION_FAILURE;
                         LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
+                            PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
                     }
                     #endif
                 } else {
                     LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
                     state.failReason = FailReason::PERSISTENCE_FAILURE;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
                 }
                 NotifyInstallStatus(packageId, version, state);
             }
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_VERSION_NOT_FOUND;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
         }
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        recordAndPublishTelemetryData(((PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE == packageFailureErrorCode) ? TELEMETRY_MARKER_INSTALL_TIME : TELEMETRY_MARKER_INSTALL_ERROR),
+                                                    packageId,
+                                                    requestTime,
+                                                    packageFailureErrorCode);
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         return result;
     }
@@ -396,7 +538,14 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_GENERAL;
         string version = GetVersion(packageId);
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        PackageManagerImplementation::PackageFailureErrorCode packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE;
+        /* Get current timestamp at the start of Uninstall for telemetry */
+        time_t requestTime = getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         LOGDBG("Uninstalling id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
+        CHECK_CACHE()
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
@@ -420,22 +569,43 @@ namespace Plugin {
                     if (pmResult == packagemanager::SUCCESS) {
                         result = Core::ERROR_NONE;
                     }
+                    else{
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
+                            PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+                    }
                     #endif
                     state.installState = InstallState::UNINSTALLED;
                     NotifyInstallStatus(packageId, version, state);
                 } else {
                     LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
                 }
             }
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_VERSION_NOT_FOUND;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         }
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        recordAndPublishTelemetryData(((PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE == packageFailureErrorCode) ? TELEMETRY_MARKER_UNINSTALL_TIME : TELEMETRY_MARKER_UNINSTALL_ERROR),
+                                                    packageId,
+                                                    requestTime,
+                                                    packageFailureErrorCode);
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
         return result;
     }
 
     Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages)
     {
+        CHECK_CACHE()
         LOGTRACE("entry");
         Core::hresult result = Core::ERROR_NONE;
         std::list<Exchange::IPackageInstaller::Package> packageList;
@@ -458,6 +628,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig)
     {
+        CHECK_CACHE()
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
@@ -476,6 +647,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version,
         Exchange::IPackageInstaller::InstallState &installState)
     {
+        CHECK_CACHE()
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
@@ -484,7 +656,8 @@ namespace Plugin {
             auto &state = it->second;
             installState = state.installState;
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
+            result = Core::ERROR_GENERAL;
         }
 
         return result;
@@ -534,7 +707,13 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        /* Get current timestamp at the start of Lock for telemetry */
+        time_t requestTime = getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
+        CHECK_CACHE()
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
@@ -555,17 +734,14 @@ namespace Plugin {
                 if (pmResult == packagemanager::SUCCESS) {
                     lockId = ++state.mLockCount;
 
-                    std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
+                    state.additionalLocks.clear();
                     for (packagemanager::NameValue nv : locks) {
                         Exchange::IPackageHandler::AdditionalLock lock;
                         lock.packageId = nv.first;
                         lock.version = nv.second;
-                        additionalLocks.emplace_back(lock);
+                        state.additionalLocks.emplace_back(lock);
                     }
-
-                    appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLocks);
-
-                    LOGDBG("Locked id: %s ver: %s", packageId.c_str(), version.c_str());
+                    LOGDBG("Locked id: %s ver: %s additionalLocks=%zu", packageId.c_str(), version.c_str(), state.additionalLocks.size());
                 } else {
                     LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
                     result = Core::ERROR_GENERAL;
@@ -575,19 +751,28 @@ namespace Plugin {
             if (result == Core::ERROR_NONE) {
                 getRuntimeConfig(state.runtimeConfig, runtimeConfig);
                 unpackedPath = state.unpackedPath;
+                appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(state.additionalLocks);
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                recordAndPublishTelemetryData(TELEMETRY_MARKER_LAUNCH_TIME,
+                                                            packageId,
+                                                            requestTime,
+                                                            PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE);
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
             }
             #endif
 
             LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
         }
 
         return result;
     }
 
-    // XXX: right way to do this is via copy ctor, when we move Thunder 5.2 and have commone struct RuntimeConfig
+    // XXX: right way to do this is via copy ctor, when we move to Thunder 5.2 and have commone struct RuntimeConfig
     void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig)
     {
         runtimeConfig.dial = config.dial;
@@ -595,6 +780,7 @@ namespace Plugin {
         runtimeConfig.thunder = config.thunder;
         runtimeConfig.systemMemoryLimit = config.systemMemoryLimit;
         runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
+        runtimeConfig.envVariables = config.envVariables;
 
         runtimeConfig.userId = config.userId;
         runtimeConfig.groupId = config.groupId;
@@ -603,7 +789,7 @@ namespace Plugin {
         runtimeConfig.fkpsFiles = config.fkpsFiles;
         runtimeConfig.appType = config.appType;
         runtimeConfig.appPath = config.appPath;
-        runtimeConfig.command= config.command;
+        runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
     }
 
@@ -614,6 +800,12 @@ namespace Plugin {
         runtimeConfig.thunder = config.thunder;
         runtimeConfig.systemMemoryLimit = config.systemMemoryLimit;
         runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
+
+        JsonArray vars = JsonArray();
+        for (auto str: config.envVars) {
+            vars.Add(str);
+        }
+        vars.ToString(runtimeConfig.envVariables);
 
         runtimeConfig.userId = config.userId;
         runtimeConfig.groupId = config.groupId;
@@ -629,7 +821,7 @@ namespace Plugin {
         }
         runtimeConfig.appType = config.appType == packagemanager::ApplicationType::SYSTEM ? "SYSTEM" : "INTERACTIVE";
         runtimeConfig.appPath = config.appPath;
-        runtimeConfig.command= config.command;
+        runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
     }
 
@@ -637,7 +829,13 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        /* Get current timestamp at the start of Lock for telemetry */
+        time_t requestTime = getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
+        CHECK_CACHE()
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
@@ -658,9 +856,19 @@ namespace Plugin {
             #endif
             LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
         }
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        if (Core::ERROR_NONE == result)
+        {
+            recordAndPublishTelemetryData(TELEMETRY_MARKER_CLOSE_TIME,
+                                                       packageId,
+                                                       requestTime,
+                                                       PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE);
+        }
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         return result;
     }
@@ -668,6 +876,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
         string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked)
     {
+        CHECK_CACHE()
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -679,20 +888,48 @@ namespace Plugin {
             locked = (state.mLockCount > 0);
             LOGDBG("id: %s ver: %s lock count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
         } else {
-            LOGERR("Unknown package id: %s ver: %s", packageId.c_str(), version.c_str());
+            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_BAD_REQUEST;
         }
+        return result;
+    }
+
+    Core::hresult PackageManagerImplementation::GetConfigForPackage(const string &fileLocator, string& id, string &version, Exchange::RuntimeConfig& config)
+    {
+        CHECK_CACHE()
+        Core::hresult result = Core::ERROR_GENERAL;
+
+        if (fileLocator.empty())
+        {
+            return Core::ERROR_INVALID_SIGNATURE;
+        }
+
+        #ifdef USE_LIBPACKAGE
+        packagemanager::ConfigMetaData metadata;
+        packagemanager::Result pmResult = packageImpl->GetFileMetadata(fileLocator, id, version, metadata);
+        if (pmResult == packagemanager::SUCCESS)
+        {
+            getRuntimeConfig(metadata, config);
+            result = Core::ERROR_NONE;
+        }
+        #endif
         return result;
     }
 
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
+        PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
+        if (subSystem != nullptr) {
+            subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
+        }
+
         #ifdef USE_LIBPACKAGE
+        packageImpl = packagemanager::IPackageImpl::instance();
+
         packagemanager::ConfigMetadataArray aConfigMetadata;
-        /*packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);*/
-        /*LOGDBG("aConfigMetadata.count:%ld pmResult=%d", aConfigMetadata.size(), pmResult);*/
-        packageImpl->Initialize(configStr, aConfigMetadata);
+        packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+        LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
         for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
             StateKey key = it->first;
             State state(it->second);
@@ -700,17 +937,23 @@ namespace Plugin {
             mState.insert( { key, state } );
         }
         #endif
+
+        if (subSystem != nullptr) {
+            subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
+        }
+        cacheInitialized = true;
         LOGDBG("exit");
     }
 
     void PackageManagerImplementation::downloader(int n)
     {
+        InitializeState();
         while(!done) {
             auto di = getNext();
             if (di == nullptr) {
                 LOGTRACE("Waiting ... ");
                 std::unique_lock<std::mutex> lock(mMutex);
-                cv.wait(lock);
+                cv.wait(lock, [this] { return done || (mDownloadQueue.size() > 0); });
             } else {
                 HttpClient::Status status = HttpClient::Status::Success;
                 int waitTime = 1;
@@ -750,28 +993,26 @@ namespace Plugin {
                     default: break; /* Do nothing */
                 }
                 NotifyDownloadStatus(di->GetId(), di->GetFileLocator(), reason);
-                mInprogressDowload.reset();
+                mInprogressDownload.reset();
             }
         }
     }
 
     void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason)
     {
-        JsonArray list = JsonArray();
-        JsonObject obj;
-        obj["downloadId"] = id;
-        obj["fileLocator"] = locator;
-        if (reason != DownloadReason::NONE)
-            obj["failReason"] = getDownloadReason(reason);
-        list.Add(obj);
-        std::string jsonstr;
-        if (!list.ToString(jsonstr)) {
-            LOGERR("Failed to  stringify JsonArray");
-        }
+
+        std::list<Exchange::IPackageDownloader::PackageInfo> packageInfoList;
+        Exchange::IPackageDownloader::PackageInfo packageInfo;
+        packageInfo.downloadId = id;
+        packageInfo.fileLocator = locator;
+        packageInfo.reason = reason;
+        packageInfoList.emplace_back(packageInfo);
+
+        Exchange::IPackageDownloader::IPackageInfoIterator* packageInfoIterator = Core::Service<RPC::IteratorType<Exchange::IPackageDownloader::IPackageInfoIterator>>::Create<Exchange::IPackageDownloader::IPackageInfoIterator>(packageInfoList);
 
         mAdminLock.Lock();
         for (auto notification: mDownloaderNotifications) {
-            notification->OnAppDownloadStatus(jsonstr);
+            notification->OnAppDownloadStatus(packageInfoIterator);
             LOGTRACE();
         }
         mAdminLock.Unlock();
@@ -784,8 +1025,8 @@ namespace Plugin {
         obj["packageId"] = id;
         obj["version"] = version;
         obj["state"] = getInstallState(state.installState);
-        if (!((state.installState != InstallState::INSTALLED) || (state.installState != InstallState::UNINSTALLED) ||
-            (state.installState != InstallState::INSTALLING) || (state.installState != InstallState::UNINSTALLING))) {
+        if (!((state.installState == InstallState::INSTALLED) || (state.installState == InstallState::UNINSTALLED) ||
+            (state.installState == InstallState::INSTALLING) || (state.installState == InstallState::UNINSTALLING))) {
             obj["failReason"] = getFailReason(state.failReason);
         }
         list.Add(obj);
@@ -806,11 +1047,11 @@ namespace Plugin {
     {
         std::lock_guard<std::mutex> lock(mMutex);
         LOGTRACE("mDownloadQueue.size = %ld\n", mDownloadQueue.size());
-        if (!mDownloadQueue.empty() && mInprogressDowload == nullptr) {
-            mInprogressDowload = mDownloadQueue.front();
+        if (!mDownloadQueue.empty() && mInprogressDownload == nullptr) {
+            mInprogressDownload = mDownloadQueue.front();
             mDownloadQueue.pop_front();
         }
-        return mInprogressDowload;
+        return mInprogressDownload;
     }
 
 } // namespace Plugin

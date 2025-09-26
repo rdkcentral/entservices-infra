@@ -70,26 +70,38 @@ if (IARMBUS_LIBRARIES)
     target_compile_definitions(${PLUGIN_IMPLEMENTATION} PRIVATE WITH_SYSMGR)
 endif ()
 
-find_package(Protobuf REQUIRED)
-target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${Protobuf_LIBRARIES})
+if(NOT RDK_SERVICE_L2_TEST)
+    find_package(Protobuf REQUIRED)
+    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${Protobuf_LIBRARIES})
 
-add_custom_target(protoc
-        ${Protobuf_PROTOC_EXECUTABLE} --cpp_out ${CMAKE_CURRENT_BINARY_DIR} -I ${CMAKE_CURRENT_SOURCE_DIR}/grpc/secure_storage ${CMAKE_CURRENT_SOURCE_DIR}/grpc/secure_storage/secure_storage.proto
-)
-add_dependencies(${PLUGIN_IMPLEMENTATION} protoc)
+    add_custom_target(protoc
+            ${Protobuf_PROTOC_EXECUTABLE} --cpp_out ${CMAKE_CURRENT_BINARY_DIR} -I ${CMAKE_CURRENT_SOURCE_DIR}/grpc/secure_storage ${CMAKE_CURRENT_SOURCE_DIR}/grpc/secure_storage/secure_storage.proto
+    )
+    add_dependencies(${PLUGIN_IMPLEMENTATION} protoc)
 
-target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE grpc++)
-find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin REQUIRED)
+    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE grpc++)
+    find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin REQUIRED)
 
-add_custom_target(protoc-gen-grpc
-        ${Protobuf_PROTOC_EXECUTABLE} --grpc_out ${CMAKE_CURRENT_BINARY_DIR} --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN} -I ${CMAKE_CURRENT_SOURCE_DIR}/grpc/secure_storage ${CMAKE_CURRENT_SOURCE_DIR}/grpc/secure_storage/secure_storage.proto
-)
-add_dependencies(${PLUGIN_IMPLEMENTATION} protoc-gen-grpc)
+    add_custom_target(protoc-gen-grpc
+            ${Protobuf_PROTOC_EXECUTABLE} --grpc_out ${CMAKE_CURRENT_BINARY_DIR} --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN} -I ${CMAKE_CURRENT_SOURCE_DIR}/grpc/secure_storage ${CMAKE_CURRENT_SOURCE_DIR}/grpc/secure_storage/secure_storage.proto
+    )
+    add_dependencies(${PLUGIN_IMPLEMENTATION} protoc-gen-grpc)
 
-set(PROTO_SRCS secure_storage.pb.cc secure_storage.grpc.pb.cc)
-target_sources(${PLUGIN_IMPLEMENTATION} PRIVATE ${PROTO_SRCS})
-set_property(SOURCE ${PROTO_SRCS} PROPERTY GENERATED 1)
-target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    set(PROTO_SRCS secure_storage.pb.cc secure_storage.grpc.pb.cc)
+    target_sources(${PLUGIN_IMPLEMENTATION} PRIVATE ${PROTO_SRCS})
+    set_property(SOURCE ${PROTO_SRCS} PROPERTY GENERATED 1)
+    target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+if (RDK_SERVICE_L2_TEST)
+   find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
+   if (TESTMOCKLIB_LIBRARIES)
+       message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")
+       target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${TESTMOCKLIB_LIBRARIES})
+   else (TESTMOCKLIB_LIBRARIES)
+       message ("Require ${TESTMOCKLIB_LIBRARIES} library")
+   endif (TESTMOCKLIB_LIBRARIES)
+endif (RDK_SERVICES_L2_TEST)
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)

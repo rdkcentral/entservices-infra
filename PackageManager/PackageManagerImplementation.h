@@ -38,6 +38,17 @@
 
 #include "HttpClient.h"
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+#include <interfaces/ITelemetryMetrics.h>
+
+#define TELEMETRY_MARKER_LAUNCH_TIME             "OverallLaunchTime_split"
+#define TELEMETRY_MARKER_CLOSE_TIME              "AppCloseTime_split"
+#define TELEMETRY_MARKER_INSTALL_TIME            "InstallTime_split"
+#define TELEMETRY_MARKER_INSTALL_ERROR           "InstallError_split"
+#define TELEMETRY_MARKER_UNINSTALL_TIME          "UninstallTime_split"
+#define TELEMETRY_MARKER_UNINSTALL_ERROR         "UninstallError_split"
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
 namespace WPEFramework {
 namespace Plugin {
     typedef Exchange::IPackageDownloader::Reason DownloadReason;
@@ -62,7 +73,8 @@ namespace Plugin {
             Exchange::RuntimeConfig runtimeConfig;
             string gatewayMetadataPath;
             string unpackedPath;
-            FailReason failReason;
+            FailReason failReason = Exchange::IPackageInstaller::FailReason::NONE;
+            std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
         };
 
         typedef std::pair<std::string, std::string> StateKey;
@@ -123,6 +135,17 @@ namespace Plugin {
         typedef std::list<DownloadInfoPtr> DownloadQueue;
 
     public:
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        enum PackageFailureErrorCode{
+            ERROR_NONE,
+            ERROR_SIGNATURE_VERIFICATION_FAILURE,
+            ERROR_PACKAGE_MISMATCH_FAILURE,
+            ERROR_INVALID_METADATA_FAILURE,
+            ERROR_PERSISTENCE_FAILURE,
+            ERROR_VERSION_NOT_FOUND
+        };
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
         PackageManagerImplementation();
         virtual ~PackageManagerImplementation();
 
@@ -132,9 +155,9 @@ namespace Plugin {
         Core::hresult Resume(const string &downloadId) override;
         Core::hresult Cancel(const string &downloadId) override;
         Core::hresult Delete(const string &fileLocator) override;
-        Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::Percent &percent);
-        Core::hresult GetStorageDetails(uint32_t &quotaKB, uint32_t &usedKB);
-        Core::hresult RateLimit(const string &downloadId, uint64_t &limit);
+        Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::ProgressInfo &progress);
+        Core::hresult GetStorageDetails(string &quotaKB, string &usedKB);
+        Core::hresult RateLimit(const string &downloadId, const uint64_t &limit);
 
         Core::hresult Register(Exchange::IPackageDownloader::INotification* notification) override;
         Core::hresult Unregister(Exchange::IPackageDownloader::INotification* notification) override;
@@ -148,6 +171,7 @@ namespace Plugin {
         Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
         Core::hresult PackageState(const string &packageId, const string &version, Exchange::IPackageInstaller::InstallState &state) override;
+        Core::hresult GetConfigForPackage(const string &fileLocator, string& id, string &version, Exchange::RuntimeConfig& config) override;
 
         Core::hresult Register(Exchange::IPackageInstaller::INotification *sink) override;
         Core::hresult Unregister(Exchange::IPackageInstaller::INotification *sink) override;
@@ -173,8 +197,8 @@ namespace Plugin {
 
     private:
         string GetVersion(const string &id) {
-            for (auto const& [key, val] : mState) {
-                if (id.compare(key.first) == 0) {
+            for (auto const& [key, state] : mState) {
+                if ((id.compare(key.first) == 0) && (state.installState == InstallState::INSTALLED)) {
                     return key.second;
                 }
             }
@@ -224,6 +248,12 @@ namespace Plugin {
     Core::hresult createStorageManagerObject();
     void releaseStorageManagerObject();
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+    void recordAndPublishTelemetryData(const std::string& marker, const std::string& appId, time_t requestTime, PackageManagerImplementation::PackageFailureErrorCode errorCode);
+    time_t getCurrentTimestamp();
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
+
     private:
         mutable Core::CriticalSection mAdminLock;
         std::list<Exchange::IPackageDownloader::INotification*> mDownloaderNotifications;
@@ -234,11 +264,12 @@ namespace Plugin {
         std::condition_variable cv;
         std::unique_ptr<std::thread> mDownloadThreadPtr;
         bool done = false;
-        DownloadInfoPtr mInprogressDowload;
+        DownloadInfoPtr mInprogressDownload;
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
         std::map<StateKey, State>  mState;
+        bool cacheInitialized = false;
 
         std::string downloadDir = "/opt/CDL/";
         string configStr;
@@ -248,6 +279,9 @@ namespace Plugin {
         #endif
         PluginHost::IShell* mCurrentservice;
         Exchange::IStorageManager* mStorageManagerObject;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
     };
 } // namespace Plugin
 } // namespace WPEFramework

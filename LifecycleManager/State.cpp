@@ -53,11 +53,10 @@ namespace WPEFramework
 	    {
                 ApplicationContext* context = getContext();
                 ApplicationLaunchParams& launchParams = context->getApplicationLaunchParams();
-                ret = runtimeManagerHandler->run(context->getAppId(), context->getAppInstanceId(), launchParams.mAppPath, launchParams.mAppConfig, launchParams.mRuntimeAppId, launchParams.mRuntimePath, launchParams.mRuntimeConfig, launchParams.mEnvironmentVars, launchParams.mEnableDebugger, launchParams.mLaunchArgs, launchParams.mTargetState, launchParams.mRuntimeConfigObject, errorReason);
-                printf("MADANA APPLICATION RUN RETURNS [%d] \n", ret);
-		fflush(stdout);
+                ret = runtimeManagerHandler->run(context->getAppId(), context->getAppInstanceId(), launchParams.mLaunchArgs, launchParams.mTargetState, launchParams.mRuntimeConfigObject, errorReason);
                 ret = true;
-                sem_wait(&context->mAppRunningSemaphore);
+                context->mPendingEventName = "onAppRunning";
+                context->mPendingStateTransition = true;
 	    }
             return ret;
         }
@@ -69,6 +68,8 @@ namespace WPEFramework
             if (Exchange::ILifecycleManager::LifecycleState::INITIALIZING == context->getCurrentLifecycleState())
 	    {
                 //TODO : Remove wait for now
+                //context->mPendingEventName = "";
+                //context->mPendingStateTransition = true;
                 //sem_wait(&context->mAppReadySemaphore);
                 ret = true;
 	    }
@@ -77,19 +78,15 @@ namespace WPEFramework
                 RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
 	        if (nullptr != runtimeManagerHandler)
 	        {
-                    ApplicationContext* context = getContext();
-                    ret = runtimeManagerHandler->resume(context->getAppInstanceId(), errorReason);
-                    if (true == ret)
-		    {
-                        WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
-	                if (nullptr != windowManagerHandler)
-	                {
-                            ApplicationContext* context = getContext();
-                            Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), true);
-                            printf("enabled display in window manager [%d] \n", retValue);
-			     fflush(stdout);
-                        }
-		    }
+                    //ret = runtimeManagerHandler->resume(context->getAppInstanceId(), errorReason);
+                    WindowManagerHandler *windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
+                    if (nullptr != windowManagerHandler)
+                    {
+                        ApplicationContext *context = getContext();
+                        Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), true);
+                        printf("enabled display in window manager [%d] \n", retValue);
+                        fflush(stdout);
+                    }
                    ret = true;
                    //TODO: Error cases
 	        }
@@ -117,7 +114,8 @@ namespace WPEFramework
 		    }
 		    else
 		    {
-                        sem_wait(&context->mFirstFrameSemaphore);
+                        context->mPendingEventName = "onFirstFrame";
+                        context->mPendingStateTransition = true;
 		    }
                 }
 		else
@@ -144,19 +142,16 @@ namespace WPEFramework
 	        }
                 else
 	        {
-                    ret = runtimeManagerHandler->suspend(context->getAppInstanceId(), errorReason);
-                    if (true == ret)
-		    {
-                        WindowManagerHandler* windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
-	                if (nullptr != windowManagerHandler)
-	                {
-                            ApplicationContext* context = getContext();
-	                    Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), false);
-                            printf("disabled display in window manager [%d] \n", retValue);
-			     fflush(stdout);
-                            ret = true;
-                        }
-		    }
+                    //ret = runtimeManagerHandler->suspend(context->getAppInstanceId(), errorReason);
+                    WindowManagerHandler *windowManagerHandler = RequestHandler::getInstance()->getWindowManagerHandler();
+                    if (nullptr != windowManagerHandler)
+                    {
+                        ApplicationContext *context = getContext();
+                        Core::hresult retValue = windowManagerHandler->enableDisplayRender(context->getAppInstanceId(), false);
+                        printf("disabled display in window manager [%d] \n", retValue);
+                        fflush(stdout);
+                        ret = true;
+                    }
                    //TODO: Handle error cases
                 }
 	    }
@@ -189,11 +184,11 @@ namespace WPEFramework
 */
 
         bool TerminatingState::handle(string& errorReason)
-	{
+        {
             bool success = false;
             RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
-	    if (nullptr != runtimeManagerHandler)
-	    {
+            if (nullptr != runtimeManagerHandler)
+            {
                 ApplicationContext* context = getContext();
                 ApplicationKillParams& killParams = context->getApplicationKillParams();
                 if (killParams.mForce)
@@ -204,10 +199,12 @@ namespace WPEFramework
                 {
                     success = runtimeManagerHandler->terminate(context->getAppInstanceId(), errorReason);
                 }
-                //TODO: handle return properly
-                success = true;
+                if(success)
+                {
+                    context->mPendingEventName = "onAppTerminating";
+                    context->mPendingStateTransition = true;
+                }
             }
-            //TODO: handle return properly	
             return success;
         }
     }

@@ -26,10 +26,14 @@
 #include <fstream>
 #include <interfaces/IStore2.h>
 #include <interfaces/IUserSettings.h>
+#include <condition_variable>
+#include <mutex>
+#include <time.h>
+#include "WaitGroup.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
-#define JSON_TIMEOUT   (1000)
+#define JSON_TIMEOUT   (4000)
 #define USERSETTING_CALLSIGN  _T("org.rdk.UserSettings")
 #define USERSETTINGL2TEST_CALLSIGN _T("L2tests.1")
 
@@ -55,9 +59,9 @@ typedef enum : uint32_t {
     UserSettings_onPinOnPurchaseChanged = 0x0000000d,
     UserSettings_onHighContrastChanged = 0x0000000e,
     UserSettings_onVoiceGuidanceChanged = 0x0000000f,
-    UserSettings_onVoiceGuidanceRateChanged = 0x00000011,
-    UserSettings_onVoiceGuidanceHintsChanged = 0x00000012,
-    UserSettings_onContentPinChanged = 0x00000013,
+    UserSettings_onVoiceGuidanceRateChanged = 0x00000010,
+    UserSettings_onVoiceGuidanceHintsChanged = 0x00000011,
+    UserSettings_onContentPinChanged = 0x00000012,
     UserSettings_StateInvalid = 0x00000000
 }UserSettingsL2test_async_events_t;
 
@@ -82,7 +86,7 @@ class AsyncHandlerMock_UserSetting
         MOCK_METHOD(void, onPinOnPurchaseChanged, (const bool pinOnPurchase));
         MOCK_METHOD(void, onHighContrastChanged, (const bool enabled));
         MOCK_METHOD(void, onVoiceGuidanceChanged, (const bool enabled));
-        MOCK_METHOD(void, onVoiceGuidanceRateChanged, (const bool rate));
+        MOCK_METHOD(void, onVoiceGuidanceRateChanged, (const double rate));
         MOCK_METHOD(void, onVoiceGuidanceHintsChanged, (const bool hints));
         MOCK_METHOD(void, onContentPinChanged, (const string& contentPin));
 };
@@ -474,9 +478,11 @@ uint32_t UserSettingTest::CreateUserSettingInterfaceObjectUsingComRPCConnection(
     else
     {
         m_controller_usersettings = Client_UserSettings->Open<PluginHost::IShell>(_T("org.rdk.UserSettings"), ~0, 3000);
+        TEST_LOG("m_controller_usersettings pointer address: %p", m_controller_usersettings);
         if (m_controller_usersettings)
         {
             m_usersettingsplugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettings>();
+            TEST_LOG("m_usersettingsplugin pointer address: %p", m_usersettingsplugin);
             m_usersettings_inspe_plugin = m_controller_usersettings->QueryInterface<Exchange::IUserSettingsInspector>();
             return_value = Core::ERROR_NONE;
         }
@@ -558,7 +564,7 @@ void UserSettingTest::onPreferredClosedCaptionServiceChanged(const string servic
     m_condition_variable.notify_one();
 }
 
-void UserSettingTest::onPinControlChanged(bool pinControl)
+void UserSettingTest::onPinControlChanged(const bool pinControl)
 {
     TEST_LOG("OnPinControlChanged event triggered ***\n");
     std::unique_lock<std::mutex> lock(m_mutex);
@@ -730,8 +736,8 @@ MATCHER_P(MatchRequestStatusDouble, expected, "")
     return expected == actual;
 
 }
-#if 0
-TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
+
+TEST_F(UserSettingTest, getMigrationStatecase)
 {
     JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
     StrictMock<AsyncHandlerMock_UserSetting> async_handler;
@@ -872,246 +878,35 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
 
     status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationStates", paramsMigrationState, result_json);
     EXPECT_EQ(status, Core::ERROR_NONE);
+}
 
-    TEST_LOG("Testing AudioDescriptionSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onAudioDescriptionChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool enabled = parameters["enabled"].Boolean();
-                                           async_handler.onAudioDescriptionChanged(enabled);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
+TEST_F(UserSettingTest, onLiveWatershedEvent)
+{
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at entry %ld\n", testcase_entry);
 
-    EXPECT_CALL(async_handler, onAudioDescriptionChanged(MatchRequestStatusBool(enabled)))
-    .WillOnce(Invoke(this, &UserSettingTest::onAudioDescriptionChanged));
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    bool liveWatershed = true;
+    bool playbackWatershed = true;
+    JsonObject paramsMigrationState;
 
-    JsonObject paramsAudioDes;
-    paramsAudioDes["enabled"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setAudioDescription", paramsAudioDes, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onAudioDescriptionChanged);
-    EXPECT_TRUE(signalled & UserSettings_onAudioDescriptionChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onAudioDescriptionChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getAudioDescription", result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
-
-    TEST_LOG("Testing PreferredAudioLanguagesSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                           _T("onPreferredAudioLanguagesChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
-                                           string preferredLanguages = parameters["preferredLanguages"].String();
-                                           async_handler.onPreferredAudioLanguagesChanged(preferredLanguages);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onPreferredAudioLanguagesChanged(MatchRequestStatusString(preferredLanguages)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPreferredAudioLanguagesChanged));
-
-    JsonObject paramsAudioLanguage;
-    paramsAudioLanguage["preferredLanguages"] = preferredLanguages;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredAudioLanguages", paramsAudioLanguage, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredAudioLanguagesChanged);
-    EXPECT_TRUE(signalled & UserSettings_onPreferredAudioLanguagesChanged);
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPreferredAudioLanguagesChanged"));
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getPreferredAudioLanguages", result_string);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-    EXPECT_EQ(result_string.Value(), preferredLanguages);
-
-    TEST_LOG("Testing PresentationLanguageSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                           _T("onPresentationLanguageChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
-                                           string presentationLanguage = parameters["presentationLanguage"].String();
-                                           async_handler.onPresentationLanguageChanged(presentationLanguage);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onPresentationLanguageChanged(MatchRequestStatusString(presentationLanguage)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPresentationLanguageChanged));
-
-    JsonObject paramsPresLanguage;
-    paramsPresLanguage["presentationLanguage"] = presentationLanguage;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setPresentationLanguage", paramsPresLanguage, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPresentationLanguageChanged);
-    EXPECT_TRUE(signalled & UserSettings_onPresentationLanguageChanged);
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPresentationLanguageChanged"));
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getPresentationLanguage", result_string);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-    EXPECT_EQ(result_string.Value(), presentationLanguage);
-
-    TEST_LOG("Testing SetCaptionsSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onCaptionsChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool enabled = parameters["enabled"].Boolean();
-                                           async_handler.onCaptionsChanged(enabled);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onCaptionsChanged(MatchRequestStatusBool(enabled)))
-    .WillOnce(Invoke(this, &UserSettingTest::onCaptionsChanged));
-
-    JsonObject paramsCaptions;
-    paramsCaptions["enabled"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setCaptions", paramsCaptions, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onCaptionsChanged);
-    EXPECT_TRUE(signalled & UserSettings_onCaptionsChanged);
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onCaptionsChanged"));
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getCaptions", result_bool);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
-
-    TEST_LOG("Testing SetPreferredCaptionsLanguagesSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                           _T("onPreferredCaptionsLanguagesChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
-                                           string preferredCaptionsLanguages = parameters["preferredLanguages"].String();
-                                           async_handler.onPreferredCaptionsLanguagesChanged(preferredCaptionsLanguages);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onPreferredCaptionsLanguagesChanged(MatchRequestStatusString(preferredCaptionsLanguages)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPreferredCaptionsLanguagesChanged));
-
-    JsonObject paramsPrefLang;
-    paramsPrefLang["preferredLanguages"] = preferredCaptionsLanguages;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredCaptionsLanguages", paramsPrefLang, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredCaptionsLanguagesChanged);
-    EXPECT_TRUE(signalled & UserSettings_onPreferredCaptionsLanguagesChanged);
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("OnPreferredCaptionsLanguagesChanged"));
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getPreferredCaptionsLanguages", result_string);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-    EXPECT_EQ(result_string.Value(), preferredCaptionsLanguages);
-
-    TEST_LOG("Testing SetPreferredClosedCaptionServiceSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                           _T("onPreferredClosedCaptionServiceChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
-                                           string preferredService = parameters["service"].String();
-                                           async_handler.onPreferredClosedCaptionServiceChanged(preferredService);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onPreferredClosedCaptionServiceChanged(MatchRequestStatusString(preferredService)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPreferredClosedCaptionServiceChanged));
-
-    JsonObject paramspreferredService;
-    paramspreferredService["service"] = preferredService;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredClosedCaptionService", paramspreferredService, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredClosedCaptionServiceChanged);
-    EXPECT_TRUE(signalled & UserSettings_onPreferredClosedCaptionServiceChanged);
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPreferredClosedCaptionServiceChanged"));
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getPreferredClosedCaptionService", result_string);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-    EXPECT_EQ(result_string.Value(), preferredService);
-
-    TEST_LOG("Testing PinControl Success");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onPinControlChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool pinControl = parameters["pinControl"].Boolean();
-                                           async_handler.onPinControlChanged(pinControl);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onPinControlChanged(MatchRequestStatusBool(pinControl)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPinControlChanged));
-
-    JsonObject paramsPinControl;
-    paramsPinControl["pinControl"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setPinControl", paramsPinControl, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPinControlChanged);
-    EXPECT_TRUE(signalled & UserSettings_onPinControlChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPinControlChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getPinControl", result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
-
-    string viewRes = "{\"restrictions\": [{\"scheme\": \"US_TV\", \"restrict\": [\"TV-Y7/FV\"]}, {\"scheme\": \"MPAA\", \"restrict\": []}]}";
-    TEST_LOG("Testing SetViewingRestrictions Success");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                           _T("onViewingRestrictionsChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
-                                           string viewRes = parameters["viewingRestrictions"].String();
-                                           async_handler.onViewingRestrictionsChanged(viewRes);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onViewingRestrictionsChanged(MatchRequestStatusString(viewRes)))
-    .WillOnce(Invoke(this, &UserSettingTest::onViewingRestrictionsChanged));
-
-    JsonObject paramsViewRestrictions;
-    paramsViewRestrictions["viewingRestrictions"] = viewRes;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setViewingRestrictions", paramsViewRestrictions, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onViewingRestrictionsChanged);
-    EXPECT_TRUE(signalled & UserSettings_onViewingRestrictionsChanged);
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onViewingRestrictionsChanged"));
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getViewingRestrictions", result_string);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-    EXPECT_EQ(result_string.Value(), viewRes);
-
-    string viewResWindow = "ALWAYS";
-    TEST_LOG("Testing SetViewingRestrictionsWindow Success");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                           _T("onViewingRestrictionsWindowChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
-                                           string viewResWindow = parameters["viewingRestrictionsWindow"].String();
-                                           async_handler.onViewingRestrictionsWindowChanged(viewResWindow);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onViewingRestrictionsWindowChanged(MatchRequestStatusString(viewResWindow)))
-    .WillOnce(Invoke(this, &UserSettingTest::onViewingRestrictionsWindowChanged));
-
-    JsonObject paramsViewResWindow;
-    paramsViewResWindow["viewingRestrictionsWindow"] = viewResWindow;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setViewingRestrictionsWindow", paramsViewResWindow, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onViewingRestrictionsWindowChanged);
-    EXPECT_TRUE(signalled & UserSettings_onViewingRestrictionsWindowChanged);
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onViewingRestrictionsWindowChanged"));
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getViewingRestrictionsWindow", result_string);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-    EXPECT_EQ(result_string.Value(), viewResWindow);
+    WaitGroup wg;
+    wg.Add(1);
 
     TEST_LOG("Testing LiveWatershed Success");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onLiveWatershedChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool liveWatershed = parameters["liveWatershed"].Boolean();
+                                           TEST_LOG("onLiveWatershedChanged callback triggered with value: %d", liveWatershed);
                                            async_handler.onLiveWatershedChanged(liveWatershed);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1123,8 +918,15 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "setLiveWatershed", paramsLiveWatershed, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
 
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+    wg.Wait();
+
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onLiveWatershedChanged);
     EXPECT_TRUE(signalled & UserSettings_onLiveWatershedChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
 
     /* Unregister for events. */
     jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onLiveWatershedChanged"));
@@ -1134,180 +936,42 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
-    TEST_LOG("Testing PlaybackWatershed Success");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onPlaybackWatershedChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool playbackWatershed = parameters["playbackWatershed"].Boolean();
-                                           async_handler.onPlaybackWatershedChanged(playbackWatershed);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onPlaybackWatershedChanged(MatchRequestStatusBool(playbackWatershed)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPlaybackWatershedChanged));
-
-    JsonObject paramsPlaybackWatershed;
-    paramsPlaybackWatershed["playbackWatershed"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setPlaybackWatershed", paramsPlaybackWatershed, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPlaybackWatershedChanged);
-    EXPECT_TRUE(signalled & UserSettings_onPlaybackWatershedChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPlaybackWatershedChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getPlaybackWatershed", result_bool);
+    paramsMigrationState["key"] = "LIVE_WATERSHED";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
     EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
 
-    TEST_LOG("Testing BlockNotRatedContent Success");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onBlockNotRatedContentChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool blockNotRatedContent = parameters["blockNotRatedContent"].Boolean();
-                                           async_handler.onBlockNotRatedContentChanged(blockNotRatedContent);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
 
-    EXPECT_CALL(async_handler, onBlockNotRatedContentChanged(MatchRequestStatusBool(blockNotRatedContent)))
-    .WillOnce(Invoke(this, &UserSettingTest::onBlockNotRatedContentChanged));
+TEST_F(UserSettingTest, onVoiceGuidanceHintsChangedEvent)
+{
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
 
-    JsonObject paramsBlockNotRatedContent;
-    paramsBlockNotRatedContent["blockNotRatedContent"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setBlockNotRatedContent", paramsBlockNotRatedContent, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+    bool hints = true;
+    JsonObject result_json;
+    Core::JSON::Boolean result_bool;
+    JsonObject paramsMigrationState;
 
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onBlockNotRatedContentChanged);
-    EXPECT_TRUE(signalled & UserSettings_onBlockNotRatedContentChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onBlockNotRatedContentChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getBlockNotRatedContent", result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
-
-    TEST_LOG("Testing PinOnPurchase Success");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onPinOnPurchaseChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool pinOnPurchase = parameters["pinOnPurchase"].Boolean();
-                                           async_handler.onPinOnPurchaseChanged(pinOnPurchase);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onPinOnPurchaseChanged(MatchRequestStatusBool(pinOnPurchase)))
-    .WillOnce(Invoke(this, &UserSettingTest::onPinOnPurchaseChanged));
-
-    JsonObject paramsPinOnPurchase;
-    paramsPinOnPurchase["pinOnPurchase"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setPinOnPurchase", paramsPinOnPurchase, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPinOnPurchaseChanged);
-    EXPECT_TRUE(signalled & UserSettings_onPinOnPurchaseChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPinOnPurchaseChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getPinOnPurchase", result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
-
-    TEST_LOG("Testing HighContrastSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onHighContrastChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool enabled = parameters["enabled"].Boolean();
-                                           async_handler.onHighContrastChanged(enabled);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onHighContrastChanged(MatchRequestStatusBool(enabled)))
-    .WillOnce(Invoke(this, &UserSettingTest::onHighContrastChanged));
-
-    JsonObject paramsHighContrast;
-    paramsHighContrast["enabled"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setHighContrast", paramsHighContrast, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onHighContrastChanged);
-    EXPECT_TRUE(signalled & UserSettings_onHighContrastChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onHighContrastChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getHighContrast", result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
-
-    TEST_LOG("Testing VoiceGuidanceSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onVoiceGuidanceChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           bool enabled = parameters["enabled"].Boolean();
-                                           async_handler.onVoiceGuidanceChanged(enabled);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onVoiceGuidanceChanged(MatchRequestStatusBool(enabled)))
-    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceChanged));
-
-    JsonObject paramsVoiceGuidance;
-    paramsVoiceGuidance["enabled"] = true;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidance", paramsVoiceGuidance, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceChanged);
-    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidance", result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result_bool.Value());
-
-    TEST_LOG("Testing VoiceGuidanceRateSuccess");
-    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
-                                       _T("onVoiceGuidanceRateChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
-                                           double rate = parameters["rate"].Double();
-                                           async_handler.onVoiceGuidanceRateChanged(rate);
-                                       });
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    EXPECT_CALL(async_handler, onVoiceGuidanceRateChanged(MatchRequestStatusDouble(rate)))
-    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceRateChanged));
-
-    JsonObject paramsVoiceGuidanceRate;
-    paramsVoiceGuidanceRate["rate"] = rate;
-    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceRate", paramsVoiceGuidanceRate, result_json);
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceRateChanged);
-    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceRateChanged);
-
-    /* Unregister for events. */
-    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceRateChanged"));
-    EXPECT_EQ(status,Core::ERROR_NONE);
-
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidanceRate", result_double);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_EQ(result_double.Value(), rate);
+    WaitGroup wg;
+    wg.Add(1);
 
     TEST_LOG("Testing VoiceGuidanceHintsSuccess");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                        _T("onVoiceGuidanceHintsChanged"),
-                                       [this, &async_handler](const JsonObject& parameters) {
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
                                            bool hints = parameters["hints"].Boolean();
+                                           TEST_LOG("onVoiceGuidanceHintsChanged callback triggered with value: %d", hints);
                                            async_handler.onVoiceGuidanceHintsChanged(hints);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1319,8 +983,16 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceHints", paramsVoiceGuidanceHints, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
 
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+     wg.Wait();
+
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceHintsChanged);
     EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceHintsChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
 
     /* Unregister for events. */
     jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceHintsChanged"));
@@ -1330,12 +1002,1082 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     EXPECT_EQ(status, Core::ERROR_NONE);
     EXPECT_TRUE(result_bool.Value());
 
+    paramsMigrationState["key"] = "VOICE_GUIDANCE_HINTS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stamp ending %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onAudioDescriptionChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+    bool enabled = true;
+    JsonObject result_json;
+    Core::JSON::Boolean result_bool;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing AudioDescriptionSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onAudioDescriptionChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           bool enabled = parameters["enabled"].Boolean();
+                                           TEST_LOG("onAudioDescriptionChanged callback triggered with value: %d", enabled);
+                                           async_handler.onAudioDescriptionChanged(enabled);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onAudioDescriptionChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onAudioDescriptionChanged));
+
+    JsonObject paramsAudioDes;
+    paramsAudioDes["enabled"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setAudioDescription", paramsAudioDes, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onAudioDescriptionChanged);
+    EXPECT_TRUE(signalled & UserSettings_onAudioDescriptionChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onAudioDescriptionChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getAudioDescription", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "AUDIO_DESCRIPTION";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at the end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onPreferredAudioLanguagesChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string preferredLanguages = "en";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing PreferredAudioLanguagesSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                           _T("onPreferredAudioLanguagesChanged"),
+                                           [&async_handler,&wg](const JsonObject& parameters) {
+                                           string preferredLanguages = parameters["preferredLanguages"].String();
+                                           TEST_LOG("onPreferredAudioLanguagesChanged callback triggered with value: %s", preferredLanguages.c_str());
+                                           async_handler.onPreferredAudioLanguagesChanged(preferredLanguages);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPreferredAudioLanguagesChanged(MatchRequestStatusString(preferredLanguages)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPreferredAudioLanguagesChanged));
+
+    JsonObject paramsAudioLanguage;
+    paramsAudioLanguage["preferredLanguages"] = preferredLanguages;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredAudioLanguages", paramsAudioLanguage, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredAudioLanguagesChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPreferredAudioLanguagesChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPreferredAudioLanguagesChanged"));
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getPreferredAudioLanguages", result_string);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+    EXPECT_EQ(result_string.Value(), preferredLanguages);
+
+    TEST_LOG("Testing getMigrationState after migrating properties");
+
+    paramsMigrationState["key"] = "PREFERRED_AUDIO_LANGUAGES";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at exit %ld\n", testcase_exit);
+
+}
+
+TEST_F(UserSettingTest, onPresentationLanguageChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp before wait %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string presentationLanguage = "fra";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing PresentationLanguageSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                           _T("onPresentationLanguageChanged"),
+                                           [&async_handler,&wg](const JsonObject& parameters) {
+                                           string presentationLanguage = parameters["presentationLanguage"].String();
+                                           TEST_LOG("onPresentationLanguageChanged callback triggered with value: %s", presentationLanguage.c_str());
+                                           async_handler.onPresentationLanguageChanged(presentationLanguage);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPresentationLanguageChanged(MatchRequestStatusString(presentationLanguage)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPresentationLanguageChanged));
+
+    JsonObject paramsPresLanguage;
+    paramsPresLanguage["presentationLanguage"] = presentationLanguage;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setPresentationLanguage", paramsPresLanguage, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+     wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT, UserSettings_onPresentationLanguageChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPresentationLanguageChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPresentationLanguageChanged"));
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getPresentationLanguage", result_string);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+    EXPECT_EQ(result_string.Value(), presentationLanguage);
+
+    paramsMigrationState["key"] = "PRESENTATION_LANGUAGE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onCaptionsChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool enabled = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing SetCaptionsSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onCaptionsChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           bool enabled = parameters["enabled"].Boolean();
+                                           TEST_LOG("onCaptionsChanged callback triggered with value: %d", enabled);
+                                           async_handler.onCaptionsChanged(enabled);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onCaptionsChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onCaptionsChanged));
+
+    JsonObject paramsCaptions;
+    paramsCaptions["enabled"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setCaptions", paramsCaptions, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onCaptionsChanged);
+    EXPECT_TRUE(signalled & UserSettings_onCaptionsChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onCaptionsChanged"));
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getCaptions", result_bool);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "CAPTIONS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+
+}
+
+TEST_F(UserSettingTest, onPreferredCaptionsLanguagesChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string preferredLanguages = "en";
+    string preferredCaptionsLanguages = "en,es";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing SetPreferredCaptionsLanguagesSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                           _T("onPreferredCaptionsLanguagesChanged"),
+                                           [&async_handler,&wg](const JsonObject& parameters) {
+                                           string preferredCaptionsLanguages = parameters["preferredLanguages"].String();
+                                           TEST_LOG("onPreferredCaptionsLanguagesChanged callback triggered with value: %s", preferredCaptionsLanguages.c_str());
+                                           async_handler.onPreferredCaptionsLanguagesChanged(preferredCaptionsLanguages);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPreferredCaptionsLanguagesChanged(MatchRequestStatusString(preferredCaptionsLanguages)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPreferredCaptionsLanguagesChanged));
+
+    JsonObject paramsPrefLang;
+    paramsPrefLang["preferredLanguages"] = preferredCaptionsLanguages;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredCaptionsLanguages", paramsPrefLang, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredCaptionsLanguagesChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPreferredCaptionsLanguagesChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("OnPreferredCaptionsLanguagesChanged"));
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getPreferredCaptionsLanguages", result_string);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+    EXPECT_EQ(result_string.Value(), preferredCaptionsLanguages);
+
+    paramsMigrationState["key"] = "PREFERRED_CAPTIONS_LANGUAGES";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+
+}
+
+TEST_F(UserSettingTest, onPreferredClosedCaptionServiceChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string preferredService = "CC3";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing SetPreferredClosedCaptionServiceSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                           _T("onPreferredClosedCaptionServiceChanged"),
+                                           [&async_handler,&wg](const JsonObject& parameters) {
+                                           string preferredService = parameters["service"].String();
+                                           TEST_LOG("onPreferredClosedCaptionServiceChanged callback triggered with value: %s", preferredService.c_str());
+                                           async_handler.onPreferredClosedCaptionServiceChanged(preferredService);
+                                            wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPreferredClosedCaptionServiceChanged(MatchRequestStatusString(preferredService)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPreferredClosedCaptionServiceChanged));
+
+    JsonObject paramspreferredService;
+    paramspreferredService["service"] = preferredService;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setPreferredClosedCaptionService", paramspreferredService, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPreferredClosedCaptionServiceChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPreferredClosedCaptionServiceChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time after wait %ld\n", wait_exit);
+
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPreferredClosedCaptionServiceChanged"));
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getPreferredClosedCaptionService", result_string);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+    EXPECT_EQ(result_string.Value(), preferredService);
+
+    paramsMigrationState["key"] = "PREFERRED_CLOSED_CAPTION_SERVICE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time at exit %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onPinControlChangedEvent)
+{
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool pinControl = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+    
+    TEST_LOG("Testing PinControl Success");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onPinControlChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           bool pinControl = parameters["pinControl"].Boolean();
+                                           TEST_LOG("onPinControlChanged callback triggered with value: %d", pinControl);
+                                           async_handler.onPinControlChanged(pinControl);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPinControlChanged(MatchRequestStatusBool(pinControl)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPinControlChanged));
+
+    JsonObject paramsPinControl;
+    paramsPinControl["pinControl"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setPinControl", paramsPinControl, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPinControlChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPinControlChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPinControlChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getPinControl", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "PIN_CONTROL";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp before wait %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onViewingRestrictionsChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string viewingRestrictions = "ALWAYS";
+
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    string viewRes = "{\"restrictions\": [{\"scheme\": \"US_TV\", \"restrict\": [\"TV-Y7/FV\"]}, {\"scheme\": \"MPAA\", \"restrict\": []}]}";
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing SetViewingRestrictions Success");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                           _T("onViewingRestrictionsChanged"),
+                                           [&async_handler,&wg](const JsonObject& parameters) {
+                                           string viewRes = parameters["viewingRestrictions"].String();
+                                           TEST_LOG("onViewingRestrictionsChanged callback triggered with value: %s", viewRes.c_str());
+                                           async_handler.onViewingRestrictionsChanged(viewRes);
+                                            wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onViewingRestrictionsChanged(MatchRequestStatusString(viewRes)))
+    .WillOnce(Invoke(this, &UserSettingTest::onViewingRestrictionsChanged));
+
+    JsonObject paramsViewRestrictions;
+    paramsViewRestrictions["viewingRestrictions"] = viewRes;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setViewingRestrictions", paramsViewRestrictions, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onViewingRestrictionsChanged);
+    EXPECT_TRUE(signalled & UserSettings_onViewingRestrictionsChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onViewingRestrictionsChanged"));
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getViewingRestrictions", result_string);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+    EXPECT_EQ(result_string.Value(), viewRes);
+
+    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onViewingRestrictionsWindowChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    string viewResWindow = "ALWAYS";
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing SetViewingRestrictionsWindow Success");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                           _T("onViewingRestrictionsWindowChanged"),
+                                           [&async_handler,&wg](const JsonObject& parameters) {
+                                           string viewResWindow = parameters["viewingRestrictionsWindow"].String();
+                                           TEST_LOG("onViewingRestrictionsWindowChanged callback triggered with value: %s", viewResWindow.c_str());
+                                           async_handler.onViewingRestrictionsWindowChanged(viewResWindow);
+                                            wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onViewingRestrictionsWindowChanged(MatchRequestStatusString(viewResWindow)))
+    .WillOnce(Invoke(this, &UserSettingTest::onViewingRestrictionsWindowChanged));
+
+    JsonObject paramsViewResWindow;
+    paramsViewResWindow["viewingRestrictionsWindow"] = viewResWindow;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setViewingRestrictionsWindow", paramsViewResWindow, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+     wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onViewingRestrictionsWindowChanged);
+    EXPECT_TRUE(signalled & UserSettings_onViewingRestrictionsWindowChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onViewingRestrictionsWindowChanged"));
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getViewingRestrictionsWindow", result_string);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+    EXPECT_EQ(result_string.Value(), viewResWindow);
+
+    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS_WINDOW";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onPlaybackWatershedChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool playbackWatershed = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing PlaybackWatershed Success");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onPlaybackWatershedChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           bool playbackWatershed = parameters["playbackWatershed"].Boolean();
+                                           TEST_LOG("onPlaybackWatershedChanged callback triggered with value: %d", playbackWatershed);
+                                           async_handler.onPlaybackWatershedChanged(playbackWatershed);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPlaybackWatershedChanged(MatchRequestStatusBool(playbackWatershed)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPlaybackWatershedChanged));
+
+    JsonObject paramsPlaybackWatershed;
+    paramsPlaybackWatershed["playbackWatershed"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setPlaybackWatershed", paramsPlaybackWatershed, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPlaybackWatershedChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPlaybackWatershedChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPlaybackWatershedChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getPlaybackWatershed", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "PLAYBACK_WATERSHED";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onBlockNotRatedContentChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool blockNotRatedContent = true;
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing BlockNotRatedContent Success");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onBlockNotRatedContentChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           bool blockNotRatedContent = parameters["blockNotRatedContent"].Boolean();
+                                           TEST_LOG("onBlockNotRatedContentChanged callback triggered with value: %d", blockNotRatedContent);
+                                           async_handler.onBlockNotRatedContentChanged(blockNotRatedContent);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onBlockNotRatedContentChanged(MatchRequestStatusBool(blockNotRatedContent)))
+    .WillOnce(Invoke(this, &UserSettingTest::onBlockNotRatedContentChanged));
+
+    JsonObject paramsBlockNotRatedContent;
+    paramsBlockNotRatedContent["blockNotRatedContent"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setBlockNotRatedContent", paramsBlockNotRatedContent, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onBlockNotRatedContentChanged);
+    EXPECT_TRUE(signalled & UserSettings_onBlockNotRatedContentChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onBlockNotRatedContentChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getBlockNotRatedContent", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "BLOCK_NOT_RATED_CONTENT";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+
+}
+
+TEST_F(UserSettingTest, onPinOnPurchaseChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool pinOnPurchase = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing PinOnPurchase Success");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onPinOnPurchaseChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           bool pinOnPurchase = parameters["pinOnPurchase"].Boolean();
+                                           TEST_LOG("onPinOnPurchaseChanged callback triggered with value: %d", pinOnPurchase);
+                                           async_handler.onPinOnPurchaseChanged(pinOnPurchase);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onPinOnPurchaseChanged(MatchRequestStatusBool(pinOnPurchase)))
+    .WillOnce(Invoke(this, &UserSettingTest::onPinOnPurchaseChanged));
+
+    JsonObject paramsPinOnPurchase;
+    paramsPinOnPurchase["pinOnPurchase"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setPinOnPurchase", paramsPinOnPurchase, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onPinOnPurchaseChanged);
+    EXPECT_TRUE(signalled & UserSettings_onPinOnPurchaseChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onPinOnPurchaseChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getPinOnPurchase", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "PIN_ON_PURCHASE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onHighContrastChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool enabled = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing HighContrastSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onHighContrastChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           bool enabled = parameters["enabled"].Boolean();
+                                           TEST_LOG("onHighContrastChanged callback triggered with value: %d", enabled);
+                                           async_handler.onHighContrastChanged(enabled);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onHighContrastChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onHighContrastChanged));
+
+    JsonObject paramsHighContrast;
+    paramsHighContrast["enabled"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setHighContrast", paramsHighContrast, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onHighContrastChanged);
+    EXPECT_TRUE(signalled & UserSettings_onHighContrastChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onHighContrastChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getHighContrast", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "HIGH_CONTRAST";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onVoiceGuidanceChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    bool enabled = true;
+
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing VoiceGuidanceSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onVoiceGuidanceChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           bool enabled = parameters["enabled"].Boolean();
+                                           TEST_LOG("onVoiceGuidanceChanged callback triggered with value: %d", enabled);
+                                           async_handler.onVoiceGuidanceChanged(enabled);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceChanged(MatchRequestStatusBool(enabled)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceChanged));
+
+    JsonObject paramsVoiceGuidance;
+    paramsVoiceGuidance["enabled"] = true;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidance", paramsVoiceGuidance, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceChanged);
+    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidance", result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result_bool.Value());
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onVoiceGuidanceRateChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    double rate = 1;
+
+    Core::JSON::Boolean result_bool;
+    Core::JSON::Double result_double;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
+    TEST_LOG("Testing VoiceGuidanceRateSuccess");
+    status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
+                                       _T("onVoiceGuidanceRateChanged"),
+                                       [this, &async_handler,&wg](const JsonObject& parameters) {
+                                           double rate = parameters["rate"].Double();
+                                           TEST_LOG("onVoiceGuidanceRateChanged callback triggered with value: %f", rate);
+                                           async_handler.onVoiceGuidanceRateChanged(rate);
+                                           wg.Done();
+                                       });
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(async_handler, onVoiceGuidanceRateChanged(MatchRequestStatusDouble(rate)))
+    .WillOnce(Invoke(this, &UserSettingTest::onVoiceGuidanceRateChanged));
+
+    JsonObject paramsVoiceGuidanceRate;
+    paramsVoiceGuidanceRate["rate"] = rate;
+    status = InvokeServiceMethod("org.rdk.UserSettings", "setVoiceGuidanceRate", paramsVoiceGuidanceRate, result_json);
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
+    signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onVoiceGuidanceRateChanged);
+    EXPECT_TRUE(signalled & UserSettings_onVoiceGuidanceRateChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
+    /* Unregister for events. */
+    jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onVoiceGuidanceRateChanged"));
+    EXPECT_EQ(status,Core::ERROR_NONE);
+
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getVoiceGuidanceRate", result_double);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_EQ(result_double.Value(), rate);
+
+    paramsMigrationState["key"] = "VOICE_GUIDANCE_RATE";
+    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
+    EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_FALSE(result_bool.Value());
+    paramsMigrationState.Clear();
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
+}
+
+TEST_F(UserSettingTest, onContentPinChangedEvent)
+{
+
+    time_t testcase_entry, testcase_exit, wait_entry, wait_exit;
+    time(&testcase_entry);
+    TEST_LOG("current time stramp at beginning %ld\n", testcase_entry);
+
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(USERSETTING_CALLSIGN, USERSETTINGL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_UserSetting> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t signalled = UserSettings_StateInvalid;
+
+    string contentPin = "1234";
+
+    Core::JSON::String result_string;
+    Core::JSON::Boolean result_bool;
+    JsonObject result_json;
+    JsonObject paramsMigrationState;
+
+    WaitGroup wg;
+    wg.Add(1);
+
     TEST_LOG("Testing SetContentPin and GetContentPin methods");
     status = jsonrpc.Subscribe<JsonObject>(JSON_TIMEOUT,
                                            _T("onContentPinChanged"),
-                                           [&async_handler](const JsonObject& parameters) {
+                                           [&async_handler,&wg](const JsonObject& parameters) {
                                            string contentPin = parameters["contentPin"].String();
+                                           TEST_LOG("onContentPinChanged callback triggered with value: %s", contentPin.c_str());
                                            async_handler.onContentPinChanged(contentPin);
+                                           wg.Done();
                                        });
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -1347,117 +2089,22 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
     status = InvokeServiceMethod("org.rdk.UserSettings", "setContentPin", paramsContentPin, result_json);
     EXPECT_EQ(status,Core::ERROR_NONE);
 
+    time(&wait_entry);
+    TEST_LOG("current time stramp before wait %ld\n", wait_entry);
+
+    wg.Wait();
+
     signalled = WaitForRequestStatus(JSON_TIMEOUT,UserSettings_onContentPinChanged);
     EXPECT_TRUE(signalled & UserSettings_onContentPinChanged);
+
+    time(&wait_exit);
+    TEST_LOG("current time stramp after wait %ld\n", wait_exit);
+
     jsonrpc.Unsubscribe(JSON_TIMEOUT, _T("onContentPinChanged"));
 
     status = InvokeServiceMethod("org.rdk.UserSettings", "getContentPin", result_string);
     EXPECT_EQ(status,Core::ERROR_NONE);
     EXPECT_EQ(result_string.Value(), contentPin);
-
-    TEST_LOG("Testing getMigrationState after migrating properties");
-
-    paramsMigrationState["key"] = "PREFERRED_AUDIO_LANGUAGES";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "AUDIO_DESCRIPTION";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "CAPTIONS";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PREFERRED_CAPTIONS_LANGUAGES";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PREFERRED_CLOSED_CAPTION_SERVICE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PRESENTATION_LANGUAGE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "HIGH_CONTRAST";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PIN_CONTROL";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VIEWING_RESTRICTIONS_WINDOW";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "LIVE_WATERSHED";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PLAYBACK_WATERSHED";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "BLOCK_NOT_RATED_CONTENT";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "PIN_ON_PURCHASE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VOICE_GUIDANCE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VOICE_GUIDANCE_RATE";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
-
-    paramsMigrationState["key"] = "VOICE_GUIDANCE_HINTS";
-    status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_FALSE(result_bool.Value());
-    paramsMigrationState.Clear();
 
     paramsMigrationState["key"] = "CONTENT_PIN";
     status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationState", paramsMigrationState, result_bool);
@@ -1467,6 +2114,9 @@ TEST_F(UserSettingTest, SetAndGetMethodsUsingJsonRpcConnectionSuccessCase)
 
     status = InvokeServiceMethod("org.rdk.UserSettings", "getMigrationStates", paramsMigrationState, result_json);
     EXPECT_EQ(status, Core::ERROR_NONE);
+
+    time(&testcase_exit);
+    TEST_LOG("current time stramp at end %ld\n", testcase_exit);
 
 }
 
@@ -1493,7 +2143,6 @@ TEST_F(UserSettingTest, VerifyDefaultValues)
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if (m_usersettingsplugin)
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
 
                 /* defaultBooleanValue should get false and the return status is Core::ERROR_NONE */
@@ -1909,9 +2558,7 @@ TEST_F(UserSettingTest,SetAndGetMethodsUsingComRpcConnectionSuccessCase)
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if ((m_usersettingsplugin!= nullptr) && (m_usersettings_inspe_plugin!= nullptr))
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
-                m_usersettings_inspe_plugin->AddRef();
 
                 bool requiresMigration;
                 Exchange::IUserSettingsInspector::IUserSettingsMigrationStateIterator *states;
@@ -2679,7 +3326,6 @@ TEST_F(UserSettingTest, NoDBFileInPersistentstoreErrorCase)
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if (m_usersettingsplugin)
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
 
                 TEST_LOG("Setting and Getting AudioDescription Values");
@@ -2801,7 +3447,6 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if (m_usersettingsplugin)
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
 
                 TEST_LOG("Setting and Getting AudioDescription Values");
@@ -2849,7 +3494,7 @@ TEST_F(UserSettingTest, PersistentstoreIsDeactivatedErrorCase)
         }
     }
 }
-#endif
+
 TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivatingErrorCase)
 {
     uint32_t status = Core::ERROR_GENERAL;
@@ -2890,7 +3535,6 @@ TEST_F(UserSettingTest, PersistentstoreIsNotActivatedWhileUserSettingsActivating
             ASSERT_TRUE(m_usersettingsplugin!= nullptr);
             if (m_usersettingsplugin)
             {
-                m_usersettingsplugin->AddRef();
                 m_usersettingsplugin->Register(&notification);
 
                 TEST_LOG("Setting and Getting AudioDescription Values");

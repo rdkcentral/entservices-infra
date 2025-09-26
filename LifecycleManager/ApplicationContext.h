@@ -24,6 +24,7 @@
 #include <time.h>
 #include <string>
 #include <semaphore>
+#include <vector>
 
 namespace WPEFramework
 {
@@ -33,14 +34,7 @@ namespace WPEFramework
 	{
             ApplicationLaunchParams();
             string mAppId;
-	    string mAppPath;
-	    string mAppConfig;
-	    string mRuntimeAppId;
-	    string mRuntimePath;
-	    string mRuntimeConfig;
 	    string mLaunchIntent;
-	    string mEnvironmentVars;
-	    bool   mEnableDebugger;
 	    string mLaunchArgs;
             Exchange::ILifecycleManager::LifecycleState mTargetState;
 	    WPEFramework::Exchange::RuntimeConfig mRuntimeConfigObject;
@@ -50,6 +44,17 @@ namespace WPEFramework
 	{
             ApplicationKillParams();
 	    bool mForce;
+        };
+
+        enum RequestType {
+            REQUEST_TYPE_NONE,
+            REQUEST_TYPE_LAUNCH,
+            REQUEST_TYPE_PAUSE,
+            REQUEST_TYPE_SUSPEND,
+            REQUEST_TYPE_RESUME,
+            REQUEST_TYPE_HIBERNATE,
+            REQUEST_TYPE_WAKE,
+            REQUEST_TYPE_TERMINATE
         };
 
         class ApplicationContext
@@ -65,8 +70,10 @@ namespace WPEFramework
 		void setState(void* state);
                 void setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState state);
                 void setStateChangeId(uint32_t id);
-                void setApplicationLaunchParams(const string& appId, const string& appPath, const string& appConfig, const string& runtimeAppId, const string& runtimePath, const string& runtimeConfig, const string& launchIntent, const string& environmentVars, const bool enableDebugger, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject);
+                void setApplicationLaunchParams(const string& appId, const string& launchIntent, const string& launchArgs, Exchange::ILifecycleManager::LifecycleState targetState, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject);
                 void setApplicationKillParams(bool force);
+                void setRequestTime(time_t requestTime);
+                void setRequestType(RequestType requestType);
 
                 void* getState();
                 std::string getAppId();
@@ -79,11 +86,16 @@ namespace WPEFramework
                 uint32_t getStateChangeId();
                 ApplicationLaunchParams& getApplicationLaunchParams();
                 ApplicationKillParams& getApplicationKillParams();
+                time_t getRequestTime();
+                RequestType getRequestType();
+
                 sem_t mReachedLoadingStateSemaphore;
-                sem_t mAppRunningSemaphore;
                 sem_t mAppReadySemaphore;
-                sem_t mFirstFrameSemaphore;
                 sem_t mFirstFrameAfterResumeSemaphore;
+                bool mPendingStateTransition;
+                std::vector<Exchange::ILifecycleManager::LifecycleState> mPendingStates; 
+                Exchange::ILifecycleManager::LifecycleState mPendingOldState; 
+                std::string mPendingEventName;
 
 	    private:
                 std::string mAppInstanceId;
@@ -96,6 +108,10 @@ namespace WPEFramework
                 uint32_t mStateChangeId;
                 ApplicationLaunchParams mLaunchParams;
                 ApplicationKillParams mKillParams;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                time_t mRequestTime;
+                RequestType mRequestType;
+#endif
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */

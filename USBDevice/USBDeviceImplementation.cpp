@@ -157,8 +157,6 @@ void USBDeviceImplementation::libUSBClose(void)
     (void)libusb_hotplug_deregister_callback(NULL, _hotPlugHandle[0]);
     (void)libusb_hotplug_deregister_callback(NULL, _hotPlugHandle[1]);
 
-    (void)libusb_exit(NULL);
-
     if (_libUSBDeviceThread)
     {
         if (_libUSBDeviceThread->joinable())
@@ -169,6 +167,7 @@ void USBDeviceImplementation::libUSBClose(void)
         _libUSBDeviceThread = nullptr;
     }
 
+    (void)libusb_exit(NULL);
     LOGINFO("libUSBClose Successed");
 }
 

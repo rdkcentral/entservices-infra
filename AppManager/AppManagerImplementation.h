@@ -25,6 +25,7 @@
 #include <interfaces/IStore2.h>
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IAppPackageManager.h>
+#include <interfaces/IStorageManager.h>
 #include "tracing/Logging.h"
 #include <com/com.h>
 #include <core/core.h>
@@ -81,6 +82,23 @@ namespace Plugin {
             APP_ACTION_KILL,
         };
 
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        enum CurrentActionError{
+            ERROR_NONE,
+            ERROR_INVALID_PARAMS,
+            ERROR_INTERNAL,
+            ERROR_PACKAGE_LOCK,
+            ERROR_PACKAGE_UNLOCK,
+            ERROR_PACKAGE_LIST_FETCH,
+            ERROR_PACKAGE_NOT_INSTALLED,
+            ERROR_PACKAGE_INVALID,
+            ERROR_SPAWN_APP,
+            ERROR_UNLOAD_APP,
+            ERROR_KILL_APP,
+            ERROR_SET_TARGET_APP_STATE
+        };
+#endif
+
         typedef struct _AppInfo
         {
             /* From LifecycleManager */
@@ -98,6 +116,9 @@ namespace Plugin {
             Exchange::IAppManager::AppLifecycleState appOldState;
             /* Current Action*/
             CurrentAction currentAction = APP_ACTION_NONE;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            time_t currentActionTime;
+#endif
         } AppInfo;
 
         std::map<std::string, AppInfo> mAppInfo;
@@ -105,7 +126,20 @@ namespace Plugin {
         enum EventNames {
             APP_EVENT_UNKNOWN = 0,
             APP_EVENT_LIFECYCLE_STATE_CHANGED,
-            APP_EVENT_INSTALLATION_STATUS
+            APP_EVENT_INSTALLATION_STATUS,
+            APP_EVENT_LAUNCH_REQUEST,
+            APP_EVENT_UNLOADED
+        };
+
+        struct AppLaunchRequestParam{
+            string appId;
+            string launchArgs;
+            string intent;
+        };
+
+        struct AppManagerRequest{
+            CurrentAction mRequestAction;
+            std::shared_ptr<void> mRequestParam;
         };
 
         private:
@@ -191,9 +225,10 @@ namespace Plugin {
         Core::hresult GetMaxHibernatedApps(int32_t& maxHibernatedApps) const override;
         Core::hresult GetMaxHibernatedFlashUsage(int32_t& maxHibernatedFlashUsage) const override;
         Core::hresult GetMaxInactiveRamUsage(int32_t& maxInactiveRamUsage) const override;
-        bool fetchPackageInfoByAppId(const string& appId, PackageInfo &packageData);
         void handleOnAppLifecycleStateChanged(const string& appId, const string& appInstanceId, const Exchange::IAppManager::AppLifecycleState newState,
                                         const Exchange::IAppManager::AppLifecycleState oldState, const Exchange::IAppManager::AppErrorReason errorReason);
+        void handleOnAppUnloaded(const string& appId, const string& appInstanceId);
+        void handleOnAppLaunchRequest(const string& appId, const string& intent, const string& source);
 
         // IConfiguration methods
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -204,6 +239,8 @@ namespace Plugin {
         Core::hresult createPackageManagerObject();
         void releasePackageManagerObject();
         void getCustomValues(WPEFramework::Exchange::RuntimeConfig& runtimeConfig);
+        Core::hresult createStorageManagerRemoteObject();
+        void releaseStorageManagerRemoteObject();
     private:
         mutable Core::CriticalSection mAdminLock;
         std::list<Exchange::IAppManager::INotification*> mAppManagerNotification;
@@ -211,9 +248,14 @@ namespace Plugin {
         Exchange::IStore2* mPersistentStoreRemoteStoreObject;
         Exchange::IPackageHandler* mPackageManagerHandlerObject;
         Exchange::IPackageInstaller* mPackageManagerInstallerObject;
+        Exchange::IStorageManager* mStorageManagerRemoteObject;
         PluginHost::IShell* mCurrentservice;
         Core::Sink<PackageManagerNotification> mPackageManagerNotification;
-        Core::hresult fetchInstalledPackages(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
+        std::thread mAppManagerWorkerThread;
+        std::mutex mAppManagerLock;
+        std::condition_variable mAppRequestListCV;
+        std::list<std::shared_ptr<AppManagerRequest>> mAppRequestList;
+        Core::hresult fetchAppPackageList(std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         void checkIsInstalled(const std::string& appId, bool& installed, const std::vector<WPEFramework::Exchange::IPackageInstaller::Package>& packageList);
         Core::hresult packageLock(const string& appId, PackageInfo &packageData, Exchange::IPackageHandler::LockReason lockReason);
         Core::hresult packageUnLock(const string& appId);
@@ -221,6 +263,7 @@ namespace Plugin {
         bool removeAppInfoByAppId(const string &appId);
         void OnAppInstallationStatus(const string& jsonresponse);
         std::string getInstallAppType(ApplicationType type);
+        void  AppManagerWorkerThread(void);
 
 
         void dispatchEvent(EventNames, const JsonObject &params);
@@ -232,7 +275,9 @@ namespace Plugin {
 
     public: /* public methods */
         void updateCurrentAction(const std::string& appId, CurrentAction action);
-
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        void updateCurrentActionTime(const std::string& appId, time_t currentActionTime, CurrentAction currentAction);
+#endif
     };
 } /* namespace Plugin */
 } /* namespace WPEFramework */
