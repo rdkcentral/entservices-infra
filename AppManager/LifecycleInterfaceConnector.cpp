@@ -669,7 +669,7 @@ namespace WPEFramework
         }
 
         /* GetLoadedApps invokes it */
-        Core::hresult LifecycleInterfaceConnector::getLoadedApps(string& apps)
+        Core::hresult LifecycleInterfaceConnector::getLoadedApps(Exchange::IAppManager::ILoadedAppInfoIterator*& apps)
         {
             LOGINFO("getLoadedApps Entered");
             Core::hresult result = Core::ERROR_GENERAL;
@@ -717,25 +717,25 @@ namespace WPEFramework
                     LOGINFO("Loaded appId: %s", appId.c_str());
                     auto& appInfo = appManagerImplInstance->mAppInfo[appId];
 
-                    JsonObject loadedAppJson;
-                    loadedAppJson["appId"] = appId;
-                    loadedAppJson["appInstanceId"] = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
-                    loadedAppJson["activeSessionId"] = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
-                    appInfo.targetAppState = mapAppLifecycleState(
+                    LoadedAppInfo loadedAppInfo = {};
+		    loadedAppInfo.appId = appId;
+		    loadedAppInfo.appInstanceId = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
+		    loadedAppInfo.activeSessionId = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
+
+		    appInfo.targetAppState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "targetLifecycleState")));
-                    loadedAppJson["targetLifecycleState"] = static_cast<int>(appInfo.targetAppState);
+                    loadedAppInfo.targetLifecycleState = static_cast<int>(appInfo.targetAppState);
                     appInfo.appNewState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "currentLifecycleState")));
-                    loadedAppJson["currentLifecycleState"] = static_cast<int>(appInfo.appNewState);
+                    loadedAppInfo.currentLifecycleState = static_cast<int>(appInfo.appNewState);
 
                     loadedAppsArray.Add(loadedAppJson);
                 }
-                // Convert the JSON array back to string to return
-                loadedAppsArray.ToString(apps);
-                LOGINFO("getLoadedApps result JSON: %s", apps.c_str());
-                result = Core::ERROR_NONE;
+                apps = Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>> \
+		       ::Create<Exchange::IAppManager::ILoadedAppInfoIterator>(loadedappInfo);
+		result = Core::ERROR_NONE;
             }
             else
             {

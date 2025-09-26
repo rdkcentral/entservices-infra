@@ -96,7 +96,7 @@ namespace WPEFramework
                     Core::hresult terminateApp(const string& appId);
                     Core::hresult killApp(const string& appId);
                     Core::hresult sendIntent(const string& appId, const string& intent);
-                    Core::hresult getLoadedApps(string& apps);
+                    Core::hresult getLoadedApps(Exchange::IAppManager::ILoadedAppInfoIterator*& apps);
                     void OnAppLifecycleStateChanged(const string& appId, const string& appInstanceId, const Exchange::ILifecycleManager::LifecycleState newState, const Exchange::ILifecycleManager::LifecycleState oldState, const string& navigationIntent);
                     void OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason);
                     Exchange::IAppManager::AppLifecycleState mapAppLifecycleState(Exchange::ILifecycleManager::LifecycleState state);
@@ -116,6 +116,7 @@ namespace WPEFramework
                     std::condition_variable mStateChangedCV;
                     std::mutex mStateMutex;
                     std::string mAppIdAwaitingPause;
+		    std::list<WPEFramework::Exchange::IAppManager::LoadedAppInfo> loadedappInfo;
         };
     }
 }
