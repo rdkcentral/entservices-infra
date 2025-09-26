@@ -448,9 +448,7 @@ err_ret:
         bool RuntimeManagerImplementation::generate(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, std::string& dobbySpec)
         {
             DobbySpecGenerator generator;
-            generator.generate(config, runtimeConfigObject, dobbySpec);
-
-            return true;
+            return generator.generate(config, runtimeConfigObject, dobbySpec);
         }
 
         Exchange::IRuntimeManager::RuntimeState RuntimeManagerImplementation::getRuntimeState(const string& appInstanceId)
@@ -509,6 +507,9 @@ err_ret:
             ApplicationConfiguration config;
             config.mAppId = appId;
             config.mAppInstanceId = appInstanceId;
+            bool displayResult = false;
+            bool notifyParamCheckFailure = false;
+            std::string errorCode = "";
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             /* Get current timestamp at the start of run for telemetry */
@@ -587,7 +588,7 @@ err_ret:
             {
 
                 mWindowManagerConnector->getDisplayInfo(appInstanceId, xdgRuntimeDir, waylandDisplay);
-                bool displayResult = mWindowManagerConnector->createDisplay(appInstanceId, waylandDisplay, uid, gid);
+                displayResult = mWindowManagerConnector->createDisplay(appInstanceId, waylandDisplay, uid, gid);
                 if(false == displayResult)
                 {
                     LOGERR("Failed to create display");
@@ -611,18 +612,23 @@ err_ret:
                 config.mWesterosSocketPath = westerosSocket;
             }
 
-            if (xdgRuntimeDir.empty() || waylandDisplay.empty())
+            if (xdgRuntimeDir.empty() || waylandDisplay.empty() || !displayResult)
             {
-                LOGERR("Missing required environment variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s",
+                LOGERR("Missing required environment variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s createDisplay %s",
                     xdgRuntimeDir.empty() ? "NOT FOUND" : xdgRuntimeDir.c_str(),
-                    waylandDisplay.empty() ? "NOT FOUND" : waylandDisplay.c_str());
+                    waylandDisplay.empty() ? "NOT FOUND" : waylandDisplay.c_str(),
+                    displayResult ? "Success" : "Failed");
                 status = Core::ERROR_GENERAL;
+                errorCode = "ERROR_CREATE_DISPLAY";
+                notifyParamCheckFailure = true;
             }
             /* Generate dobbySpec */
             else if (false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
             {
                 LOGERR("Failed to generate dobbySpec");
                 status = Core::ERROR_GENERAL;
+                errorCode = "ERROR_DOBBY_SPEC";
+                notifyParamCheckFailure = true;
             }
             else
             {
@@ -664,6 +670,8 @@ err_ret:
                     else
                     {
                         LOGERR("appInstanceId is not found ");
+                        errorCode = "ERROR_INVALID_PARAM";
+                        notifyParamCheckFailure = true;
                     }
                 }
                 else
@@ -672,6 +680,10 @@ err_ret:
                 }
             }
             mRuntimeManagerImplLock.Unlock();
+            if(notifyParamCheckFailure)
+            {
+                notifyParameterCheckFailure(appInstanceId, errorCode);
+            }
             return status;
         }
 
@@ -1142,6 +1154,15 @@ err_ret:
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_STATECHANGED, data);
         }
 
+        void RuntimeManagerImplementation::notifyParameterCheckFailure(const string& appInstanceId, const string& errorCode)
+        {
+            JsonObject data;
+            data["containerId"] = getContainerId(appInstanceId);
+            data["errorCode"] = errorCode;
+            data["eventName"] = "onParameterCheckFailed";
+            dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERFAILED, data);
+        }
+
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
 
         time_t RuntimeManagerImplementation::getCurrentTimestamp()
@@ -1216,6 +1237,5 @@ err_ret:
             }
         }
 #endif
-
     } /* namespace Plugin */
 } /* namespace WPEFramework */

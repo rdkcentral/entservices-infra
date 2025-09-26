@@ -105,9 +105,17 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
         return true;
     }
    
+    ssize_t memLimit = getSysMemoryLimit(config, runtimeConfig);
+    /*mandatory parameter check*/
+    if((memLimit <= 0) || runtimeConfig.command.empty() || (config.mUserId ==0))
+    {
+        LOGERR("Invalid mandatory parameter: Mem Limit=%d, Command=%s UserId %d", memLimit, runtimeConfig.command.c_str(), config.mUserId);
+        return false;
+    }
+
     Json::Value spec;
     spec["version"] = "1.1";
-    spec["memLimit"] = getSysMemoryLimit(config, runtimeConfig);
+    spec["memLimit"] = std::move(memLimit);
 
     Json::Value args(Json::arrayValue);
     std::string command ="";
