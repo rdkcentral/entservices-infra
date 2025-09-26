@@ -1108,20 +1108,6 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
                 return Core::ERROR_NONE;
           }));  
 
-    EXPECT_CALL(*mWindowManagerMock, EnableDisplayRender(::testing::_, ::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const string& client, bool enable) {
-                return Core::ERROR_NONE;
-          }));
-          
-    EXPECT_CALL(*mRuntimeManagerMock, Hibernate(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const string& appInstanceId) {
-                return Core::ERROR_NONE;
-          }));
-
     EXPECT_CALL(*mRuntimeManagerMock, Terminate(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1129,10 +1115,12 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
                 return Core::ERROR_NONE;
           }));
     
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::TERMINATING;
-
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
     
+    EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
+
     eventSignal();
 
     JsonObject data;
@@ -1294,9 +1282,11 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
                 return Core::ERROR_NONE;
           }));  
 
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
-
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::ACTIVE, launchIntent));
 
     eventSignal();
 
@@ -1339,9 +1329,11 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
                 return Core::ERROR_NONE;
           }));  
 
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
-
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::ACTIVE, launchIntent));
 
     eventSignal();
 
@@ -1384,9 +1376,11 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
                 return Core::ERROR_NONE;
           }));  
 
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
-
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    eventSignal();
+
+    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::ACTIVE, launchIntent));
 
     eventSignal();
 
