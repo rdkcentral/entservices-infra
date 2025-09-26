@@ -197,32 +197,18 @@ namespace Plugin {
         {
             partitionPath = storageDeviceInfo.devicePath;
         }
+        partitionPath = "/dev/sda";
         LOGINFO("partitionPath [%s]", partitionPath.c_str());
-
-        if (partitionPath == "sdd" && !partitionsFile.good()) {
-                // Hardcoded sdd partitions for contract testing when /proc/partitions is not accessible
-                LOGINFO("Contract test mode: Adding hardcoded sdd partitions");
-                partitions.push_back("/dev/sdd");
-                partitions.push_back("/dev/sdd1");
-                partitions.push_back("/dev/sdd2");
-            } else {
-                while (getline(partitionsFile, line))
-                {
-                    if (line.find(partitionPath) != std::string::npos && line != partitionPath)
-                    {
-                        string partition = "/dev/" + line.substr(line.find_last_of(' ') + 1);
-                        LOGINFO("Device path [%s], partition [%s]", storageDeviceInfo.devicePath.c_str(), partition.c_str());
-                        partitions.push_back(partition);
-                    }
-                }
-                // Fallback for contract test environment if no partitions found for sdd
-                if (partitions.empty() && partitionPath == "sdd") {
-                    LOGINFO("No partitions found in /proc/partitions for sdd, using hardcoded values for contract test");
-                    partitions.push_back("/dev/sdd");
-                    partitions.push_back("/dev/sdd1");
-                    partitions.push_back("/dev/sdd2");
-                }
+        
+        while (getline(partitionsFile, line))
+        {
+            if (line.find(partitionPath) != std::string::npos && line != partitionPath)
+            {
+                string partition = "/dev/" + line.substr(line.find_last_of(' ') + 1);
+                LOGINFO("Device path [%s], partition [%s]", storageDeviceInfo.devicePath.c_str(), partition.c_str());
+                partitions.push_back(partition);
             }
+        }
         num_partitions = partitions.size();
         LOGINFO("Device path[%s] Device Name[%s] num_partitions [%zd]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str(),num_partitions-1);
 
