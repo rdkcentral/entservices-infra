@@ -667,7 +667,7 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
 
     eventSignal();
 
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
     // TC-13: Set the target state of a loaded app with all parameters valid
     EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, launchIntent));
