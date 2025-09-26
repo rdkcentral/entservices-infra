@@ -210,6 +210,7 @@ namespace WPEFramework
             private: /* internal methods */
                 void dispatchEvent(RuntimeEventType, const JsonValue &params);
                 void Dispatch(RuntimeEventType event, const JsonValue params);
+                void notifyParameterCheckFailure(const string& appInstanceId, const string& errorCode);
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 void recordTelemetryData(const std::string& marker, const std::string& appId, uint64_t requestTime);
