@@ -75,6 +75,7 @@ namespace Plugin
             Json::Value getWorkingDir(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const;
             void initialiseIonHeapsJson();
             std::string encodeURL(std::string url) const;
+	    void addHolePunchPortToSpec(Json::Value &spec, in_port_t port) const;
 
             Json::Value mIonMemoryPluginData;
 	    std::string mPackageMountPoint;
