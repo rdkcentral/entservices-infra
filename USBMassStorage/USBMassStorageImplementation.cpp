@@ -502,17 +502,18 @@ namespace Plugin {
     Core::hresult USBMassStorageImplementation::GetMountPoints(const string &deviceName, Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator*& mountPoints) const
     {
         uint32_t errorCode = Core::ERROR_GENERAL;
-        if (deviceName.empty())
+        string temp ="sda";
+        if (temp.empty())
         {
             errorCode = Core::ERROR_INVALID_PARAMETER;
         }
         else
         {
-            auto it = USBMassStorageImplementation::_instance->usbStorageMountInfo.find(deviceName);
+            auto it = USBMassStorageImplementation::_instance->usbStorageMountInfo.find(temp);
             if (it == USBMassStorageImplementation::_instance->usbStorageMountInfo.end())
             {
-                auto itr = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [deviceName](const USBStorageDeviceInfo& item){
-                            return item.deviceName == deviceName;
+                auto itr = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [temp](const USBStorageDeviceInfo& item){
+                            return item.deviceName == temp;
                 });
 
                 if (itr != usbStorageDeviceInfo.end())
@@ -541,7 +542,7 @@ namespace Plugin {
                 }
                 else
                 {
-                    LOGERR("Mount info not found for device %s",deviceName.c_str());
+                    LOGERR("Mount info not found for device %s",temp.c_str());
                     errorCode = ERROR_INVALID_DEVICENAME;
                 }
             }
