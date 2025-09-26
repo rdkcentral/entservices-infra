@@ -197,11 +197,11 @@ namespace Plugin {
         {
             partitionPath = storageDeviceInfo.devicePath;
         }
-        partitionPath = "/dev/sda";
+        partitionPath = "sda";
         LOGINFO("partitionPath [%s]", partitionPath.c_str());
         
         while (getline(partitionsFile, line))
-        {
+        {    
             if (line.find(partitionPath) != std::string::npos && line != partitionPath)
             {
                 string partition = "/dev/" + line.substr(line.find_last_of(' ') + 1);
