@@ -197,7 +197,7 @@ namespace Plugin {
         {
             partitionPath = storageDeviceInfo.devicePath;
         }
-        partitionPath = "sda";
+        // partitionPath = "sda";
         LOGINFO("partitionPath [%s]", partitionPath.c_str());
         
         while (getline(partitionsFile, line))
