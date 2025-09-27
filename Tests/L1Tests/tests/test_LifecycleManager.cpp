@@ -1111,6 +1111,8 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
             [&](const string& appInstanceId) {
                 return Core::ERROR_NONE;
           }));
+
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
     
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
@@ -1119,16 +1121,6 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
 
     eventSignal();
-
-    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
-    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
-
-    eventSignal();
-
-    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
-    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
 
     JsonObject data;
 
@@ -1168,6 +1160,16 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     eventSignal();
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
+
+    eventSignal();
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
  
     JsonObject data;
 
