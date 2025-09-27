@@ -109,7 +109,7 @@ class EventHandlerTest : public Plugin::IEventHandler {
 
             EXPECT_EQ(find(windowEventName.begin(), windowEventName.end(), data["name"].String()) != windowEventName.end(), true);
             EXPECT_EQ(client, data["client"].String());
-            EXPECT_EQ(minutes, data["minutes"].asDouble());
+            EXPECT_EQ(minutes, data["minutes"].Double());
 
             m_condition_variable.notify_one();
         }
@@ -225,7 +225,7 @@ protected:
         runtimeEventName = {"onTerminated", "onStateChanged", "onFailure", "onStarted"};
         windowEventName = {"onReady", "onDisconnected", "onUserInactivity"};
         errorCode = "1";
-        state = 3;
+        state = Exchange::IRuntimeManager::RuntimeState::SUSPENDED;
         client = "test.client";
         minutes = 24;
         
