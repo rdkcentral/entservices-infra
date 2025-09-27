@@ -710,6 +710,7 @@ namespace WPEFramework
 	            };
 
                 // Iterate through each app JSON object in the array
+		bool loadedApps = false;
                 for (size_t i = 0; i < loadedAppsJsonArray.Length(); ++i)
                 {
                     JsonObject loadedAppsObject = loadedAppsJsonArray[i].Object();
@@ -731,10 +732,16 @@ namespace WPEFramework
                             getIntJsonField(loadedAppsObject, "currentLifecycleState")));
                     loadedAppInfo.currentLifecycleState = static_cast<int>(appInfo.appNewState);
 
-                    loadedAppsArray.Add(loadedAppJson);
+                    //Add loaded info
+		    LifecycleInterfaceConnector::_instance->loadedappInfo.push_back(loadedAppInfo);
+		    loadedApps = true;
                 }
-                apps = Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>> \
+
+		if(loadedApps)
+		{
+                    apps = Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>> \
 		       ::Create<Exchange::IAppManager::ILoadedAppInfoIterator>(loadedappInfo);
+		}
 		result = Core::ERROR_NONE;
             }
             else
