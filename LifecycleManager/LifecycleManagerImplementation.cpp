@@ -27,6 +27,9 @@
 #include "LifecycleManagerTelemetryReporting.h"
 #endif
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 namespace WPEFramework
 {
     namespace Plugin
@@ -329,35 +332,43 @@ namespace WPEFramework
         
         Core::hresult LifecycleManagerImplementation::UnloadApp(const string& appInstanceId, string& errorReason, bool& success)
         {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             // Begins a graceful shutdown of the app.  Moves the app through the lifecycle states till it ultimately ends in app container being terminated.
             // This is an asynchronous call, clients should use the onAppStateChange event to determine when the app is actually terminated.
             // This moves an app to the unloaded state
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext(appInstanceId, "");
             time_t requestTime = 0;
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
 #endif
             if (nullptr == context)
 	    {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 status = Core::ERROR_GENERAL;
                 success = false;
                 return status;
 	    }
+        DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             mAdminLock.Lock();
             if(REQUEST_TYPE_PAUSE != context->getRequestType())   //If request through AppManager closeApp, requestTime is already set
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 context->setRequestTime(requestTime);
             }
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             context->setRequestType(REQUEST_TYPE_TERMINATE);
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(false);
-
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             success = RequestHandler::getInstance()->terminate(context, false, errorReason);
             if (!success)
 	    {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 status = Core::ERROR_GENERAL;
 	    }
+        DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             mAdminLock.Unlock();
             return status;
         }
