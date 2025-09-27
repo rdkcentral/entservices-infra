@@ -116,7 +116,6 @@ namespace WPEFramework
                     std::condition_variable mStateChangedCV;
                     std::mutex mStateMutex;
                     std::string mAppIdAwaitingPause;
-		    std::list<WPEFramework::Exchange::IAppManager::LoadedAppInfo> loadedappInfo;
         };
     }
 }

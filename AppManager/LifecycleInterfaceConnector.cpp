@@ -26,6 +26,7 @@
 #include <thread>
 #include <fstream>
 #include <sstream>
+#include <list>
 #include <unistd.h>
 #include <plugins/System.h>
 
@@ -674,6 +675,7 @@ namespace WPEFramework
             LOGINFO("getLoadedApps Entered");
             Core::hresult result = Core::ERROR_GENERAL;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
+            std::list<WPEFramework::Exchange::IAppManager::LoadedAppInfo> loadedAppInfoList;
 
             mAdminLock.Lock();
             /* Checking if mLifecycleManagerRemoteObject is not valid then create the object */
@@ -710,7 +712,6 @@ namespace WPEFramework
 	            };
 
                 // Iterate through each app JSON object in the array
-		bool loadedApps = false;
                 for (size_t i = 0; i < loadedAppsJsonArray.Length(); ++i)
                 {
                     JsonObject loadedAppsObject = loadedAppsJsonArray[i].Object();
@@ -733,15 +734,11 @@ namespace WPEFramework
                     loadedAppInfo.currentLifecycleState = static_cast<int>(appInfo.appNewState);
 
                     //Add loaded info
-		    LifecycleInterfaceConnector::_instance->loadedappInfo.push_back(loadedAppInfo);
-		    loadedApps = true;
+		    loadedAppInfoList.push_back(loadedAppInfo);
                 }
 
-		if(loadedApps)
-		{
-                    apps = Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>> \
-		       ::Create<Exchange::IAppManager::ILoadedAppInfoIterator>(loadedappInfo);
-		}
+                apps = Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>> \
+		   ::Create<Exchange::IAppManager::ILoadedAppInfoIterator>(loadedAppInfoList);
 		result = Core::ERROR_NONE;
             }
             else
