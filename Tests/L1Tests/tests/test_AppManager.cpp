@@ -2971,6 +2971,8 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
             {"appId":"NexTennis","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6},
             {"appId":"uktv","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6}
         ])";
+        return Core::ERROR_NONE;
+    });        
     // Simulate a JSON-RPC call
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getLoadedApps"), _T("{}"), mJsonRpcResponse));
     EXPECT_STREQ(mJsonRpcResponse.c_str(),
