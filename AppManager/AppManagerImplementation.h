@@ -209,7 +209,7 @@ namespace Plugin {
         Core::hresult CloseApp(const string& appId) override;
         Core::hresult TerminateApp(const string& appId) override;
         Core::hresult KillApp(const string& appId) override;
-        Core::hresult GetLoadedApps(string& appData) override;
+        Core::hresult GetLoadedApps(Exchange::IAppManager::ILoadedAppInfoIterator*& appData) override;
         Core::hresult SendIntent(const string& appId , const string& intent) override;
         Core::hresult PreloadApp(const string& appId , const string& launchArgs ,string& error) override;
         Core::hresult GetAppProperty(const string& appId , const string& key , string& value) override;
