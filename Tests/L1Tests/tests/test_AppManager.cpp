@@ -349,14 +349,14 @@ protected:
         app_1.appId = "NexTennis";
         app_1.appInstanceId = "0295effd-2883-44ed-b614-471e3f682762";
         app_1.activeSessionId = "";
-        app_1.targetLifecycleState = 6; 
-        app_1.currentLifecycleState = 6;
+        app_1.targetLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE; 
+        app_1.currentLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
 
         app_2.appId = "uktv";
         app_2.appInstanceId = "67fa75b6-0c85-43d4-a591-fd29e7214be5";
         app_2.activeSessionId = "";
-        app_2.targetLifecycleState = 6; 
-        app_2.currentLifecycleState = 6;
+        app_2.targetLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE; 
+        app_2.currentLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
 
         loadedAppInfoList.emplace_back(app_1);
         loadedAppInfoList.emplace_back(app_2);
