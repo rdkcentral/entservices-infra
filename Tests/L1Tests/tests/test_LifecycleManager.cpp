@@ -1194,6 +1194,12 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 	// TC-27: Signal the Runtime Manager Event - onStateChanged
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
+
+    eventSignal();
+
     TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
     
     releaseResources();
