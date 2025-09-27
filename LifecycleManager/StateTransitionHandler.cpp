@@ -23,10 +23,15 @@
 #include <mutex>
 #include <vector>
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
+
 namespace WPEFramework
 {
     namespace Plugin
     {
+ DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
         static std::thread requestHandlerThread;
         std::mutex gRequestMutex;
         sem_t gRequestSemaphore;
@@ -37,10 +42,13 @@ namespace WPEFramework
 
         StateTransitionHandler* StateTransitionHandler::getInstance()
 	{
+		 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             if (nullptr == mInstance)
             {
+				 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 mInstance = new StateTransitionHandler();
             }
+		 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             return mInstance;
 	}
 
@@ -54,25 +62,31 @@ namespace WPEFramework
 
         bool StateTransitionHandler::initialize()
 	{
+		 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             sRunning = true;
             StateHandler::initialize();
             sem_init(&gRequestSemaphore, 0, 0);
             requestHandlerThread = std::thread([=]() {
+				 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 bool isRunning = true;
                 gRequestMutex.lock();
                 isRunning = sRunning;
                 gRequestMutex.unlock();
                 while(isRunning)
 		{
+			 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     gRequestMutex.lock();
                     while (gRequests.size() > 0)
                     {
+						 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 	                std::shared_ptr<StateTransitionRequest> request = gRequests.front();
                         if (!request)
                         {
+							 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                             gRequests.erase(gRequests.begin());
                             continue;
                         }
+						 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                         std::string errorReason;
                         bool success = StateHandler::changeState(*request, errorReason);
                         if (!success)
@@ -82,13 +96,16 @@ namespace WPEFramework
                             //TODO: Decide on what to do on state transition error
                             break;
                         }
+						 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                         gRequests.erase(gRequests.begin());
                     }
+			 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     gRequestMutex.unlock();
                     sem_wait(&gRequestSemaphore);
                     gRequestMutex.lock();
                     isRunning = sRunning;
                     gRequestMutex.unlock();
+			 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 }
             });
 	    return true;	
@@ -105,12 +122,14 @@ namespace WPEFramework
 
 	void StateTransitionHandler::addRequest(StateTransitionRequest& request)
 	{
+		 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
            //TODO: Pass contect and state as argument to function
 	   std::shared_ptr<StateTransitionRequest> stateTransitionRequest = std::make_shared<StateTransitionRequest>(request.mContext, request.mTargetState);
 	   gRequestMutex.lock();
            gRequests.push_back(stateTransitionRequest);
 	   gRequestMutex.unlock();
            sem_post(&gRequestSemaphore);
+		 DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 	}
 
     } /* namespace Plugin */
