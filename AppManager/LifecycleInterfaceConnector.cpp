@@ -719,7 +719,7 @@ namespace WPEFramework
                     LOGINFO("Loaded appId: %s", appId.c_str());
                     auto& appInfo = appManagerImplInstance->mAppInfo[appId];
 
-                    LoadedAppInfo loadedAppInfo = {};
+                    Exchange::IAppManager::LoadedAppInfo loadedAppInfo = {};
 		    loadedAppInfo.appId = appId;
 		    loadedAppInfo.appInstanceId = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
 		    loadedAppInfo.activeSessionId = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
