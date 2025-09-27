@@ -225,7 +225,7 @@ protected:
         runtimeEventName = {"onTerminated", "onStateChanged", "onFailure", "onStarted"};
         windowEventName = {"onReady", "onDisconnected", "onUserInactivity"};
         errorCode = "1";
-        state = Exchange::IRuntimeManager::RuntimeState::SUSPENDED;
+        state = Exchange::IRuntimeManager::RuntimeState::RUNTIME_STATE_SUSPENDED;
         client = "test.client";
         minutes = 24;
         
