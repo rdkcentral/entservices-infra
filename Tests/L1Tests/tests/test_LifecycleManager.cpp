@@ -1053,7 +1053,7 @@ TEST_F(LifecycleManagerTest, stateChangeComplete_withValidParams)
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
  * Set the intent to a random test value
- * Spawn an app with valid parameters with target state as LOADING
+ * Spawn an app with valid parameters with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Handle event signals by calling the eventSignal() method
  * Send an intent to the active app using the appInstanceId 
@@ -1067,11 +1067,9 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
 
     string intent = "test.intent";
 
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    eventSignal();
-
-    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::ACTIVE, launchIntent));
 
     eventSignal();
 
@@ -1086,11 +1084,15 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
 /* Test Case for Runtime Manager Event - onTerminated after Spawning
  * 
  * Set up Lifecycle Manager interface, configurations, required COM-RPC resources, mocks and expectations
- * Spawn an app with valid parameters with target state as TERMINATING
+ * Spawn an app with valid parameters with target state as ACTIVE
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
+ * Handle event signals by calling the eventSignal() method
+ * Terminate the app with the appInstanceId
+ * Verify successful termination by asserting that UnloadApp() returns Core::ERROR_NONE
  * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onTerminated along with the appInstanceId obtained
  * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data
+ * Handle event signals by calling the eventSignal() method
  * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
@@ -1112,8 +1114,8 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
                 return Core::ERROR_NONE;
           }));
 
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
-    
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     eventSignal();
@@ -1129,6 +1131,12 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
 
 	// TC-26: Signal the Runtime Manager Event - onTerminated 
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onRuntimeManagerEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onRuntimeManagerEvent);
+
+    eventSignal();
    
     releaseResources();
 } 
@@ -1139,8 +1147,9 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
  * Spawn an app with valid parameters with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Handle event signals by calling the eventSignal() method
- * Populate the data by setting the event name as onStateChanged along with the state as RUNNING and appInstanceId obtained 
+ * Populate the data by setting the event name as onStateChanged along with the state as PAUSED and appInstanceId obtained 
  * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data 
+ * Handle event signals by calling the eventSignal() method
  * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
@@ -1160,25 +1169,21 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     eventSignal();
-
-    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
-    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
-
-    eventSignal();
-
-    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
-
-    EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
  
     JsonObject data;
 
     data["name"] = "onStateChanged";
     data["appInstanceId"] = appInstanceId;
-    data["state"] = 2;
+    data["state"] = 3;
 
 	// TC-27: Signal the Runtime Manager Event - onStateChanged
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onRuntimeManagerEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onRuntimeManagerEvent);
+
+    eventSignal();
     
     releaseResources();
 } 
@@ -1291,13 +1296,9 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
                 return Core::ERROR_NONE;
           }));  
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    eventSignal();
-
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, launchIntent));
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     eventSignal();
 
@@ -1340,13 +1341,9 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
                 return Core::ERROR_NONE;
           }));  
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    eventSignal();
-
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, launchIntent));
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     eventSignal();
 
@@ -1368,6 +1365,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
  * Handle event signals by calling the eventSignal() method
  * Populate the data by setting the event name as onReady along with the appInstanceId obtained
  * Signal the Window Manager Event using onWindowManagerEvent() with the data
+ * Handle event signals by calling the eventSignal() method
  * Release the Lifecycle Manager objects and clean-up related test resources
  */
 
@@ -1389,13 +1387,9 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
                 return Core::ERROR_NONE;
           }));  
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
-
-    eventSignal();
-
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->SetTargetAppState(appInstanceId, targetLifecycleState, launchIntent));
+    EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     eventSignal();
 
@@ -1406,6 +1400,12 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
 
 	// TC-32: Signal the Window Manager Event - onReady
     mLifecycleManagerImpl->onWindowManagerEvent(data);
+
+    event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onWindowManagerEvent);
+
+    EXPECT_TRUE(event_signal & LifecycleManager_onWindowManagerEvent);
+
+    eventSignal();
 
     releaseResources();
 } 
