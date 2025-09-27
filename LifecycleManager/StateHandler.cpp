@@ -24,6 +24,9 @@
 #include "IEventHandler.h"
 #include "RequestHandler.h"
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 namespace WPEFramework
 {
     namespace Plugin
@@ -35,23 +38,29 @@ namespace WPEFramework
 
         bool StateHandler::updateState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState lifeCycleState, string& errorReason)
 	{
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             State* currentState = (State*) context->getState();
             bool result = false;
 	    if ((nullptr != currentState) && (currentState->getValue() == lifeCycleState))
 	    {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 	        return true;	   
 	    }
+        DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             State* newState = createState(context, lifeCycleState);
             if (nullptr != newState)
 	    {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 	        //context->setState(nullptr);
                 result = newState->handle(errorReason);
                 if (result)
 		{
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 	           context->setState(newState);
 		   delete currentState;
                 }
             }
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             return result;
 	}
 
@@ -92,32 +101,41 @@ namespace WPEFramework
 
         bool StateHandler::isValidTransition(Exchange::ILifecycleManager::LifecycleState start, Exchange::ILifecycleManager::LifecycleState target, std::map<Exchange::ILifecycleManager::LifecycleState, bool>& pathSequence, std::vector<Exchange::ILifecycleManager::LifecycleState>& foundPath)
         {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             bool pathPresent = false;
             if (start == target)
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 return true;
             }
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             pathSequence[target] = true; 
             std::map<Exchange::ILifecycleManager::LifecycleState, std::list<Exchange::ILifecycleManager::LifecycleState>>::iterator transitionIter = mPossibleStateTransitions.find(target);
             if (transitionIter == mPossibleStateTransitions.end())
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 return false;
             }
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             std::list<Exchange::ILifecycleManager::LifecycleState>& transitionList = transitionIter->second;
             for (auto iter = transitionList.begin(); iter != transitionList.end(); ++iter)
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 if (pathSequence.find(*iter) != pathSequence.end())
                 {
+                    DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     continue;
                 }
-
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 pathPresent = isValidTransition(start, *iter, pathSequence, foundPath);
                 if (pathPresent)
                 {
+                    DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 	            foundPath.push_back(*iter);		
                     break;
                 }
             }
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             return pathPresent;
         }
 
@@ -163,11 +181,13 @@ namespace WPEFramework
 
         bool StateHandler::changeState(StateTransitionRequest& request, string& errorReason)
 	{
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             Exchange::ILifecycleManager::LifecycleState lifecycleState = request.mTargetState;
             ApplicationContext* context = request.mContext;
 
             if (context == nullptr)
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 errorReason = "ApplicationContext is null";
                 return false;
             }
@@ -175,23 +195,27 @@ namespace WPEFramework
 
             if ((context->mPendingStateTransition) && (Exchange::ILifecycleManager::LifecycleState::TERMINATING != currentLifecycleState))
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 sendEvent(context, context->mPendingOldState, currentLifecycleState, errorReason);
             }
 
             if ((false == context->mPendingStateTransition) && (currentLifecycleState == lifecycleState))
 	    {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 	        return true;
 	    }
-
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             std::vector<Exchange::ILifecycleManager::LifecycleState> statePath;
             bool result = getStatePath(context, lifecycleState, statePath, errorReason);
             if (false == result)
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 printf("Unable to get sequence for target state \n");
                 fflush(stdout);
                 return false; 
             }
 
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             bool isStateTerminating = false;
             size_t lastStateIndex = static_cast<size_t>(-1); 
             context->mPendingStateTransition = false;
@@ -199,10 +223,12 @@ namespace WPEFramework
             // start from next state
 	    for (size_t stateIndex=1; stateIndex<statePath.size(); stateIndex++)
 	    {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 Exchange::ILifecycleManager::LifecycleState oldLifecycleState = ((State*)context->getState())->getValue();
                 isStateTerminating = (Exchange::ILifecycleManager::LifecycleState::TERMINATING == statePath[stateIndex]);
                 if (!isStateTerminating)
 		{
+                    DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     result = updateState(context, statePath[stateIndex], errorReason);
                     if(result)
                     {
@@ -215,21 +241,26 @@ namespace WPEFramework
                     }
                     if (true == context->mPendingStateTransition)
                     {
+                        DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                         context->mPendingOldState = oldLifecycleState;
                         lastStateIndex = stateIndex;
                         break;
                     }
                 }
+        DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
 
 		Exchange::ILifecycleManager::LifecycleState newLifecycleState = ((State*)context->getState())->getValue();
                 if (isStateTerminating)
 		{
+                   DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     newLifecycleState = statePath[stateIndex];
                 }
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 sendEvent(context, oldLifecycleState, newLifecycleState, errorReason);
 
                 if (isStateTerminating)
                 {
+                    DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     result = updateState(context, statePath[stateIndex], errorReason);
                     if(result)
                     {
@@ -242,37 +273,46 @@ namespace WPEFramework
                     }
                     if (true == context->mPendingStateTransition)
                     {
+                        DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                         lastStateIndex = stateIndex;
                         break;
                     }
                 }
             }
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             if (true == context->mPendingStateTransition)
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 context->mPendingStates.clear();
                 if (lastStateIndex < statePath.size())
                 {
+                    DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     for (size_t stateIndex = lastStateIndex; stateIndex < statePath.size() ; stateIndex++)
                     {
+                        DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                         context->mPendingStates.push_back(statePath[stateIndex]);
                     }
                 }
             }
             else 
 	    {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 context->mPendingStateTransition = false;
                 context->mPendingEventName = "";
                 context->mPendingStates.clear();
-            }		  
+            }	
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");	  
             return result;
         }
 
         void StateHandler::sendEvent(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState oldLifecycleState, Exchange::ILifecycleManager::LifecycleState newLifecycleState, string& errorReason)
 	{
+        DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             IEventHandler* eventHandler = RequestHandler::getInstance()->getEventHandler();
 
             if (nullptr != eventHandler)
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 struct timespec stateChangeTime;
                 timespec_get(&stateChangeTime, TIME_UTC);
                 context->setLastLifecycleStateChangeTime(stateChangeTime);
@@ -286,8 +326,10 @@ namespace WPEFramework
                 eventData["newLifecycleState"] = (uint32_t)newLifecycleState;
                 if (newLifecycleState == Exchange::ILifecycleManager::LifecycleState::ACTIVE)
                 {
+                    DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     eventData["navigationIntent"] = context->getMostRecentIntent();
                 }
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 eventData["errorReason"] = errorReason;
                 eventHandler->onStateChangeEvent(eventData);
             }
@@ -295,27 +337,33 @@ namespace WPEFramework
 
         bool StateHandler::getStatePath(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState lifecycleState, std::vector<Exchange::ILifecycleManager::LifecycleState>& statePath, string& errorReason)
         {
+            DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
             if (false == context->mPendingStateTransition)
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 Exchange::ILifecycleManager::LifecycleState currentLifecycleState = context->getCurrentLifecycleState();
                 std::map<Exchange::ILifecycleManager::LifecycleState, bool> seenPaths;
 
                 bool isValidRequest = StateHandler::isValidTransition(currentLifecycleState, lifecycleState, seenPaths, statePath);
                 if (!isValidRequest)
                 {
+                    DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     errorReason = "Invalid launch request in current state";
                     return false;
                 }
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 //ensure final state is pushed here
                 statePath.push_back(lifecycleState);
 
                 if (Exchange::ILifecycleManager::LifecycleState::TERMINATING == lifecycleState)
 	        {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                     statePath.push_back(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
 	        }
             }
             else
             {
+                DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
                 statePath = context->mPendingStates;
             }
             return true;

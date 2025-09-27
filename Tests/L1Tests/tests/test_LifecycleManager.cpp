@@ -1113,14 +1113,20 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
           }));
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+
+    TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
     
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
+
+    TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
 
     eventSignal();
     
     EXPECT_EQ(Core::ERROR_NONE, interface->UnloadApp(appInstanceId, errorReason, success));
 
     eventSignal();
+
+    TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
 
     JsonObject data;
 
@@ -1129,6 +1135,8 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
 
 	// TC-26: Signal the Runtime Manager Event - onTerminated 
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
+
+    TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
    
     releaseResources();
 } 
@@ -1157,15 +1165,21 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
+    TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
+
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     eventSignal();
 
+    TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
+    
     event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
 
     EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
 
     eventSignal();
+
+    TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
 
     event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onStateChangeEvent);
 
@@ -1179,6 +1193,8 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 
 	// TC-27: Signal the Runtime Manager Event - onStateChanged
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
+
+    TEST_LOG("------------------------------- ISHVAR 2806 --------------------------------------");
     
     releaseResources();
 } 
