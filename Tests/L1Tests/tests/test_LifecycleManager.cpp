@@ -62,18 +62,22 @@ using namespace std;
 
 class EventHandlerTest : public Plugin::IEventHandler {
     public:
-        std::string appId;
-        std::string appInstanceId;
+        string appId;
+        string appInstanceId;
         Exchange::ILifecycleManager::LifecycleState oldLifecycleState;
         Exchange::ILifecycleManager::LifecycleState newLifecycleState;
         Exchange::IRuntimeManager::RuntimeState state;
-        std::string navigationIntent;
-        std::string errorReason;
-        std::string name;
-        std::string errorCode;
+        string navigationIntent;
+        string errorReason;
+        string name;
+        string errorCode;
+        string client;
+        vector<string> runtimeEventName;
+        vector<string> windowEventName;
+        double minutes;
 
-        std::mutex m_mutex;
-        std::condition_variable m_condition_variable;
+        mutex m_mutex;
+        condition_variable m_condition_variable;
         uint32_t m_event_signal = LifecycleManager_invalidEvent;
 
         void onStateChangeEvent(JsonObject& data) override 
@@ -81,7 +85,6 @@ class EventHandlerTest : public Plugin::IEventHandler {
             m_event_signal = LifecycleManager_onStateChangeEvent;
 
             EXPECT_EQ(appId, data["appId"].String());
-            EXPECT_EQ(appInstanceId, data["appInstanceId"].String());
             EXPECT_EQ(oldLifecycleState, static_cast<Exchange::ILifecycleManager::LifecycleState>(data["oldLifecycleState"].Number()));
             EXPECT_EQ(newLifecycleState, static_cast<Exchange::ILifecycleManager::LifecycleState>(data["newLifecycleState"].Number()));
             EXPECT_EQ(errorReason, data["errorReason"].String());
@@ -93,10 +96,9 @@ class EventHandlerTest : public Plugin::IEventHandler {
         {
             m_event_signal = LifecycleManager_onRuntimeManagerEvent;
 
-            EXPECT_EQ(name, data["name"].String());
-            EXPECT_EQ(appInstanceId, data["appInstanceId"].String());
+            EXPECT_EQ(find(runtimeEventName.begin(), runtimeEventName.end(), data["name"].String()) != runtimeEventName.end(), true);
             EXPECT_EQ(state, static_cast<Exchange::IRuntimeManager::RuntimeState>(data["state"].Number()));
-            EXPECT_EQ(errorCode, data["errorReason"].String());
+            EXPECT_EQ(errorCode, data["errorCode"].String());
 
             m_condition_variable.notify_one();
         }
@@ -105,13 +107,14 @@ class EventHandlerTest : public Plugin::IEventHandler {
         {
             m_event_signal = LifecycleManager_onWindowManagerEvent;
 
-            EXPECT_EQ(name, data["name"].String());
-            EXPECT_EQ(appInstanceId, data["appInstanceId"].String());
+            EXPECT_EQ(find(windowEventName.begin(), windowEventName.end(), data["name"].String()) != windowEventName.end(), true);
+            EXPECT_EQ(client, data["client"].String());
+            EXPECT_EQ(minutes, data["minutes"].asDouble());
 
             m_condition_variable.notify_one();
         }
 
-        void onRippleEvent(std::string name, JsonObject& data) override
+        void onRippleEvent(string name, JsonObject& data) override
         {
             m_event_signal = LifecycleManager_onRippleEvent;
 
@@ -167,6 +170,13 @@ protected:
     string appInstanceId;
     string errorReason;
     bool success;
+    vector<string> runtimeEventName;
+    vector<string> windowEventName;
+    string errorCode;
+    Exchange::IRuntimeManager::RuntimeState state;
+    string client;
+    double minutes;
+
     Core::ProxyType<Plugin::LifecycleManagerImplementationTest> mLifecycleManagerImpl;
     EventHandlerTest eventHdlTest;
     Exchange::ILifecycleManager* interface = nullptr;
@@ -212,6 +222,12 @@ protected:
         appInstanceId = "";
         errorReason = "";
         success = true;
+        runtimeEventName = {"onTerminated", "onStateChanged", "onFailure", "onStarted"};
+        windowEventName = {"onReady", "onDisconnected", "onUserInactivity"};
+        errorCode = "1";
+        state = 3;
+        client = "test.client";
+        minutes = 24;
         
         runtimeConfigObject = {
             true,true,true,1024,512,"test.env.variables",1,1,1024,true,"test.dial.id","test.command","test.app.type","test.app.path","test.runtime.path","test.logfile.path",1024,"test.log.levels",true,"test.fkps.files","test.firebolt.version",true,"test.unpacked.path"
@@ -223,6 +239,12 @@ protected:
         eventHdlTest.oldLifecycleState = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
         eventHdlTest.newLifecycleState = targetLifecycleState;
         eventHdlTest.errorReason = errorReason;
+        eventHdlTest.state = state;
+        eventHdlTest.errorCode = errorCode;
+        eventHdlTest.client = client;
+        eventHdlTest.minutes = minutes;
+        eventHdlTest.runtimeEventName = runtimeEventName;
+        eventHdlTest.windowEventName = windowEventName;
 
         eventData["appId"] = appId;
         eventData["appInstanceId"] = appInstanceId;
@@ -230,6 +252,11 @@ protected:
         eventData["newLifecycleState"] = static_cast<uint32_t>(targetLifecycleState);
         eventData["navigationIntent"] = launchIntent;
         eventData["errorReason"] = errorReason;
+        eventData["name"] = "";
+        eventData["state"] = static_cast<uint32_t>(state);
+        eventData["errorCode"] = errorCode;
+        eventData["client"] = client;
+        eventData["minutes"] = minutes;
 
         event_signal = LifecycleManager_invalidEvent;
 		
@@ -326,8 +353,10 @@ protected:
         EXPECT_TRUE(event_signal & LifecycleManager_onStateChangeEvent);
     }
 
-    void onRuntimeManagerEventSignal() 
+    void onRuntimeManagerEventSignal(JsonObject data) 
     {
+        eventData["name"] = data["name"];
+
         event_signal = LifecycleManager_invalidEvent;
 
         eventHdlTest.onRuntimeManagerEvent(eventData);
@@ -337,8 +366,10 @@ protected:
         EXPECT_TRUE(event_signal & LifecycleManager_onRuntimeManagerEvent);
     }
 
-    void onWindowManagerEventSignal() 
+    void onWindowManagerEventSignal(JsonObject data) 
     {
+        eventData["name"] = data["name"];
+
         event_signal = LifecycleManager_invalidEvent;
 
         eventHdlTest.onWindowManagerEvent(eventData);
@@ -1154,7 +1185,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
 	// TC-26: Signal the Runtime Manager Event - onTerminated 
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
-    onRuntimeManagerEventSignal();
+    onRuntimeManagerEventSignal(data);
 
     event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onRuntimeManagerEvent);
 
@@ -1169,7 +1200,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
  * Spawn an app with valid parameters with target state as INITIALIZING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Handle event signals by calling the onStateChangeEventSignal() method
- * Populate the data by setting the event name as onStateChanged along with the state as PAUSED and appInstanceId obtained 
+ * Populate the data by setting the event name as onStateChanged along with the state as SUSPENDED and appInstanceId obtained 
  * Signal the Runtime Manager Event using onRuntimeManagerEvent() with the data 
  * Handle event signals by calling the onStateChangeEventSignal() method
  * Release the Lifecycle Manager objects and clean-up related test resources
@@ -1201,7 +1232,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStateChanged)
 	// TC-27: Signal the Runtime Manager Event - onStateChanged
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
-    onRuntimeManagerEventSignal();
+    onRuntimeManagerEventSignal(data);
 
     event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onRuntimeManagerEvent);
 
@@ -1247,7 +1278,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onFailure)
 	// TC-28: Signal the Runtime Manager Event - onFailure
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
-    onRuntimeManagerEventSignal();
+    onRuntimeManagerEventSignal(data);
 
     releaseResources();
 } 
@@ -1288,7 +1319,7 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onStarted)
 	// TC-29: Signal the Runtime Manager Event - onStarted
     mLifecycleManagerImpl->onRuntimeManagerEvent(data);
 
-    onRuntimeManagerEventSignal();
+    onRuntimeManagerEventSignal(data);
 
     releaseResources();
 } 
@@ -1331,11 +1362,12 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onUserInactivity)
     JsonObject data;
 
     data["name"] = "onUserInactivity";
+    data["minutes"] = 24;
 
 	// TC-30: Signal the Window Manager Event - onUserInactivity
     mLifecycleManagerImpl->onWindowManagerEvent(data);
 
-    onWindowManagerEventSignal();
+    onWindowManagerEventSignal(data);
 
     releaseResources();
 } 
@@ -1378,11 +1410,12 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onDisconnect)
     JsonObject data;
 
     data["name"] = "onDisconnect";
+    data["client"] = "test.client";
 
 	// TC-31: Signal the Window Manager Event - onDisconnect
     mLifecycleManagerImpl->onWindowManagerEvent(data);
 
-    onWindowManagerEventSignal();
+    onWindowManagerEventSignal(data);
 
     releaseResources();
 } 
@@ -1431,7 +1464,7 @@ TEST_F(LifecycleManagerTest, windowManagerEvent_onReady)
 	// TC-32: Signal the Window Manager Event - onReady
     mLifecycleManagerImpl->onWindowManagerEvent(data);
 
-    onWindowManagerEventSignal();
+    onWindowManagerEventSignal(data);
 
     event_signal = eventHdlTest.WaitForEventStatus(TIMEOUT, LifecycleManager_onWindowManagerEvent);
 
