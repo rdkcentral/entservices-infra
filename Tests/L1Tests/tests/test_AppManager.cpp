@@ -2966,11 +2966,11 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
     EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
-    ).WillOnce([&](const bool verbose, Exchange::IAppManager::ILoadedAppInfoIterator*& apps) {
-        auto mockIterator = FillLoadedAppsIterator(); // Fill the loaded apps
-        apps = mockIterator;
-        return Core::ERROR_NONE;
-    });
+    ).WillOnce([&](const bool verbose, std::string &apps) {
+        apps = R"([
+            {"appId":"NexTennis","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6},
+            {"appId":"uktv","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6}
+        ])";
     // Simulate a JSON-RPC call
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getLoadedApps"), _T("{}"), mJsonRpcResponse));
     EXPECT_STREQ(mJsonRpcResponse.c_str(),
