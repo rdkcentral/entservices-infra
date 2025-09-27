@@ -31,7 +31,6 @@ namespace WPEFramework
 {
     namespace Plugin
     {
- DEBUG_PRINTF("------------------------------- ISHVAR 2806 --------------------------------------");
         static std::thread requestHandlerThread;
         std::mutex gRequestMutex;
         sem_t gRequestSemaphore;
