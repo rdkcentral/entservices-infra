@@ -54,6 +54,7 @@ namespace WPEFramework
 
         bool StateTransitionHandler::initialize()
 	{
+            sRunning = true;
             StateHandler::initialize();
             sem_init(&gRequestSemaphore, 0, 0);
             requestHandlerThread = std::thread([=]() {

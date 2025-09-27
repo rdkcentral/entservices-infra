@@ -71,6 +71,11 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
+option(ENABLE_UNIT_TESTS "Enable unit tests" OFF)
+if(ENABLE_UNIT_TESTS)
+  target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
+endif()
+
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
