@@ -701,7 +701,7 @@ TEST_F(LifecycleManagerTest, getLoadedApps_noAppsLoaded)
  * Spawn an app with valid parameters with target state as LOADING
  * Verify successful spawn by asserting that SpawnApp() returns Core::ERROR_NONE
  * Handle event signals by calling the onStateChangeEventSignal() method
- * Set the target state of the app from LOADING to INITIALIZING with valid parameters
+ * Set the target state of the app from LOADING to ACTIVE with valid parameters
  * Verify successful state change by asserting that SetTargetAppState() returns Core::ERROR_NONE
  * Handle event signals by calling the onStateChangeEventSignal() method
  * Repeat the same process with only required parameters valid
@@ -716,6 +716,13 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mWindowManagerMock, RenderReady(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& client, bool &status) {
                 return Core::ERROR_NONE;
           }));
 
@@ -1121,6 +1128,20 @@ TEST_F(LifecycleManagerTest, sendIntenttoActiveApp_onSpawnAppSuccess)
 {
     createResources();
 
+    EXPECT_CALL(*mRuntimeManagerMock, Run(appId, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mWindowManagerMock, RenderReady(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& client, bool &status) {
+                return Core::ERROR_NONE;
+          }));
+
     string intent = "test.intent";
 
     targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::ACTIVE;
@@ -1160,6 +1181,13 @@ TEST_F(LifecycleManagerTest, runtimeManagerEvent_onTerminated)
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const string& appInstanceId, const uint32_t userId, const uint32_t groupId, Exchange::IRuntimeManager::IValueIterator* const& ports, Exchange::IRuntimeManager::IStringIterator* const& paths, Exchange::IRuntimeManager::IStringIterator* const& debugSettings, const Exchange::RuntimeConfig& runtimeConfigObject) {
+                return Core::ERROR_NONE;
+          }));
+
+    EXPECT_CALL(*mWindowManagerMock, RenderReady(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& client, bool &status) {
                 return Core::ERROR_NONE;
           }));
 
