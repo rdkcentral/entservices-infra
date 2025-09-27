@@ -110,6 +110,9 @@ protected:
     Core::JSONRPC::Handler& mJsonRpcHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
+    std::mutex mPreLoadMutex;
+    std::condition_variable mPreLoadCV;
+    bool mPreLoadSpawmCalled = false;
 
     void createAppManagerImpl()
     {
@@ -399,6 +402,51 @@ protected:
             appInstanceId = APPMANAGER_APP_INSTANCE;
             errorReason = "";
             success = true;
+            return Core::ERROR_NONE;
+        });
+    }
+
+    void preLaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState state)
+    {
+        const std::string launchArgs = APPMANAGER_APP_LAUNCHARGS;
+        TEST_LOG("LaunchAppPreRequisite with state: %d", state);
+
+        EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            auto mockIterator = FillPackageIterator(); // Fill the package Info
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
+
+        EXPECT_CALL(*mPackageManagerMock, Lock(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, const Exchange::IPackageHandler::LockReason &lockReason, uint32_t &lockId /* @out */, string &unpackedPath /* @out */, Exchange::RuntimeConfig &configMetadata /* @out */, Exchange::IPackageHandler::ILockIterator*& appMetadata /* @out */) {
+            lockId = 1;
+            unpackedPath = APPMANAGER_APP_UNPACKEDPATH;
+            return Core::ERROR_NONE;
+        });
+
+        EXPECT_CALL(*mLifecycleManagerMock, IsAppLoaded(::testing::_, ::testing::_))
+        .WillRepeatedly([&](const std::string &appId, bool &loaded) {
+            loaded = true;
+            return Core::ERROR_NONE;
+        });
+
+        EXPECT_CALL(*mLifecycleManagerMock, SetTargetAppState(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string& appInstanceId , const Exchange::ILifecycleManager::LifecycleState targetLifecycleState , const string& launchIntent) {
+            return Core::ERROR_NONE;
+        });
+        EXPECT_CALL(*mLifecycleManagerMock, SpawnApp(APPMANAGER_APP_ID, ::testing::_, ::testing::_, ::testing::_, launchArgs, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce([&](const string& appId, const string& launchIntent, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState,
+            const Exchange::RuntimeConfig& runtimeConfigObject, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success) {
+            {
+                std::lock_guard<std::mutex> lock(mPreLoadMutex);
+                mPreLoadSpawmCalled = true;
+            }
+            appInstanceId = APPMANAGER_APP_INSTANCE;
+            errorReason = "";
+            success = true;
+            mPreLoadCV.notify_one();
             return Core::ERROR_NONE;
         });
     }
@@ -1267,9 +1315,14 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    mPreLoadSpawmCalled = false;
 
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
+    preLaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
+    {
+        std::unique_lock<std::mutex> lock(mPreLoadMutex);
+        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(1), [&]{ return mPreLoadSpawmCalled; }));
+    }
 
     if(status == Core::ERROR_NONE)
     {
@@ -1293,10 +1346,15 @@ TEST_F(AppManagerTest, PreloadAppUsingJSONRpcSuccess)
     std::string error = "";
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    mPreLoadSpawmCalled = false;
 
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
+    preLaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("preloadApp"), request, mJsonRpcResponse));
+    {
+        std::unique_lock<std::mutex> lock(mPreLoadMutex);
+        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(1), [&]{ return mPreLoadSpawmCalled; }));
+    }
 
     if(status == Core::ERROR_NONE)
     {
@@ -2976,8 +3034,8 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
     // Simulate a JSON-RPC call
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getLoadedApps"), _T("{}"), mJsonRpcResponse));
     EXPECT_STREQ(mJsonRpcResponse.c_str(),
-    "\"[{\\\"appId\\\":\\\"NexTennis\\\",\\\"appInstanceId\\\":\\\"0295effd-2883-44ed-b614-471e3f682762\\\",\\\"activeSessionId\\\":\\\"\\\",\\\"targetLifecycleState\\\":8,\\\"currentLifecycleState\\\":8},{\\\"appId\\\":\\\"uktv\\\",\\\"appInstanceId\\\":\\\"67fa75b6-0c85-43d4-a591-fd29e7214be5\\\",\\\"activeSessionId\\\":\\\"\\\",\\\"targetLifecycleState\\\":8,\\\"currentLifecycleState\\\":8}]\"");
-     if(status == Core::ERROR_NONE)
+    "[{\"appId\":\"NexTennis\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"currentLifecycleState\":\"APP_STATE_HIBERNATED\"},{\"appId\":\"uktv\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"currentLifecycleState\":\"APP_STATE_HIBERNATED\"}]");
+    if(status == Core::ERROR_NONE)
     {
         releaseResources();
     }
