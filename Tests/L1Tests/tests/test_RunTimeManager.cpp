@@ -729,6 +729,8 @@ TEST_F(RuntimeManagerTest, RunMethods)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 
@@ -773,6 +775,8 @@ TEST_F(RuntimeManagerTest, RunWithoutCreateDisplay)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 
@@ -789,7 +793,7 @@ TEST_F(RuntimeManagerTest, RunWithoutCreateDisplay)
     ON_CALL(*mWindowManagerMock, CreateDisplay(::testing::_))
             .WillByDefault(::testing::Return(Core::ERROR_GENERAL));
 
-    EXPECT_EQ(Core::ERROR_NONE, interface->Run(appInstanceId, appInstanceId, 10, 10, portsIterator, pathsListIterator, debugSettingsIterator, runtimeConfig));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Run(appInstanceId, appInstanceId, 10, 10, portsIterator, pathsListIterator, debugSettingsIterator, runtimeConfig));
     releaseResources();
 }
 
@@ -816,6 +820,8 @@ TEST_F(RuntimeManagerTest, RunCreateFkpsMounts)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     std::string fkpsFileName = "test1.fkps";
     std::string fkpsDir = "/opt/drm";
@@ -907,6 +913,8 @@ TEST_F(RuntimeManagerTest, RunReadfromAIConfigFile)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=wst-test";
     runtimeConfig.appPath = "/var/testApp";
     runtimeConfig.runtimePath = "/tmp/testApp";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 
@@ -953,6 +961,8 @@ TEST_F(RuntimeManagerTest, StartContainerFailure) {
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
     EXPECT_CALL(*mociContainerMock, StartContainerFromDobbySpec(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -1012,6 +1022,8 @@ TEST_F(RuntimeManagerTest, RunWithDuplicateContainerId) {
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/valid/path";
     runtimeConfig.runtimePath = "/valid/runtime";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Run(
         "youTube", "youTube", 10, 10, nullptr, nullptr, nullptr,runtimeConfig
@@ -1041,6 +1053,8 @@ TEST_F(RuntimeManagerTest, RunWithTimeout) {
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/valid/path";
     runtimeConfig.runtimePath = "/valid/runtime";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Run(
         "youTube", "youTube", 10, 10, nullptr, nullptr, nullptr,runtimeConfig
@@ -1071,6 +1085,8 @@ TEST_F(RuntimeManagerTest, WakeMethods)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 
@@ -1134,6 +1150,8 @@ TEST_F(RuntimeManagerTest, WakeOnRunningNonHibernateContainer)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 
@@ -1178,6 +1196,8 @@ TEST_F(RuntimeManagerTest, WakeWithGeneralError)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 
@@ -1276,6 +1296,8 @@ TEST_F(RuntimeManagerTest, SuspendResumeMethods)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 
@@ -1374,6 +1396,8 @@ TEST_F(RuntimeManagerTest, SuspendFailsWithPauseContainerError)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 
@@ -1427,6 +1451,8 @@ TEST_F(RuntimeManagerTest, ResumeFailsResumePauseContainerError)
     runtimeConfig.envVariables = "XDG_RUNTIME_DIR=/tmp;WAYLAND_DISPLAY=main";
     runtimeConfig.appPath = "/var/runTimeManager";
     runtimeConfig.runtimePath = "/tmp/runTimeManager";
+    runtimeConfig.systemMemoryLimit = 512;
+    runtimeConfig.command ="SkyBrowserLauncher";
 
     EXPECT_EQ(true, createResources());
 

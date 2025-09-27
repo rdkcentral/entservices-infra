@@ -751,7 +751,7 @@ TEST_F(AppManagerTest, LaunchAppEmptyAppIdUsingJsonRpc)
     params["intent"] = "start";
     params["launchArgs"] = "{\"key1\":\"38\"}";
     status = InvokeServiceMethod("org.rdk.AppManager", "launchApp", params, resultJson);
-    EXPECT_EQ(status,Core::ERROR_GENERAL);
+    EXPECT_EQ(status,Core::ERROR_INVALID_PARAMETER);
 
 #ifdef ENABLE_NOTIFICATION_VERIFICATION
     /* Unregister for events. */
