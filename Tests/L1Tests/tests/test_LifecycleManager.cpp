@@ -127,11 +127,14 @@ class EventHandlerTest : public Plugin::IEventHandler {
             std::unique_lock<std::mutex> lock(m_mutex);
             auto now = std::chrono::steady_clock::now();
             auto timeout = std::chrono::milliseconds(timeout_ms);
+            while(!(status & m_event_signal))
+            {
               if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
               {
                  TEST_LOG("Timeout waiting for request status event");
-                 return m_event_signal == status;
+                 break;
               }
+            }
             event_signal = m_event_signal;
             m_event_signal = LifecycleManager_invalidEvent;
             return event_signal;
@@ -223,7 +226,7 @@ protected:
         errorReason = "";
         success = true;
         runtimeEventName = {"onTerminated", "onStateChanged", "onFailure", "onStarted"};
-        windowEventName = {"onReady", "onDisconnected", "onUserInactivity"};
+        windowEventName = {"onReady", "onDisconnect", "onUserInactivity"};
         errorCode = "1";
         state = Exchange::IRuntimeManager::RuntimeState::RUNTIME_STATE_SUSPENDED;
         client = "test.client";
