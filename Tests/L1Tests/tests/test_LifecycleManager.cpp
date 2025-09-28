@@ -130,7 +130,7 @@ class EventHandlerTest : public Plugin::IEventHandler {
             if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
             {
                  TEST_LOG("Timeout waiting for request status event");
-                 break;
+                 return m_event_signal;
             }
             event_signal = m_event_signal;
             m_event_signal = LifecycleManager_invalidEvent;
