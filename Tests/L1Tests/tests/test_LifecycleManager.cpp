@@ -127,13 +127,10 @@ class EventHandlerTest : public Plugin::IEventHandler {
             std::unique_lock<std::mutex> lock(m_mutex);
             auto now = std::chrono::steady_clock::now();
             auto timeout = std::chrono::milliseconds(timeout_ms);
-            while(!(status & m_event_signal))
+            if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
             {
-              if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
-              {
                  TEST_LOG("Timeout waiting for request status event");
                  break;
-              }
             }
             event_signal = m_event_signal;
             m_event_signal = LifecycleManager_invalidEvent;
@@ -725,8 +722,6 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
             [&](const string& client, bool &status) {
                 return Core::ERROR_NONE;
           }));
-
-    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
 
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
