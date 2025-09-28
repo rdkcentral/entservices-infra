@@ -726,6 +726,8 @@ TEST_F(LifecycleManagerTest, setTargetAppState_withValidParams)
                 return Core::ERROR_NONE;
           }));
 
+    targetLifecycleState = Exchange::ILifecycleManager::LifecycleState::INITIALIZING;
+
     EXPECT_EQ(Core::ERROR_NONE, interface->SpawnApp(appId, launchIntent, targetLifecycleState, runtimeConfigObject, launchArgs, appInstanceId, errorReason, success));
 
     onStateChangeEventSignal();
