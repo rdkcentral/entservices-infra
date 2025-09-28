@@ -419,6 +419,7 @@ void USBMassStorageTest::Mock_SetSerialNumberInUSBDevicePath()
     // serialNumOutFile1 << "B32FD507" << std::endl;
     // serialNumOutFile1.close();
 
+
     std::string serialNumFileName2 = "/tmp/bus/usb/devices/101-124/serial";
     std::ofstream serialNumOutFile2(serialNumFileName2);
 
@@ -464,6 +465,7 @@ void USBMassStorageTest::Mock_SetSerialNumberInUSBDevicePath()
     }
     serialNumOutFileSdd << "SDDSERIAL 102-125" << std::endl;
     serialNumOutFileSdd.close();
+
 }
 
 uint32_t USBMassStorageTest::CreateUSBMassStorageInterfaceObjectUsingComRPCConnection()
