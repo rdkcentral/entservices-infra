@@ -121,11 +121,6 @@ set (APPMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/AppManager ${CMAKE_
 set (APPMANAGER_LIBS ${NAMESPACE}AppManager ${NAMESPACE}AppManagerImplementation)
 add_plugin_test_ex(PLUGIN_APPMANAGER tests/test_AppManager.cpp "${APPMANAGER_INC}" "${APPMANAGER_LIBS}")
 
-# PLUGIN_LIFECYCLE_MANAGER
-set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
-add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
-
 # PLUGIN_OCICONTAINER
 set (OCICONTAINER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/OCIContainer ${CMAKE_SOURCE_DIR}/../entservices-infra/OCIContainer/stubs)
 set (OCICONTAINER_LIBS ${NAMESPACE}OCIContainer)
@@ -150,6 +145,11 @@ add_plugin_test_ex(PLUGIN_RESOURCEMANAGER tests/test_ResourceManager.cpp "${RESO
 set (STORAGE_MANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/StorageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (STORAGE_MANAGER_LIBS ${NAMESPACE}StorageManager ${NAMESPACE}StorageManagerImplementation)
 add_plugin_test_ex(PLUGIN_STORAGE_MANAGER tests/test_StorageManager.cpp "${STORAGE_MANAGER_INC}" "${STORAGE_MANAGER_LIBS}")
+
+# PLUGIN_LIFECYCLE_MANAGER
+set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
+add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
