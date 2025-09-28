@@ -625,8 +625,10 @@ jobs:
           /run/sda2
           /tmp/bus/usb/devices/100-123
           /tmp/bus/usb/devices/101-124
+          /tmp/bus/usb/devices/102-125
           /tmp/block/sda/device
           /tmp/block/sdb/device
+          /tmp/block/sdd/device
           /dev/disk/by-id
           /dev &&
           if [ ! -f mknod /dev/sda c 240 0 ]; then mknod /dev/sda c 240 0; fi &&
@@ -634,7 +636,10 @@ jobs:
           if [ ! -f mknod /dev/sda2 c 240 0 ]; then mknod /dev/sda2 c 240 0; fi &&
           if [ ! -f mknod /dev/sdb c 240 0 ]; then mknod /dev/sdb c 240 0; fi &&
           if [ ! -f mknod /dev/sdb1 c 240 0 ]; then mknod /dev/sdb1 c 240 0; fi &&
-          if [ ! -f mknod /dev/sdb2 c 240 0 ]; then mknod /dev/sdb2 c 240 0; fi
+          if [ ! -f mknod /dev/sdb2 c 240 0 ]; then mknod /dev/sdb2 c 240 0; fi &&
+          if [ ! -f mknod /dev/sdd c 240 0 ]; then mknod /dev/sdd c 240 0; fi &&
+          if [ ! -f mknod /dev/sdd1 c 240 0 ]; then mknod /dev/sdd1 c 240 0; fi &&
+          if [ ! -f mknod /dev/sdd2 c 240 0 ]; then mknod /dev/sdd2 c 240 0; fi
           &&
           sudo touch
           /opt/standbyReason.txt
@@ -661,10 +666,13 @@ jobs:
           /tmp/secure/persistent/rdkservicestore
           /tmp/bus/usb/devices/100-123/serial
           /tmp/bus/usb/devices/101-124/serial
+          /tmp/bus/usb/devices/102-125/serial
           /tmp/block/sda/device/vendor
           /tmp/block/sda/device/model
           /tmp/block/sdb/device/vendor
           /tmp/block/sdb/device/model
+          /tmp/block/sdd/device/vendor
+          /tmp/block/sdd/device/model
           &&
           sudo chmod -R 777
           /opt/standbyReason.txt
@@ -684,8 +692,11 @@ jobs:
           /tmp/block/sda/device/vendor
           /tmp/block/sda/device/model
           /tmp/bus/usb/devices/101-124/serial
+          /tmp/bus/usb/devices/102-125/serial
           /tmp/block/sdb/device/vendor
           /tmp/block/sdb/device/model
+          /tmp/block/sdd/device/vendor
+          /tmp/block/sdd/device/model
           &&
           cd /dev/disk/by-id/
           &&
@@ -693,9 +704,13 @@ jobs:
           &&
           sudo ln -s ../../sdb /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
           &&
+          sudo ln -s ../../sdd /dev/disk/by-id/usb-SanDisk_MyStick_SDDSERIAL-0
+          &&
           ls -l /dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
           &&
           ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
+          &&
+          ls -l /dev/disk/by-id/usb-SanDisk_MyStick_SDDSERIAL-0
 
       - name: Download pact_verifier_cli
         run: |
