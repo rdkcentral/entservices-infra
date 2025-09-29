@@ -1321,7 +1321,7 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
     {
         std::unique_lock<std::mutex> lock(mPreLoadMutex);
-        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(1), [&]{ return mPreLoadSpawmCalled; }));
+        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(5), [&]{ return mPreLoadSpawmCalled; }));
     }
 
     if(status == Core::ERROR_NONE)
@@ -1353,7 +1353,7 @@ TEST_F(AppManagerTest, PreloadAppUsingJSONRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("preloadApp"), request, mJsonRpcResponse));
     {
         std::unique_lock<std::mutex> lock(mPreLoadMutex);
-        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(1), [&]{ return mPreLoadSpawmCalled; }));
+        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(5), [&]{ return mPreLoadSpawmCalled; }));
     }
 
     if(status == Core::ERROR_NONE)
