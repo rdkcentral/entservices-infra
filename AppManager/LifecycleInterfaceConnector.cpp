@@ -55,6 +55,7 @@ namespace WPEFramework
         : mLifecycleManagerRemoteObject(nullptr),
           mLifecycleManagerStateRemoteObject(nullptr),
           mNotification(*this),
+          mAppStateChangeNotification(*this),
           mCurrentservice(nullptr),
           mAppIdAwaitingPause("")
         {
@@ -97,6 +98,7 @@ namespace WPEFramework
             {
                 LOGINFO("Created LifecycleManager Remote Object \n");
                 mLifecycleManagerRemoteObject->AddRef();
+                mLifecycleManagerRemoteObject->Register(&mAppStateChangeNotification);
 
                 LOGINFO("Created LifecycleManagerState Remote Object \n");
                 mLifecycleManagerStateRemoteObject->AddRef();
@@ -113,6 +115,7 @@ namespace WPEFramework
             ASSERT(nullptr != mLifecycleManagerRemoteObject );
             if(mLifecycleManagerRemoteObject )
             {
+                mLifecycleManagerRemoteObject->Unregister(&mAppStateChangeNotification);
                 mLifecycleManagerRemoteObject ->Release();
                 mLifecycleManagerRemoteObject = nullptr;
             }
@@ -874,6 +877,69 @@ End:
                     removeAppInfoByAppId(appId);
                 }
             }
+        }
+
+        void LifecycleInterfaceConnector::OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason)
+        {
+            string appInstanceId = "";
+            Exchange::IAppManager::AppLifecycleState currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+            AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
+            Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+            LOGINFO("OnAppStateChanged event triggered for appId %s: state=%d, errorReason=%s", appId.c_str(), static_cast<int>(state), errorReason.c_str());
+
+            if(nullptr == appManagerImplInstance)
+            {
+                LOGERR("Invalid AppManager Implementation Instance");
+            }
+            else
+            {
+                if (!appId.empty())
+                {
+                    auto it = appManagerImplInstance->mAppInfo.find(appId);
+                    if(it != appManagerImplInstance->mAppInfo.end())
+                    {
+                        appInstanceId = it->second.appInstanceId;
+                        currentAppState = it->second.appNewState;
+                    }
+                    else
+                    {
+                        LOGERR("appId not found in database");
+                    }
+                }
+
+                if (!errorReason.empty())
+                {
+                    errorCode = mapErrorReason(errorReason);
+                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
+                        currentAppState, errorCode);
+                    LOGINFO("Notified error event for appId %s: currentAppState=%d errorCode %d", appId.c_str(), static_cast<int>(currentAppState), static_cast<int>(errorCode));
+                }
+            }
+        }
+
+        Exchange::IAppManager::AppErrorReason LifecycleInterfaceConnector::mapErrorReason(const string& errorReason)
+        {
+            Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+            if(!errorReason.empty())
+            {
+                if(!errorReason.compare("ERROR_CREATE_DISPLAY"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_CREATE_DISPLAY;
+                }
+                else if(!errorReason.compare("ERROR_DOBBY_SPEC"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_DOBBY_SPEC;
+                }
+                else if(!errorReason.compare("ERROR_INVALID_PARAM"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_INVALID_PARAM;
+                }
+                else
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
+                }
+            }
+            return errorCode;
         }
 
         /* Returns appInstanceId for appId. Does not synchronize access to LoadedAppInfo.
