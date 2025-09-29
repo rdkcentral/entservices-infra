@@ -152,6 +152,10 @@ namespace WPEFramework
                 void addStateTransitionRequest(ApplicationContext* context, std::string event);
 
                 friend class Job;
+
+#ifdef UNIT_TEST                
+                friend class LifecycleManagerImplementationTest;
+#endif
         };
     } /* namespace Plugin */
 } /* namespace WPEFramework */
