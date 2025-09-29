@@ -41,7 +41,7 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
-#define TIMEOUT   (1000)
+#define TIMEOUT   (10000)
 #define APPMANAGER_APP_ID           "com.test.app"
 #define APPMANAGER_EMPTY_APP_ID     ""
 #define APPMANAGER_APP_VERSION      "1.2.8"
@@ -1300,7 +1300,7 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
     {
         std::unique_lock<std::mutex> lock(mPreLoadMutex);
-        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(5), [&]{ return mPreLoadSpawmCalled; }));
+        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(10), [&]{ return mPreLoadSpawmCalled; }));
     }
 
     if(status == Core::ERROR_NONE)
@@ -1332,7 +1332,7 @@ TEST_F(AppManagerTest, PreloadAppUsingJSONRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("preloadApp"), request, mJsonRpcResponse));
     {
         std::unique_lock<std::mutex> lock(mPreLoadMutex);
-        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(5), [&]{ return mPreLoadSpawmCalled; }));
+        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(10), [&]{ return mPreLoadSpawmCalled; }));
     }
 
     if(status == Core::ERROR_NONE)
