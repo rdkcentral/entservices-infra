@@ -662,6 +662,7 @@ err_ret:
                 LOGINFO("Environment Variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s",
                      xdgRuntimeDir.c_str(), waylandDisplay.c_str());
                 std::string command = "";
+                std::string appPath = runtimeConfigObject.unpackedPath;
                 if(isOCIPluginObjectValid())
                 {
                     string containerId = getContainerId(appInstanceId);
