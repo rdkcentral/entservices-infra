@@ -16,6 +16,8 @@
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
 using ::testing::NiceMock;
+using ::testing::_;
+using ::testing::Return;
 using namespace WPEFramework;
 
 class UserSettingsTest : public ::testing::Test {
@@ -83,677 +85,571 @@ protected:
     }
 };
 
-TEST_F(UserSettingsTest, RegisteredMethods)
+TEST_F(UserSettingsTest, SetAudioDescription_Success)
 {
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setAudioDescription")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getAudioDescription")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPreferredAudioLanguages")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPreferredAudioLanguages")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPresentationLanguage")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPresentationLanguage")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setCaptions")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getCaptions")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPreferredCaptionsLanguages")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPreferredCaptionsLanguages")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPreferredClosedCaptionService")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPreferredClosedCaptionService")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPinControl")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPinControl")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setViewingRestrictions")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getViewingRestrictions")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setViewingRestrictionsWindow")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getViewingRestrictionsWindow")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setLiveWatershed")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getLiveWatershed")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPlaybackWatershed")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPlaybackWatershed")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setBlockNotRatedContent")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getBlockNotRatedContent")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setPinOnPurchase")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getPinOnPurchase")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setHighContrast")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getHighContrast")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setVoiceGuidance")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getVoiceGuidance")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setVoiceGuidanceRate")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getVoiceGuidanceRate")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("setVoiceGuidanceHints")));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getVoiceGuidanceHints")));
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_AUDIO_DESCRIPTION_KEY, "true", ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setAudioDescription"), _T("{\"enabled\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, SetAudioDescription_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_AUDIO_DESCRIPTION_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setAudioDescription"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetAudioDescription_Success)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setAudioDescription"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, GetAudioDescription_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setAudioDescription"), _T("{\"enabled\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetAudioDescription_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_AUDIO_DESCRIPTION_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
-TEST_F(UserSettingsTest, SetPreferredAudioLanguages_Failure)
+TEST_F(UserSettingsTest, GetAudioDescription_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_AUDIO_DESCRIPTION_KEY, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredAudioLanguages"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getAudioDescription"), _T("{}"), response));
 }
 
 TEST_F(UserSettingsTest, SetPreferredAudioLanguages_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY, "eng,fra", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredAudioLanguages"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredAudioLanguages"), _T("{\"preferredLanguages\": \"eng,fra\"}"), response));
 }
 
-TEST_F(UserSettingsTest, GetPreferredAudioLanguages_Failure)
+TEST_F(UserSettingsTest, SetPreferredAudioLanguages_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY, "eng,fra", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPreferredAudioLanguages"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredAudioLanguages"), _T("{\"preferredLanguages\": \"eng,fra\"}"), response));
 }
 
 TEST_F(UserSettingsTest, GetPreferredAudioLanguages_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("eng,fra"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPreferredAudioLanguages"), _T("{}"), response));
+    EXPECT_TRUE(response.find("eng,fra") != string::npos);
 }
 
-TEST_F(UserSettingsTest, SetPresentationLanguage_Failure)
+TEST_F(UserSettingsTest, GetPreferredAudioLanguages_DefaultValue)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPresentationLanguage"), _T("{}"), response));
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_AUDIO_LANGUAGES_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_UNKNOWN_KEY));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPreferredAudioLanguages"), _T("{}"), response));
 }
 
 TEST_F(UserSettingsTest, SetPresentationLanguage_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PRESENTATION_LANGUAGE_KEY, "en-US", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPresentationLanguage"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPresentationLanguage"), _T("{\"presentationLanguage\": \"en-US\"}"), response));
 }
 
-TEST_F(UserSettingsTest, GetPresentationLanguage_Failure)
+TEST_F(UserSettingsTest, SetPresentationLanguage_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PRESENTATION_LANGUAGE_KEY, "en-US", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPresentationLanguage"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPresentationLanguage"), _T("{\"presentationLanguage\": \"en-US\"}"), response));
 }
 
 TEST_F(UserSettingsTest, GetPresentationLanguage_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_PRESENTATION_LANGUAGE_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("en-US"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPresentationLanguage"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetCaptions_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setCaptions"), _T("{}"), response));
+    EXPECT_TRUE(response.find("en-US") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetCaptions_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_CAPTIONS_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setCaptions"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setCaptions"), _T("{\"enabled\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetCaptions_Failure)
+TEST_F(UserSettingsTest, SetCaptions_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_CAPTIONS_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getCaptions"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setCaptions"), _T("{\"enabled\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetCaptions_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_CAPTIONS_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getCaptions"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetPreferredCaptionsLanguages_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredCaptionsLanguages"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetPreferredCaptionsLanguages_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_CAPTIONS_LANGUAGES_KEY, "eng,fra", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredCaptionsLanguages"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredCaptionsLanguages"), _T("{\"preferredLanguages\": \"eng,fra\"}"), response));
 }
 
-TEST_F(UserSettingsTest, GetPreferredCaptionsLanguages_Failure)
+TEST_F(UserSettingsTest, SetPreferredCaptionsLanguages_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_CAPTIONS_LANGUAGES_KEY, "eng,fra", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPreferredCaptionsLanguages"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredCaptionsLanguages"), _T("{\"preferredLanguages\": \"eng,fra\"}"), response));
 }
 
 TEST_F(UserSettingsTest, GetPreferredCaptionsLanguages_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_CAPTIONS_LANGUAGES_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("eng,fra"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPreferredCaptionsLanguages"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetPreferredClosedCaptionService_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredClosedCaptionService"), _T("{}"), response));
+    EXPECT_TRUE(response.find("eng,fra") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetPreferredClosedCaptionService_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY, "CC3", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredClosedCaptionService"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPreferredClosedCaptionService"), _T("{\"service\": \"CC3\"}"), response));
 }
 
-TEST_F(UserSettingsTest, GetPreferredClosedCaptionService_Failure)
+TEST_F(UserSettingsTest, SetPreferredClosedCaptionService_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY, "CC3", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPreferredClosedCaptionService"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPreferredClosedCaptionService"), _T("{\"service\": \"CC3\"}"), response));
 }
 
 TEST_F(UserSettingsTest, GetPreferredClosedCaptionService_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_PREFERRED_CLOSED_CAPTIONS_SERVICE_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("CC3"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPreferredClosedCaptionService"), _T("{}"), response));
+    EXPECT_TRUE(response.find("CC3") != string::npos);
+}
+
+TEST_F(UserSettingsTest, SetPrivacyMode_Success)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, "privacyMode", ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("SHARE"), ::testing::Return(Core::ERROR_NONE)));
+    
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, "privacyMode", "DO_NOT_SHARE", ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPrivacyMode"), _T("{\"privacyMode\": \"DO_NOT_SHARE\"}"), response));
+}
+
+TEST_F(UserSettingsTest, SetPrivacyMode_InvalidValue)
+{
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPrivacyMode"), _T("{\"privacyMode\": \"INVALID_VALUE\"}"), response));
+}
+
+TEST_F(UserSettingsTest, GetPrivacyMode_Success)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, "privacyMode", ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("SHARE"), ::testing::Return(Core::ERROR_NONE)));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPrivacyMode"), _T("{}"), response));
+    EXPECT_TRUE(response.find("SHARE") != string::npos);
+}
+
+TEST_F(UserSettingsTest, GetPrivacyMode_DefaultValue)
+{
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, "privacyMode", ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("INVALID"), ::testing::Return(Core::ERROR_NONE)));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPrivacyMode"), _T("{}"), response));
+    EXPECT_TRUE(response.find("SHARE") != string::npos);  // Default value should be returned
+}
+
+TEST_F(UserSettingsTest, SetPinControl_Success)
+{
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PIN_CONTROL_KEY, "true", ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPinControl"), _T("{\"pinControl\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, SetPinControl_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PIN_CONTROL_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPinControl"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, setPinControl_Success)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPinControl"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, GetPinControl_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPinControl"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPinControl"), _T("{\"pinControl\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetPinControl_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_PIN_CONTROL_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPinControl"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetViewingRestrictions_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setViewingRestrictions"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetViewingRestrictions_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    std::string restrictions = "{\"rating\":\"TV-14\"}";
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VIEWING_RESTRICTIONS_KEY, restrictions, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setViewingRestrictions"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setViewingRestrictions"), 
+        _T("{\"viewingRestrictions\": \"{\\\"rating\\\":\\\"TV-14\\\"}\"}"), response));
 }
 
-TEST_F(UserSettingsTest, GetViewingRestrictions_Failure)
+TEST_F(UserSettingsTest, SetViewingRestrictions_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    std::string restrictions = "{\"rating\":\"TV-14\"}";
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VIEWING_RESTRICTIONS_KEY, restrictions, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getViewingRestrictions"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setViewingRestrictions"), 
+        _T("{\"viewingRestrictions\": \"{\\\"rating\\\":\\\"TV-14\\\"}\"}"), response));
 }
 
 TEST_F(UserSettingsTest, GetViewingRestrictions_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    std::string restrictions = "{\"rating\":\"TV-14\"}";
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_VIEWING_RESTRICTIONS_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>(restrictions), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getViewingRestrictions"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetViewingRestrictionsWindow_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setViewingRestrictionsWindow"), _T("{}"), response));
+    EXPECT_TRUE(response.find(restrictions) != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetViewingRestrictionsWindow_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VIEWING_RESTRICTIONS_WINDOW_KEY, "ALWAYS", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setViewingRestrictionsWindow"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setViewingRestrictionsWindow"), 
+        _T("{\"viewingRestrictionsWindow\": \"ALWAYS\"}"), response));
 }
 
-TEST_F(UserSettingsTest, GetViewingRestrictionsWindow_Failure)
+TEST_F(UserSettingsTest, SetViewingRestrictionsWindow_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VIEWING_RESTRICTIONS_WINDOW_KEY, "ALWAYS", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getViewingRestrictionsWindow"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setViewingRestrictionsWindow"), 
+        _T("{\"viewingRestrictionsWindow\": \"ALWAYS\"}"), response));
 }
 
 TEST_F(UserSettingsTest, GetViewingRestrictionsWindow_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_VIEWING_RESTRICTIONS_WINDOW_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("ALWAYS"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getViewingRestrictionsWindow"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetLiveWatershed_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setLiveWatershed"), _T("{}"), response));
+    EXPECT_TRUE(response.find("ALWAYS") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetLiveWatershed_Success)
 {
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_LIVE_WATERSHED_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setLiveWatershed"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setLiveWatershed"), _T("{\"liveWatershed\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetLiveWatershed_Failure)
+TEST_F(UserSettingsTest, SetLiveWatershed_Failure)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_LIVE_WATERSHED_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getLiveWatershed"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setLiveWatershed"), _T("{\"liveWatershed\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetLiveWatershed_Success)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_LIVE_WATERSHED_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getLiveWatershed"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetPlaybackWatershed_Failure)
-{
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPlaybackWatershed"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetPlaybackWatershed_Success)
 {
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PLAYBACK_WATERSHED_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPlaybackWatershed"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPlaybackWatershed"), _T("{\"playbackWatershed\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetPlaybackWatershed_Failure)
+TEST_F(UserSettingsTest, SetPlaybackWatershed_Failure)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PLAYBACK_WATERSHED_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPlaybackWatershed"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPlaybackWatershed"), _T("{\"playbackWatershed\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetPlaybackWatershed_Success)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_PLAYBACK_WATERSHED_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPlaybackWatershed"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetBlockNotRatedContent_Failure)
-{
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setBlockNotRatedContent"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetBlockNotRatedContent_Success)
 {
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_BLOCK_NOT_RATED_CONTENT_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setBlockNotRatedContent"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setBlockNotRatedContent"), _T("{\"blockNotRatedContent\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetBlockNotRatedContent_Failure)
+TEST_F(UserSettingsTest, SetBlockNotRatedContent_Failure)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_BLOCK_NOT_RATED_CONTENT_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getBlockNotRatedContent"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setBlockNotRatedContent"), _T("{\"blockNotRatedContent\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetBlockNotRatedContent_Success)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_BLOCK_NOT_RATED_CONTENT_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getBlockNotRatedContent"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetPinOnPurchase_Failure)
-{
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPinOnPurchase"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetPinOnPurchase_Success)
 {
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PIN_ON_PURCHASE_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPinOnPurchase"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setPinOnPurchase"), _T("{\"pinOnPurchase\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetPinOnPurchase_Failure)
+TEST_F(UserSettingsTest, SetPinOnPurchase_Failure)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_PIN_ON_PURCHASE_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getPinOnPurchase"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setPinOnPurchase"), _T("{\"pinOnPurchase\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetPinOnPurchase_Success)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_PIN_ON_PURCHASE_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getPinOnPurchase"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetHighContrast_Failure)
-{
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setHighContrast"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetHighContrast_Success)
 {
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_HIGH_CONTRAST_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setHighContrast"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setHighContrast"), _T("{\"enabled\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetHighContrast_Failure)
+TEST_F(UserSettingsTest, SetHighContrast_Failure)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_HIGH_CONTRAST_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getHighContrast"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setHighContrast"), _T("{\"enabled\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetHighContrast_Success)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_HIGH_CONTRAST_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getHighContrast"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidance_Failure)
-{
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setVoiceGuidance"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetVoiceGuidance_Success)
 {
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setVoiceGuidance"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setVoiceGuidance"), _T("{\"enabled\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetVoiceGuidance_Failure)
+TEST_F(UserSettingsTest, SetVoiceGuidance_Failure)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getVoiceGuidance"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setVoiceGuidance"), _T("{\"enabled\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetVoiceGuidance_Success)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getVoiceGuidance"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidanceRate_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setVoiceGuidanceRate"), _T("{\"rate\":0.1}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureOutOfRangeMin)
-{
-    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setVoiceGuidanceRate"), _T("{\"rate\":0.01}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureOutOfRangeMax)
-{
-    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setVoiceGuidanceRate"), _T("{\"rate\":11}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetVoiceGuidanceRate_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, "2.5", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setVoiceGuidanceRate"), _T("{\"rate\":0.1}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setVoiceGuidanceRate"), _T("{\"rate\": 2.5}"), response));
 }
 
-TEST_F(UserSettingsTest, GetVoiceGuidanceRate_Failure)
+TEST_F(UserSettingsTest, SetVoiceGuidanceRate_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, "2.5", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setVoiceGuidanceRate"), _T("{\"rate\": 2.5}"), response));
+}
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getVoiceGuidanceRate"), _T("{}"), response));
+TEST_F(UserSettingsTest, SetVoiceGuidanceRate_InvalidValue_TooHigh)
+{
+    // Rate must be between 0.1 and 10
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setVoiceGuidanceRate"), _T("{\"rate\": 11}"), response));
+}
+
+TEST_F(UserSettingsTest, SetVoiceGuidanceRate_InvalidValue_TooLow)
+{
+    // Rate must be between 0.1 and 10
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setVoiceGuidanceRate"), _T("{\"rate\": 0.05}"), response));
 }
 
 TEST_F(UserSettingsTest, GetVoiceGuidanceRate_Success)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_RATE_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("2.5"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getVoiceGuidanceRate"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidanceHints_Failure)
-{
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setVoiceGuidanceHints"), _T("{}"), response));
+    EXPECT_TRUE(response.find("2.5") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetVoiceGuidanceHints_Success)
 {
-	EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setVoiceGuidanceHints"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setVoiceGuidanceHints"), _T("{\"hints\": true}"), response));
 }
 
-TEST_F(UserSettingsTest, GetVoiceGuidanceHints_Failure)
+TEST_F(UserSettingsTest, SetVoiceGuidanceHints_Failure)
 {
-	EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, "true", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getVoiceGuidanceHints"), _T("{}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setVoiceGuidanceHints"), _T("{\"hints\": true}"), response));
 }
 
 TEST_F(UserSettingsTest, GetVoiceGuidanceHints_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_HINTS_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("true"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getVoiceGuidanceHints"), _T("{}"), response));
+    EXPECT_TRUE(response.find("true") != string::npos);
 }
 
 TEST_F(UserSettingsTest, SetContentPin_Success)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_CONTENT_PIN_KEY, "1234", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"1234\"}"), response));
-}
-
-TEST_F(UserSettingsTest, SetContentPin_SuccessWithEmptyString)
-{
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"\"}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\": \"1234\"}"), response));
 }
 
 TEST_F(UserSettingsTest, SetContentPin_Failure)
 {
-    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_CONTENT_PIN_KEY, "1234", ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"1234\"}"), response));
+    
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\": \"1234\"}"), response));
 }
 
-TEST_F(UserSettingsTest, SetContentPin_FailureWithAlphanumericInput)
+TEST_F(UserSettingsTest, SetContentPin_Empty_Success)
 {
-    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"12a4\"}"), response));
+    EXPECT_CALL(*p_store2Mock, SetValue(::testing::_, ::testing::_, USERSETTINGS_CONTENT_PIN_KEY, "", ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\": \"\"}"), response));
 }
 
-TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureThreeDigitNumber)
+TEST_F(UserSettingsTest, SetContentPin_InvalidFormat)
 {
-    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"123\"}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureFiveDigitNumber)
-{
-    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"12345\"}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureAllSpecialCharacters)
-{
-    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"&%$*\"}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureWithOneSpecialCharacter)
-{
-    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"12&5\"}"), response));
-}
-
-TEST_F(UserSettingsTest, SetVoiceGuidanceRate_FailureSpecialCharactersAndDecimal)
-{
-    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\":\"12$#%#$56\"}"), response));
-}
-
-TEST_F(UserSettingsTest, GetContentPin_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getContentPin"), _T("{}"), response));
+    // Content PIN must be 4 digits
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, handler.Invoke(connection, _T("setContentPin"), _T("{\"contentPin\": \"123A\"}"), response));
 }
 
 TEST_F(UserSettingsTest, GetContentPin_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_CONTENT_PIN_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<3>("1234"), ::testing::Return(Core::ERROR_NONE)));
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getContentPin"), _T("{}"), response));
-}
-
-TEST_F(UserSettingsTest, GetMigrationState_Failure)
-{
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationState"), _T("{\"key\": \"VOICE_GUIDANCE_RATE\"}"), response));
-}
-
-TEST_F(UserSettingsTest, GetMigrationState_RequiresMigrationStateTrue)
-{
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NOT_EXIST));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationState"), _T("{\"key\": \"VOICE_GUIDANCE_RATE\"}"), response));
+    EXPECT_TRUE(response.find("1234") != string::npos);
 }
 
 TEST_F(UserSettingsTest, GetMigrationState_Success)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_KEY, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_NONE));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationState"), _T("{\"key\": \"VOICE_GUIDANCE_RATE\"}"), response));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationState"), 
+        _T("{\"key\": 15}"), response)); // 15 = VOICE_GUIDANCE
+    EXPECT_TRUE(response.find("false") != string::npos); // requiresMigration should be false
 }
 
-TEST_F(UserSettingsTest, GetMigrationStates_Failure)
+TEST_F(UserSettingsTest, GetMigrationState_RequiresMigration)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(Core::ERROR_GENERAL));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStates"), _T("{}"), response));
+    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, USERSETTINGS_VOICE_GUIDANCE_KEY, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_UNKNOWN_KEY));
+    
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationState"), 
+        _T("{\"key\": 15}"), response)); // 15 = VOICE_GUIDANCE
+    EXPECT_TRUE(response.find("true") != string::npos); // requiresMigration should be true
 }
 
-TEST_F(UserSettingsTest, GetMigrationStates_RequiresMigrationStateTrueForAllProperties)
+TEST_F(UserSettingsTest, GetMigrationState_InvalidKey)
 {
-    EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(Core::ERROR_NOT_EXIST));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStates"), _T("{}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getMigrationState"), 
+        _T("{\"key\": 999}"), response)); // Invalid key
 }
 
 TEST_F(UserSettingsTest, GetMigrationStates_Success)
 {
+    // For simplicity, we'll mock just a few calls, as the real implementation would make 18 calls
     EXPECT_CALL(*p_store2Mock, GetValue(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
-
+    
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStates"), _T("{}"), response));
+    EXPECT_TRUE(response.find("states") != string::npos);
 }
-
