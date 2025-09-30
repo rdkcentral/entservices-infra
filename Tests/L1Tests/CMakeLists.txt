@@ -146,6 +146,11 @@ set (STORAGE_MANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/StorageManager
 set (STORAGE_MANAGER_LIBS ${NAMESPACE}StorageManager ${NAMESPACE}StorageManagerImplementation)
 add_plugin_test_ex(PLUGIN_STORAGE_MANAGER tests/test_StorageManager.cpp "${STORAGE_MANAGER_INC}" "${STORAGE_MANAGER_LIBS}")
 
+#PLUGIN_PACKAGE_MANAGER
+set (PACKAGEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PackageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (PACKAGEMANAGER_LIBS ${NAMESPACE}PackageManagerRDKEMS)
+add_plugin_test_ex(PLUGIN_PACKAGE_MANAGER tests/test_PackageManager.cpp "${PACKAGEMANAGER_INC}" "${PACKAGEMANAGER_LIBS}")
+
 # PLUGIN_LIFECYCLE_MANAGER
 set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
@@ -162,6 +167,8 @@ include_directories(${TEST_INC})
 target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins)
 
 target_link_libraries(${MODULE_NAME} ${TEST_LIB})
+
+target_link_libraries(${MODULE_NAME} PRIVATE jsoncpp_lib)
 
 target_include_directories(${MODULE_NAME}
         PUBLIC

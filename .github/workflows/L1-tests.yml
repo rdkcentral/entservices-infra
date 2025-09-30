@@ -13,7 +13,7 @@ on:
 
 env:
   BUILD_TYPE: Debug
-  THUNDER_REF: "R4.4.1"
+  THUNDER_REF: "R4.4.3"
   INTERFACES_REF: "develop"
   AUTOMATICS_UNAME: ${{ secrets.AUTOMATICS_UNAME}}
   AUTOMATICS_PASSCODE: ${{ secrets. AUTOMATICS_PASSCODE}}
@@ -85,7 +85,7 @@ jobs:
         run: >
           sudo apt update
           &&
-          sudo apt install -y libsqlite3-dev libcurl4-openssl-dev valgrind lcov clang libsystemd-dev libboost-all-dev libwebsocketpp-dev meson libcunit1 libcunit1-dev curl protobuf-compiler-grpc libgrpc-dev libgrpc++-dev libjsoncpp-dev
+          sudo apt install -y libsqlite3-dev libcurl4-openssl-dev valgrind lcov clang libsystemd-dev libboost-all-dev libwebsocketpp-dev meson libcunit1 libcunit1-dev curl protobuf-compiler-grpc libgrpc-dev libgrpc++-dev libjsoncpp-dev libboost-filesystem-dev libboost-system-dev libarchive-dev
 
       - name: Install GStreamer
         run: |
@@ -139,6 +139,14 @@ jobs:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
           ref: develop
+
+      - name: Checkout libpackage
+        uses: actions/checkout@v3
+        with:
+          repository: rdkcentral/libpackage
+          path: libpackage
+          ref: develop
+          token: ${{ secrets.LIBPKG_REPO_TOKEN }}
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
@@ -409,6 +417,20 @@ jobs:
           &&
           cmake --install build/mocks
 
+      - name: Build libpackage
+        run: >
+          cmake -G Ninja
+          -S "$GITHUB_WORKSPACE/libpackage"
+          -B build/libpackage
+          -DCMAKE_INSTALL_INCLUDEDIR=include
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DCMAKE_BUILD_TYPE=Debug
+          &&
+          cmake --build build/libpackage -j8
+          &&
+          cmake --install build/libpackage
+
       - name: Build entservices-infra
         run: >
           cmake -G Ninja
@@ -485,6 +507,7 @@ jobs:
           -DHAS_FRONT_PANEL=ON
           -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
+          -DLIB_PACKAGE=ON
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           -DPLUGIN_TELEMETRY=ON
           -DPLUGIN_USBDEVICE=ON
@@ -495,6 +518,7 @@ jobs:
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_PACKAGE_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
@@ -578,6 +602,7 @@ jobs:
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_PACKAGE_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
