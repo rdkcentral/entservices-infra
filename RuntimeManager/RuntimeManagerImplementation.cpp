@@ -49,6 +49,11 @@ namespace WPEFramework
             {
                 RuntimeManagerImplementation::_instance = this;
             }
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+        LOGWARN("Creating rialto connector");
+        RialtoConnector *rialtoBridge = new RialtoConnector();
+        mRialtoConnector = std::shared_ptr<RialtoConnector>(rialtoBridge);
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
         }
 
         RuntimeManagerImplementation* RuntimeManagerImplementation::getInstance()
@@ -612,6 +617,25 @@ err_ret:
                 config.mWesterosSocketPath = westerosSocket;
             }
 
+            bool legacyContainer = true;
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+             mRialtoConnector->initialize();
+            if (mRialtoConnector->createAppSession(appId,westerosSocket, appId))
+            {
+               if (!mRialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
+                {
+                  LOGWARN(" Rialto app session not ready. ");
+                  status = Core::ERROR_GENERAL;
+                }
+            }
+            else
+            {
+               LOGWARN(" Rialto app session not ready. ");
+               status = Core::ERROR_GENERAL;
+            }
+            legacyContainer = false;
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
+            LOGINFO("legacyContainer: %s", legacyContainer ? "true" : "false");
             if (xdgRuntimeDir.empty() || waylandDisplay.empty() || !displayResult)
             {
                 LOGERR("Missing required environment variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s createDisplay %s",
@@ -623,7 +647,7 @@ err_ret:
                 notifyParamCheckFailure = true;
             }
             /* Generate dobbySpec */
-            else if (false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
+            else if (legacyContainer && false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
             {
                 LOGERR("Failed to generate dobbySpec");
                 status = Core::ERROR_GENERAL;
@@ -638,12 +662,17 @@ err_ret:
                 LOGINFO("Environment Variables: XDG_RUNTIME_DIR=%s, WAYLAND_DISPLAY=%s",
                      xdgRuntimeDir.c_str(), waylandDisplay.c_str());
                 std::string command = "";
+                std::string appPath = runtimeConfigObject.unpackedPath;
                 if(isOCIPluginObjectValid())
                 {
                     string containerId = getContainerId(appInstanceId);
                     if (!containerId.empty())
                     {
-                        status =  mOciContainerObject->StartContainerFromDobbySpec(containerId, dobbySpec, command, westerosSocket, descriptor, success, errorReason);
+                        if(legacyContainer)
+                            status =  mOciContainerObject->StartContainerFromDobbySpec(containerId, dobbySpec, command, westerosSocket, descriptor, success, errorReason);
+                        else
+                            status = mOciContainerObject->StartContainer(containerId, appPath, command, westerosSocket, descriptor, success, errorReason);
+
                         if ((success == false) || (status != Core::ERROR_NONE))
                         {
                             LOGERR("Failed to Run Container %s",errorReason.c_str());
@@ -976,6 +1005,14 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
             }
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+            mRialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
+            if (!mRialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
+            {
+               LOGERR("Rialto app session not ready. ");
+               status = Core::ERROR_GENERAL;
+            }
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
