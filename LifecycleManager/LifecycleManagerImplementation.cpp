@@ -405,11 +405,26 @@ namespace WPEFramework
                 success = false;
                 return status;
 	    }
-            success = RequestHandler::getInstance()->sendIntent(context, intent, errorReason);
-            if (!success)
-	    {
+
+            // sending intent is not valid for non-active application
+            if (Exchange::ILifecycleManager::LifecycleState::ACTIVE != context->getCurrentLifecycleState())
+            {
+                printf("Failed to send intent to non-active app [%s] \n", appInstanceId.c_str());
+                fflush(stdout);
                 status = Core::ERROR_GENERAL;
-	    }
+                success = false;
+                errorReason = "application is not active";
+                return status;
+            }
+
+            JsonObject eventData;
+            eventData["appId"] = context->getAppId();
+            eventData["appInstanceId"] = context->getAppInstanceId();
+            eventData["oldLifecycleState"] = (uint32_t)Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+            eventData["newLifecycleState"] = (uint32_t)Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+            eventData["navigationIntent"] = intent;
+            eventData["errorReason"] = "";
+            dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, eventData);
             return status;
         }
 
