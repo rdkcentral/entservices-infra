@@ -1,15 +1,8 @@
 name: L1-tests
 
 on:
-  workflow_call:
-    inputs:
-      caller_source:
-        description: "Specifies the source type (e.g., local or test framework) for the workflow."
-        required: true
-        type: string
-    secrets:
-      RDKCM_RDKE:
-        required: true
+  push:
+    branches: ['topic/RDKEMW-2803_4']
 
 env:
   BUILD_TYPE: Debug
