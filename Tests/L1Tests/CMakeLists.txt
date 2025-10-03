@@ -168,6 +168,8 @@ target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAK
 
 target_link_libraries(${MODULE_NAME} PRIVATE ${TEST_LIB} jsoncpp_lib)
 
+target_link_libraries(${MODULE_NAME} PRIVATE jsoncpp_lib)
+
 target_include_directories(${MODULE_NAME}
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
