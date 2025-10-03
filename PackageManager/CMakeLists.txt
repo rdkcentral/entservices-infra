@@ -28,7 +28,7 @@ message("CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}")
 if (LIB_PACKAGE)
     message("LIB_PACKAGE=${LIB_PACKAGE}")
     add_compile_options ( -DUSE_LIBPACKAGE )
-    include_directories(${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/include/Package)
+    include_directories(${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/include)
     set(LIB_PACKAGE_LIBRARY "${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/lib/libPackage.so")
 endif()
 
