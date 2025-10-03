@@ -132,6 +132,14 @@ jobs:
           path: entservices-infra
           ref: develop
 
+      - name: Checkout libpackage
+        uses: actions/checkout@v3
+        with:
+          repository: rdkcentral/libpackage
+          path: libpackage
+          ref: develop
+          token: ${{ secrets.LIBPKG_REPO_TOKEN }}
+
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
@@ -401,6 +409,20 @@ jobs:
           &&
           cmake --install build/mocks
 
+      - name: Build libpackage
+        run: >
+          cmake -G Ninja
+          -S "$GITHUB_WORKSPACE/libpackage"
+          -B build/libpackage
+          -DCMAKE_INSTALL_INCLUDEDIR=include
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DCMAKE_BUILD_TYPE=Debug
+          &&
+          cmake --build build/libpackage -j8
+          &&
+          cmake --install build/libpackage
+
       - name: Build entservices-infra
         run: >
           cmake -G Ninja
@@ -413,6 +435,7 @@ jobs:
           -ftest-coverage
           -DEXCEPTIONS_ENABLE=ON
           -DUSE_THUNDER_R4=ON
+          -DLIB_PACKAGE=ON
           -DTHUNDER_VERSION=4
           -DTHUNDER_VERSION_MAJOR=4
           -DTHUNDER_VERSION_MINOR=4
