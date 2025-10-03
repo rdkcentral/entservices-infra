@@ -124,7 +124,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: topic/RDKEMW-2803
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
