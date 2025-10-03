@@ -69,6 +69,15 @@ target_link_libraries(${MODULE_NAME} PRIVATE
     ${LIB_PACKAGE_LIBRARY}
     )
 
+if(RDK_SERVICES_L1_TEST)
+    find_package( JsonCpp REQUIRED)
+    if (JSONCPP_FOUND)
+    message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
+    endif()
+    target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
+    target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
+endif()
+
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
