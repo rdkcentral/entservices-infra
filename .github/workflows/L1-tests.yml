@@ -2,7 +2,7 @@ name: L1-tests
 
 on:
   push:
-    branches: ['topic/RDKEMW-2803_4']
+    branches: ['topic/RDKEMW-2803_new']
 
 env:
   BUILD_TYPE: Debug
@@ -73,6 +73,14 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
           cmake-version: '3.16.x'
+
+      - name: Set Thunder version flags
+        run: |
+          if [ "${{ env.THUNDER_REF }}" = "R4.4.3" ]; then
+          echo "THUNDER_R443=ON" >> $GITHUB_ENV
+          else
+          echo "THUNDER_R443=OFF" >> $GITHUB_ENV
+          fi
 
       - name: Install packages
         run: >
