@@ -800,7 +800,7 @@ TEST_F(StorageManagerTest, test_clearall_failure_json){
 
     std::string path = "";
     std::string errorReason = "";
-    std::string wrappedJson = "{\"exemptionAppIds\": \"{\\\"exemptionAppIds\\\": [\\\"testexempt\\\"]}\"}";
+    std::string wrappedJson = "{\"exemptionAppIds\": \"[\\\"testexempt\\\"]\"}";
     static int callCount = 0;
 
     // mock the mkdir function to always return success
