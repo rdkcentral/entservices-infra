@@ -64,9 +64,11 @@ namespace Plugin {
         class State {
             public:
             State() {}
+            #ifdef USE_LIBPACKAGE
             State(const packagemanager::ConfigMetaData &config) {
                 PackageManagerImplementation::getRuntimeConfig(config, runtimeConfig);
             }
+            #endif
             InstallState installState = InstallState::UNINSTALLED;
             bool preInsalled = false;
             uint32_t mLockCount = 0;
@@ -185,8 +187,10 @@ namespace Plugin {
         Core::hresult Unlock(const string &packageId, const string &version) override;
         Core::hresult GetLockedInfo(const string &packageId, const string &version, string &unpackedPath, Exchange::RuntimeConfig& configMetadata,
             string& gatewayMetadataPath, bool &locked) override;
-
+        
+        #ifdef USE_LIBPACKAGE
         static void getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig);
+        #endif
         static void getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig);
 
         BEGIN_INTERFACE_MAP(PackageManagerImplementation)
