@@ -71,7 +71,7 @@ protected:
     Exchange::IPackageHandler* pkghandlerInterface = nullptr;
     Exchange::IPackageDownloader::Options options;
     Exchange::IPackageDownloader::DownloadId downloadId;
-    Exchange::IPackageDownloader::Percent percent;
+    Exchange::IPackageDownloader::ProgressInfo progress;
 
     // Constructor
     PackageManagerTest()
@@ -393,7 +393,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpc) {
 
     initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"testDownloadId\", \"percent\": {\"percent\": 0}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"testDownloadId\", \"progress\": {\"progress\": 0}}"), mJsonRpcResponse));
 
     releaseResources();
 
@@ -406,13 +406,13 @@ TEST_F(PackageManagerTest, progressMethodusingComRpc) {
 
     initforComRpc();
 
-    percent = {
+    progress = {
         0
     };
 
     string downloadId = "testDownloadId";
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, percent));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
 
     releaseResources();
 
@@ -438,8 +438,8 @@ TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
 
     initforComRpc();
 
-    uint32_t quotaKB = 1024;
-    uint32_t usedKB = 568;
+    string quotaKB = 1024;
+    string usedKB = 568;
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->GetStorageDetails(quotaKB, usedKB));
 
@@ -591,7 +591,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpc) {
 
     Exchange::IPackageInstaller::Package packageList = {};
 
-    auto packages = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
+    auto packages = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IPackageInfoIterator>>::Create<Exchange::IPackageInstaller::IPackageInfoIterator>(packageList);
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
     
@@ -661,7 +661,39 @@ TEST_F(PackageManagerTest, packageStateusingComRpc) {
     deinitforComRpc();
 }
 
-//IPackageHandler methods
+TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpc) {
+
+    createResources();   
+
+    initforJsonRpc();
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"/opt/CDL/packagetestDownloadId\", \"id\": \"testID\", \"version\": \"2.0\", \"config\": {}}"), mJsonRpcResponse));
+    
+    releaseResources();
+
+    deinitforJsonRpc();
+}
+
+TEST_F(PackageManagerTest, getConfigforPackageusingComRpc) {
+
+    createResources();   
+
+    initforComRpc();
+
+    string fileLocator = "/opt/CDL/packagetestDownloadId";
+    string id = "testID";
+    string version = "2.0";
+
+    Exchange::RuntimeConfig config = {};
+
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->GetConfigForPackage(fileLocator, id, version, config));
+    
+    releaseResources();
+
+    deinitforComRpc();
+}
+
+// IPackageHandler methods
 
 TEST_F(PackageManagerTest, lockusingJsonRpc) {
 
