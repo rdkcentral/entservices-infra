@@ -1052,7 +1052,7 @@ Core::hresult AppManagerImplementation::KillApp(const string& appId)
     return status;
 }
 
-Core::hresult AppManagerImplementation::GetLoadedApps(string& appData)
+Core::hresult AppManagerImplementation::GetLoadedApps(Exchange::IAppManager::ILoadedAppInfoIterator*& appData)
 {
     Core::hresult status = Core::ERROR_GENERAL;
     LOGINFO("GetLoadedApps Entered");
