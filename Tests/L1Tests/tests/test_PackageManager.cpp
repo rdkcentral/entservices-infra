@@ -64,7 +64,7 @@ protected:
     FactoriesImplementation factoriesImplementation;
 
     Core::ProxyType<Plugin::PackageManagerImplementation> mPackageManagerImpl;
-    Core::ProxyType<WorkerpoolImplementation> workerPool;
+    Core::ProxyType<WorkerPoolImplementation> workerPool;
 
     Exchange::IPackageDownloader* pkgdownloaderInterface = nullptr;
     Exchange::IPackageInstaller* pkginstallerInterface = nullptr;
@@ -438,8 +438,8 @@ TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
 
     initforComRpc();
 
-    string quotaKB = 1024;
-    string usedKB = 568;
+    string quotaKB = "1024";
+    string usedKB = "568";
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->GetStorageDetails(quotaKB, usedKB));
 
@@ -485,7 +485,7 @@ TEST_F(PackageManagerTest, installusingJsonRpc) {
 
     initforJsonRpc();
 
-    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_))
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
@@ -511,9 +511,9 @@ TEST_F(PackageManagerTest, installusingComRpc) {
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     Exchange::IPackageInstaller::KeyValue kv = {"testapp", "2"};
 
-    auto additionalMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+    auto additionalMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IKeyValueIterator, ID_PACKAGE_KEY_VALUE_ITERATOR>>::Create<Exchange::IPackageInstaller::IKeyValueIterator, ID_PACKAGE_KEY_VALUE_ITERATOR>(kv);
 
-    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_))
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
@@ -591,7 +591,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpc) {
 
     Exchange::IPackageInstaller::Package packageList = {};
 
-    auto packages = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IPackageInfoIterator>>::Create<Exchange::IPackageInstaller::IPackageInfoIterator>(packageList);
+    auto packages = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IPackageInfoIterator, ID_PACKAGE_ITERATOR>>::Create<Exchange::IPackageInstaller::IPackageInfoIterator, ID_PACKAGE_ITERATOR>(packageList);
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
     
@@ -652,7 +652,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpc) {
 
     string packageId = "testPackageId";
     string version = "2.0";
-    Exchange::IPackageInstaller::InstallState state = 0;
+    Exchange::IPackageInstaller::InstallState state = Exchange::IPackageInstaller::InstallState::INSTALLING;
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->PackageState(packageId, version, state));
     
@@ -722,7 +722,7 @@ TEST_F(PackageManagerTest, lockusingComRpc) {
     Exchange::RuntimeConfig configMetadata = {};
     Exchange::IPackageHandler::AdditionalLock additionalLock = {};
 
-    auto appMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLock);
+    auto appMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageHandler::ILockIterator, ID_PACKAGE_LOCK_ITERATOR>>::Create<Exchange::IPackageHandler::ILockIterator, ID_PACKAGE_LOCK_ITERATOR>(additionalLock);
 
     EXPECT_EQ(Core::ERROR_NONE, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
     
