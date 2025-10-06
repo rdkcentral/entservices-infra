@@ -24,6 +24,8 @@ set(PLUGIN_RUNTIME_MANAGER_AUTOSTART false CACHE STRING "Automatically start Run
 set(PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES "")
 set(PLUGIN_RUNTIME_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start RuntimeManager plugin")
 
+option(AIMANAGERS_TELEMETRY_METRICS_SUPPORT "AIMANAGERS_TELEMETRY_METRICS_SUPPORT" OFF)
+
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_MAJOR=1)
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_MINOR=0)
 add_definitions(-DRUNTIME_MANAGER_API_VERSION_NUMBER_PATCH=0)
@@ -57,14 +59,31 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-add_library(${PLUGIN_IMPLEMENTATION} SHARED
-    RuntimeManagerImplementation.cpp
-    DobbySpecGenerator.cpp
-    WindowManagerConnector.cpp
-    DobbyEventListener.cpp
-    UserIdManager.cpp
-    AIConfiguration.cpp
-    Module.cpp)
+set (RUNTIMEMANAGER_SOURCES)
+list(APPEND RUNTIMEMANAGER_SOURCES  RuntimeManagerImplementation.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  DobbySpecGenerator.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  WindowManagerConnector.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  DobbyEventListener.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  UserIdManager.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  AIConfiguration.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  Module.cpp)
+
+if (RIALTO_IN_DAC_FEATURE)
+  add_definitions("-DRIALTO_IN_DAC_FEATURE_ENABLED")
+  list(APPEND RUNTIMEMANAGER_SOURCES  RialtoConnector.cpp)
+endif(RIALTO_IN_DAC_FEATURE)
+
+
+add_library(${PLUGIN_IMPLEMENTATION} SHARED ${RUNTIMEMANAGER_SOURCES})
+
+if (RIALTO_IN_DAC_FEATURE)
+target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins RialtoServerManager)
+endif(RIALTO_IN_DAC_FEATURE)
+
+if(AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
+    message(STATUS "AIMANAGERS_TELEMETRY_METRICS_SUPPORT is enabled")
+    add_definitions(-DENABLE_AIMANAGERS_TELEMETRY_METRICS)
+endif(AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
 
 include_directories(../helpers)
 

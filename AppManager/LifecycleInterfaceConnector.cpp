@@ -33,6 +33,9 @@
 
 #include "UtilsString.h"
 #include "AppManagerImplementation.h"
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+#include "AppManagerTelemetryReporting.h"
+#endif
 
 #define SUSPEND_POLICY_FILE        "/tmp/AI2.0Suspendable"
 #define HIBERNATE_POLICY_FILE      "/tmp/AI2.0Hibernatable"
@@ -52,6 +55,7 @@ namespace WPEFramework
         : mLifecycleManagerRemoteObject(nullptr),
           mLifecycleManagerStateRemoteObject(nullptr),
           mNotification(*this),
+          mAppStateChangeNotification(*this),
           mCurrentservice(nullptr),
           mAppIdAwaitingPause("")
         {
@@ -94,6 +98,7 @@ namespace WPEFramework
             {
                 LOGINFO("Created LifecycleManager Remote Object \n");
                 mLifecycleManagerRemoteObject->AddRef();
+                mLifecycleManagerRemoteObject->Register(&mAppStateChangeNotification);
 
                 LOGINFO("Created LifecycleManagerState Remote Object \n");
                 mLifecycleManagerStateRemoteObject->AddRef();
@@ -110,6 +115,7 @@ namespace WPEFramework
             ASSERT(nullptr != mLifecycleManagerRemoteObject );
             if(mLifecycleManagerRemoteObject )
             {
+                mLifecycleManagerRemoteObject->Unregister(&mAppStateChangeNotification);
                 mLifecycleManagerRemoteObject ->Release();
                 mLifecycleManagerRemoteObject = nullptr;
             }
@@ -161,6 +167,10 @@ namespace WPEFramework
             string errorReason = "";
             bool success = true;
             Exchange::ILifecycleManager::LifecycleState state = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
+
             if (appId.empty())
             {
                 LOGERR("appId is empty");
@@ -236,9 +246,24 @@ namespace WPEFramework
                             else
                             {
                                 LOGERR("spawnApp failed");
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_SPAWN_APP);
+#endif
                             }
                         }
                     }
+                    else
+                    {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_INTERNAL);
+#endif
+                    }
+                }
+                else
+                {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                 }
                 mAdminLock.Unlock();
             }
@@ -250,6 +275,9 @@ namespace WPEFramework
         {
             Core::hresult status = Core::ERROR_GENERAL;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
 
             string intent = "";
 
@@ -303,7 +331,16 @@ namespace WPEFramework
                     else
                     {
                         LOGERR("PreLoad failed");
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_PRELOAD, AppManagerImplementation::ERROR_SPAWN_APP);
+#endif
                     }
+                }
+                else
+                {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_PRELOAD, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                 }
                 mAdminLock.Unlock();
             }
@@ -319,6 +356,10 @@ namespace WPEFramework
             bool success = false;
             std::string errorReason = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
+            bool isAppLoaded = false;
 
             LOGINFO("AppId retrieved: %s", appId.c_str());
 
@@ -332,6 +373,7 @@ namespace WPEFramework
                     {
                         appInstanceId = appIterator->second.appInstanceId;
                         appIntent = appIterator->second.appIntent;
+                        isAppLoaded = true;
 
                         if(nullptr != mLifecycleManagerRemoteObject)
                         {
@@ -390,6 +432,9 @@ namespace WPEFramework
                                             if (status != Core::ERROR_NONE)
                                             {
                                                 LOGERR("UnloadApp failed with error reason: %s", errorReason.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_UNLOAD_APP);
+#endif
                                             }
                                             else
                                             {
@@ -400,28 +445,54 @@ namespace WPEFramework
                                     else
                                     {
                                         LOGERR("AppId: %s not found after PAUSED wait", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                        appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                                         status = Core::ERROR_GENERAL;
                                     }
                                 }
                                 else
                                 {
                                     LOGERR("Timed out waiting for appId: %s to reach PAUSED state", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                                     status = Core::ERROR_GENERAL;
                                 }
                             }
                             else
                             {
                                 LOGERR("Failed to set PAUSED state for AppId: %s", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_SET_TARGET_APP_STATE);
+#endif
                             }
+                        }
+                        else
+                        {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                            appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                         }
 
                         break;
                     }
                 }
+
+                if (!isAppLoaded)
+                {
+                    LOGERR("AppId %s not found in database", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INVALID_PARAMS);
+#endif
+                }
             }
             else
             {
                 LOGERR("AppManagerImplementation instance is null");
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
             }
             mAdminLock.Unlock();
             return status;
@@ -433,6 +504,9 @@ namespace WPEFramework
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
             bool success = false;
             std::string errorReason = "";
             bool foundAppId = false;
@@ -456,6 +530,9 @@ namespace WPEFramework
                             if (status != Core::ERROR_NONE)
                             {
                                 LOGERR("UnloadApp failed with error reason: %s", errorReason.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_UNLOAD_APP);
+#endif
                             }
                         }
                         break;
@@ -464,11 +541,17 @@ namespace WPEFramework
                 if (!foundAppId)
                 {
                     LOGERR("AppId %s not found in database", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_INVALID_PARAMS);
+#endif
                 }
             }
             else
             {
                 LOGERR("appManagerImplInstance is null");
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
             }
             mAdminLock.Unlock();
             return status;
@@ -480,6 +563,9 @@ namespace WPEFramework
             LOGINFO("killApp entered");
             Core::hresult result = Core::ERROR_GENERAL;
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
 
             if (appId.empty())
             {
@@ -503,6 +589,9 @@ namespace WPEFramework
                 if (appInstanceId.empty())
                 {
                     LOGERR("appInstanceId not found for appId '%s'", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_INVALID_PARAMS);
+#endif
                 }
                 else
                 {
@@ -515,9 +604,18 @@ namespace WPEFramework
                     if (!(result == Core::ERROR_NONE && success))
                     {
                         LOGERR("killApp failed, result: %d, success: %d, errorReason: %s", result, success, errorReason.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_KILL_APP);
+#endif
                     }
                 }
                 mAdminLock.Unlock();
+            }
+            else
+            {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_INTERNAL);
+#endif
             }
 
             return result;
@@ -765,11 +863,83 @@ End:
                 {
                     appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
                 }
+
                 if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
                 {
                     appManagerImplInstance->handleOnAppUnloaded(appId, appInstanceId);
                 }
+
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                AppManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(appId, newState);
+#endif
+                if(Exchange::ILifecycleManager::LifecycleState::UNLOADED == newState)
+                {
+                    removeAppInfoByAppId(appId);
+                }
             }
+        }
+
+        void LifecycleInterfaceConnector::OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason)
+        {
+            string appInstanceId = "";
+            Exchange::IAppManager::AppLifecycleState currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+            AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
+            Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+            LOGINFO("OnAppStateChanged event triggered for appId %s: state=%d, errorReason=%s", appId.c_str(), static_cast<int>(state), errorReason.c_str());
+
+            if(nullptr == appManagerImplInstance)
+            {
+                LOGERR("Invalid AppManager Implementation Instance");
+            }
+            else
+            {
+                if (!appId.empty())
+                {
+                    auto it = appManagerImplInstance->mAppInfo.find(appId);
+                    if(it != appManagerImplInstance->mAppInfo.end())
+                    {
+                        appInstanceId = it->second.appInstanceId;
+                        currentAppState = it->second.appNewState;
+                    }
+                    else
+                    {
+                        LOGERR("appId not found in database");
+                    }
+                }
+
+                if (!errorReason.empty())
+                {
+                    errorCode = mapErrorReason(errorReason);
+                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
+                        currentAppState, errorCode);
+                    LOGINFO("Notified error event for appId %s: currentAppState=%d errorCode %d", appId.c_str(), static_cast<int>(currentAppState), static_cast<int>(errorCode));
+                }
+            }
+        }
+
+        Exchange::IAppManager::AppErrorReason LifecycleInterfaceConnector::mapErrorReason(const string& errorReason)
+        {
+            Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+            if(!errorReason.empty())
+            {
+                if(!errorReason.compare("ERROR_CREATE_DISPLAY"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_CREATE_DISPLAY;
+                }
+                else if(!errorReason.compare("ERROR_DOBBY_SPEC"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_DOBBY_SPEC;
+                }
+                else if(!errorReason.compare("ERROR_INVALID_PARAM"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_INVALID_PARAM;
+                }
+                else
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
+                }
+            }
+            return errorCode;
         }
 
         /* Returns appInstanceId for appId. Does not synchronize access to LoadedAppInfo.
@@ -786,6 +956,24 @@ End:
                 return {};
             else
                 return it->second.appInstanceId;
+        }
+
+        void LifecycleInterfaceConnector::removeAppInfoByAppId(const string& appId)
+        {
+            AppManagerImplementation* appManagerImpl = AppManagerImplementation::getInstance();
+            if (!appManagerImpl)
+                return;
+
+            auto it = appManagerImpl->mAppInfo.find(appId);
+            if (it != appManagerImpl->mAppInfo.end())
+            {
+                LOGINFO("appId %s is removed from database", appId.c_str());
+                appManagerImpl->mAppInfo.erase(it);
+            }
+            else
+            {
+                LOGERR("AppInfo for appId '%s' not found", appId.c_str());
+            }
         }
 
         bool LifecycleInterfaceConnector::fileExists(const char* pFileName)

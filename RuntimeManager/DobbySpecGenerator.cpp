@@ -105,9 +105,17 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
         return true;
     }
    
+    ssize_t memLimit = getSysMemoryLimit(config, runtimeConfig);
+    /*mandatory parameter check*/
+    if((memLimit <= 0) || runtimeConfig.command.empty() || (config.mUserId ==0))
+    {
+        LOGERR("Invalid mandatory parameter: Mem Limit=%d, Command=%s UserId %d", memLimit, runtimeConfig.command.c_str(), config.mUserId);
+        return false;
+    }
+
     Json::Value spec;
     spec["version"] = "1.1";
-    spec["memLimit"] = getSysMemoryLimit(config, runtimeConfig);
+    spec["memLimit"] = std::move(memLimit);
 
     Json::Value args(Json::arrayValue);
     std::string command ="";
@@ -217,6 +225,8 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     spec["rdkPlugins"] = createRdkPlugins(config, runtimeConfig);
     spec["mounts"] = createMounts(config, runtimeConfig);
     spec["env"] = createEnvVars(config, runtimeConfig);
+    //TODO SUPPORT Add only for web runtime and debug builds
+    addHolePunchPortToSpec(spec, 22222);
 
     Json::FastWriter writer;
     resultSpec = writer.write(spec);
@@ -311,9 +321,7 @@ Json::Value DobbySpecGenerator::createEnvVars(const ApplicationConfiguration& co
    //TODO SUPPORT WATCHDOG
    //TODO SUPPORT runtime parameter in runtime config: RDKEMW-4432
    //TODO SUPPORT Add only for web runtime
-#if(AI_BUILD_TYPE == AI_DEBUG)
    env.append("WEBKIT_LEGACY_INSPECTOR_SERVER=0.0.0.0:22222");
-#endif // (AI_BUILD_TYPE == AI_DEBUG)
 
    return env;
 }
@@ -1070,5 +1078,73 @@ std::string DobbySpecGenerator::encodeURL(std::string url) const
     return encodedUrl;
 }
 
+void DobbySpecGenerator::addHolePunchPortToSpec(Json::Value &spec, in_port_t port) const
+{
+printf("Adding hole punching port %hu for app", port);
+    fflush(stdout);
+
+    static Json::Value nullValue(Json::nullValue);
+
+    Json::Value &specRef = spec;
+
+    // create a new entry
+    Json::Value entry(Json::objectValue);
+    entry["port"] = port;
+    entry["protocol"] = "tcp";
+
+    // check which type of spec we have
+    if (specRef.isMember("rdkPlugins"))
+    {
+        // dobby++ spec format
+        Json::Value &rdkPlugins = specRef["rdkPlugins"];
+
+        const Json::Value &hostToContainer =
+            Json::Path(".networking.data.portForwarding.hostToContainer")
+                .resolve(rdkPlugins);
+        if (!hostToContainer.isArray())
+        {
+            // no hole punches defined so add Networking rdkPlugin's
+            // hostToContainer field
+            rdkPlugins["networking"]["data"]["portForwarding"]["hostToContainer"] = Json::arrayValue;
+        }
+
+        // append to the array hole punches array
+        rdkPlugins["networking"]["data"]["portForwarding"]["hostToContainer"].append(std::move(entry));
+    }
+    else
+    {
+        // classic dobby format
+
+        // add / modify the hole punch code for gdbserver
+        Json::Value &plugins = specRef["plugins"];
+        for (Json::Value &plugin : plugins)
+        {
+            if (!plugin.isObject())
+                break;
+
+            const Json::Value &name = plugin["name"];
+            if (!name.isString() || (strcmp(name.asCString(), "HolePuncher") != 0))
+                continue;
+
+            Json::Value &holes = plugin["data"]["holes"];
+            if (!holes.isArray())
+                LOGINFO("odd, invalid HolePuncher plugin json object");
+            else
+                holes.append(std::move(entry));
+
+            return;
+        }
+
+        // no hole punch plugin defined so add one now
+        Json::Value holes(Json::arrayValue);
+        holes.append(std::move(entry));
+
+        Json::Value plugin(Json::objectValue);
+        plugin["name"] = "HolePuncher";
+        plugin["data"]["holes"] = std::move(holes);
+
+        plugins.append(std::move(plugin));
+    }
+}
 } // namespace Plugin
 } // namespace WPEFramework
