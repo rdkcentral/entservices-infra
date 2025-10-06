@@ -24,6 +24,7 @@
 #endif
 
 #define TIME_DATA_SIZE           200
+static bool sRunning = false;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -40,6 +41,7 @@ AppManagerImplementation::AppManagerImplementation()
 , mPackageManagerInstallerObject(nullptr)
 , mCurrentservice(nullptr)
 , mPackageManagerNotification(*this)
+, mAppManagerWorkerThread()
 {
     LOGINFO("Create AppManagerImplementation Instance");
     if (nullptr == AppManagerImplementation::_instance)
@@ -57,6 +59,14 @@ AppManagerImplementation::~AppManagerImplementation()
 {
     LOGINFO("Delete AppManagerImplementation Instance");
     _instance = nullptr;
+    sRunning = false;
+    mAppRequestListCV.notify_all();
+    if (mAppManagerWorkerThread.joinable())
+    {
+        mAppManagerWorkerThread.join();
+        LOGINFO("App Manager Worker Thread joined successfully");
+    }
+
     if (nullptr != mLifecycleInterfaceConnector)
     {
         mLifecycleInterfaceConnector->releaseLifecycleManagerRemoteObject();
@@ -92,6 +102,98 @@ Core::hresult AppManagerImplementation::Register(Exchange::IAppManager::INotific
     mAdminLock.Unlock();
 
     return Core::ERROR_NONE;
+}
+
+void AppManagerImplementation::AppManagerWorkerThread(void)
+{
+    while (sRunning)
+    {
+        std::shared_ptr<AppManagerRequest> request = nullptr;
+        std::unique_lock<std::mutex> lock(mAppManagerLock);
+        mAppRequestListCV.wait(lock, [this] {return !mAppRequestList.empty() || !sRunning;});
+
+        if (!mAppRequestList.empty() && sRunning)
+        {
+            Core::hresult status = Core::ERROR_GENERAL;
+            request = mAppRequestList.front();
+            mAppRequestList.pop_front();
+
+            if (request != nullptr)
+            {
+                CurrentAction action = request->mRequestAction;
+
+                switch (action)
+                {
+                    case APP_ACTION_LAUNCH:
+                    case APP_ACTION_PRELOAD:
+                    {
+                        if (nullptr != request->mRequestParam)
+                        {
+                            if (auto appRequestParam = std::static_pointer_cast<AppLaunchRequestParam>(request->mRequestParam))
+                            {
+                                string appId = appRequestParam->appId;
+                                PackageInfo packageData;
+                                Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
+
+                                status = packageLock(appId, packageData, lockReason);
+                                if (status == Core::ERROR_NONE)
+                                {
+                                    WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
+                                    runtimeConfig.unpackedPath = packageData.unpackedPath;
+                                    getCustomValues(runtimeConfig);
+                                    string launchArgs = appRequestParam->launchArgs;
+
+                                    if (action == APP_ACTION_LAUNCH)
+                                    {
+                                        status = mLifecycleInterfaceConnector->launch(appId, appRequestParam->intent, launchArgs, runtimeConfig);
+                                        LOGINFO("Application Launch from thread returns with status %d", status);
+
+                                        if (status != Core::ERROR_NONE)
+                                        {
+                                            LOGERR("launch failed status %d", status);
+                                        }
+                                    }
+                                    else if (action == APP_ACTION_PRELOAD)
+                                    {
+                                        string errorReason;
+                                        status = mLifecycleInterfaceConnector->preLoadApp(appId, launchArgs, runtimeConfig, errorReason);
+                                        LOGINFO("Application preLoad from thread returns with status %d error %s", status, errorReason.c_str());
+
+                                        if ((!errorReason.empty()) || (status != Core::ERROR_NONE))
+                                        {
+                                            LOGERR("preLoadApp failed reason %s status %d", errorReason.c_str(), status);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    bool installed = false;
+
+                                    IsInstalled(appId, installed);
+                                    LOGERR("Failed to PackageManager Lock %s installed %d", appId.c_str(), installed);
+                                    handleOnAppLifecycleStateChanged(appId, "",
+                                        Exchange::IAppManager::APP_STATE_UNKNOWN,
+                                        Exchange::IAppManager::APP_STATE_UNLOADED,
+                                        (installed == true)?Exchange::IAppManager::APP_ERROR_PACKAGE_LOCK: Exchange::IAppManager::APP_ERROR_NOT_INSTALLED);
+                                }
+                            }
+                        }
+                    }
+                    break; /*APP_ACTION_LAUNCH | APP_ACTION_PRELOAD*/
+
+                    default:
+                    {
+                        LOGERR("action type is invalid");
+                    }
+                    break; /* defult*/
+                }
+            }
+        }
+    }
+    {
+        std::lock_guard<std::mutex> lock(mAppManagerLock);
+        mAppRequestList.clear();
+    }
 }
 
 /**
@@ -144,10 +246,6 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
             {
                 LOGERR("appId not present or empty");
             }
-            else if (!(params.HasLabel("appInstanceId") && !(appInstanceId = params["appInstanceId"].String()).empty()))
-            {
-                LOGERR("appInstanceId not present or empty");
-            }
             else if (!params.HasLabel("newState"))
             {
                 LOGERR("newState not present");
@@ -162,6 +260,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
             }
             else
             {
+                appInstanceId = params.HasLabel("appInstanceId") ? params["appInstanceId"].String() : "";
                 newState = static_cast<AppLifecycleState>(params["newState"].Number());
                 oldState = static_cast<AppLifecycleState>(params["oldState"].Number());
                 errorReason = static_cast<AppErrorReason>(params["errorReason"].Number());
@@ -298,8 +397,8 @@ void AppManagerImplementation::handleOnAppLifecycleStateChanged(const string& ap
     eventDetails["oldState"] = static_cast<int>(oldState);
     eventDetails["errorReason"] = static_cast<int>(errorReason);
 
-    LOGINFO("Notify App Lifecycle state change for appId %s: oldState=%d, newState=%d",
-        appId.c_str(), static_cast<int>(oldState), static_cast<int>(newState));
+    LOGINFO("Notify App Lifecycle state change for appId %s: appInstanceId %s oldState=%d, newState=%d",
+        appId.c_str(), (appInstanceId.empty()?" ":appInstanceId.c_str()), static_cast<int>(oldState), static_cast<int>(newState));
 
     dispatchEvent(APP_EVENT_LIFECYCLE_STATE_CHANGED, eventDetails);
 }
@@ -408,7 +507,18 @@ uint32_t AppManagerImplementation::Configure(PluginHost::IShell* service)
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         AppManagerTelemetryReporting::getInstance().initialize(service);
 #endif
-        result = Core::ERROR_NONE;
+        sRunning = true;
+        /* Create the worker thread */
+        try
+        {
+            mAppManagerWorkerThread = std::thread(&AppManagerImplementation::AppManagerWorkerThread, AppManagerImplementation::getInstance());
+            LOGINFO("App Manager Worker thread created");
+            result = Core::ERROR_NONE;
+        }
+        catch (const std::system_error& e)
+        {
+            LOGERR("Failed to create App Manager worker thread: %s", e.what());
+        }
     }
     else
     {
@@ -765,8 +875,6 @@ Core::hresult AppManagerImplementation::packageUnLock(const string& appId)
 Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const string& intent , const string& launchArgs)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
     time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
@@ -774,15 +882,36 @@ Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const st
     LOGINFO(" LaunchApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
-    if (nullptr != mLifecycleInterfaceConnector)
+    if (appId.empty())
     {
-        status = packageLock(appId, packageData, lockReason);
-        WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
-        runtimeConfig.unpackedPath = packageData.unpackedPath;
-        getCustomValues(runtimeConfig);
-        if (status == Core::ERROR_NONE)
+        LOGERR("application Id is empty");
+        status = Core::ERROR_INVALID_PARAMETER;
+    }
+    else if (nullptr != mLifecycleInterfaceConnector)
+    {
+        std::shared_ptr<AppManagerRequest> request = std::make_shared<AppManagerRequest>();
+
+        if (request != nullptr)
         {
-            status = mLifecycleInterfaceConnector->launch(appId, intent, launchArgs, runtimeConfig);
+            LOGINFO("LaunchApp enter with appId %s", appId.c_str());
+            request->mRequestAction = APP_ACTION_LAUNCH;
+            request->mRequestParam = std::make_shared<AppLaunchRequestParam>(AppLaunchRequestParam{appId, launchArgs, intent});
+            if (request->mRequestParam != nullptr)
+            {
+                mAppManagerLock.lock();
+                mAppRequestList.push_back(request);
+                mAppManagerLock.unlock();
+                mAppRequestListCV.notify_one();
+                status = Core::ERROR_NONE;
+            }
+            else
+            {
+                LOGERR("Failed to perform operation due to no memory");
+            }
+        }
+        else
+        {
+            LOGERR("Failed to perform operation due to no memory");
         }
     }
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -968,9 +1097,6 @@ Core::hresult AppManagerImplementation::SendIntent(const string& appId , const s
 Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const string& launchArgs ,string& error)
 {
     Core::hresult status = Core::ERROR_GENERAL;
-
-    PackageInfo packageData;
-    Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
     AppManagerTelemetryReporting& appManagerTelemetryReporting = AppManagerTelemetryReporting::getInstance();
     time_t requestTime = appManagerTelemetryReporting.getCurrentTimestamp();
@@ -978,16 +1104,39 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
     LOGINFO(" PreloadApp enter with appId %s", appId.c_str());
 
     mAdminLock.Lock();
-    if (nullptr != mLifecycleInterfaceConnector)
+    if (appId.empty())
     {
-        status = packageLock(appId, packageData, lockReason);
-        WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
-        runtimeConfig.unpackedPath = packageData.unpackedPath;
-        getCustomValues(runtimeConfig);
+        LOGERR("application Id is empty");
+        error = "application Id is empty";
+        status = Core::ERROR_INVALID_PARAMETER;
+    }
+    else if (nullptr != mLifecycleInterfaceConnector)
+    {
+        std::shared_ptr<AppManagerRequest> request = std::make_shared<AppManagerRequest>();
 
-        if (status == Core::ERROR_NONE)
+        if (request != nullptr)
         {
-            status = mLifecycleInterfaceConnector->preLoadApp(appId, launchArgs, runtimeConfig, error);
+            LOGINFO(" PreloadApp enter with appId %s", appId.c_str());
+            request->mRequestAction = APP_ACTION_PRELOAD;
+            request->mRequestParam = std::make_shared<AppLaunchRequestParam>(AppLaunchRequestParam{appId, launchArgs});
+            if (request->mRequestParam != nullptr)
+            {
+                mAppManagerLock.lock();
+                mAppRequestList.push_back(request);
+                mAppManagerLock.unlock();
+                mAppRequestListCV.notify_one();
+                status = Core::ERROR_NONE;
+            }
+            else
+            {
+                LOGERR("Failed to perform operation due to no memory");
+                error = "Failed to perform operation due to no memory";
+            }
+        }
+        else
+        {
+            LOGERR("Failed to perform operation due to no memory");
+            error = "Failed to perform operation due to no memory";
         }
     }
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS

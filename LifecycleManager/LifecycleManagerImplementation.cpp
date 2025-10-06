@@ -167,6 +167,13 @@ namespace WPEFramework
                  case LIFECYCLE_MANAGER_EVENT_WINDOW:
                       handleWindowManagerEvent(obj);
                       break;
+                 case LIFECYCLE_MANAGER_EVENT_ONFAILURE:
+                      while (index != mLifecycleManagerNotification.end())
+                      {
+                          (*index)->OnAppStateChanged(appId, (LifecycleState)newLifecycleState, errorReason);
+                          ++index;
+                      }
+                      break;
                  default:
                      LOGWARN("Event[%u] not handled", event);
                      break;
@@ -628,12 +635,30 @@ namespace WPEFramework
                 string appInstanceId = data["appInstanceId"];
                 string errorCode = data["errorCode"];
                 LOGINFO("Received container failure event from runtime manager for app[%s] error[%s]", appInstanceId.c_str(), errorCode.c_str());
+                notifyOnFailure(appInstanceId, errorCode);
             }
             else if (eventName.compare("onStarted") == 0)
             {
                 string appInstanceId = data["appInstanceId"];
                 LOGINFO("Received container started event from runtime manager for app[%s]", appInstanceId.c_str());
             }
+        }
+
+        void LifecycleManagerImplementation::notifyOnFailure(const string& appInstanceId, const string& errorCode)
+        {
+            string appId = "";
+            JsonObject eventData;
+            ApplicationContext* context = getContext(appInstanceId, "");
+            if (nullptr != context)
+            {
+                appId = context->getAppId();
+            }
+            eventData["appId"] = appId;
+            eventData["appInstanceId"] = appInstanceId;
+            eventData["newLifecycleState"] = static_cast<uint32_t>(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
+            eventData["errorReason"] = errorCode;
+            dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_ONFAILURE, eventData);
+            LOGINFO("Notify error event for appId[%s] appInstanceId[%s] error[%s]", appId.c_str(), appInstanceId.c_str(), errorCode.c_str());
         }
 
 	void LifecycleManagerImplementation::handleStateChangeEvent(const JsonObject &data)
