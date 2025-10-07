@@ -1,6 +1,27 @@
 #include "gtest/gtest.h"
 #include "MessageControl.h"
 
+// Forward declare INotification if not available
+namespace WPEFramework {
+namespace PluginHost {
+    struct IShell {
+        virtual ~IShell() = default;
+        virtual void AddRef() = 0;
+        virtual uint32_t Release() = 0;
+        virtual string ConfigLine() const = 0;
+        virtual bool Background() const = 0;
+        virtual string VolatilePath() const = 0;
+        // Use void* for notification to avoid type errors
+        virtual void Register(void* /*INotification*/) {}
+        virtual void Unregister(void* /*INotification*/) {}
+    };
+    struct Channel {
+        virtual ~Channel() = default;
+        virtual uint32_t Id() const { return 1; }
+    };
+}
+}
+
 // Dummy IShell implementation
 class DummyShell : public WPEFramework::PluginHost::IShell {
 public:
@@ -9,30 +30,28 @@ public:
     string ConfigLine() const override { return ""; }
     bool Background() const override { return false; }
     string VolatilePath() const override { return ""; }
-    void Register(WPEFramework::PluginHost::IShell::INotification*) override {}
-    void Unregister(WPEFramework::PluginHost::IShell::INotification*) override {}
-    // ...other required dummy methods...
+    void Register(void* /*INotification*/) override {}
+    void Unregister(void* /*INotification*/) override {}
 };
 
 // Dummy Channel implementation
 class DummyChannel : public WPEFramework::PluginHost::Channel {
 public:
     uint32_t Id() const override { return 1; }
-    // ...other required dummy methods...
 };
 
 using namespace WPEFramework::Plugin;
 
 class MessageControlL1Test : public ::testing::Test {
 protected:
-    MessageControl* control;
+    std::unique_ptr<MessageControl> control;
 
     void SetUp() override {
-        control = new MessageControl();
+        control = std::make_unique<MessageControl>();
     }
 
     void TearDown() override {
-        delete control;
+        control.reset();
     }
 };
 
