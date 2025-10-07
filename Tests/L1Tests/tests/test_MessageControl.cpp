@@ -1,9 +1,5 @@
 #include "gtest/gtest.h"
 #include "MessageControl.h"
-#include <plugins/IPlugin.h>
-#include <plugins/Channel.h>
-
-using namespace WPEFramework::Plugin;
 
 // Dummy IShell implementation
 class DummyShell : public WPEFramework::PluginHost::IShell {
@@ -11,28 +7,28 @@ public:
     DummyShell() = default;
     ~DummyShell() override = default;
 
-    // IUnknown
-    void AddRef() override {}
-    uint32_t Release() override { return 0; }
-
-    // IShell
+    // Implement only methods required by IShell interface
     string ConfigLine() const override { return ""; }
     bool Background() const override { return false; }
     string VolatilePath() const override { return ""; }
-    void Register(INotification* /*notification*/) override {}
-    void Unregister(INotification* /*notification*/) override {}
-    // Add stubs for any other pure virtual methods if required
+    void Register(WPEFramework::PluginHost::IShell::INotification* /*notification*/) override {}
+    void Unregister(WPEFramework::PluginHost::IShell::INotification* /*notification*/) override {}
+    // ...add other required stubs if IShell has more pure virtuals...
 };
 
 // Dummy Channel implementation
 class DummyChannel : public WPEFramework::PluginHost::Channel {
 public:
-    DummyChannel() : WPEFramework::PluginHost::Channel(nullptr, 1) {}
+    // Use a valid SOCKET and NodeId for base constructor
+    DummyChannel()
+        : WPEFramework::PluginHost::Channel(0, WPEFramework::Core::NodeId("127.0.0.1", 12345)) {}
     ~DummyChannel() override = default;
 
     uint32_t Id() const override { return 1; }
-    // Add stubs for any other pure virtual methods if required
+    // ...add other required stubs if Channel has more pure virtuals...
 };
+
+using namespace WPEFramework::Plugin;
 
 class MessageControlL1Test : public ::testing::Test {
 protected:
@@ -63,6 +59,10 @@ TEST_F(MessageControlL1Test, DeinitializeDoesNotCrash) {
 }
 
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
+    DummyChannel channel;
+    EXPECT_TRUE(control->Attach(channel));
+    control->Detach(channel);
+}
     DummyChannel channel;
     EXPECT_TRUE(control->Attach(channel));
     control->Detach(channel);
