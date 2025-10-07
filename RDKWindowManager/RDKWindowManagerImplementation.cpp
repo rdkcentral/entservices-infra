@@ -83,7 +83,7 @@ static std::thread shellThread;
 static std::vector<std::shared_ptr<CreateDisplayRequest>> gCreateDisplayRequests;
 
 CreateDisplayRequest::CreateDisplayRequest(std::string client, std::string displayName, uint32_t displayWidth, uint32_t displayHeight, bool virtualDisplayEnabled,
-                                           uint32_t virtualWidth, uint32_t virtualHeight, bool topmost, bool focus)
+                                           uint32_t virtualWidth, uint32_t virtualHeight, bool topmost, bool focus, int32_t ownerId, int32_t groupId)
 : mClient(std::move(client))
 , mDisplayName(std::move(displayName))
 , mDisplayWidth(displayWidth)
@@ -94,7 +94,8 @@ CreateDisplayRequest::CreateDisplayRequest(std::string client, std::string displ
 , mTopmost(topmost)
 , mFocus(focus)
 , mResult(false)
-, mAutoDestroy(true)
+, mOwnerId(ownerId)
+, mGroupId(groupId)
 {
     if (0 != sem_init(&mSemaphore, 0, 0))
     {
@@ -242,7 +243,7 @@ Core::hresult RDKWindowManagerImplementation::Initialize(PluginHost::IShell* ser
                       gCreateDisplayRequests.erase(gCreateDisplayRequests.begin());
                       continue;
                   }
-                  request->mResult = CompositorController::createDisplay(request->mClient, request->mDisplayName, request->mDisplayWidth, request->mDisplayHeight, request->mVirtualDisplayEnabled, request->mVirtualWidth, request->mVirtualHeight, request->mTopmost, request->mFocus , request->mAutoDestroy);
+                  request->mResult = CompositorController::createDisplay(request->mClient, request->mDisplayName, request->mDisplayWidth, request->mDisplayHeight, request->mVirtualDisplayEnabled, request->mVirtualWidth, request->mVirtualHeight, request->mTopmost, request->mFocus , request->mOwnerId, request->mGroupId);
                   gCreateDisplayRequests.erase(gCreateDisplayRequests.begin());
                   if (0 != sem_post(&request->mSemaphore))
                   {
@@ -274,8 +275,10 @@ Core::hresult RDKWindowManagerImplementation::Initialize(PluginHost::IShell* ser
     return (result);
 }
 
-void RDKWindowManagerImplementation::Deinitialize(PluginHost::IShell* service)
+Core::hresult RDKWindowManagerImplementation::Deinitialize(PluginHost::IShell* service)
 {
+    Core::hresult result = Core::ERROR_NONE;
+
     ASSERT(nullptr != service);
 
     if (nullptr != mService)
@@ -328,6 +331,8 @@ void RDKWindowManagerImplementation::Deinitialize(PluginHost::IShell* service)
     gRdkWindowManagerMutex.unlock();
 
     LOGINFO("RDKWindowManagerImplementation::Deinitialized");
+
+    return (result);
 }
 
 /**
@@ -396,6 +401,104 @@ void RDKWindowManagerImplementation::RdkWindowManagerListener::onUserInactive(co
     }
 }
 
+void RDKWindowManagerImplementation::RdkWindowManagerListener::onApplicationDisconnected(const std::string& client)
+{
+    LOGINFO("RDKWindowManager onApplicationDisconnected event received for client: %s", client.c_str());
+
+    if (nullptr == mRDKWindowManagerImpl)
+    {
+        LOGERR("mRDKWindowManagerImpl is null");
+    }
+    else
+    {
+        mRDKWindowManagerImpl->dispatchEvent(RDKWindowManagerImplementation::Event::RDK_WINDOW_MANAGER_EVENT_APPLICATION_DISCONNECTED, JsonValue(client));
+    }
+}
+
+void RDKWindowManagerImplementation::RdkWindowManagerListener::onReady(const std::string& client)
+{
+    LOGINFO("RDKWindowManager OnReady event received Client: %s", client.c_str());
+
+    if ( nullptr == mRDKWindowManagerImpl )
+    {
+        LOGERR("mRDKWindowManagerImpl is null");
+    }
+    else
+    {
+        mRDKWindowManagerImpl->dispatchEvent(RDKWindowManagerImplementation::Event::RDK_WINDOW_MANAGER_EVENT_ON_READY, JsonValue(client));
+    }
+}
+
+void RDKWindowManagerImplementation::RdkWindowManagerListener::onApplicationConnected(const std::string& client)
+{
+    LOGINFO("RDKWindowManager onApplicationConnected event received for client: %s", client.c_str());
+
+    if (nullptr == mRDKWindowManagerImpl)
+    {
+        LOGERR("mRDKWindowManagerImpl is null");
+    }
+    else
+    {
+        mRDKWindowManagerImpl->dispatchEvent(RDKWindowManagerImplementation::Event::RDK_WINDOW_MANAGER_EVENT_APPLICATION_CONNECTED, JsonValue(client));
+    }
+}
+
+void RDKWindowManagerImplementation::RdkWindowManagerListener::onApplicationVisible(const std::string& client)
+{
+    LOGINFO("RDKWindowManager onApplicationVisible event received for client: %s", client.c_str());
+
+    if (nullptr == mRDKWindowManagerImpl)
+    {
+        LOGERR("mRDKWindowManagerImpl is null");
+    }
+    else
+    {
+        mRDKWindowManagerImpl->dispatchEvent(RDKWindowManagerImplementation::Event::RDK_WINDOW_MANAGER_EVENT_APPLICATION_VISIBLE, JsonValue(client));
+    }
+}
+
+void RDKWindowManagerImplementation::RdkWindowManagerListener::onApplicationHidden(const std::string& client)
+{
+    LOGINFO("RDKWindowManager onApplicationHidden event received for client: %s", client.c_str());
+
+    if (nullptr == mRDKWindowManagerImpl)
+    {
+        LOGERR("mRDKWindowManagerImpl is null");
+    }
+    else
+    {
+        mRDKWindowManagerImpl->dispatchEvent(RDKWindowManagerImplementation::Event::RDK_WINDOW_MANAGER_EVENT_APPLICATION_HIDDEN, JsonValue(client));
+    }
+}
+
+void RDKWindowManagerImplementation::RdkWindowManagerListener::onApplicationFocus(const std::string& client)
+{
+    LOGINFO("RDKWindowManager onApplicationFocus event received for client: %s", client.c_str());
+
+    if (nullptr == mRDKWindowManagerImpl)
+    {
+        LOGERR("mRDKWindowManagerImpl is null");
+    }
+    else
+    {
+        mRDKWindowManagerImpl->dispatchEvent(RDKWindowManagerImplementation::Event::RDK_WINDOW_MANAGER_EVENT_APPLICATION_FOCUS, JsonValue(client));
+    }
+}
+
+void RDKWindowManagerImplementation::RdkWindowManagerListener::onApplicationBlur(const std::string& client)
+{
+    LOGINFO("RDKWindowManager onApplicationBlur event received for client: %s", client.c_str());
+
+    if (nullptr == mRDKWindowManagerImpl)
+    {
+        LOGERR("mRDKWindowManagerImpl is null");
+    }
+    else
+    {
+        mRDKWindowManagerImpl->dispatchEvent(RDKWindowManagerImplementation::Event::RDK_WINDOW_MANAGER_EVENT_APPLICATION_BLUR, JsonValue(client));
+    }
+}
+
 void RDKWindowManagerImplementation::dispatchEvent(Event event, const JsonValue &params)
 {
     Core::IWorkerPool::Instance().Submit(Job::Create(this, event, params));
@@ -418,6 +521,76 @@ void RDKWindowManagerImplementation::Dispatch(Event event, const JsonValue param
              }
          break;
 
+        case RDK_WINDOW_MANAGER_EVENT_APPLICATION_DISCONNECTED:
+            while (index != mRDKWindowManagerNotification.end())
+            {
+                LOGINFO("RDKWindowManager Dispatch OnDisconnected client: %s", params.String().c_str());
+
+                (*index)->OnDisconnected(params.String());
+                ++index;
+            }
+            break;
+
+        case RDK_WINDOW_MANAGER_EVENT_ON_READY:
+             while (index != mRDKWindowManagerNotification.end())
+             {
+                 LOGINFO("RDKWindowManager Dispatch onReady application: %s", params.String().c_str());
+
+                 (*index)->OnReady(params.String());
+                 ++index;
+             }
+         break;
+
+        case RDK_WINDOW_MANAGER_EVENT_APPLICATION_CONNECTED:
+            while (index != mRDKWindowManagerNotification.end())
+            {
+                LOGINFO("RDKWindowManager Dispatch OnConnected application: %s", params.String().c_str());
+
+                (*index)->OnConnected(params.String());
+                ++index;
+            }
+            break;
+
+        case RDK_WINDOW_MANAGER_EVENT_APPLICATION_VISIBLE:
+            while (index != mRDKWindowManagerNotification.end())
+            {
+                LOGINFO("RDKWindowManager Dispatch onApplicationVisible application: %s", params.String().c_str());
+
+                (*index)->OnVisible(params.String());
+                ++index;
+            }
+            break;
+
+        case RDK_WINDOW_MANAGER_EVENT_APPLICATION_HIDDEN:
+            while (index != mRDKWindowManagerNotification.end())
+            {
+                LOGINFO("RDKWindowManager Dispatch onApplicationHidden application: %s", params.String().c_str());
+
+                (*index)->OnHidden(params.String());
+                ++index;
+            }
+            break;
+
+        case RDK_WINDOW_MANAGER_EVENT_APPLICATION_FOCUS:
+            while (index != mRDKWindowManagerNotification.end())
+            {
+                LOGINFO("RDKWindowManager Dispatch onApplicationFocus application: %s", params.String().c_str());
+
+                (*index)->OnFocus(params.String());
+                ++index;
+            }
+            break;
+
+        case RDK_WINDOW_MANAGER_EVENT_APPLICATION_BLUR:
+            while (index != mRDKWindowManagerNotification.end())
+            {
+                LOGINFO("RDKWindowManager Dispatch onApplicationBlur application: %s", params.String().c_str());
+
+                (*index)->OnBlur(params.String());
+                ++index;
+            }
+            break;
+
          default:
              LOGWARN("Event[%u] not handled", event);
              break;
@@ -433,7 +606,7 @@ void RDKWindowManagerImplementation::Dispatch(Event event, const JsonValue param
  * @displayParams[in] : JSON String format with client/callSign, displayName, displayWidth, displayHeight,
  *                      virtualDisplay,virtualWidth,virtualHeight,topmost,focus
  *                      Ex:{\"callsign\": \"org.rdk.YouTube\",\"displayName\": \"test1\",\"displayWidth\": 1920,\"displayHeight\": 1080,
- *                          \"virtualDisplay\": true,\"virtualWidth\": 1920,\"virtualHeight\": 1080,\"topmost\": false,\"focus\": false}
+ *                          \"virtualDisplay\": true,\"virtualWidth\": 1920,\"virtualHeight\": 1080,\"topmost\": false,\"focus\": false, \"ownerId\": 30001,  \"groupId\": 30000}
  * @return            : Core::<StatusCode>
  */
 Core::hresult RDKWindowManagerImplementation::CreateDisplay(const string &displayParams)
@@ -516,13 +689,24 @@ Core::hresult RDKWindowManagerImplementation::CreateDisplay(const string &displa
                 focus = parameters["focus"].Boolean();
             }
 
+            int32_t ownerId = 0;
+            if (parameters.HasLabel("ownerId"))
+            {
+                ownerId = parameters["ownerId"].Number();
+            }
+
+            int32_t groupId = 0;
+            if (parameters.HasLabel("groupId"))
+            {
+                groupId = parameters["groupId"].Number();
+            }
             result = createDisplay(client, displayName, displayWidth, displayHeight,
-                                   virtualDisplay, virtualWidth, virtualHeight, topmost, focus);
+                                   virtualDisplay, virtualWidth, virtualHeight, topmost, focus, ownerId, groupId);
 
             if (false == result)
             {
-                LOGERR("failed to create display : %s, displayName:%s, displayWidth:%u, displayHeight:%u, virtualDisplay:%u, virtualWidth:%u, virtualHeight:%u, topmost:%u, focus:%u",
-                       client.c_str(), displayName.c_str(), displayWidth, displayHeight, virtualDisplay, virtualWidth, virtualHeight, topmost, focus);
+                LOGERR("failed to create display : %s, displayName:%s, displayWidth:%u, displayHeight:%u, virtualDisplay:%u, virtualWidth:%u, virtualHeight:%u, topmost:%u, focus:%u, ownerId: %d, groupId: %d",
+                       client.c_str(), displayName.c_str(), displayWidth, displayHeight, virtualDisplay, virtualWidth, virtualHeight, topmost, focus, ownerId, groupId);
             }
             else
             {
@@ -534,14 +718,14 @@ Core::hresult RDKWindowManagerImplementation::CreateDisplay(const string &displa
 }
 
 /***
- * @brief Create the display window.
- * Creates a display for the specified client using the configuration parameters.
+ * @brief Get the list of connected application clients.
+ * Returns a list of application IDs currently connected to the window manager.
  *
- * @clients[out]      : get the array of clients as a JSON string format
+ * @appsIds[out]      : JSON string array of connected app IDs.
  *                      Ex: [\"org.rdk.youttube\",\"org.rdk.netflix\"]
- * @return            : Core::<StatusCode>
+ * @return Core::ERROR_NONE on success, Core::ERROR_GENERAL on error.
  */
-Core::hresult RDKWindowManagerImplementation::GetClients(string &clients) const
+Core::hresult RDKWindowManagerImplementation::GetApps(string &appsIds) const
 {
     Core::hresult status = Core::ERROR_GENERAL;
     bool retValue = false;
@@ -565,18 +749,18 @@ Core::hresult RDKWindowManagerImplementation::GetClients(string &clients) const
 
         if (clientsArray.IsSet())
         {
-            clientsArray.ToString(clients);
-            LOGINFO("clients: %s", clients.c_str());
+            clientsArray.ToString(appsIds);
+            LOGINFO("List of appsIds: %s", appsIds.c_str());
         }
         else
         {
-            LOGWARN("There is no clients");
+            LOGWARN("There are no apps");
         }
         status = Core::ERROR_NONE;
     }
     else
     {
-        LOGERR("getClients Falied");
+        LOGERR("GetApps Falied");
     }
 
     return status;
@@ -624,7 +808,19 @@ Core::hresult RDKWindowManagerImplementation::AddKeyIntercept(const string &inte
             {
                 client = parameters["callsign"].String();
             }
-            if (false == addKeyIntercept(keyCode, modifiers, client))
+
+	    bool focusOnly = false;
+            bool propagate = false;
+            if (parameters.HasLabel("focusOnly"))
+            {
+                focusOnly = parameters["focusOnly"].Boolean();
+            }
+            if (parameters.HasLabel("propagate"))
+            {
+                propagate = parameters["propagate"].Boolean();
+            }
+	    
+	    if (false == addKeyIntercept(keyCode, modifiers, client, focusOnly, propagate))
             {
                 LOGERR("failed to add key intercept");
             }
@@ -1207,6 +1403,167 @@ Core::hresult RDKWindowManagerImplementation::KeyRepeatConfig(const string &inpu
     return status;
 }
 
+/**
+ * @brief Sets focus to the specified client application.
+ * Sets the focus to the application identified by the given client ID.
+ * This allows the specified application to receive input events and be brought to the foreground,
+ * provided it exists in the active client list.
+ *
+ * @param[in] client/appInstanceId: Client/Application instance ID as a plain string
+ *
+ * @return           : Core::<StatusCode> (Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure)
+ */
+Core::hresult RDKWindowManagerImplementation::SetFocus(const string &client)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool lockAcquired = false;
+    bool ret = false;
+
+    if(client.empty())
+    {
+        LOGERR("SetFocus: client is empty");
+    }
+    else
+    {
+        LOGINFO("SetFocus: client :%s", client.c_str());
+
+        lockAcquired = lockRdkWindowManagerMutex();
+
+        ret = RdkWindowManager::CompositorController::setFocus(client);
+        if(true == ret)
+        {
+            status = Core::ERROR_NONE;
+        }
+        else
+        {
+            LOGERR("SetFocus: Failed to set focus to '%s'", client.c_str());
+        }
+
+        if (lockAcquired)
+        {
+            gRdkWindowManagerMutex.unlock();
+        }
+    }
+    return status;
+}
+
+/**
+ * @brief Sets the visibility of the specified client with given appInstanceId or name.
+ *
+ * This function controls the visibility of the client identified by its appInstanceId/name.
+ *
+ * @param[in] client            : client name or Application instance ID
+ * @param[in] visible           : boolean indicating the visibility status: `true` for visible, `false` for hide.
+ * @return    Core::<StatusCode>: Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure
+ */
+Core::hresult RDKWindowManagerImplementation::SetVisible(const std::string &client, bool visible)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool lockAcquired = false;
+
+    if (client.empty())
+    {
+        LOGERR("SetVisible: client is empty");
+    }
+    else
+    {
+        lockAcquired = lockRdkWindowManagerMutex();
+        if (true == RdkWindowManager::CompositorController::setVisibility(client, visible))
+        {
+            LOGINFO("SetVisible: client:%s visible:%d", client.c_str(), visible);
+            status = Core::ERROR_NONE;
+        }
+        else
+        {
+            LOGERR("SetVisible: Failed to set focus to '%s' visible:%d", client.c_str(), visible);
+        }
+
+        if (lockAcquired)
+        {
+            gRdkWindowManagerMutex.unlock();
+        }
+    }
+    return status;
+}
+
+/**
+ * @brief Sets the zOrder of the specified client with given appInstanceId or name.
+ *
+ * This function controls the zOrder of the client identified by its appInstanceId/name.
+ *
+ * @param[in] client            : client name or Application instance ID
+ * @param[in] zOrder           : integer zorder of an app
+ * @return    Core::<StatusCode>: Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure
+ */
+Core::hresult RDKWindowManagerImplementation::SetZOrder(const string &appInstanceId, int32_t zOrder)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool lockAcquired = false;
+
+    if (appInstanceId.empty())
+    {
+        LOGERR("SetZOrder: appInstanceId is empty");
+    }
+    else
+    {
+        lockAcquired = lockRdkWindowManagerMutex();
+        if (true == RdkWindowManager::CompositorController::setZorder(appInstanceId, zOrder))
+        {
+            LOGINFO("SetZOrder: client:%s zOrder:%d", appInstanceId.c_str(), zOrder);
+            status = Core::ERROR_NONE;
+        }
+        else
+        {
+            LOGERR("SetZOrder: Failed to set ZOrder to '%s' zorder:%d", appInstanceId.c_str(), zOrder);
+        }
+
+        if (lockAcquired)
+        {
+            gRdkWindowManagerMutex.unlock();
+        }
+    }
+    return status;
+}
+
+/**
+ * @brief Gets the zOrder of the specified client with given appInstanceId or name.
+ *
+ * This function controls the zOrder of the client identified by its appInstanceId/name.
+ *
+ * @param[in] client            : client name or Application instance ID
+ * @param[out] zOrder           : integer zorder of an app
+ * @return    Core::<StatusCode>: Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure
+ */
+Core::hresult RDKWindowManagerImplementation::GetZOrder(const string &appInstanceId, int32_t &zOrder)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool lockAcquired = false;
+
+    if (appInstanceId.empty())
+    {
+        LOGERR("GetZOrder: appInstanceId is empty");
+    }
+    else
+    {
+        lockAcquired = lockRdkWindowManagerMutex();
+        if (true == RdkWindowManager::CompositorController::getZOrder(appInstanceId, zOrder))
+        {
+            LOGINFO("GetZOrder: client:%s zOrder:%d", appInstanceId.c_str(), zOrder);
+            status = Core::ERROR_NONE;
+        }
+        else
+        {
+            LOGERR("GetZOrder: Failed to get ZOrder to '%s' ", appInstanceId.c_str());
+        }
+        if (lockAcquired)
+        {
+            gRdkWindowManagerMutex.unlock();
+        }
+    }
+    return status;
+}
+
+
 /***
  * @brief Create the display window.
  * Creates a display for the specified client using the configuration parameters.
@@ -1225,7 +1582,7 @@ Core::hresult RDKWindowManagerImplementation::KeyRepeatConfig(const string &inpu
  */
 bool RDKWindowManagerImplementation::createDisplay(const string& client, const string& displayName, const uint32_t displayWidth, const uint32_t displayHeight,
                                                    const bool virtualDisplay, const uint32_t virtualWidth, const uint32_t virtualHeight,
-                                                   const bool topmost, const bool focus)
+                                                   const bool topmost, const bool focus, const int32_t ownerId, int32_t groupId)
 {
     bool ret = false;
 
@@ -1233,7 +1590,7 @@ bool RDKWindowManagerImplementation::createDisplay(const string& client, const s
     {
         bool lockAcquired = false;
         gRdkWindowManagerMutex.lock();
-        std::shared_ptr<CreateDisplayRequest> request = std::make_shared<CreateDisplayRequest>(client, displayName, displayWidth, displayHeight, virtualDisplay, virtualWidth, virtualHeight, topmost, focus);
+        std::shared_ptr<CreateDisplayRequest> request = std::make_shared<CreateDisplayRequest>(client, displayName, displayWidth, displayHeight, virtualDisplay, virtualWidth, virtualHeight, topmost, focus, ownerId, groupId);
         gCreateDisplayRequests.push_back(request);
         gRdkWindowManagerMutex.unlock();
 
@@ -1277,7 +1634,7 @@ bool RDKWindowManagerImplementation::enableInactivityReporting(const bool enable
     return true;
 }
 
-bool RDKWindowManagerImplementation::addKeyIntercept(const uint32_t& keyCode, const JsonArray& modifiers, const string& client)
+bool RDKWindowManagerImplementation::addKeyIntercept(const uint32_t& keyCode, const JsonArray& modifiers, const string& client, const bool& focusOnly, const bool &propagate)
 {
     uint32_t flags = 0;
     for (unsigned int i=0; i<modifiers.Length(); i++) {
@@ -1285,7 +1642,8 @@ bool RDKWindowManagerImplementation::addKeyIntercept(const uint32_t& keyCode, co
     }
     bool ret = false;
     gRdkWindowManagerMutex.lock();
-    ret = RdkWindowManager::CompositorController::addKeyIntercept(client, keyCode, flags);
+    LOGINFO("addKeyIntercept: focusOnly - %d  propagate - %d ",focusOnly, propagate);
+    ret = RdkWindowManager::CompositorController::addKeyIntercept(client, keyCode, flags, focusOnly, propagate);
     gRdkWindowManagerMutex.unlock();
     return ret;
 }
@@ -1321,9 +1679,20 @@ bool RDKWindowManagerImplementation::addKeyIntercepts(const JsonArray& intercept
                 LOGWARN("ignoring key  %d in entry  %d due to missing key code parameter ", k+1, i+1);
                 continue;
             }
+	    bool focusOnly = false;
+            bool propagate = false;
+            if (interceptEntry.HasLabel("focusOnly"))
+            {
+               focusOnly = interceptEntry["focusOnly"].Boolean();
+            }
+            if (interceptEntry.HasLabel("propagate"))
+            {
+                propagate = interceptEntry["propagate"].Boolean();
+            }
             const JsonArray modifiers = keyEntry.HasLabel("modifiers") ? keyEntry["modifiers"].Array() : JsonArray();
             const uint32_t keyCode = keyEntry["keyCode"].Number();
-            ret = addKeyIntercept(keyCode, modifiers, client);
+            LOGINFO("addKeyIntercepts: focusOnly - %d  propagate - %d ",focusOnly, propagate);
+	    ret = addKeyIntercept(keyCode, modifiers, client, focusOnly, propagate);
         }
     }
     return ret;
@@ -1614,5 +1983,139 @@ bool RDKWindowManagerImplementation::resetInactivityTime()
     }
     return true;
 }
+
+ /***
+ * @brief Get the renderer status of the application.
+ *
+ * This function retrieves the rendering status of the application or client
+ *
+ * @param[in] client            : client name or Application instance ID
+ * @param[out] status           : boolean the render status: `true` got first frame else `false`.
+ * @return    Core::<StatusCode>: Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure
+ */
+Core::hresult RDKWindowManagerImplementation::RenderReady(const string& client,bool &status) const
+{
+    Core::hresult retStatus  = Core::ERROR_GENERAL;
+    bool lockAcquired = false;
+
+    if(client.empty())
+    {
+        LOGERR("RenderReady: client is empty");
+    }
+    else
+    {
+        lockAcquired = lockRdkWindowManagerMutex();
+        status = RdkWindowManager::CompositorController::renderReady(client);
+
+        if (lockAcquired)
+        {
+            gRdkWindowManagerMutex.unlock();
+        }
+        retStatus  = Core::ERROR_NONE;
+    }
+    return retStatus ;
+}
+
+/***
+ * @brief enable/disable render of the specified client with given appInstanceId or name.
+ *
+ * This function controls the display render  of the client identified by its appInstanceId/name.
+ *
+ * @param[in] client            : client name or Application instance ID
+ * @param[in] enable            : boolean the enable: `true` for enable the render, `false` for disable the render.
+ * @return    Core::<StatusCode>: Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure
+ */
+Core::hresult RDKWindowManagerImplementation::EnableDisplayRender(const string& client, bool enable)
+{
+    Core::hresult retStatus = Core::ERROR_GENERAL;
+    bool lockAcquired = false;
+    if(client.empty())
+    {
+        LOGERR("EnableDisplayRender: client is empty");
+    }
+    else
+    {
+        lockAcquired = lockRdkWindowManagerMutex();
+        if (true == RdkWindowManager::CompositorController::enableDisplayRender(client, enable))
+        {
+            retStatus = Core::ERROR_NONE;
+            LOGINFO("RDKWindowManager enableDisplayRender for client %s enable= %d", client.c_str(), enable);
+        }
+        else
+        {
+            LOGERR("Failed to enable Display Render");
+        }
+
+        if (lockAcquired)
+        {
+            gRdkWindowManagerMutex.unlock();
+        }
+    }
+    return retStatus;
+}
+
+/**
+ * @brief Starts the VNC server to allow remote desktop access.
+ *
+ * This method starts the internal VNC server on the configured port (default 5900),
+ * enabling remote clients to connect and view/control the compositor's output.
+ * If the server is already running, this call has no additional effect.
+ *
+ * @return    : Core::<StatusCode> (Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure)
+ */
+Core::hresult RDKWindowManagerImplementation::StartVncServer()
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool lockAcquired = lockRdkWindowManagerMutex();
+
+    bool ret = RdkWindowManager::CompositorController::startVncServer();
+    if (ret)
+    {
+        status = Core::ERROR_NONE;
+    }
+    else
+    {
+        LOGERR("Failed to start VNC server");
+    }
+
+    if (lockAcquired)
+    {
+        gRdkWindowManagerMutex.unlock();
+    }
+
+    return status;
+}
+
+/**
+ * @brief Stops the VNC server if it is running.
+ *
+ * This method stops the running VNC server and releases any associated resources.
+ * If the server is not active, this call has no effect.
+ *
+ * @return    : Core::<StatusCode> (Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure)
+ */
+Core::hresult RDKWindowManagerImplementation::StopVncServer()
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool lockAcquired = lockRdkWindowManagerMutex();
+
+    bool ret = RdkWindowManager::CompositorController::stopVncServer();
+    if (ret)
+    {
+        status = Core::ERROR_NONE;
+    }
+    else
+    {
+        LOGERR("Failed to stop VNC server");
+    }
+
+    if (lockAcquired)
+    {
+        gRdkWindowManagerMutex.unlock();
+    }
+
+    return status;
+}
+
 } /* namespace Plugin */
 } /* namespace WPEFramework */
