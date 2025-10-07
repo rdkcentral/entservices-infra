@@ -509,7 +509,7 @@ TEST_F(PackageManagerTest, installusingComRpc) {
     string version = "2.0";
     string fileLocator = "/opt/CDL/testpackageDownload";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
-    Exchange::IPackageInstaller::KeyValue kv = {"testapp", "2"};
+    list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
 
     auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
 
@@ -589,7 +589,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpc) {
 
     initforComRpc();
 
-    Exchange::IPackageInstaller::Package packageList = {};
+    list<Exchange::IPackageInstaller::Package> packageList = { {} };
 
     auto packages = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
 
@@ -720,7 +720,7 @@ TEST_F(PackageManagerTest, lockusingComRpc) {
     uint32_t lockId = 132;
     string unpackedPath = "testPath";
     Exchange::RuntimeConfig configMetadata = {};
-    Exchange::IPackageHandler::AdditionalLock additionalLock = {};
+    list<Exchange::IPackageHandler::AdditionalLock> additionalLock = { {} };
 
     auto appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLock);
 
