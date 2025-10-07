@@ -30,6 +30,7 @@
 #include "PackageManager.h"
 #include "PackageManagerImplementation.h"
 #include "StorageManagerMock.h"
+#include "ISubSystemMock.h"
 #include "ServiceMock.h"
 #include "COMLinkMock.h"
 #include "ThunderPortability.h"
@@ -51,6 +52,7 @@ protected:
     // Declare the protected members
     ServiceMock* mServiceMock = nullptr;
     StorageManagerMock* mStorageManagerMock = nullptr;
+    SubSystemMock* mSubSystemMock = nullptr;
 
     Core::ProxyType<Plugin::PackageManager> plugin;
     Core::JSONRPC::Handler& mJsonRpcHandler;
@@ -103,6 +105,7 @@ protected:
 		// Set up mocks and expect calls
         mServiceMock = new NiceMock<ServiceMock>;
         mStorageManagerMock = new NiceMock<StorageManagerMock>;
+        mSubSystemMock = new NiceMock<SubSystemMock>;
 
         EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
           .Times(::testing::AnyNumber())
@@ -113,6 +116,10 @@ protected:
                 } 
             return nullptr;
         }));
+
+        EXPECT_CALL(*mServiceMock, SubSystems())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return(mSubSystemMock));
 
 		EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
@@ -232,9 +239,12 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    EXPECT_CALL(*mServiceMock, SubSystems())
-          .Times(::testing::AnyNumber())
-          .WillOnce(::testing::Return(true));
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {\"testDownloadId\"}}"), mJsonRpcResponse));
 
@@ -251,9 +261,12 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     getDownloadParams();
 
-    EXPECT_CALL(*mServiceMock, SubSystems())
-          .Times(::testing::AnyNumber())
-          .WillOnce(::testing::Return(true));
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type){
+                return true;
+            }));
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
@@ -498,7 +511,9 @@ TEST_F(PackageManagerTest, installusingComRpc) {
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     Exchange::IPackageInstaller::KeyValue kv = {"testapp", "2"};
 
-    auto additionalMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IKeyValueIterator, Exchange::ID_PACKAGE_KEY_VALUE_ITERATOR>>::Create<Exchange::IPackageInstaller::IKeyValueIterator, Exchange::ID_PACKAGE_KEY_VALUE_ITERATOR>(kv);
+    auto service = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::KeyValue, 53001>>::Create<Exchange::IPackageInstaller::KeyValue, 53001>(kv);
+
+    Exchange::IPackageInstaller::IKeyValueIterator* additionalMetadata = &service;
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -578,7 +593,9 @@ TEST_F(PackageManagerTest, listPackagesusingComRpc) {
 
     Exchange::IPackageInstaller::Package packageList = {};
 
-    auto packages = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IPackageIterator, Exchange::ID_PACKAGE_ITERATOR>>::Create<Exchange::IPackageInstaller::IPackageIterator, Exchange::ID_PACKAGE_ITERATOR>(packageList);
+    auto service = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::Package, 53000>>::Create<Exchange::IPackageInstaller::Package, 53000>(packageList);
+
+    Exchange::IPackageInstaller::IPackageIterator* packages = &service;
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
     
@@ -709,7 +726,9 @@ TEST_F(PackageManagerTest, lockusingComRpc) {
     Exchange::RuntimeConfig configMetadata = {};
     Exchange::IPackageHandler::AdditionalLock additionalLock = {};
 
-    auto appMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageHandler::ILockIterator, Exchange::ID_PACKAGE_LOCK_ITERATOR>>::Create<Exchange::IPackageHandler::ILockIterator, Exchange::ID_PACKAGE_LOCK_ITERATOR>(additionalLock);
+    auto service = Core::Service<RPC::IIteratorType<Exchange::IPackageHandler::AdditionalLock, 53002>>::Create<Exchange::IPackageHandler::AdditionalLock, 53002>(additionalLock);
+
+    Exchange::IPackageHandler::ILockIterator* appMetadata = &service;
 
     EXPECT_EQ(Core::ERROR_NONE, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
     
