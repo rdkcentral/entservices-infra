@@ -509,9 +509,9 @@ TEST_F(PackageManagerTest, installusingComRpc) {
     string version = "2.0";
     string fileLocator = "/opt/CDL/testpackageDownload";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
-    vector<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
+    Exchange::IPackageInstaller::KeyValue kv = {"testapp", "2"};
 
-    auto additionalMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IKeyValueIterator, 53001>>::Create<Exchange::IPackageInstaller::KeyValue>(kv);
+    auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -589,9 +589,9 @@ TEST_F(PackageManagerTest, listPackagesusingComRpc) {
 
     initforComRpc();
 
-    vector<Exchange::IPackageInstaller::Package> packageList = { {} };
+    Exchange::IPackageInstaller::Package packageList = {};
 
-    auto packages = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IPackageIterator, 53000>>::Create<Exchange::IPackageInstaller::Package>(packageList);
+    auto packages = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
     
@@ -720,9 +720,9 @@ TEST_F(PackageManagerTest, lockusingComRpc) {
     uint32_t lockId = 132;
     string unpackedPath = "testPath";
     Exchange::RuntimeConfig configMetadata = {};
-    vector<Exchange::IPackageHandler::AdditionalLock> additionalLock = { {} };
+    Exchange::IPackageHandler::AdditionalLock additionalLock = {};
 
-    auto appMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageHandler::ILockIterator, 53002>>::Create<Exchange::IPackageHandler::AdditionalLock>(additionalLock);
+    auto appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLock);
 
     EXPECT_EQ(Core::ERROR_NONE, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
     

@@ -941,8 +941,8 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
+	#ifdef USE_THUNDER_R443
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
-        #ifdef USE_THUNDER_R443
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
         }
