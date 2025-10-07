@@ -1,12 +1,6 @@
 name: L2-tests
 
 on:
-  push:
-    branches:
-      - feature/***
-  pull_request:
-    branches:
-      - feature/***
   workflow_call:
     inputs:
       caller_source:
