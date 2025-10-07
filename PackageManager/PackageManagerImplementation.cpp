@@ -460,9 +460,17 @@ namespace Plugin {
 
         packagemanager::NameValues keyValues;
         struct IPackageInstaller::KeyValue kv;
-        while (additionalMetadata->Next(kv) == true) {
-            LOGDBG("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
-            keyValues.push_back(std::make_pair(kv.name, kv.value));
+        if (additionalMetadata != nullptr)
+        {
+            while (additionalMetadata->Next(kv) == true)
+            {
+                LOGDBG("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
+                keyValues.push_back(std::make_pair(kv.name, kv.value));
+            }
+        }
+        else
+        {
+            LOGWARN("additionalMetadata is null");
         }
 
         StateKey key { packageId, version };
