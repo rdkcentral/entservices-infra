@@ -807,6 +807,23 @@ const void DobbyInterface::stateListener(int32_t descriptor, const std::string& 
     // Cast const void* back to DobbyInterface* type to get 'this'
     DobbyInterface* __this = const_cast<DobbyInterface*>(reinterpret_cast<const DobbyInterface*>(_this));
 
+    auto stateToString = [](IDobbyProxyEvents::ContainerState s)->const char* {
+        switch (s) {
+            case IDobbyProxyEvents::ContainerState::Starting:    return "Starting";
+            case IDobbyProxyEvents::ContainerState::Running:     return "Running";
+            case IDobbyProxyEvents::ContainerState::Stopping:    return "Stopping";
+            case IDobbyProxyEvents::ContainerState::Paused:      return "Paused";
+            case IDobbyProxyEvents::ContainerState::Stopped:     return "Stopped";
+            case IDobbyProxyEvents::ContainerState::Hibernating: return "Hibernating";
+            case IDobbyProxyEvents::ContainerState::Hibernated:  return "Hibernated";
+            case IDobbyProxyEvents::ContainerState::Awakening:   return "Awakening";
+            default: return "Unknown";
+        }
+    };
+
+    LOGINFO("stateListener: descriptor=%d name='%s' dobbyState=%d (%s)", descriptor, name.c_str(), static_cast<int>(state), stateToString(state));
+
+
     __this->onContainerStateChanged(descriptor, name, state);
 
     if (state == IDobbyProxyEvents::ContainerState::Running)
