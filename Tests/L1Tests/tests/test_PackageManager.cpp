@@ -511,7 +511,7 @@ TEST_F(PackageManagerTest, installusingComRpc) {
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     vector<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
 
-    auto additionalMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+    auto additionalMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IKeyValueIterator, 53001>>::Create<Exchange::IPackageInstaller::KeyValue>(kv);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -591,7 +591,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpc) {
 
     vector<Exchange::IPackageInstaller::Package> packageList = { {} };
 
-    auto packages = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
+    auto packages = Core::Service<RPC::IIteratorType<Exchange::IPackageInstaller::IPackageIterator, 53000>>::Create<Exchange::IPackageInstaller::Package>(packageList);
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
     
@@ -722,7 +722,7 @@ TEST_F(PackageManagerTest, lockusingComRpc) {
     Exchange::RuntimeConfig configMetadata = {};
     vector<Exchange::IPackageHandler::AdditionalLock> additionalLock = { {} };
 
-    auto appMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLock);
+    auto appMetadata = Core::Service<RPC::IIteratorType<Exchange::IPackageHandler::ILockIterator, 53002>>::Create<Exchange::IPackageHandler::AdditionalLock>(additionalLock);
 
     EXPECT_EQ(Core::ERROR_NONE, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
     
