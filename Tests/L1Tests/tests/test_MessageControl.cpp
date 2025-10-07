@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include "MessageControl.h"
-#include <interfaces/IPlugin.h>
-#include <interfaces/Channel.h>
+#include <plugins/IPlugin.h>
+#include <plugins/Channel.h>
 
 using namespace WPEFramework::Plugin;
 
