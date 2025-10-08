@@ -1170,3 +1170,77 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_DEEPSLEEP)
         }
     }
 }
+
+/************Test case Details **************************
+** 1.Trigger OnPrivacyModeChanged notification in Telemetry plugin
+** 2.Test UserSettings SetPrivacyMode API triggering Telemetry notification
+** 3.Verify that privacy mode changes are propagated to Telemetry plugin
+*******************************************************/
+TEST_F(Telemetry_L2test, TriggerOnPrivacyModeChangedNotification_COMRPC)
+{
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEngine_UserSettings;
+    Core::ProxyType<RPC::CommunicatorClient> mClient_UserSettings;
+    PluginHost::IShell* mController_UserSettings;
+
+    TEST_LOG("Creating mEngine_UserSettings");
+    mEngine_UserSettings = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+    mClient_UserSettings = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_UserSettings));
+
+    TEST_LOG("Creating mEngine_UserSettings Announcements");
+#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
+    mEngine_UserSettings->Announcements(mClient_UserSettings->Announcement());
+#endif
+
+    if (!mClient_UserSettings.IsValid()) {
+        TEST_LOG("Invalid mClient_UserSettings");
+    } else {
+        mController_UserSettings = mClient_UserSettings->Open<PluginHost::IShell>(_T("org.rdk.UserSettings"), ~0, 3000);
+        if (mController_UserSettings) {
+            auto userSettingsPlugin = mController_UserSettings->QueryInterface<Exchange::IUserSettings>();
+
+            if (userSettingsPlugin) {
+                Core::hresult status = Core::ERROR_GENERAL;
+
+                // Mock RBUS calls for privacy mode notification to T2
+
+                EXPECT_CALL(*p_rBusApiImplMock, rbus_set(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .Times(::testing::AtLeast(1))
+                    .WillRepeatedly(::testing::Invoke(
+                        [](rbusHandle_t handle, const char* name, rbusValue_t value, rbusSetOptions_t* options) {
+                            TEST_LOG("RBUS set called for property: %s", name);
+                            EXPECT_STREQ(name, "Device.X_RDKCENTRAL-COM_Privacy.PrivacyMode");
+                            return RBUS_ERROR_SUCCESS;
+                        }));
+
+                // Test setting privacy mode from default "SHARE" to "DO_NOT_SHARE"
+                TEST_LOG("Setting privacy mode to DO_NOT_SHARE");
+                status = userSettingsPlugin->SetPrivacyMode("DO_NOT_SHARE");
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // Allow time for notification to be processed
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+                // Test setting privacy mode back to "SHARE"
+                TEST_LOG("Setting privacy mode to SHARE");
+                status = userSettingsPlugin->SetPrivacyMode("SHARE");
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // Allow time for notification to be processed
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+                // Verify current privacy mode
+                std::string currentPrivacyMode;
+                status = userSettingsPlugin->GetPrivacyMode(currentPrivacyMode);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_STREQ(currentPrivacyMode.c_str(), "SHARE");
+
+                userSettingsPlugin->Release();
+            } else {
+                TEST_LOG("UserSettingsPlugin is NULL");
+            }
+            mController_UserSettings->Release();
+        } else {
+            TEST_LOG("mController_UserSettings is NULL");
+        }
+    }
+}
