@@ -228,9 +228,9 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("unlock")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getLockedInfo")));
 
+	deinitforJsonRpc();
+	
     releaseResources();
-
-    deinitforJsonRpc();
 }
 
 TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
@@ -248,9 +248,9 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {\"testDownloadId\"}}"), mJsonRpcResponse));
 
+	deinitforJsonRpc();
+	
     releaseResources();
-
-    deinitforJsonRpc();
 }
 
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
@@ -270,9 +270,9 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
@@ -282,10 +282,10 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"testDownloadId\"}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
@@ -298,9 +298,9 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Pause(downloadId));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, resumeMethodusingJsonRpc) {
@@ -310,10 +310,10 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"testDownloadId\"}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, resumeMethodusingComRpc) {
@@ -326,9 +326,9 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Resume(downloadId));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, cancelMethodusingJsonRpc) {
@@ -338,10 +338,10 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"testDownloadId\"}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, cancelMethodusingComRpc) {
@@ -354,9 +354,9 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Cancel(downloadId));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, deleteMethodusingJsonRpc) {
@@ -366,10 +366,10 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/packagetestDownloadId\"}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, deleteMethodusingComRpc) {
@@ -382,9 +382,9 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, progressMethodusingJsonRpc) {
@@ -395,9 +395,9 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"testDownloadId\", \"progress\": {\"progress\": 0}}"), mJsonRpcResponse));
 
+	deinitforJsonRpc();
+	
     releaseResources();
-
-    deinitforJsonRpc();
 }
 
 TEST_F(PackageManagerTest, progressMethodusingComRpc) {
@@ -414,9 +414,9 @@ TEST_F(PackageManagerTest, progressMethodusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, getStorageDetailsusingJsonRpc) {
@@ -427,9 +427,9 @@ TEST_F(PackageManagerTest, getStorageDetailsusingJsonRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getStorageDetails"), _T("{\"quotaKB\": \"1024\", \"usedKB\": \"568\"}"), mJsonRpcResponse));
 
+	deinitforJsonRpc();
+	
     releaseResources();
-
-    deinitforJsonRpc();
 }
 
 TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
@@ -443,9 +443,9 @@ TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->GetStorageDetails(quotaKB, usedKB));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, rateLimitusingJsonRpc) {
@@ -456,9 +456,9 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"testDownloadId\", \"limit\": 1024}"), mJsonRpcResponse));
 
+	deinitforJsonRpc();
+	
     releaseResources();
-
-    deinitforJsonRpc();
 }
 
 TEST_F(PackageManagerTest, rateLimitusingComRpc) {
@@ -472,9 +472,9 @@ TEST_F(PackageManagerTest, rateLimitusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId, limit));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 // IPackageInstaller methods
@@ -493,10 +493,10 @@ TEST_F(PackageManagerTest, installusingJsonRpc) {
             }));
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testapp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/testpackageDownload\", \"reason\": 1}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, installusingComRpc) {
@@ -522,9 +522,9 @@ TEST_F(PackageManagerTest, installusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, uninstallusingJsonRpc) {
@@ -541,10 +541,10 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpc) {
             }));
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackageId\", \"errorReason\": \"no error\"}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, uninstallusingComRpc) {
@@ -565,9 +565,9 @@ TEST_F(PackageManagerTest, uninstallusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Uninstall(packageId, errorReason));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, listPackagesusingJsonRpc) {
@@ -577,10 +577,10 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("listPackages"), _T("{\"packages\": {}}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, listPackagesusingComRpc) {
@@ -594,10 +594,10 @@ TEST_F(PackageManagerTest, listPackagesusingComRpc) {
     auto packages = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
-    
-    releaseResources();
 
-    deinitforComRpc();
+	deinitforComRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, configusingJsonRpc) {
@@ -607,10 +607,10 @@ TEST_F(PackageManagerTest, configusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\", \"configMetadata\": {}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, configusingComRpc) {
@@ -626,9 +626,9 @@ TEST_F(PackageManagerTest, configusingComRpc) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Config(packageId, version, runtimeConfig));
 
+	deinitforComRpc();
+	
     releaseResources();
-
-    deinitforComRpc();
 }
 
 TEST_F(PackageManagerTest, packageStateusingJsonRpc) {
@@ -638,10 +638,10 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\", \"state\": 0}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, packageStateusingComRpc) {
@@ -655,10 +655,10 @@ TEST_F(PackageManagerTest, packageStateusingComRpc) {
     Exchange::IPackageInstaller::InstallState state = Exchange::IPackageInstaller::InstallState::INSTALLING;
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->PackageState(packageId, version, state));
-    
-    releaseResources();
 
-    deinitforComRpc();
+	deinitforComRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpc) {
@@ -668,10 +668,10 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"/opt/CDL/packagetestDownloadId\", \"id\": \"testID\", \"version\": \"2.0\", \"config\": {}}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, getConfigforPackageusingComRpc) {
@@ -687,10 +687,10 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpc) {
     Exchange::RuntimeConfig config = {};
 
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->GetConfigForPackage(fileLocator, id, version, config));
-    
-    releaseResources();
 
-    deinitforComRpc();
+	deinitforComRpc();
+	
+    releaseResources();
 }
 
 // IPackageHandler methods
@@ -702,10 +702,10 @@ TEST_F(PackageManagerTest, lockusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("lock"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\", \"lockReason\": 0, \"lockId\": 132, \"unpackedPath\": \"testPath\", \"configMetadata\": {}, \"appMetadata\": {}}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, lockusingComRpc) {
@@ -725,10 +725,10 @@ TEST_F(PackageManagerTest, lockusingComRpc) {
     auto appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLock);
 
     EXPECT_EQ(Core::ERROR_NONE, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
-    
-    releaseResources();
 
-    deinitforComRpc();
+	deinitforComRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, unlockusingJsonRpc) {
@@ -738,10 +738,10 @@ TEST_F(PackageManagerTest, unlockusingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\"}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, unlockusingComRpc) {
@@ -754,10 +754,10 @@ TEST_F(PackageManagerTest, unlockusingComRpc) {
     string version = "2.0";
 
     EXPECT_EQ(Core::ERROR_NONE, pkghandlerInterface->Unlock(packageId, version));
-    
-    releaseResources();
 
-    deinitforComRpc();
+	deinitforComRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, getLockedInfousingJsonRpc) {
@@ -767,10 +767,10 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpc) {
     initforJsonRpc();
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getLockedInfo"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\", \"unpackedPath\": \"testPath\", \"configMetadata\": {}, \"gatewayMetadataPath\": \"testgatewayMetadataPath\", \"locked\": true}"), mJsonRpcResponse));
-    
-    releaseResources();
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
+	
+    releaseResources();
 }
 
 TEST_F(PackageManagerTest, getLockedInfousingComRpc) {
@@ -787,8 +787,8 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpc) {
     bool locked = true;
 
     EXPECT_EQ(Core::ERROR_NONE, pkghandlerInterface->GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked));
-    
-    releaseResources();
 
-    deinitforComRpc();
+	deinitforComRpc();
+	
+    releaseResources();
 }
