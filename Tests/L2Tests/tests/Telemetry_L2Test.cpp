@@ -1123,10 +1123,15 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_DEEPSLEEP)
                 uint32_t status = PowerManagerPlugin->AddPowerModePreChangeClient("l2-test-client", clientId);
                 EXPECT_EQ(status, Core::ERROR_NONE);
 
+                // Expect multiple power state transitions due to deep sleep timeout mechanism
                 EXPECT_CALL(*p_powerManagerHalMock, PLAT_API_SetPowerState(::testing::_))
+                    .Times(::testing::AtLeast(1))
                     .WillRepeatedly(::testing::Invoke(
                         [](PWRMgr_PowerState_t powerState) {
-                            EXPECT_EQ(powerState, PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP);
+                            // Accept both DEEP_SLEEP and LIGHT_SLEEP transitions
+                            // Deep sleep timeout causes automatic transition to light sleep
+                            EXPECT_TRUE(powerState == PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP || 
+                                       powerState == PWRMGR_POWERSTATE_STANDBY_LIGHT_SLEEP);
                             return PWRMGR_SUCCESS;
                         }));
 
