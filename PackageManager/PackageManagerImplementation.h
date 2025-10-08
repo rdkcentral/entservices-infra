@@ -200,14 +200,18 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        string GetVersion(const string &id) {
+        string GetVersion(const string& id) {
             for (auto const& [key, state] : mState) {
-                if ((id.compare(key.first) == 0) && (state.installState == InstallState::INSTALLED)) {
+                if ((id.compare(key.first) == 0) &&
+                    (state.installState == InstallState::INSTALLED || state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
                     return key.second;
                 }
             }
             return "";
         }
+        //State& GetInstalledPackage(const string& id, const string& version) {
+        //}
+
         void InitializeState();
         void downloader(int n);
         void NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason status);
@@ -236,6 +240,7 @@ namespace Plugin {
                 case InstallState::UNINSTALLING : return "UNINSTALLING";
                 case InstallState::UNINSTALL_FAILURE : return "UNINSTALL_FAILURE";
                 case InstallState::UNINSTALLED : return "UNINSTALLED";
+                case InstallState::UNINSTALL_BLOCKED : return "UNINSTALL_BLOCKED";
                 default: return "Unknown";
             }
         }

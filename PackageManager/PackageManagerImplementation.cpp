@@ -483,12 +483,21 @@ namespace Plugin {
         auto it = mState.find( key );
         if (it == mState.end()) {
             State state;
-            mState.insert( { key, state } );
+            mState.insert( { key, state } );    // XXX: if the install fails should this be in the cache ???
         }
 
         it = mState.find( key );
         if (it != mState.end()) {
             State &state = it->second;
+
+
+            if (state.mLockCount) {   // XXX: ???
+                LOGWARN("App is locked id: '%s' ver: '%s' count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
+                state.installState = InstallState::UNINSTALL_BLOCKED;
+                NotifyInstallStatus(packageId, version, state);
+                return Core::ERROR_GENERAL;
+            } // mLockCount == 0
+
 
             if (nullptr == mStorageManagerObject) {
                 if (Core::ERROR_NONE != createStorageManagerObject()) {
@@ -573,41 +582,46 @@ namespace Plugin {
         if (it != mState.end()) {
             auto &state = it->second;
 
-            if (nullptr == mStorageManagerObject) {
-                LOGINFO("Create StorageManager object");
-                if (Core::ERROR_NONE != createStorageManagerObject()) {
-                    LOGERR("Failed to create StorageManager");
+            if (state.mLockCount == 0) {
+                if (nullptr == mStorageManagerObject) {
+                    LOGINFO("Create StorageManager object");
+                    if (Core::ERROR_NONE != createStorageManagerObject()) {
+                        LOGERR("Failed to create StorageManager");
+                    }
                 }
-            }
-            ASSERT (nullptr != mStorageManagerObject);
-            if (nullptr != mStorageManagerObject) {
-                if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
-                    LOGINFO("DeleteStorage done");
-                    state.installState = InstallState::UNINSTALLING;
-                    NotifyInstallStatus(packageId, version, state);
-                    #ifdef USE_LIBPACKAGE
-                    // XXX: what if DeleteStorage() fails, who Uninstall the package
-                    packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
-                    if (pmResult == packagemanager::SUCCESS) {
-                        result = Core::ERROR_NONE;
-                    }
-                    else{
+                ASSERT (nullptr != mStorageManagerObject);
+                if (nullptr != mStorageManagerObject) {
+                    if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
+                        LOGINFO("DeleteStorage done");
+                        state.installState = InstallState::UNINSTALLING;
+                        NotifyInstallStatus(packageId, version, state);
+                        #ifdef USE_LIBPACKAGE
+                        // XXX: what if DeleteStorage() fails, who Uninstall the package
+                        packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
+                        if (pmResult == packagemanager::SUCCESS) {
+                            result = Core::ERROR_NONE;
+                        } else {
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                        packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
-                            PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
+                            packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
+                                PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
-                    }
-                    #endif
-                    state.installState = InstallState::UNINSTALLED;
-                    NotifyInstallStatus(packageId, version, state);
-                } else {
-                    LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+                        }
+                        #endif
+                        state.installState = InstallState::UNINSTALLED;
+                        NotifyInstallStatus(packageId, version, state);
+                    } else {
+                        LOGERR("DeleteStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                    packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
+                        packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
+                    }
                 }
-            }
+            } else {
+                LOGWARN("App is locked, uninstall delayed id: '%s' ver: '%s' count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
+                state.installState = InstallState::UNINSTALL_BLOCKED;
+                NotifyInstallStatus(packageId, version, state);
+            } // mLockCount == 0
         } else {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -652,15 +666,19 @@ namespace Plugin {
     {
         CHECK_CACHE()
         LOGDBG();
-        Core::hresult result = Core::ERROR_NONE;
+        Core::hresult result = Core::ERROR_GENERAL;
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-            getRuntimeConfig(state.runtimeConfig, runtimeConfig);
-        } else {
+            if (state.installState == InstallState::INSTALLED) {
+                getRuntimeConfig(state.runtimeConfig, runtimeConfig);
+                result = Core::ERROR_NONE;
+            }
+        }
+        if (result == Core::ERROR_GENERAL) {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
-            result = Core::ERROR_GENERAL;
+
         }
 
         return result;
@@ -865,11 +883,20 @@ namespace Plugin {
             #ifdef USE_LIBPACKAGE
             if (state.mLockCount) {
                 if (--state.mLockCount == 0) {
-                    packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
+                    //packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
                     state.unpackedPath = "";
-                    if (pmResult != packagemanager::SUCCESS) {
-                        result = Core::ERROR_GENERAL;
-                    }
+                    //if (pmResult == packagemanager::SUCCESS) {
+                        if (state.installState == InstallState::UNINSTALL_BLOCKED) {
+                            string errorReason;
+                            if (Uninstall(packageId, errorReason) == packagemanager::SUCCESS) {
+                                LOGDBG("Blocked package uninstaller id: %s ver: %s", packageId.c_str(), version.c_str());
+                            } else {
+                                state.installState == InstallState::UNINSTALL_FAILURE;
+                            }
+                        }
+                    //} else {
+                    //    result = Core::ERROR_GENERAL;
+                    //}
                 }
             } else {
                 LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
