@@ -225,8 +225,10 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     spec["rdkPlugins"] = createRdkPlugins(config, runtimeConfig);
     spec["mounts"] = createMounts(config, runtimeConfig);
     spec["env"] = createEnvVars(config, runtimeConfig);
-    //TODO SUPPORT Add only for web runtime and debug builds
+
+#ifdef RDK_APP_MANAGER_DEBUG
     addHolePunchPortToSpec(spec, 22222);
+#endif
 
     Json::FastWriter writer;
     resultSpec = writer.write(spec);
