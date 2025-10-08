@@ -41,6 +41,40 @@ using namespace WPEFramework;
 using testing::StrictMock;
 using ::WPEFramework::Exchange::ITelemetry;
 using Success = WPEFramework::Exchange::ITelemetry::TelemetrySuccess;
+using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
+
+namespace {
+static void removeFile(const char* fileName)
+{
+    // Use sudo for protected files
+    if (strcmp(fileName, "/etc/device.properties") == 0 || strcmp(fileName, "/opt/persistent/ds/cecData_2.json") == 0 || strcmp(fileName, "/opt/uimgr_settings.bin") == 0) {
+        char cmd[256];
+        snprintf(cmd, sizeof(cmd), "sudo rm -f %s", fileName);
+        int ret = system(cmd);
+        if (ret != 0) {
+            printf("File %s failed to remove with sudo\n", fileName);
+            perror("Error deleting file");
+        } else {
+            printf("File %s successfully deleted with sudo\n", fileName);
+        }
+    } else {
+        if (std::remove(fileName) != 0) {
+            printf("File %s failed to remove\n", fileName);
+            perror("Error deleting file");
+        } else {
+            printf("File %s successfully deleted\n", fileName);
+        }
+    }
+}
+
+static void createFile(const char* fileName, const char* fileContent)
+{
+    std::ofstream fileContentStream(fileName);
+    fileContentStream << fileContent;
+    fileContentStream << "\n";
+    fileContentStream.close();
+}
+}
 
 typedef enum : uint32_t {
     Telemetry_OnReportUpload = 0x00000001,
@@ -154,6 +188,7 @@ Telemetry_L2test::Telemetry_L2test()
 {
     Core::hresult status = Core::ERROR_GENERAL;
     m_event_signalled = Telemetry_StateInvalid;
+    createFile("/tmp/pwrmgr_restarted", "2");
 
     EXPECT_CALL(*p_powerManagerHalMock, PLAT_DS_INIT())
     .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
@@ -267,6 +302,8 @@ Telemetry_L2test::~Telemetry_L2test()
     status = DeactivateService("org.rdk.Telemetry");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
+    removeFile("/tmp/pwrmgr_restarted");
+    removeFile("/opt/uimgr_settings.bin");
 }
 
 
@@ -994,4 +1031,118 @@ TEST_F(Telemetry_L2test, SetOptOutTelemetry_JsonRPC)
     EXPECT_TRUE(result["Opt-Out"].Boolean());
     EXPECT_TRUE(result["success"].Boolean());
     EXPECT_STREQ("null", result["value"].String().c_str());
+}
+
+/************Test case Details **************************
+ * Transition from POWER_STATE_ON to POWER_STATE_STANDBY_LIGHT_SLEEP
+ * This will trigger TELEMETRY_EVENT_UPLOADREPORT internally
+ ********************************************************/
+TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_LIGHTSLEEP)
+{
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEngine_PowerManager;
+    Core::ProxyType<RPC::CommunicatorClient> mClient_PowerManager;
+    PluginHost::IShell* mController_PowerManager;
+
+    TEST_LOG("Creating mEngine_PowerManager");
+    mEngine_PowerManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+    mClient_PowerManager = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_PowerManager));
+
+    TEST_LOG("Creating mEngine_PowerManager Announcements");
+#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
+    mEngine_PowerManager->Announcements(mClient_PowerManager->Announcement());
+#endif
+
+    if (!mClient_PowerManager.IsValid()) {
+        TEST_LOG("Invalid mClient_PowerManager");
+    } else {
+        mController_PowerManager = mClient_PowerManager->Open<PluginHost::IShell>(_T("org.rdk.PowerManager"), ~0, 3000);
+        if (mController_PowerManager) {
+            auto PowerManagerPlugin = mController_PowerManager->QueryInterface<Exchange::IPowerManager>();
+
+            if (PowerManagerPlugin) {
+                int keyCode = 0;
+
+                uint32_t clientId = 0;
+                uint32_t status = PowerManagerPlugin->AddPowerModePreChangeClient("l2-test-client", clientId);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                EXPECT_CALL(*p_powerManagerHalMock, PLAT_API_SetPowerState(::testing::_))
+                    .WillRepeatedly(::testing::Invoke(
+                        [](PWRMgr_PowerState_t powerState) {
+                            EXPECT_EQ(powerState, PWRMGR_POWERSTATE_STANDBY_LIGHT_SLEEP);
+                            return PWRMGR_SUCCESS;
+                        }));
+
+                status = PowerManagerPlugin->SetPowerState(keyCode, PowerState::POWER_STATE_STANDBY_LIGHT_SLEEP, "l2-test");
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // some delay to destroy AckController after IModeChanged notification
+                std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+                PowerManagerPlugin->Release();
+            } else {
+                TEST_LOG("PowerManagerPlugin is NULL");
+            }
+            mController_PowerManager->Release();
+        } else {
+            TEST_LOG("mController_PowerManager is NULL");
+        }
+    }
+}
+
+/************Test case Details **************************
+ * Transition to POWER_STATE_STANDBY_DEEP_SLEEP from POWER_STATE_ON
+ * This will trigger TELEMETRY_EVENT_ABORTREPORT internally
+ ********************************************************/
+TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_DEEPSLEEP)
+{
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEngine_PowerManager;
+    Core::ProxyType<RPC::CommunicatorClient> mClient_PowerManager;
+    PluginHost::IShell* mController_PowerManager;
+
+    TEST_LOG("Creating mEngine_PowerManager");
+    mEngine_PowerManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+    mClient_PowerManager = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_PowerManager));
+
+    TEST_LOG("Creating mEngine_PowerManager Announcements");
+#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
+    mEngine_PowerManager->Announcements(mClient_PowerManager->Announcement());
+#endif
+
+    if (!mClient_PowerManager.IsValid()) {
+        TEST_LOG("Invalid mClient_PowerManager");
+    } else {
+        mController_PowerManager = mClient_PowerManager->Open<PluginHost::IShell>(_T("org.rdk.PowerManager"), ~0, 3000);
+        if (mController_PowerManager) {
+            auto PowerManagerPlugin = mController_PowerManager->QueryInterface<Exchange::IPowerManager>();
+
+            if (PowerManagerPlugin) {
+                int keyCode = 0;
+
+                uint32_t clientId = 0;
+                uint32_t status = PowerManagerPlugin->AddPowerModePreChangeClient("l2-test-client", clientId);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                EXPECT_CALL(*p_powerManagerHalMock, PLAT_API_SetPowerState(::testing::_))
+                    .WillRepeatedly(::testing::Invoke(
+                        [](PWRMgr_PowerState_t powerState) {
+                            EXPECT_EQ(powerState, PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP);
+                            return PWRMGR_SUCCESS;
+                        }));
+
+                status = PowerManagerPlugin->SetPowerState(keyCode, PowerState::POWER_STATE_STANDBY_DEEP_SLEEP, "l2-test");
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // some delay to destroy AckController after IModeChanged notification
+                std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+                PowerManagerPlugin->Release();
+            } else {
+                TEST_LOG("PowerManagerPlugin is NULL");
+            }
+            mController_PowerManager->Release();
+        } else {
+            TEST_LOG("mController_PowerManager is NULL");
+        }
+    }
 }
