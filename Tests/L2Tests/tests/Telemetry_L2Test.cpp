@@ -40,6 +40,7 @@ using ::testing::NiceMock;
 using namespace WPEFramework;
 using testing::StrictMock;
 using ::WPEFramework::Exchange::ITelemetry;
+using Success = WPEFramework::Exchange::ITelemetry::TelemetrySuccess;
 
 typedef enum : uint32_t {
     Telemetry_OnReportUpload = 0x00000001,
@@ -894,4 +895,103 @@ TEST_F(Telemetry_L2test, SetReportProfileStatusUsingComrpc)
         std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
         TEST_LOG("Err: %s", errorMsg.c_str());
     }
+}
+
+/************Test case Details **************************
+** 1.SetOptOutTelemetry with OptOut as "false" and "true" using comrpc.
+** 2.Verify OptOut value using IsOptOutTelemetry after each SetOptOutTelemetry call using comrpc.
+*******************************************************/
+TEST_F(Telemetry_L2test, SetOptOutTelemetry_COMRPC)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool optOut = false;
+    Success result;
+
+    /* with OptOut as "false" */
+    status = m_telemetryplugin->SetOptOutTelemetry(optOut, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_TRUE(result.success);
+    if (status != Core::ERROR_NONE)
+    {
+        std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+        TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+
+    /* Verify OptOut value using GetOptOutTelemetry */
+    optOut = true; //initially setting to true, so that we can verify
+    bool ret = false;
+    status = m_telemetryplugin->IsOptOutTelemetry(optOut, ret);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_TRUE(result.success);
+    EXPECT_FALSE(optOut);
+    if (status != Core::ERROR_NONE)
+    {
+        std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+        TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+
+    /* with OptOut as "true" */
+    optOut = true;
+    status = m_telemetryplugin->SetOptOutTelemetry(optOut, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    if (status != Core::ERROR_NONE)
+    {
+        std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+        TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+
+    /* Verify OptOut value using GetOptOutTelemetry */
+    optOut = false; //initially setting to false, so that we can verify
+    ret = false;
+    status = m_telemetryplugin->IsOptOutTelemetry(optOut, ret);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_TRUE(optOut);
+    EXPECT_TRUE(result.success);
+    if (status != Core::ERROR_NONE)
+    {
+        std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+        TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+}
+
+/************Test case Details **************************
+** 1.SetOptOutTelemetry with OptOut as "false" and "true" using Jsonrpc.
+** 2.Verify OptOut value using IsOptOutTelemetry after each SetOptOutTelemetry call using Jsonrpc.
+*******************************************************/
+TEST_F(Telemetry_L2test, SetOptOutTelemetry_JsonRPC)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(TELEMETRY_CALLSIGN, TELEMETRYL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_Telemetry> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params;
+    JsonObject result;
+
+    /* with OptOut as "false" */
+    params["Opt-Out"] = false;
+    status = InvokeServiceMethod("org.rdk.Telemetry.1", "setOptOutTelemetry", params, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_STREQ("null", result["value"].String().c_str());
+
+    /* Verify OptOut value using IsOptOutTelemetry */
+    params.Clear();
+    status = InvokeServiceMethod("org.rdk.Telemetry.1", "isOptOutTelemetry", params, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_FALSE(result["Opt-Out"].Boolean());
+    EXPECT_TRUE(result["success"].Boolean());
+    EXPECT_STREQ("null", result["value"].String().c_str());
+
+    /* with OptOut as "true" */
+    params.Clear();
+    params["Opt-Out"] = true;
+    status = InvokeServiceMethod("org.rdk.Telemetry.1", "setOptOutTelemetry", params, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_STREQ("null", result["value"].String().c_str());
+
+    /* Verify OptOut value using IsOptOutTelemetry */
+    params.Clear();
+    status = InvokeServiceMethod("org.rdk.Telemetry.1", "isOptOutTelemetry", params, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_TRUE(result["Opt-Out"].Boolean());
+    EXPECT_TRUE(result["success"].Boolean());
+    EXPECT_STREQ("null", result["value"].String().c_str());
 }
