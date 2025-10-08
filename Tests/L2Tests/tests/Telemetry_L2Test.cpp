@@ -1139,7 +1139,7 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_DEEPSLEEP)
                 EXPECT_EQ(status, Core::ERROR_NONE);
 
                 // some delay to destroy AckController after IModeChanged notification
-                std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+                std::this_thread::sleep_for(std::chrono::milliseconds(2500));
 
                 PowerManagerPlugin->Release();
             } else {
