@@ -30,6 +30,7 @@
 #include <condition_variable>
 #include <fstream>
 #include <interfaces/ITelemetry.h>
+#include <interfaces/IUserSettings.h>
 
 #define JSON_TIMEOUT   (1000)
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
@@ -249,7 +250,19 @@ Telemetry_L2test::Telemetry_L2test()
             return mfrERR_NONE;
     }));
 
+    EXPECT_CALL(*p_rBusApiImplMock, rbus_set(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly(::testing::Invoke(
+        [](rbusHandle_t handle, const char* name, rbusValue_t value, rbusSetOptions_t* options) {
+            return RBUS_ERROR_SUCCESS;
+    }));
+
     /* Activate plugin in constructor */
+    status = ActivateService("org.rdk.PersistentStore");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    status = ActivateService("org.rdk.UserSettings");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
     status = ActivateService("org.rdk.PowerManager");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -291,7 +304,13 @@ Telemetry_L2test::~Telemetry_L2test()
     EXPECT_CALL(*p_powerManagerHalMock, PLAT_DS_TERM())
     .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
 
-    //Deactivate PowerMgr
+    /* DeActivate plugin in constructor */
+    status = DeactivateService("org.rdk.PersistentStore");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    status = DeactivateService("org.rdk.UserSettings");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
     status = DeactivateService("org.rdk.PowerManager");
 
     if (m_telemetryplugin) {
