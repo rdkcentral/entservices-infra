@@ -354,8 +354,6 @@ namespace WPEFramework
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
             std::string appIntent = "";
-            bool success = false;
-            std::string errorReason = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
@@ -428,19 +426,7 @@ namespace WPEFramework
                                         }
                                         else
                                         {
-                                            LOGINFO("App with AppId: %s is non suspendable. Proceeding to unload the app", appId.c_str());
-                                            status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
-                                            if (status != Core::ERROR_NONE)
-                                            {
-                                                LOGERR("UnloadApp failed with error reason: %s", errorReason.c_str());
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_UNLOAD_APP);
-#endif
-                                            }
-                                            else
-                                            {
-                                                LOGINFO("UnloadApp succeeded for appId: %s", appId.c_str());
-                                            }
+                                            LOGINFO("App with AppId: %s is non suspendable. Keeping app in Paused state", appId.c_str());
                                         }
                                     }
                                     else
