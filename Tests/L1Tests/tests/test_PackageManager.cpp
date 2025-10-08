@@ -233,6 +233,14 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
     releaseResources();
 }
 
+/* Test Case for adding download request to a queue using JsonRpc
+ * 
+ * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Check if the methods listed exist by using the Exists() from the JSON RPC handler
+ * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
+ * Deinitialize the JSON-RPC resources and clean-up related test resources
+ */
+
 TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
     createResources();
@@ -606,7 +614,7 @@ TEST_F(PackageManagerTest, configusingJsonRpc) {
 
     initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\", \"configMetadata\": {}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\", \"configMetadata\": {}}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
