@@ -39,6 +39,9 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 using ::testing::NiceMock;
 using namespace WPEFramework;
 using namespace std;
@@ -127,11 +130,13 @@ protected:
 
     void initforJsonRpc() 
     {
+	DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");    
         // Activate the dispatcher and initialize the plugin for JSON-RPC
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(mServiceMock);
         plugin->Initialize(mServiceMock);
+	DEBUG_PRINTF("-----------------------DEBUG-2803------------------------"); 
     }
 
     void initforComRpc() 
@@ -242,8 +247,12 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
  */
 
 TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
+    
+    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------"); 
 
     createResources();
+    
+    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
     initforJsonRpc();
 
@@ -256,8 +265,12 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {\"testDownloadId\"}}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
+    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
+    deinitforJsonRpc();
+
+    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------"); 
+
     releaseResources();
 }
 

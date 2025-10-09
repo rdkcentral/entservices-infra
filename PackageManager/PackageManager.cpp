@@ -20,6 +20,9 @@
 #include "PackageManager.h"
 #include <interfaces/IConfiguration.h>
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 namespace WPEFramework {
 
 namespace Plugin
@@ -50,6 +53,7 @@ namespace Plugin
 
     const string PackageManager::Initialize(PluginHost::IShell * service)
     {
+	DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         string message;
 
         ASSERT(service != nullptr);
@@ -67,8 +71,13 @@ namespace Plugin
         mService->Register(&mNotificationSink);
 
         mPackageDownloader = service->Root<Exchange::IPackageDownloader>(mConnectionId, RPC::CommunicationTimeOut, _T("PackageManagerImplementation"));
+
+	DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
         if (mPackageDownloader != nullptr) {
             mPackageDownloader->Initialize(service);
+            
+	    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
             mPackageDownloader->Register(&mNotificationSink);
             Exchange::JPackageDownloader::Register(*this, mPackageDownloader);

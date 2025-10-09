@@ -24,7 +24,8 @@
 
 /* Until we don't get it from Package configuration, use size as 1MB */
 #define STORAGE_MAX_SIZE 1024
-
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 namespace WPEFramework {
 namespace Plugin {
 
@@ -117,6 +118,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::Initialize(PluginHost::IShell* service)
     {
+	DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         Core::hresult result = Core::ERROR_GENERAL;
         LOGINFO("entry");
 
