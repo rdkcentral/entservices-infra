@@ -1,4 +1,4 @@
-#define MODULE_NAME "MessageControlL1Tests"
+#define MODULE_NAME MessageControlL1Tests
 
 #include <gtest/gtest.h>
 #include "MessageControl.h"
