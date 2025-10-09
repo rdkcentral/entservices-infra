@@ -4,58 +4,68 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#define MODULE_NAME MessageControlL1Tests
-
 #include <gtest/gtest.h>
-#include "MessageControl.h"
-#include "MessageControlImplementation.cpp" // Include concrete implementation
+#include "MessageControlImplementation.cpp" // Direct include for unit test
 
 using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
-// Minimal stub for Channel (only for Attach/Detach test)
-class DummyChannel : public PluginHost::Channel {
+class DummyCallback : public Exchange::IMessageControl::ICollect::ICallback {
 public:
-    DummyChannel() : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 12345)) {}
-    ~DummyChannel() override = default;
-    uint32_t Id() const override { return 42; }
-    // Implement other pure virtuals if needed
+    DummyCallback() : called(false) {}
+    void Message(Exchange::IMessageControl::MessageType, const string&, const string&, const string&, const uint32_t, const string&, const uint64_t, const string&) override {
+        called = true;
+    }
+    bool called;
 };
 
-class MessageControlTest : public ::testing::Test {
+class MessageControlImplTest : public ::testing::Test {
 protected:
-    MessageControlImplementation* control = nullptr;
+    MessageControlImplementation* control;
+
     void SetUp() override {
         control = new MessageControlImplementation();
     }
     void TearDown() override {
-        if (control) delete control;
+        delete control;
     }
 };
 
-TEST_F(MessageControlTest, InformationEmptyBeforeInit) {
-    EXPECT_TRUE(control->Controls(nullptr) == Core::ERROR_NONE);
+TEST_F(MessageControlImplTest, ConstructDestruct) {
+    EXPECT_NE(control, nullptr);
 }
 
-TEST_F(MessageControlTest, EnableControlsCleanup) {
-    EXPECT_EQ(Core::ERROR_NONE, control->Enable(Exchange::IMessageControl::MessageType::TRACING, "TestCategory", "TestModule", true));
+TEST_F(MessageControlImplTest, CallbackSetUnset) {
+    DummyCallback* cb = new DummyCallback();
+    EXPECT_EQ(control->Callback(cb), Core::ERROR_NONE);
+    EXPECT_EQ(control->Callback(nullptr), Core::ERROR_NONE);
+    delete cb;
+}
+
+TEST_F(MessageControlImplTest, AttachDetachInstance) {
+    uint32_t id = 42;
+    EXPECT_EQ(control->Attach(id), Core::ERROR_NONE);
+    EXPECT_EQ(control->Detach(id), Core::ERROR_NONE);
+}
+
+TEST_F(MessageControlImplTest, EnableControls) {
+    // Enable a control and check Controls iterator
+    EXPECT_EQ(control->Enable(Exchange::IMessageControl::MessageType::TRACING, "testcat", "testmod", true), Core::ERROR_NONE);
+
     Exchange::IMessageControl::IControlIterator* controls = nullptr;
-    EXPECT_EQ(Core::ERROR_NONE, control->Controls(controls));
-    if (controls) controls->Release();
-}
+    EXPECT_EQ(control->Controls(controls), Core::ERROR_NONE);
+    ASSERT_NE(controls, nullptr);
 
-TEST_F(MessageControlTest, AttachDetachInstance) {
-    EXPECT_EQ(Core::ERROR_NONE, control->Attach(123));
-    EXPECT_EQ(Core::ERROR_NONE, control->Detach(123));
+    bool found = false;
+    while (controls->Next()) {
+        if (controls->Type() == Exchange::IMessageControl::MessageType::TRACING &&
+            controls->Category() == "testcat" &&
+            controls->Module() == "testmod" &&
+            controls->Enabled()) {
+            found = true;
+            break;
+        }
+    }
+    controls->Release();
+    EXPECT_TRUE(found);
 }
-
-TEST_F(MessageControlTest, CallbackSetUnset) {
-    struct DummyCallback : public Exchange::IMessageControl::ICollect::ICallback {
-        void Message(Exchange::IMessageControl::MessageType, const string&, const string&, const string&, const uint32_t, const string&, const uint64_t, const string&) override {}
-    };
-    DummyCallback cb;
-    EXPECT_EQ(Core::ERROR_NONE, control->Callback(&cb));
-    EXPECT_EQ(Core::ERROR_NONE, control->Callback(nullptr));
-}
-
-// ...add more tests for other public MessageControlImplementation methods as needed...
