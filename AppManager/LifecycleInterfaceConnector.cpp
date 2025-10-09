@@ -354,8 +354,6 @@ namespace WPEFramework
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
             std::string appIntent = "";
-            bool success = false;
-            std::string errorReason = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
