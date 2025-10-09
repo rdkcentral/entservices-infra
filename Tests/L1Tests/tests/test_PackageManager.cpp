@@ -75,6 +75,11 @@ protected:
     Exchange::IPackageDownloader::Options options;
     Exchange::IPackageDownloader::DownloadId downloadId;
     Exchange::IPackageDownloader::ProgressInfo progress;
+    
+    // Timeout utility function (waits for 1 second)
+        void waitForTimeout() {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
 
     // Constructor
     PackageManagerTest()
@@ -626,6 +631,8 @@ TEST_F(PackageManagerTest, configusingJsonRpc) {
     createResources();   
 
     initforJsonRpc();
+
+    waitForTimeout(); // 1 second timeout
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackageId\", \"version\": \"2.0\", \"configMetadata\": {}}"), mJsonRpcResponse));
 
