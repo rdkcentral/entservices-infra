@@ -3026,15 +3026,15 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
     EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
     ).WillOnce([&](const bool verbose, std::string &apps) {
         apps = R"([
-            {"appId":"NexTennis","type":"","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
-            {"appId":"uktv","type":"","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6}
+            {"appId":"NexTennis","type":"","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6},
+            {"appId":"uktv","type":"","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6}
         ])";
         return Core::ERROR_NONE;
     });        
     // Simulate a JSON-RPC call
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getLoadedApps"), _T("{}"), mJsonRpcResponse));
     EXPECT_STREQ(mJsonRpcResponse.c_str(),
-    "[{\"appId\":\"NexTennis\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"lifecycleState\":\"APP_STATE_HIBERNATED\"},{\"appId\":\"uktv\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"lifecycleState\":\"APP_STATE_HIBERNATED\"}]");
+    "[{\"appId\":\"NexTennis\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"currentLifecycleState\":\"APP_STATE_HIBERNATED\"},{\"appId\":\"uktv\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"currentLifecycleState\":\"APP_STATE_HIBERNATED\"}]");
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
