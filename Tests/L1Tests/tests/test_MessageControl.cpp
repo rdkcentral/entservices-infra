@@ -50,7 +50,7 @@ TEST_F(MessageControlTest, AttachDetachInstance) {
 }
 
 TEST_F(MessageControlTest, CallbackSetUnset) {
-    class DummyCallback : public Exchange::IMessageControl::ICollect::ICallback {
+    struct DummyCallback : public Exchange::IMessageControl::ICollect::ICallback {
         void Message(Exchange::IMessageControl::MessageType, const string&, const string&, const string&, const uint32_t, const string&, const uint64_t, const string&) override {}
     };
     DummyCallback cb;
