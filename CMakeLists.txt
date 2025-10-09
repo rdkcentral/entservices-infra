@@ -148,6 +148,10 @@ if(PLUGIN_TELEMETRYMETRICS)
     add_subdirectory(TelemetryMetrics)
 endif()
 
+if(PLUGIN_PREINSTALL_MANAGER)
+    add_subdirectory(PreinstallManager)
+endif()
+
 if(PLUGIN_MIGRATION)
     add_subdirectory(Migration)
 endif()
