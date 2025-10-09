@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <interfaces/IMessageControl.h>
 #include "MessageControlImplementation.cpp" // Direct include for unit test
 
 using namespace WPEFramework;
