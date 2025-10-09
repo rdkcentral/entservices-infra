@@ -2,33 +2,33 @@
 
 #include <gtest/gtest.h>
 #include "MessageControl.h"
-#include "MessageOutput.h"
-#include "MessageControlImplementation.cpp"
-#include "MessageControl.h"
-#include "MessageOutput.cpp"
-#include "MessageControl.cpp"
 
-using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
-// Minimal IShell stub for initialization
-class ShellStub : public PluginHost::IShell {
-public:
-    ShellStub() = default;
-    ~ShellStub() override = default;
-
-    // Implement all pure virtuals with dummy returns
-    void AddRef() override {}
-    uint32_t Release() override { return 0; }
-    string ConfigLine() const override { return "{}"; }
-    string VolatilePath() const override { return "/tmp/"; }
-    bool Background() const override { return false; }
-    void Register(RPC::IRemoteConnection::INotification*) override {}
-    void Unregister(RPC::IRemoteConnection::INotification*) override {}
-    // ...add more if your IShell has more pure virtuals...
+class MessageControlL1Test : public ::testing::Test {
+protected:
+    std::unique_ptr<MessageControl> control;
+    void SetUp() override {
+        control = std::make_unique<MessageControl>();
+    }
 };
 
-// Minimal Channel stub for attach/detach
+TEST_F(MessageControlL1Test, Constructed) {
+    EXPECT_NE(control.get(), nullptr);
+}
+
+TEST_F(MessageControlL1Test, InformationEmptyBeforeInit) {
+    EXPECT_TRUE(control->Information().empty());
+}
+
+TEST_F(MessageControlL1Test, InboundCommandReturnsElementProxy) {
+    auto element = control->Inbound("any");
+    EXPECT_TRUE(element.IsValid());
+}
+
+// NOTE: The following tests require valid IShell and Channel objects.
+// If you want to cover these, you must provide complete mocks for IShell and Channel.
+// Otherwise, keep only the above tests for error-free compilation.
 class DummyChannel : public PluginHost::Channel {
 public:
     DummyChannel() : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 12345)) {}
@@ -99,3 +99,5 @@ TEST_F(MessageControlL2Test, InboundReceivedReturnsElement) {
     auto result = control->Inbound(1, dummyElement);
     EXPECT_TRUE(result.IsValid());
 }
+
+// ...end of file...
