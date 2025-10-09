@@ -29,8 +29,8 @@ TEST_F(MessageControlL1Test, InboundCommandReturnsElementProxy) {
 }
 
 // NOTE:
-// Initialization / Attach / Detach tests removed to avoid complex Thunder IShell/Channel stubs.
-// Add them later only with full interface-compliant mocks.
+// Tests needing IShell / Channel (Initialize, Attach/Detach) removed to avoid
+// heavy interface mocks. Add later with proper Thunder stubs.
 // NOTE:
 // Initialization & Attach/Detach tests removed because creating a fully
 // functional DummyShell / Channel stub requires matching all pure virtual
