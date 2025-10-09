@@ -20,71 +20,37 @@
 #pragma once
 
 #include "Module.h"
-
-#if defined(ENABLE_ERM) || defined(ENABLE_L1TEST)
-#include <map>
-#include "essos-resmgr.h"
-#endif
-#include <string>
-#include <iostream>
-
-#include "UtilsJsonRpc.h"
+#include <interfaces/IResourceManager.h>
+#include <interfaces/json/JResourceManager.h>
 
 namespace WPEFramework {
 
     namespace Plugin {
 
-        class ResourceManager :  public PluginHost::IPlugin, public PluginHost::JSONRPC {
+        class ResourceManager : public PluginHost::IPlugin, public PluginHost::JSONRPC {
         public:
+            ResourceManager(const ResourceManager&) = delete;
+            ResourceManager& operator=(const ResourceManager&) = delete;
+
             ResourceManager();
-            virtual ~ResourceManager();
+            ~ResourceManager() override;
 
             BEGIN_INTERFACE_MAP(ResourceManager)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
+            INTERFACE_AGGREGATE(Exchange::IResourceManager, _implementation)
             END_INTERFACE_MAP
 
-            // IPlugin methods
-            virtual const string Initialize(PluginHost::IShell* service) override;
-            virtual void Deinitialize(PluginHost::IShell* service) override;
-            virtual string Information() const override;
+            //  IPlugin methods
+            // -------------------------------------------------------------------------------------------------------
+            const string Initialize(PluginHost::IShell* service) override;
+            void Deinitialize(PluginHost::IShell* service) override;
+            string Information() const override;
 
-        public/*members*/:
-            static ResourceManager* _instance;
-
-        public /*constants*/:
-            static const string SERVICE_NAME;
-            //methods
-            static const string RESOURCE_MANAGER_METHOD_SET_AV_BLOCKED;
-            static const string RESOURCE_MANAGER_METHOD_GET_BLOCKED_AV_APPLICATIONS;
-            static const string RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE;
-	    static const string RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE_FOR_APPS;
-
-        private/*registered methods (wrappers)*/:
-            //methods ("parameters" here is "params" from the curl request)
-            uint32_t setAVBlockedWrapper(const JsonObject& parameters, JsonObject& response);
-            uint32_t getBlockedAVApplicationsWrapper(const JsonObject& parameters, JsonObject& response);
-            uint32_t reserveTTSResourceWrapper(const JsonObject& parameters, JsonObject& response);
-	    uint32_t reserveTTSResourceWrapperForApps(const JsonObject& parameters, JsonObject& response);
-
-        // private/*internal methods*/: changing private to protected for testing purpose
-        protected:
-            ResourceManager(const ResourceManager&) = delete;
-            ResourceManager& operator=(const ResourceManager&) = delete;
-
-            bool setAVBlocked(const string& client, const bool blocked);
-            bool getBlockedAVApplications(std::vector<std::string> &appsList);
-            bool reserveTTSResource(const string& client);
-	    bool reserveTTSResourceForApps(const std::vector<std::string>& clients);
- 
-        #if defined(ENABLE_ERM) || defined(ENABLE_L1TEST) 
-            EssRMgr* mEssRMgr;
-        #endif
-        
-            bool mDisableBlacklist;
-            bool mDisableReserveTTS;
-            PluginHost::IShell* mCurrentService;
-            std::map<std::string, bool> mAppsAVBlacklistStatus;
+        private:
+            PluginHost::IShell* _service{};
+            uint32_t _connectionId{};
+            Exchange::IResourceManager* _implementation{};
 
         };
 
