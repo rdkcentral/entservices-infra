@@ -179,15 +179,20 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
         MockChannel(const SOCKET& connector, const Core::NodeId& remoteId)
             : PluginHost::Channel(connector, remoteId) {}
 
-        // Required pure virtual implementations from Channel base class
-        virtual void Received(string& text) override {}
-        virtual void Send(const string& text) override {}
-        virtual void StateChange() override {}
-        virtual bool IsOpen() const override { return true; }
-        virtual bool IsSuspended() const override { return false; }
-        virtual string LocalId() const override { return "MockChannel"; }
-        virtual string RemoteId() const override { return "127.0.0.1"; }
-        virtual uint32_t Id() const override { return 1; }
+        // Required pure virtual methods from Channel base class
+        virtual uint16_t Serialize(uint8_t* dataFrame, const uint16_t maxLength) const override {
+            return 0;
+        }
+        
+        virtual void Deserialize(const uint8_t* dataFrame, const uint16_t length) override {
+        }
+
+        virtual Core::ProxyType<Core::JSON::IElement> Element() override {
+            return Core::ProxyType<Core::JSON::IElement>();
+        }
+
+        virtual void Complete() override {
+        }
     };
 
     SOCKET socket = 0;  // Dummy socket
