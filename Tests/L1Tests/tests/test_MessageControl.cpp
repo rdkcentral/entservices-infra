@@ -31,7 +31,7 @@ protected:
         delete control;
     }
 };
-
+/*
 // ===== Dummy Callback =====
 class DummyCallback : public Exchange::IMessageControl::ICollect::ICallback {
 public:
@@ -41,6 +41,7 @@ public:
     }
     bool called;
 };
+*/
 
 // =========================
 // ===== TEST CASES ========
