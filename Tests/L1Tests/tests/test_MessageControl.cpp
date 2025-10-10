@@ -179,20 +179,8 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
         MockChannel(const SOCKET& connector, const Core::NodeId& remoteId)
             : PluginHost::Channel(connector, remoteId) {}
 
-        // Required pure virtual methods from Channel base class
-        virtual uint16_t Serialize(uint8_t* dataFrame, const uint16_t maxLength) const override {
-            return 0;
-        }
-        
-        virtual void Deserialize(const uint8_t* dataFrame, const uint16_t length) override {
-        }
-
-        virtual Core::ProxyType<Core::JSON::IElement> Element() override {
-            return Core::ProxyType<Core::JSON::IElement>();
-        }
-
-        virtual void Complete() override {
-        }
+        // Only implement the minimum required virtual method
+        uint32_t Id() const override { return 1234; }
     };
 
     SOCKET socket = 0;  // Dummy socket
