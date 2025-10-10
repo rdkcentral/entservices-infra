@@ -179,18 +179,15 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
         MockChannel(const SOCKET& connector, const Core::NodeId& remoteId)
             : PluginHost::Channel(connector, remoteId) {}
 
-        // Required pure virtual method implementations
-        void Trigger() override {}
-        bool IsWebSocket() const override { return true; }
-        string Name() const override { return "MockChannel"; }
-        string BaseURL() const override { return ""; }
-        bool IsSecure() const override { return false; }
-        bool IsUpgrade() const override { return true; }
-        bool IsWebServer() const override { return true; }
-        bool IsRAW() const override { return false; }
-        bool IsJSONRPC() const override { return false; }
-        bool HasError() const override { return false; }
-        void Revoke() override {}
+        // Required pure virtual implementations from Channel base class
+        virtual void Received(string& text) override {}
+        virtual void Send(const string& text) override {}
+        virtual void StateChange() override {}
+        virtual bool IsOpen() const override { return true; }
+        virtual bool IsSuspended() const override { return false; }
+        virtual string LocalId() const override { return "MockChannel"; }
+        virtual string RemoteId() const override { return "127.0.0.1"; }
+        virtual uint32_t Id() const override { return 1; }
     };
 
     SOCKET socket = 0;  // Dummy socket
