@@ -7,7 +7,7 @@ using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
 namespace {
-    class TestCallback : public Exchange::IMessageControl::ICallback {
+    class TestCallback : public Exchange::IMessageControl::INotification {
     public:
         TestCallback() : callCount(0) {}
 
@@ -66,16 +66,16 @@ TEST_F(MessageControlL1Test, EnableLogging) {
 }
 
 TEST_F(MessageControlL1Test, EnableDisableWarning) {
-    // Test enabling and disabling warning messages
+    // Test enabling and disabling messages
     Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::MessageType::ERROR, // Changed from WARNING to ERROR
+        Exchange::IMessageControl::Type::INFORMATION,  // Using correct enum
         "category1",
         "testmodule",
         true);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
     hr = plugin->Enable(
-        Exchange::IMessageControl::MessageType::ERROR, // Changed from WARNING to ERROR
+        Exchange::IMessageControl::Type::INFORMATION,
         "category1", 
         "testmodule",
         false);
@@ -84,8 +84,8 @@ TEST_F(MessageControlL1Test, EnableDisableWarning) {
 
 TEST_F(MessageControlL1Test, ControlsIterator) {
     // First enable some controls
-    plugin->Enable(Exchange::IMessageControl::MessageType::TRACING, "cat1", "mod1", true);
-    plugin->Enable(Exchange::IMessageControl::MessageType::LOGGING, "cat2", "mod2", true);
+    plugin->Enable(Exchange::IMessageControl::Type::TRACING, "cat1", "mod1", true);
+    plugin->Enable(Exchange::IMessageControl::Type::LOGGING, "cat2", "mod2", true);
 
     // Get controls iterator
     Exchange::IMessageControl::IControlIterator* controls = nullptr;
@@ -104,19 +104,15 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
 }
 
 TEST_F(MessageControlL1Test, ChannelOperations) {
-    // Mock channel class since we can't use real one in L1 tests
-    class MockChannel : public PluginHost::Channel {
+    class MockChannel : public Core::IDispatch {
     public:
-        MockChannel(const string& name) : PluginHost::Channel(name) {}
+        MockChannel() = default;
         
-        uint32_t Id() const override { return 1; }
-        // Add other required overrides from Channel base class
-        string Name() const override { return "MockChannel"; }
-        void State(const PluginHost::Channel::state state) override {}
-        state State() const override { return state::WEBSERVER; }
+        uint32_t Submit(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
+        void Close() override {}
     };
 
-    MockChannel channel("TestChannel");
+    MockChannel channel;
     
     // Test attach/detach
     bool attached = plugin->Attach(channel);
