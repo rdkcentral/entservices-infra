@@ -178,9 +178,6 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
     public:
         MockChannel(const SOCKET& connector, const Core::NodeId& remoteId)
             : PluginHost::Channel(connector, remoteId) {}
-
-        // Only implement the minimum required virtual method
-        uint32_t Id() const override { return 1234; }
     };
 
     SOCKET socket = 0;  // Dummy socket
