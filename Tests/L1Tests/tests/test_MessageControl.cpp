@@ -139,14 +139,14 @@ TEST_F(MessageControlL1Test, EnableLogging) {
 
 TEST_F(MessageControlL1Test, EnableDisableWarning) {
     Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::TRACE,  // Fixed enum
+        Exchange::IMessageControl::TRACING,  // Using correct enum value
         "category1",
         "testmodule",
         true);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
     hr = plugin->Enable(
-        Exchange::IMessageControl::TRACE,
+        Exchange::IMessageControl::TRACING,  // Using correct enum value
         "category1", 
         "testmodule",
         false);
@@ -154,7 +154,7 @@ TEST_F(MessageControlL1Test, EnableDisableWarning) {
 }
 
 TEST_F(MessageControlL1Test, ControlsIterator) {
-    plugin->Enable(Exchange::IMessageControl::TRACE, "cat1", "mod1", true);
+    plugin->Enable(Exchange::IMessageControl::TRACING, "cat1", "mod1", true);
     plugin->Enable(Exchange::IMessageControl::LOGGING, "cat2", "mod2", true);
 
     // Get controls iterator
@@ -179,11 +179,18 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
         MockChannel(const SOCKET& connector, const Core::NodeId& remoteId)
             : PluginHost::Channel(connector, remoteId) {}
 
-        void Trigger() {}
-        bool IsWebSocket() const { return true; }
-        string Name() const { return "MockChannel"; }
-        void State(const PluginHost::Channel::state state) {}
-        PluginHost::Channel::state State() const { return state::WEBSERVER; }
+        // Required pure virtual method implementations
+        void Trigger() override {}
+        bool IsWebSocket() const override { return true; }
+        string Name() const override { return "MockChannel"; }
+        string BaseURL() const override { return ""; }
+        bool IsSecure() const override { return false; }
+        bool IsUpgrade() const override { return true; }
+        bool IsWebServer() const override { return true; }
+        bool IsRAW() const override { return false; }
+        bool IsJSONRPC() const override { return false; }
+        bool HasError() const override { return false; }
+        void Revoke() override {}
     };
 
     SOCKET socket = 0;  // Dummy socket
