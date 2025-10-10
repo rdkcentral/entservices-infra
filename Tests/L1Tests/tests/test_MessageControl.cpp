@@ -8,23 +8,33 @@ using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
 namespace {
-    class TestCallback : public Core::IDispatch {
+    class TestCallback : public Exchange::IMessageControl {
     public:
         TestCallback() : callCount(0) {}
-
-        void Dispatch() override {
-            // Required by IDispatch
-        }
-
-        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) {
+        
+        uint32_t Enable(const messagetype type, const string& category, const string& module, const bool enabled) override {
+            lastType = type;
+            lastCategory = category;
+            lastModule = module;
+            lastEnabled = enabled;
             callCount++;
-            lastMetadata = metadata;
-            lastText = text;
+            return Core::ERROR_NONE;
         }
+
+        uint32_t Controls(IControlIterator*& controls) const override {
+            controls = nullptr;
+            return Core::ERROR_NONE;
+        }
+
+        BEGIN_INTERFACE_MAP(TestCallback)
+            INTERFACE_ENTRY(Exchange::IMessageControl)
+        END_INTERFACE_MAP
 
         uint32_t callCount;
-        Core::Messaging::MessageInfo lastMetadata;
-        string lastText;
+        messagetype lastType;
+        string lastCategory;
+        string lastModule;
+        bool lastEnabled;
     };
 }
 
@@ -50,10 +60,66 @@ TEST_F(MessageControlL1Test, InitialState) {
     EXPECT_TRUE(plugin->Information().empty());
 }
 
+TEST_F(MessageControlL1Test, EnableAllMessageTypes) {
+    // Test all message types defined in IMessageControl
+    std::vector<Exchange::IMessageControl::messagetype> types = {
+        Exchange::IMessageControl::TRACING,
+        Exchange::IMessageControl::LOGGING,
+        Exchange::IMessageControl::REPORTING,
+        Exchange::IMessageControl::STANDARD_OUT,
+        Exchange::IMessageControl::STANDARD_ERROR
+    };
+
+    for (auto type : types) {
+        Core::hresult hr = plugin->Enable(type, "category1", "testmodule", true);
+        EXPECT_EQ(Core::ERROR_NONE, hr);
+    }
+}
+
+TEST_F(MessageControlL1Test, ControlStructure) {
+    // Test Control structure functionality
+    Exchange::IMessageControl::Control testControl;
+    testControl.type = Exchange::IMessageControl::TRACING;
+    testControl.category = "TestCategory";
+    testControl.module = "TestModule";
+    testControl.enabled = true;
+
+    // Enable the control
+    Core::hresult hr = plugin->Enable(
+        testControl.type,
+        testControl.category,
+        testControl.module,
+        testControl.enabled);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+
+    // Verify through iterator
+    Exchange::IMessageControl::IControlIterator* controls = nullptr;
+    hr = plugin->Controls(controls);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+    ASSERT_NE(nullptr, controls);
+
+    // Check if our control exists
+    bool found = false;
+    while (controls->Next()) {
+        Exchange::IMessageControl::Control current;
+        controls->Current(current);
+        
+        if (current.type == testControl.type &&
+            current.category == testControl.category &&
+            current.module == testControl.module &&
+            current.enabled == testControl.enabled) {
+            found = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(found);
+    controls->Release();
+}
+
 TEST_F(MessageControlL1Test, EnableTracing) {
     // Test enabling tracing messages
     Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::MessageType::TRACING,
+        Exchange::IMessageControl::TRACING,  // Using correct enum
         "category1", 
         "testmodule",
         true);
@@ -63,7 +129,7 @@ TEST_F(MessageControlL1Test, EnableTracing) {
 TEST_F(MessageControlL1Test, EnableLogging) {
     // Test enabling logging messages
     Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::MessageType::LOGGING,
+        Exchange::IMessageControl::LOGGING,  // Using correct enum
         "category1",
         "testmodule", 
         true);
@@ -72,14 +138,14 @@ TEST_F(MessageControlL1Test, EnableLogging) {
 
 TEST_F(MessageControlL1Test, EnableDisableWarning) {
     Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::MessageType::TRACE,  // Fixed enum
+        Exchange::IMessageControl::TRACE,  // Fixed enum
         "category1",
         "testmodule",
         true);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
     hr = plugin->Enable(
-        Exchange::IMessageControl::MessageType::TRACE,
+        Exchange::IMessageControl::TRACE,
         "category1", 
         "testmodule",
         false);
@@ -87,8 +153,8 @@ TEST_F(MessageControlL1Test, EnableDisableWarning) {
 }
 
 TEST_F(MessageControlL1Test, ControlsIterator) {
-    plugin->Enable(Exchange::IMessageControl::MessageType::TRACE, "cat1", "mod1", true);
-    plugin->Enable(Exchange::IMessageControl::MessageType::LOGGING, "cat2", "mod2", true);
+    plugin->Enable(Exchange::IMessageControl::TRACE, "cat1", "mod1", true);
+    plugin->Enable(Exchange::IMessageControl::LOGGING, "cat2", "mod2", true);
 
     // Get controls iterator
     Exchange::IMessageControl::IControlIterator* controls = nullptr;
