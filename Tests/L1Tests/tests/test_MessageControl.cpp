@@ -12,7 +12,10 @@ namespace {
     public:
         TestCallback() : callCount(0) {}
         
-        uint32_t Enable(const messagetype type, const string& category, const string& module, const bool enabled) override {
+        uint32_t Enable(const Exchange::IMessageControl::MessageType type, 
+                       const string& category, 
+                       const string& module, 
+                       const bool enabled) override {
             lastType = type;
             lastCategory = category;
             lastModule = module;
@@ -21,7 +24,7 @@ namespace {
             return Core::ERROR_NONE;
         }
 
-        uint32_t Controls(IControlIterator*& controls) const override {
+        uint32_t Controls(Exchange::IMessageControl::IControlIterator*& controls) const override {
             controls = nullptr;
             return Core::ERROR_NONE;
         }
@@ -31,7 +34,7 @@ namespace {
         END_INTERFACE_MAP
 
         uint32_t callCount;
-        messagetype lastType;
+        Exchange::IMessageControl::MessageType lastType;
         string lastCategory;
         string lastModule;
         bool lastEnabled;
@@ -62,7 +65,7 @@ TEST_F(MessageControlL1Test, InitialState) {
 
 TEST_F(MessageControlL1Test, EnableAllMessageTypes) {
     // Test all message types defined in IMessageControl
-    std::vector<Exchange::IMessageControl::messagetype> types = {
+    std::vector<Exchange::IMessageControl::MessageType> types = {
         Exchange::IMessageControl::TRACING,
         Exchange::IMessageControl::LOGGING,
         Exchange::IMessageControl::REPORTING,
@@ -100,10 +103,8 @@ TEST_F(MessageControlL1Test, ControlStructure) {
 
     // Check if our control exists
     bool found = false;
-    while (controls->Next()) {
-        Exchange::IMessageControl::Control current;
-        controls->Current(current);
-        
+    Exchange::IMessageControl::Control current;
+    while (controls->Next(current)) {
         if (current.type == testControl.type &&
             current.category == testControl.category &&
             current.module == testControl.module &&
@@ -175,16 +176,20 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
 TEST_F(MessageControlL1Test, ChannelOperations) {
     class MockChannel : public PluginHost::Channel {
     public:
-        MockChannel() : PluginHost::Channel("MockChannel") {}
+        MockChannel(const SOCKET& connector, const Core::NodeId& remoteId)
+            : PluginHost::Channel(connector, remoteId) {}
 
-        uint32_t Identifier() const override { return 1; }
-        void Trigger() override {}
-        string WebSocketProtocol() const override { return ""; }
+        void Trigger() {}
+        bool IsWebSocket() const { return true; }
+        string Name() const { return "MockChannel"; }
+        void State(const PluginHost::Channel::state state) {}
+        PluginHost::Channel::state State() const { return state::WEBSERVER; }
     };
 
-    MockChannel channel;
+    SOCKET socket = 0;  // Dummy socket
+    Core::NodeId remoteId("127.0.0.1:8080");
+    MockChannel channel(socket, remoteId);
     
-    // Test attach/detach
     bool attached = plugin->Attach(channel);
     EXPECT_TRUE(attached);
     
