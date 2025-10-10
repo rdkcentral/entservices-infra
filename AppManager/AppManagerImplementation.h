@@ -229,6 +229,7 @@ namespace Plugin {
                                         const Exchange::IAppManager::AppLifecycleState oldState, const Exchange::IAppManager::AppErrorReason errorReason);
         void handleOnAppUnloaded(const string& appId, const string& appInstanceId);
         void handleOnAppLaunchRequest(const string& appId, const string& intent, const string& source);
+        std::string getInstallAppType(ApplicationType type);
 
         // IConfiguration methods
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -262,10 +263,7 @@ namespace Plugin {
         bool createOrUpdatePackageInfoByAppId(const string& appId, PackageInfo &packageData);
         bool removeAppInfoByAppId(const string &appId);
         void OnAppInstallationStatus(const string& jsonresponse);
-        std::string getInstallAppType(ApplicationType type);
         void  AppManagerWorkerThread(void);
-
-
         void dispatchEvent(EventNames, const JsonObject &params);
         void Dispatch(EventNames event, const JsonObject params);
         friend class Job;
