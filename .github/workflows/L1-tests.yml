@@ -1,16 +1,8 @@
 name: L1-tests
 
 on:
-  workflow_call:
-    inputs:
-      caller_source:
-        description: "Specifies the source type (e.g., local or test framework) for the workflow."
-        required: true
-        type: string
-    secrets:
-      RDKCM_RDKE:
-        required: true
-
+  push:
+    branches: ['topic/RDKEMW-8855']
 env:
   BUILD_TYPE: Debug
   THUNDER_REF: "R4.4.1"
@@ -485,17 +477,18 @@ jobs:
           -DHAS_FRONT_PANEL=ON
           -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
-          -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
-          -DPLUGIN_TELEMETRY=ON
-          -DPLUGIN_USBDEVICE=ON
-          -DPLUGIN_USB_MASS_STORAGE=ON
-          -DPLUGIN_OCICONTAINER=ON
-          -DPLUGIN_USERSETTINGS=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
-          -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_RUNTIME_MANAGER=ON
-          -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DHIDE_NON_EXTERNAL_SYMBOLS=ON
+          -DPLUGIN_TELEMETRY=OFF
+          -DPLUGIN_USBDEVICE=OFF
+          -DPLUGIN_USB_MASS_STORAGE=OFF
+          -DPLUGIN_OCICONTAINER=OFF
+          -DPLUGIN_USERSETTINGS=OFF
+          -DPLUGIN_RESOURCEMANAGER=OFF
+          -DPLUGIN_APPMANAGER=OFF
+          -DPLUGIN_STORAGE_MANAGER=OFF
+          -DPLUGIN_RUNTIME_MANAGER=OFF
+          -DPLUGIN_LIFECYCLE_MANAGER=OFF
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
@@ -579,6 +572,7 @@ jobs:
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
