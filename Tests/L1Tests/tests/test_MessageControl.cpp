@@ -2,16 +2,21 @@
 #include <gmock/gmock.h>
 #include <interfaces/IMessageControl.h>
 #include "MessageControl.h"
+#include <core/core.h>
 
 using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
 namespace {
-    class TestCallback : public Exchange::IMessageControl::INotification {
+    class TestCallback : public Core::IDispatch {
     public:
         TestCallback() : callCount(0) {}
 
-        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) override {
+        void Dispatch() override {
+            // Required by IDispatch
+        }
+
+        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) {
             callCount++;
             lastMetadata = metadata;
             lastText = text;
@@ -66,16 +71,15 @@ TEST_F(MessageControlL1Test, EnableLogging) {
 }
 
 TEST_F(MessageControlL1Test, EnableDisableWarning) {
-    // Test enabling and disabling messages
     Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::Type::INFORMATION,  // Using correct enum
+        Exchange::IMessageControl::MessageType::TRACE,  // Fixed enum
         "category1",
         "testmodule",
         true);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
     hr = plugin->Enable(
-        Exchange::IMessageControl::Type::INFORMATION,
+        Exchange::IMessageControl::MessageType::TRACE,
         "category1", 
         "testmodule",
         false);
@@ -83,9 +87,8 @@ TEST_F(MessageControlL1Test, EnableDisableWarning) {
 }
 
 TEST_F(MessageControlL1Test, ControlsIterator) {
-    // First enable some controls
-    plugin->Enable(Exchange::IMessageControl::Type::TRACING, "cat1", "mod1", true);
-    plugin->Enable(Exchange::IMessageControl::Type::LOGGING, "cat2", "mod2", true);
+    plugin->Enable(Exchange::IMessageControl::MessageType::TRACE, "cat1", "mod1", true);
+    plugin->Enable(Exchange::IMessageControl::MessageType::LOGGING, "cat2", "mod2", true);
 
     // Get controls iterator
     Exchange::IMessageControl::IControlIterator* controls = nullptr;
@@ -104,12 +107,13 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
 }
 
 TEST_F(MessageControlL1Test, ChannelOperations) {
-    class MockChannel : public Core::IDispatch {
+    class MockChannel : public PluginHost::Channel {
     public:
-        MockChannel() = default;
-        
-        uint32_t Submit(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
-        void Close() override {}
+        MockChannel() : PluginHost::Channel("MockChannel") {}
+
+        uint32_t Identifier() const override { return 1; }
+        void Trigger() override {}
+        string WebSocketProtocol() const override { return ""; }
     };
 
     MockChannel channel;
@@ -122,7 +126,7 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
 }
 
 TEST_F(MessageControlL1Test, MessageCallback) {
-    auto callback = Core::ServiceType<TestCallback>::Create();
+    auto callback = Core::Service<TestCallback>::Create();
     
     // Register callback
     Core::hresult hr = plugin->Callback(callback);
@@ -132,7 +136,9 @@ TEST_F(MessageControlL1Test, MessageCallback) {
     hr = plugin->Callback(nullptr);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
-    callback->Release();
+    if (callback != nullptr) {
+        callback->Release();
+    }
 }
 
 TEST_F(MessageControlL1Test, ConfigureConsoleOutput) {
