@@ -174,15 +174,16 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
 }
 
 TEST_F(MessageControlL1Test, ChannelOperations) {
-    class MockChannel : public PluginHost::Channel {
+    // Create a minimal mock channel that only implements what MessageControl actually uses
+    class MockChannel : public Core::IDispatch {
     public:
-        MockChannel(const SOCKET& connector, const Core::NodeId& remoteId)
-            : PluginHost::Channel(connector, remoteId) {}
+        MockChannel() = default;
+        
+        uint32_t Id() const { return 1234; }
+        void Dispatch() override {}
     };
 
-    SOCKET socket = 0;  // Dummy socket
-    Core::NodeId remoteId("127.0.0.1:8080");
-    MockChannel channel(socket, remoteId);
+    MockChannel channel;
     
     bool attached = plugin->Attach(channel);
     EXPECT_TRUE(attached);
@@ -191,7 +192,7 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
 }
 
 TEST_F(MessageControlL1Test, MessageCallback) {
-    auto callback = Core::Service<TestCallback>::Create();
+    auto callback = Core::Service<TestCallback>::Create<TestCallback>();
     
     // Register callback
     Core::hresult hr = plugin->Callback(callback);
