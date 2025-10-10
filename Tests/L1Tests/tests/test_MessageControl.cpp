@@ -8,36 +8,34 @@ using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
 namespace {
-    class TestCallback : public Exchange::IMessageControl {
+    class TestCallback : public Plugin::MessageControl::ICollect::ICallback {
     public:
         TestCallback() : callCount(0) {}
         
-        uint32_t Enable(const Exchange::IMessageControl::MessageType type, 
-                       const string& category, 
-                       const string& module, 
-                       const bool enabled) override {
-            lastType = type;
-            lastCategory = category;
-            lastModule = module;
-            lastEnabled = enabled;
+        void Message(const Exchange::IMessageControl::MessageType type, 
+                    const string& module, 
+                    const string& category,
+                    const string& file,
+                    const uint32_t lineNumber,
+                    const string& className, 
+                    const uint64_t timestamp,
+                    const string& text) override {
             callCount++;
-            return Core::ERROR_NONE;
-        }
-
-        uint32_t Controls(Exchange::IMessageControl::IControlIterator*& controls) const override {
-            controls = nullptr;
-            return Core::ERROR_NONE;
+            lastType = type;
+            lastModule = module;
+            lastCategory = category;
+            lastText = text;
         }
 
         BEGIN_INTERFACE_MAP(TestCallback)
-            INTERFACE_ENTRY(Exchange::IMessageControl)
+            INTERFACE_ENTRY(Plugin::MessageControl::ICollect::ICallback)
         END_INTERFACE_MAP
 
         uint32_t callCount;
         Exchange::IMessageControl::MessageType lastType;
-        string lastCategory;
         string lastModule;
-        bool lastEnabled;
+        string lastCategory; 
+        string lastText;
     };
 }
 
@@ -174,20 +172,16 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
 }
 
 TEST_F(MessageControlL1Test, ChannelOperations) {
-    // Create a minimal mock channel that only implements what MessageControl actually uses
-    class MockChannel : public Core::IDispatch {
+    class MockChannel : public PluginHost::Channel {
     public:
-        MockChannel() = default;
-        
-        uint32_t Id() const { return 1234; }
-        void Dispatch() override {}
+        MockChannel() 
+            : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")) {}
+
     };
 
     MockChannel channel;
-    
     bool attached = plugin->Attach(channel);
     EXPECT_TRUE(attached);
-    
     plugin->Detach(channel);
 }
 
