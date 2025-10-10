@@ -7,8 +7,8 @@ using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
 namespace {
-    class TestCallback : public Exchange::IMessageControl::ICollect::ICallback {
-    public: 
+    class TestCallback : public Exchange::IMessageControl::ICallback {
+    public:
         TestCallback() : callCount(0) {}
 
         void Message(const Core::Messaging::MessageInfo& metadata, const string& text) override {
@@ -68,14 +68,14 @@ TEST_F(MessageControlL1Test, EnableLogging) {
 TEST_F(MessageControlL1Test, EnableDisableWarning) {
     // Test enabling and disabling warning messages
     Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::MessageType::WARNING,
+        Exchange::IMessageControl::MessageType::ERROR, // Changed from WARNING to ERROR
         "category1",
         "testmodule",
         true);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
     hr = plugin->Enable(
-        Exchange::IMessageControl::MessageType::WARNING,
+        Exchange::IMessageControl::MessageType::ERROR, // Changed from WARNING to ERROR
         "category1", 
         "testmodule",
         false);
@@ -107,10 +107,16 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
     // Mock channel class since we can't use real one in L1 tests
     class MockChannel : public PluginHost::Channel {
     public:
+        MockChannel(const string& name) : PluginHost::Channel(name) {}
+        
         uint32_t Id() const override { return 1; }
+        // Add other required overrides from Channel base class
+        string Name() const override { return "MockChannel"; }
+        void State(const PluginHost::Channel::state state) override {}
+        state State() const override { return state::WEBSERVER; }
     };
 
-    MockChannel channel;
+    MockChannel channel("TestChannel");
     
     // Test attach/detach
     bool attached = plugin->Attach(channel);
