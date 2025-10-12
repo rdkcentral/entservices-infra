@@ -940,7 +940,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
     releaseResources();
 }
 
- /* Test Case for cancelling failed using ComRpc
+/* Test Case for cancelling failed using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Call the cancel method using the COM RPC interface, passing downloadId
@@ -967,14 +967,14 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
 /* Test Case for delete download failure when download in progress using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
- * Invoke the download method using the JSON RPC handler, passing the required parameters as json string and setting priority as true
+ * Invoke the download method using the JSON RPC handler, passing the required parameters
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
  * Invoke the delete method using the JSON RPC handler, passing the fileLocator
  * Verify failure in delete by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, deleteMethodusingJsonRpcInProgress) {
+TEST_F(PackageManagerTest, deleteMethodusingJsonRpcInProgressFail) {
 
     createResources();
 
@@ -991,7 +991,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcInProgress) {
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    // TC-25: Delete download failure when download in progress using JsonRpc
+    // TC-26: Delete download failure when download in progress using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
@@ -999,7 +999,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcInProgress) {
     releaseResources();
 }
 
- /* Test Case for delete failed using JsonRpc
+/* Test Case for delete failed using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Invoke the delete method using the JSON RPC handler, passing fileLocator
@@ -1013,7 +1013,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
 
     initforJsonRpc();
 
-    // TC-26: Failure in delete using JsonRpc
+    // TC-27: Failure in delete using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
@@ -1021,7 +1021,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
     releaseResources();
 }
 
- /* Test Case for delete download failure when download in progress using ComRpc
+/* Test Case for delete download failure when download in progress using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Obtain the required parameters for downloading using the getDownloadParams()
@@ -1032,7 +1032,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, deleteMethodusingComRpcInProgress) {
+TEST_F(PackageManagerTest, deleteMethodusingComRpcInProgressFail) {
 
     createResources();
 
@@ -1053,7 +1053,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcInProgress) {
 
     string fileLocator = "/opt/CDL/package1001";
 
-    // TC-27: Delete download failure when download in progress using ComRpc
+    // TC-28: Delete download failure when download in progress using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
 
 	deinitforComRpc();
@@ -1061,10 +1061,9 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcInProgress) {
     releaseResources();
 }
 
- /* Test Case for deleting failed using ComRpc
+/* Test Case for deleting failed using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
- * Obtain the required parameters for downloading using the getDownloadParams()
  * Call the delete method using the COM RPC interface, passing fileLocator
  * Verify delete method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the COM-RPC resources and clean-up related test resources
@@ -1076,9 +1075,9 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
 
     initforComRpc();
 
-    string fileLocator = "/opt/CDL/packagetestDownloadId";
+    string fileLocator = "/opt/CDL/package1001";
 
-    // TC-28: Failure in delete using ComRpc
+    // TC-29: Failure in delete using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
 
 	deinitforComRpc();
@@ -1089,7 +1088,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
 /* Test Case for download progress via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
- * Invoke the download method using the JSON RPC handler, passing the required parameters as json string and setting priority as true
+ * Invoke the download method using the JSON RPC handler, passing the required parameters
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
  * Invoke the progress method using the JSON RPC handler, passing the downloadId and progress info
  * Verify that the progress method is invoked successfully by asserting that it returns Core::ERROR_NONE
@@ -1113,8 +1112,8 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    // TC-29: Download progress via downloadId using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\", \"progress\": {\"progress\": 0}}"), mJsonRpcResponse));
+    // TC-30: Download progress via downloadId using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\", \"progress\": {}}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
