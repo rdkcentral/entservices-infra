@@ -145,11 +145,7 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
         MockChannel() 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")) {}
 
-        // Implement minimum required pure virtual methods
-        uint32_t Initialize() override { return Core::ERROR_NONE; }
-        void Deserialize(const uint8_t* dataFrame, const uint16_t length) override {}
-        uint16_t Serialize(uint8_t data[], const uint16_t length) const override { return 0; }
-        void Complete() override {}
+        uint32_t Id() const override { return 1234; }
     };
 
     MockChannel channel;
