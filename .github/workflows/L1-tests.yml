@@ -514,6 +514,8 @@ jobs:
           -fprofile-arcs
           -ftest-coverage
           -DEXCEPTIONS_ENABLE=ON
+          -DBUILD_SHARED_LIBS=ON
+          -DRDK_SERVICES_L1_TEST=ON
           -DUSE_THUNDER_R4=ON
           -DTHUNDER_VERSION=4
           -DTHUNDER_VERSION_MAJOR=4
