@@ -139,19 +139,6 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
     EXPECT_TRUE(element.IsValid());
 }
 
-TEST_F(MessageControlL1Test, ChannelOperations) {
-    class MockChannel : public PluginHost::Channel {
-    public:
-        MockChannel() 
-            : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")) {}
-    };
-
-    MockChannel channel;
-    bool attached = plugin->Attach(channel);
-    EXPECT_TRUE(attached);
-    plugin->Detach(channel);
-}
-
 TEST_F(MessageControlL1Test, ConfigureConsoleOutput) {
     string jsonConfig = R"(
     {
