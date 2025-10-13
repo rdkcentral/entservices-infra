@@ -22,6 +22,14 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Define plugin options before find_package
+option(PLUGIN_MESSAGECONTROL "Enable MessageControl plugin tests" ON)
+option(PLUGIN_LIFECYCLE_MANAGER "Enable LifecycleManager plugin tests" ON) 
+option(PLUGIN_RESOURCEMANAGER "Enable ResourceManager plugin tests" ON)
+option(PLUGIN_RUNTIME_MANAGER "Enable RuntimeManager plugin tests" ON)
+option(PLUGIN_TELEMETRY "Enable Telemetry plugin tests" ON)
+option(PLUGIN_USERSETTINGS "Enable UserSettings plugin tests" ON)
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 
 set (TEST_SRC
@@ -101,9 +109,6 @@ macro(add_plugin_test plugin_name test_files)
     add_plugin_test_ex(${plugin_opt} "${test_files}" "../../${plugin_name}" "${NAMESPACE}${plugin_name}")
 endmacro()
 
-# Enable MessageControl plugin test
-option(PLUGIN_MESSAGECONTROL "Enable MessageControl plugin tests" ON)
-
 # PLUGIN_USBDEVICE
 set (USBDEVICE_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/USBDevice ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (USBDEVICE_LIBS ${NAMESPACE}USBDevice ${NAMESPACE}USBDeviceImplementation)
@@ -159,12 +164,13 @@ set (MESSAGECONTROL_INC
     ${CMAKE_SOURCE_DIR}/../entservices-infra/MessageControl 
     ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (MESSAGECONTROL_LIBS 
-    ${NAMESPACE}MessageControl
-    ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
-add_plugin_test_ex(PLUGIN_MESSAGECONTROL 
-    tests/test_MessageControl.cpp 
-    "${MESSAGECONTROL_INC}" 
-    "${MESSAGECONTROL_LIBS}")
+    ${NAMESPACE}MessageControl)
+if(PLUGIN_MESSAGECONTROL)
+    add_plugin_test_ex(PLUGIN_MESSAGECONTROL 
+        tests/test_MessageControl.cpp 
+        "${MESSAGECONTROL_INC}" 
+        "${MESSAGECONTROL_LIBS}")
+endif()
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
