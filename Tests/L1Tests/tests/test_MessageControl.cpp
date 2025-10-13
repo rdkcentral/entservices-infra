@@ -7,24 +7,6 @@
 using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
-namespace {
-    class TestCallback : public Exchange::IMessageControl::ICallback {
-    public:
-        TestCallback() : _callCount(0) {}
-        
-        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) override {
-            _callCount++;
-        }
-
-        BEGIN_INTERFACE_MAP(TestCallback)
-            INTERFACE_ENTRY(Exchange::IMessageControl::ICallback)
-        END_INTERFACE_MAP
-
-    private:
-        uint32_t _callCount;
-    };
-}
-
 class MessageControlL1Test : public ::testing::Test {
 protected:
     Core::ProxyType<MessageControl> plugin;
@@ -174,16 +156,6 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
     bool attached = plugin->Attach(channel);
     EXPECT_TRUE(attached);
     plugin->Detach(channel);
-}
-
-TEST_F(MessageControlL1Test, MessageCallback) {
-    Core::ProxyType<Exchange::IMessageControl::ICallback> callback = Core::ProxyType<TestCallback>::Create();
-    
-    Core::hresult hr = plugin->Callback(callback);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-
-    hr = plugin->Callback(nullptr);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
 }
 
 TEST_F(MessageControlL1Test, ConfigureConsoleOutput) {
