@@ -514,7 +514,6 @@ jobs:
           -fprofile-arcs
           -ftest-coverage
           -DEXCEPTIONS_ENABLE=ON
-          -DBUILD_SHARED_LIBS=ON
           -DUSE_THUNDER_R4=ON
           -DTHUNDER_VERSION=4
           -DTHUNDER_VERSION_MAJOR=4
@@ -581,7 +580,6 @@ jobs:
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
-          -DPLUGIN_MESSAGECONTROL=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
