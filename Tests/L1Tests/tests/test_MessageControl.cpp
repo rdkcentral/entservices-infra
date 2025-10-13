@@ -8,26 +8,20 @@ using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
 namespace {
-    class TestCallback : public Plugin::MessageControl::ICollect::ICallback {
+    class TestCallback : public Exchange::IMessageControl::ICallback {
     public:
-        TestCallback() : callCount(0) {}
+        TestCallback() : _callCount(0) {}
         
-        void Message(const Exchange::IMessageControl::MessageType type, 
-                    const string& module,
-                    const string& category, 
-                    const string& fileName,
-                    const uint32_t lineNumber,
-                    const string& className,
-                    const uint64_t timestamp,
-                    const string& text) override {
-            callCount++;
+        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) override {
+            _callCount++;
         }
 
         BEGIN_INTERFACE_MAP(TestCallback)
-            INTERFACE_ENTRY(Plugin::MessageControl::ICollect::ICallback)
+            INTERFACE_ENTRY(Exchange::IMessageControl::ICallback)
         END_INTERFACE_MAP
 
-        uint32_t callCount;
+    private:
+        uint32_t _callCount;
     };
 }
 
@@ -169,7 +163,11 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
         MockChannel() 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")) {}
 
-        void Dispatch() override {}
+        // Implement minimum required pure virtual methods
+        uint32_t Initialize() override { return Core::ERROR_NONE; }
+        void Deserialize(const uint8_t* dataFrame, const uint16_t length) override {}
+        uint16_t Serialize(uint8_t data[], const uint16_t length) const override { return 0; }
+        void Complete() override {}
     };
 
     MockChannel channel;
@@ -179,13 +177,11 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
 }
 
 TEST_F(MessageControlL1Test, MessageCallback) {
-    Core::ProxyType<TestCallback> callback = Core::ProxyType<TestCallback>::Create();
+    Core::ProxyType<Exchange::IMessageControl::ICallback> callback = Core::ProxyType<TestCallback>::Create();
     
-    // Register callback
     Core::hresult hr = plugin->Callback(callback);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
-    // Unregister callback
     hr = plugin->Callback(nullptr);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 }
