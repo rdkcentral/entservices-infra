@@ -38,7 +38,7 @@
 #include "FactoriesImplementation.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
-#define TIMEOUT(1000)
+#define TIMEOUT   (1000)
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
@@ -1522,7 +1522,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
- TEST_F(PackageManagerTest, rateLimitusingComRpcError) {
+ TEST_F(PackageManagerTest, rateLimitusingComRpcFailure) {
 
     createResources();
 
@@ -1653,7 +1653,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     statusParams.version = version;
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
     notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -1671,7 +1671,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
 
 	deinitforComRpc();
 	
@@ -1729,10 +1729,10 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     // Initialize the status params
     StatusParams statusParams;
     statusParams.packageId = packageId;
-    statusParams.version = version;
+    statusParams.version = "2.0";
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
     notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, DeleteStorage(::testing::_, ::testing::_))
@@ -1749,7 +1749,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
 
 	deinitforComRpc();
 	
