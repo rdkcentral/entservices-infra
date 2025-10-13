@@ -145,7 +145,11 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
         MockChannel() 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")) {}
 
-        uint32_t Id() const override { return 1234; }
+        // Required pure virtual methods
+        uint32_t Identifier() const override { return 1234; } 
+        void StateChange() override {}
+        bool IsWebSocket() const override { return true; }
+        string Name() const override { return "MockChannel"; }
     };
 
     MockChannel channel;
