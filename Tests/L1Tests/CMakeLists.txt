@@ -101,6 +101,9 @@ macro(add_plugin_test plugin_name test_files)
     add_plugin_test_ex(${plugin_opt} "${test_files}" "../../${plugin_name}" "${NAMESPACE}${plugin_name}")
 endmacro()
 
+# Enable MessageControl plugin test
+option(PLUGIN_MESSAGECONTROL "Enable MessageControl plugin tests" ON)
+
 # PLUGIN_USBDEVICE
 set (USBDEVICE_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/USBDevice ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (USBDEVICE_LIBS ${NAMESPACE}USBDevice ${NAMESPACE}USBDeviceImplementation)
