@@ -8,13 +8,24 @@ using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
 namespace {
-    class TestCallback : public Core::IDispatch {
+    class TestCallback : public Plugin::MessageControl::ICollect::ICallback {
     public:
         TestCallback() : callCount(0) {}
         
-        void Dispatch() override {
+        void Message(const Exchange::IMessageControl::MessageType type, 
+                    const string& module,
+                    const string& category, 
+                    const string& fileName,
+                    const uint32_t lineNumber,
+                    const string& className,
+                    const uint64_t timestamp,
+                    const string& text) override {
             callCount++;
         }
+
+        BEGIN_INTERFACE_MAP(TestCallback)
+            INTERFACE_ENTRY(Plugin::MessageControl::ICollect::ICallback)
+        END_INTERFACE_MAP
 
         uint32_t callCount;
     };
@@ -168,7 +179,7 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
 }
 
 TEST_F(MessageControlL1Test, MessageCallback) {
-    auto callback = Core::Service<TestCallback>::Create<TestCallback>();
+    Core::ProxyType<TestCallback> callback = Core::ProxyType<TestCallback>::Create();
     
     // Register callback
     Core::hresult hr = plugin->Callback(callback);
@@ -177,10 +188,6 @@ TEST_F(MessageControlL1Test, MessageCallback) {
     // Unregister callback
     hr = plugin->Callback(nullptr);
     EXPECT_EQ(Core::ERROR_NONE, hr);
-
-    if (callback != nullptr) {
-        callback->Release();
-    }
 }
 
 TEST_F(MessageControlL1Test, ConfigureConsoleOutput) {
