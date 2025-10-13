@@ -1682,6 +1682,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 /* Test Case for uninstall failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the install method using the JSON RPC handler, passing the required parameters
+ * Verify that the install method fails by asserting that it returns Core::ERROR_GENERAL
  * Invoke the uninstall method using the JSON RPC handler, passing the required parameters
  * Verify that the uninstall method fails by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
@@ -1693,12 +1695,21 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
 
     initforJsonRpc();
 
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
+                return Core::ERROR_NONE;
+            }));
+    
     EXPECT_CALL(*mStorageManagerMock, DeleteStorage(::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
+
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/testpackage1001\", \"reason\": 1}"), mJsonRpcResponse));
 
     // TC-46: Failure on uninstall using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\", \"errorReason\": \"no error\"}"), mJsonRpcResponse));
@@ -1712,6 +1723,9 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Register the notification using the COM RPC interface and set the status params via the SetStatusParams()
+ * Call the install method using the COM RPC interface, passing required parameters
+ * Verify that the install method fails by asserting that it returns Core::ERROR_GENERAL
+ * Signal the onAppInstallationStatus method, passing the packageId and version as arguments and wait
  * Call the uninstall method using the COM RPC interface, passing required parameters
  * Verify that the uninstall method fails by asserting that it returns Core::ERROR_GENERAL
  * Signal the onAppInstallationStatus method, passing the packageId and version as arguments and wait
@@ -1730,15 +1744,28 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
     string packageId = "testPackage";
     string errorReason = "no error";
+    string version = "2.0";
+    string fileLocator = "/opt/CDL/testpackage1001";
+    Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
+    list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
+
+    auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
 
     // Initialize the status params
     StatusParams statusParams;
     statusParams.packageId = packageId;
-    statusParams.version = "2.0";
+    statusParams.version = version;
 
     // Register the notification
     mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
     notification.SetStatusParams(statusParams);
+
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
+                return Core::ERROR_NONE;
+            }));
 
     EXPECT_CALL(*mStorageManagerMock, DeleteStorage(::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1746,6 +1773,13 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
             [&](const string& appId, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
+
+    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+
+    notification.OnAppInstallationStatus(packageId, version);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
+    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
+    signal = PackageManager_invalidStatus;
 
 	// TC-47: Failure on uninstall using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Uninstall(packageId, errorReason));
@@ -1813,6 +1847,8 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 /* Test Case for config method failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the install method using the JSON RPC handler, passing the required parameters
+ * Verify install method failure by asserting that it returns Core::ERROR_GENERAL
  * Invoke the config method using the JSON RPC handler, passing the required parameters
  * Verify config method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
@@ -1823,6 +1859,15 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
     createResources();   
 
     initforJsonRpc();
+
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
+                return Core::ERROR_NONE;
+            }));
+
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/testpackage1001\", \"reason\": 1}"), mJsonRpcResponse));
 
     // TC-50: Failure in config using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"configMetadata\": {}}"), mJsonRpcResponse));
@@ -1835,6 +1880,9 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
 /* Test Case for config method failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Call the install method using the COM RPC interface, passing the required parameters
+ * Verify install method failure by asserting that it returns Core::ERROR_GENERAL
+ * Signal the onAppInstallationStatus method, passing the packageId and version as arguments and wait
  * Call the config method using the COM RPC interface, passing the required parameters
  * Verify config method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the COM-RPC resources and clean-up related test resources
@@ -1846,12 +1894,45 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 
     initforComRpc();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     string packageId = "testPackage";
     string version = "2.0";
+    string fileLocator = "/opt/CDL/testpackage1001";
+    Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
+    list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
     Exchange::RuntimeConfig runtimeConfig = {};
 
-	// TC-51: Failure in config using ComRpc
+    auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+
+    // Initialize the status params
+    StatusParams statusParams;
+    statusParams.packageId = packageId;
+    statusParams.version = version;
+
+    // Register the notification
+    mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    notification.SetStatusParams(statusParams);
+
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
+                return Core::ERROR_NONE;
+            }));
+
+    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+
+    notification.OnAppInstallationStatus(packageId, version);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
+    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
+
+    // TC-51: Failure in config using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Config(packageId, version, runtimeConfig));
+
+    // Unregister the notification
+    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
 
 	deinitforComRpc();
 	
@@ -1861,6 +1942,8 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the install method using the JSON RPC handler, passing the required parameters
+ * Verify install method failure by asserting that it returns Core::ERROR_GENERAL
  * Invoke the packageState method using the JSON RPC handler, passing the required parameters
  * Verify packageState method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
@@ -1871,6 +1954,15 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
     createResources();   
 
     initforJsonRpc();
+
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
+                return Core::ERROR_NONE;
+            }));
+
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/testpackage1001\", \"reason\": 1}"), mJsonRpcResponse));
 
     // TC-52: Failure in package state using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"installState\": 0}"), mJsonRpcResponse));
@@ -1883,6 +1975,9 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
 /* Test Case for package state failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Call the install method using the COM RPC interface, passing the required parameters
+ * Verify install method failure by asserting that it returns Core::ERROR_GENERAL
+ * Signal the onAppInstallationStatus method, passing the packageId and version as arguments and wait
  * Call the PackageState method using the COM RPC interface, passing the required parameters
  * Verify package state method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the COM-RPC resources and clean-up related test resources
@@ -1894,12 +1989,45 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 
     initforComRpc();
 
-    string packageId = "testPackageId";
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
+    string packageId = "testPackage";
     string version = "2.0";
+    string fileLocator = "/opt/CDL/testpackage1001";
+    Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
+    list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
     Exchange::IPackageInstaller::InstallState state = Exchange::IPackageInstaller::InstallState::INSTALLING;
+
+    auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+
+    // Initialize the status params
+    StatusParams statusParams;
+    statusParams.packageId = packageId;
+    statusParams.version = version;
+
+    // Register the notification
+    mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    notification.SetStatusParams(statusParams);
+
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
+                return Core::ERROR_NONE;
+            }));
+
+    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+
+    notification.OnAppInstallationStatus(packageId, version);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
+    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // TC-53: Failure in package state using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->PackageState(packageId, version, state));
+
+    // Unregister the notification
+    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
 
 	deinitforComRpc();
 	
@@ -1920,7 +2048,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcInvalidSignature) {
 
     initforJsonRpc();
 
-    // TC-53: Error in get config for packages due to empty file locator using JsonRpc
+    // TC-54: Error in get config for packages due to empty file locator using JsonRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"\", \"id\": \"1001\", \"version\": \"2.0\", \"config\": {}}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
@@ -1942,7 +2070,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcFailure) {
 
     initforJsonRpc();
 
-    // TC-54: Failure in get config for packages using JsonRpc
+    // TC-55: Failure in get config for packages using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"/opt/CDL/package1001\", \"id\": \"1001\", \"version\": \"2.0\", \"config\": {}}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
@@ -1970,7 +2098,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcInvalidSignature) {
 
     Exchange::RuntimeConfig config = {};
 
-    // TC-55: Error in get config for packages due to empty file locator using ComRpc
+    // TC-56: Error in get config for packages due to empty file locator using ComRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->GetConfigForPackage(fileLocator, id, version, config));
 
 	deinitforComRpc();
@@ -1998,7 +2126,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 
     Exchange::RuntimeConfig config = {};
 
-    // TC-56: Failure in get config for packages using ComRpc
+    // TC-57: Failure in get config for packages using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->GetConfigForPackage(fileLocator, id, version, config));
 
 	deinitforComRpc();
@@ -2022,7 +2150,7 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 
     initforJsonRpc();
     
-    // TC-57: Error on lock using JsonRpc
+    // TC-58: Error on lock using JsonRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("lock"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"lockReason\": 0, \"lockId\": 132, \"unpackedPath\": \"testPath\", \"configMetadata\": {}, \"appMetadata\": {}}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
@@ -2054,7 +2182,7 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
 
     auto appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLock);
 
-	// TC-58: Error on lock using ComRpc
+	// TC-59: Error on lock using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
 
 	deinitforComRpc();
@@ -2076,7 +2204,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 
     initforJsonRpc();
 
-	// TC-59: Error on unlock using JsonRpc
+	// TC-60: Error on unlock using JsonRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
@@ -2101,7 +2229,7 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
     string packageId = "testPackage";
     string version = "2.0";
 
-    // TC-60: Error on unlock using ComRpc
+    // TC-61: Error on unlock using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Unlock(packageId, version));
 
 	deinitforComRpc();
@@ -2123,7 +2251,7 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 
     initforJsonRpc();
 
-    // TC-61: Error on get locked info using JsonRpc
+    // TC-62: Error on get locked info using JsonRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("getLockedInfo"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"unpackedPath\": \"testPath\", \"configMetadata\": {}, \"gatewayMetadataPath\": \"testgatewayMetadataPath\", \"locked\": true}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
@@ -2152,7 +2280,7 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
     string gatewayMetadataPath = "testgatewayMetadataPath";
     bool locked = true;
 
-    // TC-62: Error on get locked info using ComRpc
+    // TC-63: Error on get locked info using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked));
 
 	deinitforComRpc();
