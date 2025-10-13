@@ -8,34 +8,15 @@ using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
 
 namespace {
-    class TestCallback : public Plugin::MessageControl::ICollect::ICallback {
+    class TestCallback : public Core::IDispatch {
     public:
         TestCallback() : callCount(0) {}
         
-        void Message(const Exchange::IMessageControl::MessageType type, 
-                    const string& module, 
-                    const string& category,
-                    const string& file,
-                    const uint32_t lineNumber,
-                    const string& className, 
-                    const uint64_t timestamp,
-                    const string& text) override {
+        void Dispatch() override {
             callCount++;
-            lastType = type;
-            lastModule = module;
-            lastCategory = category;
-            lastText = text;
         }
 
-        BEGIN_INTERFACE_MAP(TestCallback)
-            INTERFACE_ENTRY(Plugin::MessageControl::ICollect::ICallback)
-        END_INTERFACE_MAP
-
         uint32_t callCount;
-        Exchange::IMessageControl::MessageType lastType;
-        string lastModule;
-        string lastCategory; 
-        string lastText;
     };
 }
 
@@ -177,6 +158,7 @@ TEST_F(MessageControlL1Test, ChannelOperations) {
         MockChannel() 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")) {}
 
+        void Dispatch() override {}
     };
 
     MockChannel channel;
