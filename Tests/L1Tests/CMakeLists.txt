@@ -31,6 +31,7 @@ option(PLUGIN_TELEMETRY "Enable Telemetry plugin tests" ON)
 option(PLUGIN_USERSETTINGS "Enable UserSettings plugin tests" ON)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Interfaces REQUIRED)
 
 set (TEST_SRC
     tests/test_UtilsFile.cpp
