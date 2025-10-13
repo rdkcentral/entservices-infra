@@ -159,18 +159,13 @@ set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleMana
 set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
 add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
 
-# PLUGIN_MESSAGECONTROL  
-set (MESSAGECONTROL_INC 
-    ${CMAKE_SOURCE_DIR}/../entservices-infra/MessageControl 
-    ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-set (MESSAGECONTROL_LIBS 
-    ${NAMESPACE}MessageControl)
-if(PLUGIN_MESSAGECONTROL)
-    add_plugin_test_ex(PLUGIN_MESSAGECONTROL 
-        tests/test_MessageControl.cpp 
-        "${MESSAGECONTROL_INC}" 
-        "${MESSAGECONTROL_LIBS}")
-endif()
+# Modify MessageControl test section
+set(PLUGIN_MESSAGECONTROL ON CACHE BOOL "Enable MessageControl plugin tests" FORCE)
+
+# PLUGIN_MESSAGECONTROL
+set (MESSAGECONTROL_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/MessageControl ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (MESSAGECONTROL_LIBS ${NAMESPACE}MessageControl)
+add_plugin_test_ex(PLUGIN_MESSAGECONTROL tests/test_MessageControl.cpp "${MESSAGECONTROL_INC}" "${MESSAGECONTROL_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
@@ -182,7 +177,10 @@ include_directories(${TEST_INC})
 
 target_link_directories(${MODULE_NAME} PUBLIC ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins)
 
-target_link_libraries(${MODULE_NAME} ${TEST_LIB})
+target_link_libraries(${MODULE_NAME} 
+    ${TEST_LIB}
+    ${NAMESPACE}Interfaces
+)
 
 target_include_directories(${MODULE_NAME}
         PUBLIC
@@ -200,5 +198,3 @@ target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
 write_config(${PLUGIN_NAME})
-
-
