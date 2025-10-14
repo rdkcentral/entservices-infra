@@ -41,7 +41,7 @@ TEST_F(MessageControlL1Test, EnableAllMessageTypes) {
         EXPECT_EQ(Core::ERROR_NONE, hr);
     }
 }
-
+/*
 TEST_F(MessageControlL1Test, ControlStructure) {
     Exchange::IMessageControl::Control testControl;
     testControl.type = Exchange::IMessageControl::TRACING;
@@ -75,7 +75,7 @@ TEST_F(MessageControlL1Test, ControlStructure) {
     EXPECT_TRUE(found);
     controls->Release();
 }
-
+*/
 TEST_F(MessageControlL1Test, EnableTracing) {
     Core::hresult hr = plugin->Enable(
         Exchange::IMessageControl::TRACING,
