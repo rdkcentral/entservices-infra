@@ -477,18 +477,18 @@ namespace Plugin {
                         FailReason::PACKAGE_MISMATCH_FAILURE : FailReason::SIGNATURE_VERIFICATION_FAILURE;
                     LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
 
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                    packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
-                        PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
-#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+//#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+//                    packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
+//                        PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
+//#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
                 }
                 #endif
             } else {
                 LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
                 state.failReason = FailReason::PERSISTENCE_FAILURE;
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
-#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+//#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+//                packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
+//#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
             }
             NotifyInstallStatus(packageId, version, state);
         }
@@ -557,6 +557,11 @@ namespace Plugin {
 
 #if 1
             result = Install(packageId, version, keyValues, fileLocator, state);
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
+                        ? PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE
+                        : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
+#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 #else
             if (nullptr == mStorageManagerObject) {
                 if (Core::ERROR_NONE != createStorageManagerObject()) {
