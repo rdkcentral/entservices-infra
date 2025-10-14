@@ -75,9 +75,9 @@ protected:
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
     string uri;
-    string ndownloadId;
-    string nfileLocator;
-    Exchange::IPackageDownloader::Reason nreason;
+    //string ndownloadId;
+    //string nfileLocator;
+    //Exchange::IPackageDownloader::Reason nreason;
     PLUGINHOST_DISPATCHER *dispatcher;
     FactoriesImplementation factoriesImplementation;
 
@@ -91,9 +91,9 @@ protected:
     Exchange::IPackageDownloader::DownloadId downloadId;
     Exchange::IPackageDownloader::ProgressInfo progress;
 
-    StatusParams statusParams;
-    Core::Sink<NotificationTest> downloadNotification;
-    uint32_t downloadSignal;
+    //StatusParams statusParams;
+    //Core::Sink<NotificationTest> downloadNotification;
+    //uint32_t downloadSignal;
     
     // Constructor
     PackageManagerTest()
