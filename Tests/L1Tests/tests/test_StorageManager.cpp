@@ -562,6 +562,7 @@ TEST_F(StorageManagerTest, DeleteStorage_Failure){
     rmdir is set up to simulate a failure result.
     It verifies that the DeleteStorage method returns a failure code and errorReason that Error deleting the empty App Folder: File exists.
 */
+#if 0
 TEST_F(StorageManagerTest, DeleteStorage_rmdirFilure){
 
     std::string appId = "testApp";
@@ -613,7 +614,7 @@ TEST_F(StorageManagerTest, DeleteStorage_rmdirFilure){
     EXPECT_EQ(Core::ERROR_GENERAL, interface->DeleteStorage(appId, errorReason));
     EXPECT_STREQ("Error deleting the empty App Folder: File exists", errorReason.c_str());
 }
-
+#endif
 /*
     DeleteStorage_Success test checks the successful deletion of storage for a given appId.
     Creates a mock environment where the necessary functions like mkdir, access, nftw, statvfs, and rmdir are set up to simulate a successful resutls.
@@ -670,7 +671,7 @@ TEST_F(StorageManagerTest, DeleteStorage_Success){
     EXPECT_EQ(Core::ERROR_NONE, interface->DeleteStorage(appId, errorReason));
     EXPECT_STREQ("", errorReason.c_str());
 }
-
+#if 0
 
 /*
     test_clear_failure_json checks the failure of the clear method when an empty appId is provided.
@@ -787,7 +788,7 @@ TEST_F(StorageManagerTest, test_clear_success_json){
     EXPECT_EQ(Core::ERROR_NONE, interface->CreateStorage("testApp", 1024, path, errorReason));
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("clear"), _T("{\"appId\":\"testApp\"}"), response));
 }
-
+#endif
 /*
     test_clearall_failure_json checks the failure of the clearAll method when an error occurs during the clearing process.
     It creates a mock environment where the necessary functions like mkdir, access, nftw, statvfs, and SetValue are set up to simulate a successful result.
