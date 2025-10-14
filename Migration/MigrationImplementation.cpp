@@ -45,67 +45,98 @@ namespace WPEFramework
             LOGINFO("MigrationImplementation Destructor called");
         }
 
-        Core::hresult MigrationImplementation::GetBootTypeInfo(BootTypeInfo& bootTypeInfo)
+        Core::hresult MigrationImplementation::SetMigrationStatus(const MigrationStatus status, MigrationResult& migrationResult)
         {
-            bool status = false;
-            const char* filename = "/tmp/bootType";
-            string propertyName = "BOOT_TYPE";
+            // Map enum to string
+            static const std::unordered_map<MigrationStatus, std::string> statusToString = {
+                { MIGRATION_STATUS_NOT_STARTED,                "NOT_STARTED" },
+                { MIGRATION_STATUS_NOT_NEEDED,                 "NOT_NEEDED" },
+                { MIGRATION_STATUS_STARTED,                    "STARTED" },
+                { MIGRATION_STATUS_PRIORITY_SETTINGS_MIGRATED, "PRIORITY_SETTINGS_MIGRATED" },
+                { MIGRATION_STATUS_DEVICE_SETTINGS_MIGRATED,   "DEVICE_SETTINGS_MIGRATED" },
+                { MIGRATION_STATUS_CLOUD_SETTINGS_MIGRATED,    "CLOUD_SETTINGS_MIGRATED" },
+                { MIGRATION_STATUS_APP_DATA_MIGRATED,          "APP_DATA_MIGRATED" },
+                { MIGRATION_STATUS_MIGRATION_COMPLETED,        "MIGRATION_COMPLETED" }
+            };
 
-            if (Utils::readPropertyFromFile(filename, propertyName, bootTypeInfo.bootType))
-            {
-                LOGINFO("Boot type changed to: %s, current OS Class: rdke\n", bootTypeInfo.bootType.c_str());
-                status = true;
-            }
-            else
-            {
-                LOGERR("BootType is not present");
-            }
-	        return (status ? static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) : static_cast<uint32_t>(ERROR_FILE_IO));
-        }
-
-        Core::hresult MigrationImplementation::SetMigrationStatus(const string& status, MigrationResult& migrationResult)
-        {
-            std::unordered_set<std::string> Status_Set = {"NOT_STARTED","NOT_NEEDED","STARTED","PRIORITY_SETTINGS_MIGRATED","DEVICE_SETTINGS_MIGRATED","CLOUD_SETTINGS_MIGRATED","APP_DATA_MIGRATED","MIGRATION_COMPLETED"};
-
-            if(Status_Set.find(status) != Status_Set.end())
-            {
+            auto it = statusToString.find(status);
+            if (it != statusToString.end()) {
                 // if file exists, it will be truncated, otherwise it will be created
                 std::ofstream file(MIGRATIONSTATUS, std::ios::trunc);
                 if (file.is_open()) {
-                    // Write the string status to the file
-                    file << status;
-                    LOGINFO("Current ENTOS Migration Status is %s\n", status.c_str());
+                // Write the string status to the file
+                file << it->second;
+                LOGINFO("Current ENTOS Migration Status is %s\n", it->second.c_str());
                 } else {
                     LOGERR("Failed to open or create file %s\n", MIGRATIONSTATUS);
-		            return (ERROR_FILE_IO);
+                    return (ERROR_FILE_IO);
                 }
-                // Close the file
                 file.close();
-            }
-            else {
-		        LOGERR("Invalid Migration Status\n");
-		        return (WPEFramework::Core::ERROR_INVALID_PARAMETER);
+            } else {
+                LOGERR("Invalid Migration Status\n");
+                return (WPEFramework::Core::ERROR_INVALID_PARAMETER);
             }
             migrationResult.success = true;
             return WPEFramework::Core::ERROR_NONE;
         }
 
-        Core::hresult MigrationImplementation::GetMigrationStatus(MigrationStatusInfo& migrationStatusInfo)
+        Core::hresult MigrationImplementation::GetMigrationStatus(MigrationStatus& migrationStatus)
         {
             bool status = false;
             RFC_ParamData_t param = {0};
             WDMP_STATUS wdmpstatus = getRFCParameter((char*)"thunderapi", TR181_MIGRATIONSTATUS, &param);
             if (WDMP_SUCCESS == wdmpstatus) {
-                migrationStatusInfo.migrationStatus = param.value;
-                LOGINFO("Current ENTOS Migration Status is: %s\n", migrationStatusInfo.migrationStatus.c_str());
-                status = true;
-            }
-            else {
-                LOGINFO("Failed to get RFC parameter for Migration Status \n");
+                std::string migrationStatusStr = param.value;
+
+                static const std::unordered_map<std::string, MigrationStatus> stringToStatus = {
+                    {"NOT_STARTED",                MIGRATION_STATUS_NOT_STARTED},
+                    {"NOT_NEEDED",                 MIGRATION_STATUS_NOT_NEEDED},
+                    {"STARTED",                    MIGRATION_STATUS_STARTED},
+                    {"PRIORITY_SETTINGS_MIGRATED", MIGRATION_STATUS_PRIORITY_SETTINGS_MIGRATED},
+                    {"DEVICE_SETTINGS_MIGRATED",   MIGRATION_STATUS_DEVICE_SETTINGS_MIGRATED},
+                    {"CLOUD_SETTINGS_MIGRATED",    MIGRATION_STATUS_CLOUD_SETTINGS_MIGRATED},
+                    {"APP_DATA_MIGRATED",          MIGRATION_STATUS_APP_DATA_MIGRATED},
+                    {"MIGRATION_COMPLETED",        MIGRATION_STATUS_MIGRATION_COMPLETED}
+                };
+
+                auto it = stringToStatus.find(migrationStatusStr);
+                if (it != stringToStatus.end()) {
+                    migrationStatus = it->second;
+                    LOGINFO("Current ENTOS Migration Status is: %s\n", migrationStatusStr.c_str());
+                    status = true;
+                }
+            } else {
+            LOGINFO("Failed to get RFC parameter for Migration Status \n");
             }
 
-            return (status ?  static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) :  static_cast<uint32_t>(ERROR_FILE_IO));
+            return (status ? static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) : static_cast<uint32_t>(ERROR_FILE_IO));
         }
-    
+
+        Core::hresult MigrationImplementation::GetBootTypeInfo(BootType& bootType)
+        {
+            bool status = false;
+            const char* filename = "/tmp/bootType";
+            std::string propertyName = "BOOT_TYPE";
+            std::string bootTypeStr;
+
+            if (Utils::readPropertyFromFile(filename, propertyName, bootTypeStr)) {
+                static const std::unordered_map<std::string, BootType> stringToBootType = {
+                    {"BOOT_NORMAL",       BOOT_TYPE_NORMAL},
+                    {"BOOT_MIGRATION",    BOOT_TYPE_MIGRATION},
+                    {"BOOT_UPDATE",       BOOT_TYPE_UPDATE},
+                    {"BOOT_INCONCLUSIVE", BOOT_TYPE_INCONCLUSIVE}
+                };
+
+                auto it = stringToBootType.find(bootTypeStr);
+                if (it != stringToBootType.end()) {
+                    bootType = it->second;
+                    LOGINFO("Boot type changed to: %s, current OS Class: rdke\n", bootTypeStr.c_str());
+                    status = true;
+                }
+            } else {
+                 LOGERR("BootType is not present");
+            }
+            return (status ? static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) : static_cast<uint32_t>(ERROR_FILE_IO));
+        }
     } // namespace Plugin
 } // namespace WPEFramework
