@@ -314,6 +314,9 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
             m_status_signal = PackageManager_invalidStatus;
             return status_signal;
         }
+
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
     };
 
 /* Test Case for verifying registered methods using JsonRpc
@@ -1490,6 +1493,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
 
+    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1500,6 +1505,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // TC-45: Failure on install using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
+    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
@@ -1508,8 +1515,12 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
+    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
     // Unregister the notification
     mPackageManagerImpl->Unregister(&notification);
+
+    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
 	deinitforComRpc();
 	
