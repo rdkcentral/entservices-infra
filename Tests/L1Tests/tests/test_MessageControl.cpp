@@ -128,10 +128,20 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
 }
 
 TEST_F(MessageControlL1Test, Initialize) {
-    PluginHost::IShell* service = nullptr;
-    string result = plugin->Initialize(service);
-    EXPECT_FALSE(result.empty());
+    string basicConfig = R"({"console":false,"syslog":false,"filename":""})";
+    
+    MockShell mockService;
+    EXPECT_CALL(mockService, ConfigLine())
+        .WillRepeatedly(::testing::Return(basicConfig));
+    EXPECT_CALL(mockService, Background())
+        .WillRepeatedly(::testing::Return(true));
+    EXPECT_CALL(mockService, VolatilePath())
+        .WillRepeatedly(::testing::Return("/tmp/"));
+
+    string result = plugin->Initialize(&mockService);
+    EXPECT_TRUE(result.empty());
 }
+
 /*
 TEST_F(MessageControlL1Test, NetworkConfig) {
     string jsonConfig = R"({"port":2200, "binding":"127.0.0.1"})";
