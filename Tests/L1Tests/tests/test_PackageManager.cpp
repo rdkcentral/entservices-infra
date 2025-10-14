@@ -236,8 +236,7 @@ protected:
     #endif
 };
 
-class NotificationTest : public Exchange::IPackageDownloader::INotification,
-                         public Exchange::IPackageInstaller::INotification
+class NotificationTest : public Exchange::IPackageInstaller::INotification
 {
     private:
         BEGIN_INTERFACE_MAP(Notification)
@@ -1466,7 +1465,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     statusParams.version = version;
 
     // Register the notification
-    mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -1488,7 +1487,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    mPackageManagerImpl->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -1573,7 +1572,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     statusParams.version = version;
 
     // Register the notification
-    mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -1613,7 +1612,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    mPackageManagerImpl->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -1736,7 +1735,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     statusParams.version = version;
 
     // Register the notification
-    mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -1760,7 +1759,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Config(packageId, version, runtimeConfig));
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    mPackageManagerImpl->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -1835,7 +1834,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     statusParams.version = version;
 
     // Register the notification
-    mPackageManagerImpl->Register(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -1859,7 +1858,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->PackageState(packageId, version, state));
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageInstaller::INotification*>(&notification));
+    mPackageManagerImpl->Unregister(&notification);
 
 	deinitforComRpc();
 	
