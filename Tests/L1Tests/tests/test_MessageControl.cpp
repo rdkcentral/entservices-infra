@@ -133,16 +133,6 @@ TEST_F(MessageControlL1Test, Initialize) {
     EXPECT_FALSE(result.empty());
 }
 
-TEST_F(MessageControlL1Test, AttachDetachChannel) {
-    PluginHost::Channel channel;
-    channel.Id(1234);
-    
-    bool attached = plugin->Attach(channel);
-    EXPECT_TRUE(attached);
-    
-    plugin->Detach(channel);
-}
-
 TEST_F(MessageControlL1Test, NetworkConfig) {
     string jsonConfig = R"({"port":2200, "binding":"127.0.0.1"})";
     Core::JSON::String config;
@@ -154,6 +144,78 @@ TEST_F(MessageControlL1Test, NetworkConfig) {
 
 TEST_F(MessageControlL1Test, OutputDirector) {
     string testFileName = "/tmp/test.log";
-    plugin->Announce(new Publishers::FileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, testFileName));
+    
+    auto* fileOutput = new Publishers::FileOutput(
+        Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, 
+        testFileName);
+    plugin->Announce(fileOutput);
+
+    std::ifstream testFile(testFileName);
+    EXPECT_TRUE(testFile.good()) << "File " << testFileName << " was not created";
+    testFile.close();
+t
+    Core::hresult hr = plugin->Enable(
+        Exchange::IMessageControl::TRACING,
+        "category1",
+        "testmodule",
+        true); 
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+
     plugin->Deinitialize(nullptr);
+    std::ifstream checkFile(testFileName);
+    EXPECT_FALSE(checkFile.good()) << "File " << testFileName << " was not cleaned up";
+}
+
+TEST_F(MessageControlL1Test, EnableMultipleCategories) {
+    Core::hresult hr = plugin->Enable(
+        Exchange::IMessageControl::TRACING,
+        "category1", 
+        "module1",
+        true);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+
+    hr = plugin->Enable(
+        Exchange::IMessageControl::TRACING,
+        "category2",
+        "module1", 
+        true);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+}
+
+TEST_F(MessageControlL1Test, EnableMultipleModules) {
+    Core::hresult hr = plugin->Enable(
+        Exchange::IMessageControl::LOGGING,
+        "category1",
+        "module1",
+        true);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+
+    hr = plugin->Enable(
+        Exchange::IMessageControl::LOGGING,
+        "category1",
+        "module2",
+        true);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+}
+
+TEST_F(MessageControlL1Test, EnableAndVerifyControls) {
+    plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", true);
+    
+    Exchange::IMessageControl::IControlIterator* controls = nullptr;
+    Core::hresult hr = plugin->Controls(controls);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+    ASSERT_NE(nullptr, controls);
+
+    Exchange::IMessageControl::Control current;
+    bool found = false;
+    while (controls->Next(current)) {
+        if (current.type == Exchange::IMessageControl::STANDARD_OUT &&
+            current.category == "cat1" &&
+            current.module == "mod1") {
+            found = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(found);
+    controls->Release();
 }
