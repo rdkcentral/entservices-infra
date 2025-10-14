@@ -25,6 +25,9 @@
 /* Until we don't get it from Package configuration, use size as 1MB */
 #define STORAGE_MAX_SIZE 1024
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -687,10 +690,12 @@ namespace Plugin {
         ASSERT(std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end());
         if (std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end()) {
             mInstallNotifications.push_back(notification);
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             notification->AddRef();
         }
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         mAdminLock.Unlock();
-
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         return result;
     }
 
