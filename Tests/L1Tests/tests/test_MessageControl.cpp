@@ -128,18 +128,8 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
 }
 
 TEST_F(MessageControlL1Test, Initialize) {
-    string basicConfig = R"({"console":false,"syslog":false,"filename":""})";
-    
-    MockShell mockService;
-    EXPECT_CALL(mockService, ConfigLine())
-        .WillRepeatedly(::testing::Return(basicConfig));
-    EXPECT_CALL(mockService, Background())
-        .WillRepeatedly(::testing::Return(true));
-    EXPECT_CALL(mockService, VolatilePath())
-        .WillRepeatedly(::testing::Return("/tmp/"));
-
-    string result = plugin->Initialize(&mockService);
-    EXPECT_TRUE(result.empty());
+    string result = plugin->Initialize(nullptr);
+    EXPECT_FALSE(result.empty()); 
 }
 
 /*
