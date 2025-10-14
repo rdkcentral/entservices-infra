@@ -409,10 +409,6 @@ uint32_t Telemetry_L2test::CreateTelemetryInterfaceObjectUsingComRPCConnection()
     Engine_Telemetry = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
     Client_Telemetry = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(Engine_Telemetry));
 
-    TEST_LOG("Creating Engine_Telemetry Announcements");
-#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
-    Engine_Telemetry->Announcements(mClient_Telemetry->Announcement());
-#endif
     if (!Client_Telemetry.IsValid())
     {
         TEST_LOG("Invalid Client_Telemetry");
