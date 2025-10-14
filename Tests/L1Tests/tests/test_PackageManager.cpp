@@ -263,6 +263,7 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
 
         void SetStatusParams(const StatusParams& statusParam)
         {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             m_status_param = statusParam;
         }
 
@@ -1491,7 +1492,6 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
     // Register the notification
     mPackageManagerImpl->Register(&notification);
-    notification.SetStatusParams(statusParams);
 
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
@@ -1506,7 +1506,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-
+    
+    notification.SetStatusParams(statusParams);
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
