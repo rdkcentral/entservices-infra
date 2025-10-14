@@ -126,3 +126,34 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
     Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("test");
     EXPECT_TRUE(element.IsValid());
 }
+
+TEST_F(MessageControlL1Test, Initialize) {
+    PluginHost::IShell* service = nullptr;
+    string result = plugin->Initialize(service);
+    EXPECT_FALSE(result.empty());
+}
+
+TEST_F(MessageControlL1Test, AttachDetachChannel) {
+    PluginHost::Channel channel;
+    channel.Id(1234);
+    
+    bool attached = plugin->Attach(channel);
+    EXPECT_TRUE(attached);
+    
+    plugin->Detach(channel);
+}
+
+TEST_F(MessageControlL1Test, NetworkConfig) {
+    string jsonConfig = R"({"port":2200, "binding":"127.0.0.1"})";
+    Core::JSON::String config;
+    config.FromString(jsonConfig);
+    
+    EXPECT_EQ(2200, plugin->_config.Remote.Port.Value());
+    EXPECT_STREQ("127.0.0.1", plugin->_config.Remote.Binding.Value().c_str());
+}
+
+TEST_F(MessageControlL1Test, OutputDirector) {
+    string testFileName = "/tmp/test.log";
+    plugin->Announce(new Publishers::FileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, testFileName));
+    plugin->Deinitialize(nullptr);
+}
