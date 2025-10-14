@@ -66,6 +66,12 @@ namespace Plugin {
     {
         private:
         class State {
+            class BlockedInstallData {
+                public:
+                packagemanager::NameValues keyValues;
+                string fileLocator;
+            };
+
             public:
             State() {}
             State(const packagemanager::ConfigMetaData &config) {
@@ -79,6 +85,8 @@ namespace Plugin {
             string unpackedPath;
             FailReason failReason = Exchange::IPackageInstaller::FailReason::NONE;
             std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
+            BlockedInstallData  blockedInstallData;
+
         };
 
         typedef std::pair<std::string, std::string> StateKey;
@@ -170,7 +178,7 @@ namespace Plugin {
         Core::hresult Deinitialize(PluginHost::IShell* service) override;
 
         // IPackageInstaller methods
-        Core::hresult Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) override;
+        Core::hresult Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) override;
         Core::hresult Uninstall(const string &packageId, string &errorReason ) override;
         Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
@@ -200,7 +208,7 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        string GetVersion(const string& id) {
+        string GetInstalledVersion(const string& id) {
             for (auto const& [key, state] : mState) {
                 if ((id.compare(key.first) == 0) &&
                     (state.installState == InstallState::INSTALLED || state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
@@ -209,8 +217,11 @@ namespace Plugin {
             }
             return "";
         }
-        //State& GetInstalledPackage(const string& id, const string& version) {
-        //}
+        Core::hresult Install(const string &packageId, const string &version,
+            const packagemanager::NameValues &keyValues, const string &fileLocator,
+            State& state
+            //Exchange::IPackageInstaller::FailReason &failReason
+        );
 
         void InitializeState();
         void downloader(int n);
