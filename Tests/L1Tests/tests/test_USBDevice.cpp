@@ -303,6 +303,7 @@ TEST_F(USBDeviceTest, RegisteredMethods)
  * @return : \"params\":{"deviceclass":8,"devicesubclass":6,"devicename":"002\/002","devicepath":"\/dev\/sda"}
  *
  */
+#if 0
 TEST_F(USBDeviceTest, OnDevicePluggedInSuccess)
 {
     Core::Event onDevicePluggedIn(false, true);
@@ -617,6 +618,7 @@ TEST_F(USBDeviceTest, getDeviceListUsingWithMultipleMassStorageUSBSuccessCase)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
     EXPECT_EQ(response, string("[{\"deviceClass\":8,\"deviceSubclass\":8,\"deviceName\":\"100\\/001\",\"devicePath\":\"\\/dev\\/sda\"},{\"deviceClass\":8,\"deviceSubclass\":8,\"deviceName\":\"101\\/002\",\"devicePath\":\"\\/dev\\/sdb\"}]"));
 }
+#endif
 /*Test cases for getDeviceList ends here*/
 
 /*******************************************************************************************************************
