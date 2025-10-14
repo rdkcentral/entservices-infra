@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <interfaces/IMessageControl.h>
 #include "MessageControl.h"
 #include <core/core.h>
 
