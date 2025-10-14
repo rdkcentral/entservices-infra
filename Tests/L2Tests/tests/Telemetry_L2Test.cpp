@@ -973,7 +973,7 @@ TEST_F(Telemetry_L2test, SetOptOutTelemetry_COMRPC)
         TEST_LOG("Err: %s", errorMsg.c_str());
     }
 
-    /* Verify OptOut value using GetOptOutTelemetry */
+    /* Verify OptOut value using IsOptOutTelemetry */
     optOut = true; //initially setting to true, so that we can verify
     bool ret = false;
     status = m_telemetryplugin->IsOptOutTelemetry(optOut, ret);
@@ -996,7 +996,7 @@ TEST_F(Telemetry_L2test, SetOptOutTelemetry_COMRPC)
         TEST_LOG("Err: %s", errorMsg.c_str());
     }
 
-    /* Verify OptOut value using GetOptOutTelemetry */
+    /* Verify OptOut value using IsOptOutTelemetry */
     optOut = false; //initially setting to false, so that we can verify
     ret = false;
     status = m_telemetryplugin->IsOptOutTelemetry(optOut, ret);
@@ -1066,10 +1066,6 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_LIGHTSLEEP)
     mEngine_PowerManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
     mClient_PowerManager = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_PowerManager));
 
-    TEST_LOG("Creating mEngine_PowerManager Announcements");
-#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
-    mEngine_PowerManager->Announcements(mClient_PowerManager->Announcement());
-#endif
 
     if (!mClient_PowerManager.IsValid()) {
         TEST_LOG("Invalid mClient_PowerManager");
@@ -1122,11 +1118,6 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_DEEPSLEEP)
     TEST_LOG("Creating mEngine_PowerManager");
     mEngine_PowerManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
     mClient_PowerManager = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_PowerManager));
-
-    TEST_LOG("Creating mEngine_PowerManager Announcements");
-#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
-    mEngine_PowerManager->Announcements(mClient_PowerManager->Announcement());
-#endif
 
     if (!mClient_PowerManager.IsValid()) {
         TEST_LOG("Invalid mClient_PowerManager");
@@ -1185,11 +1176,6 @@ TEST_F(Telemetry_L2test, TriggerOnPrivacyModeChangedNotification_COMRPC)
     TEST_LOG("Creating mEngine_UserSettings");
     mEngine_UserSettings = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
     mClient_UserSettings = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_UserSettings));
-
-    TEST_LOG("Creating mEngine_UserSettings Announcements");
-#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
-    mEngine_UserSettings->Announcements(mClient_UserSettings->Announcement());
-#endif
 
     if (!mClient_UserSettings.IsValid()) {
         TEST_LOG("Invalid mClient_UserSettings");
