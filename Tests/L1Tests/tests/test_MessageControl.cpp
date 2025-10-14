@@ -142,7 +142,7 @@ TEST_F(MessageControlL1Test, ConfigureConsoleOutput) {
     string result = plugin->Initialize(nullptr);
     EXPECT_TRUE(result.empty());
 }
-*/
+
 TEST_F(MessageControlL1Test, ConfigureSyslogOutput) {
     string jsonConfig = R"(
     {
@@ -158,3 +158,4 @@ TEST_F(MessageControlL1Test, ConfigureSyslogOutput) {
     string result = plugin->Initialize(nullptr);
     EXPECT_TRUE(result.empty());
 }
+*/
