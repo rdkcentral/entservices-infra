@@ -126,36 +126,3 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
     Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("test");
     EXPECT_TRUE(element.IsValid());
 }
-/*
-TEST_F(MessageControlL1Test, ConfigureConsoleOutput) {
-    string jsonConfig = R"(
-    {
-        "console": true,
-        "syslog": false,
-        "abbreviated": true,
-        "maxexportconnections": 5
-    })";
-
-    Core::JSONRPC::Message message;
-    message.FromString(jsonConfig);
-
-    string result = plugin->Initialize(nullptr);
-    EXPECT_TRUE(result.empty());
-}
-
-TEST_F(MessageControlL1Test, ConfigureSyslogOutput) {
-    string jsonConfig = R"(
-    {
-        "console": false,
-        "syslog": true,
-        "abbreviated": true,
-        "maxexportconnections": 5
-    })";
-
-    Core::JSONRPC::Message message;
-    message.FromString(jsonConfig);
-
-    string result = plugin->Initialize(nullptr);
-    EXPECT_TRUE(result.empty());
-}
-*/
