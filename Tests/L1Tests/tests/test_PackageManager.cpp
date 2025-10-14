@@ -40,6 +40,9 @@
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (3000)
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 using ::testing::NiceMock;
 using namespace WPEFramework;
 using namespace std;
@@ -263,6 +266,7 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
             m_status_param = statusParam;
         }
 
+        #if 0
         void OnAppDownloadStatus(const string& downloadId, const string& fileLocator, const Exchange::IPackageDownloader::Reason reason)
         {
             m_status_signal = PackageManager_AppDownloadStatus;
@@ -274,14 +278,21 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
 
             m_condition_variable.notify_one();
         }
+        #endif
 
-        void OnAppInstallationStatus(const string& packageId, const string& version)
+        void OnAppInstallationStatus(const string& jsonresponse) override
         {
             m_status_signal = PackageManager_AppInstallStatus;
             
+            JsonObject obj;
+            if(obj.IElement::FromString(jsonresponse)) {
+                JsonValue packageId = obj["packageId"];
+                JsonValue version = obj["version"]; 
+            }
+
             std::unique_lock<std::mutex> lock(m_mutex);
-            EXPECT_EQ(m_status_param.packageId, packageId);
-            EXPECT_EQ(m_status_param.version, version);
+            EXPECT_EQ(m_status_param.packageId, packageId.String());
+            EXPECT_EQ(m_status_param.version, version.String());
 
             m_condition_variable.notify_one();
         }
@@ -1463,6 +1474,16 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     statusParams.packageId = packageId;
     statusParams.version = version;
 
+    // Initialize the json string
+    JsonObject obj;
+    obj["packageId"] = packageId;
+    obj["version"] = version;
+
+    JsonArray list;
+    list.Add(obj);
+    string jsonstr;
+    list.ToString(jsonstr);
+
     // Register the notification
     mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
@@ -1477,11 +1498,11 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // TC-45: Failure on install using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
     signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
@@ -1570,6 +1591,16 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     statusParams.packageId = packageId;
     statusParams.version = version;
 
+    // Initialize the json string
+    JsonObject obj;
+    obj["packageId"] = packageId;
+    obj["version"] = version;
+
+    JsonArray list;
+    list.Add(obj);
+    string jsonstr;
+    list.ToString(jsonstr);
+
     // Register the notification
     mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
@@ -1590,23 +1621,23 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
     signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
     signal = PackageManager_invalidStatus;
 
 	// TC-47: Failure on uninstall using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Uninstall(packageId, errorReason));
-    
-    notification.OnAppInstallationStatus(packageId, version);
+
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
     signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
@@ -1733,6 +1764,16 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     statusParams.packageId = packageId;
     statusParams.version = version;
 
+    // Initialize the json string
+    JsonObject obj;
+    obj["packageId"] = packageId;
+    obj["version"] = version;
+
+    JsonArray list;
+    list.Add(obj);
+    string jsonstr;
+    list.ToString(jsonstr);
+
     // Register the notification
     mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
@@ -1746,11 +1787,11 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
     signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
@@ -1832,6 +1873,16 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     statusParams.packageId = packageId;
     statusParams.version = version;
 
+    // Initialize the json string
+    JsonObject obj;
+    obj["packageId"] = packageId;
+    obj["version"] = version;
+
+    JsonArray list;
+    list.Add(obj);
+    string jsonstr;
+    list.ToString(jsonstr);
+
     // Register the notification
     mPackageManagerImpl->Register(&notification);
     notification.SetStatusParams(statusParams);
@@ -1845,11 +1896,11 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
     signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(packageId, version);
+    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
