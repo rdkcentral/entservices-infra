@@ -240,7 +240,6 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
 {
     private:
         BEGIN_INTERFACE_MAP(Notification)
-        INTERFACE_ENTRY(Exchange::IPackageDownloader::INotification)
         INTERFACE_ENTRY(Exchange::IPackageInstaller::INotification)
         END_INTERFACE_MAP
 
