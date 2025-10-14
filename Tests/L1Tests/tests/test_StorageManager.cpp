@@ -562,7 +562,6 @@ TEST_F(StorageManagerTest, DeleteStorage_Failure){
     rmdir is set up to simulate a failure result.
     It verifies that the DeleteStorage method returns a failure code and errorReason that Error deleting the empty App Folder: File exists.
 */
-#if 0
 TEST_F(StorageManagerTest, DeleteStorage_rmdirFilure){
 
     std::string appId = "testApp";
@@ -614,7 +613,6 @@ TEST_F(StorageManagerTest, DeleteStorage_rmdirFilure){
     EXPECT_EQ(Core::ERROR_GENERAL, interface->DeleteStorage(appId, errorReason));
     EXPECT_STREQ("Error deleting the empty App Folder: File exists", errorReason.c_str());
 }
-#endif
 /*
     DeleteStorage_Success test checks the successful deletion of storage for a given appId.
     Creates a mock environment where the necessary functions like mkdir, access, nftw, statvfs, and rmdir are set up to simulate a successful resutls.
@@ -787,7 +785,6 @@ TEST_F(StorageManagerTest, test_clear_success_json){
     EXPECT_EQ(Core::ERROR_NONE, interface->CreateStorage("testApp", 1024, path, errorReason));
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("clear"), _T("{\"appId\":\"testApp\"}"), response));
 }
-#endif
 /*
     test_clearall_failure_json checks the failure of the clearAll method when an error occurs during the clearing process.
     It creates a mock environment where the necessary functions like mkdir, access, nftw, statvfs, and SetValue are set up to simulate a successful result.
@@ -796,7 +793,6 @@ TEST_F(StorageManagerTest, test_clear_success_json){
     It expects the clearAll method to return a failure code and sets the errorReason accordingly.
     The test also logs the error reason for debugging purposes.
 */
-#if 0
 TEST_F(StorageManagerTest, test_clearall_failure_json){
 
     std::string path = "";
@@ -886,18 +882,16 @@ TEST_F(StorageManagerTest, test_clearall_failure_json){
     EXPECT_EQ(Core::ERROR_NONE, interface->CreateStorage("testexempt", 1024, path, errorReason));
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("clearAll"), wrappedJson, response));
 }
-#endif
 /*
     test_clearall_without_exemption_json checks the successful execution of the clearAll method without any exemption appIds.
     It verifies that the clearAll method returns a success code and the response is empty ensuring all storage is cleared.
 */
-#if 0
 TEST_F(StorageManagerTest, test_clearall_without_exemption_json){
     std::string exemptionAppIds = "";
     std::string errorReason = "";
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("clearAll"), _T("{}"), response));
 }
-#endif
+
 /*
     test_clearall_success_json checks the successful execution of the clearAll method with exemption appIds.
     It creates a mock environment where the necessary functions like mkdir, access, nftw, statvfs, and SetValue are set up to simulate a successful result.
@@ -905,7 +899,7 @@ TEST_F(StorageManagerTest, test_clearall_without_exemption_json){
     The test then invokes the clearAll method with a JSON string containing exemptionAppIds.
     It expects the clearAll method to return a success code and the response is empty indicating that the storage has been cleared successfully except for the exempted appId.
 */
-#if 0
+
 TEST_F(StorageManagerTest, test_clearall_success_json){
     std::string path = "";
     std::string errorReason = ""; 
@@ -980,5 +974,5 @@ TEST_F(StorageManagerTest, test_clearall_success_json){
     EXPECT_EQ(Core::ERROR_NONE, interface->CreateStorage("testexempt", 1024, path, errorReason));
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("clearAll"), wrappedJson, response));
 }
-#endif
+
 
