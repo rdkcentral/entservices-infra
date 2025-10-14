@@ -1052,6 +1052,7 @@ namespace Plugin {
 
     void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const State &state)
     {
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         JsonArray list = JsonArray();
         JsonObject obj;
         obj["packageId"] = id;
@@ -1059,6 +1060,7 @@ namespace Plugin {
         obj["state"] = getInstallState(state.installState);
         if (!((state.installState == InstallState::INSTALLED) || (state.installState == InstallState::UNINSTALLED) ||
             (state.installState == InstallState::INSTALLING) || (state.installState == InstallState::UNINSTALLING))) {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             obj["failReason"] = getFailReason(state.failReason);
         }
         list.Add(obj);
@@ -1066,12 +1068,14 @@ namespace Plugin {
         if (!list.ToString(jsonstr)) {
             LOGERR("Failed to  stringify JsonArray");
         }
-
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         mAdminLock.Lock();
         for (auto notification: mInstallNotifications) {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             notification->OnAppInstallationStatus(jsonstr);
             LOGTRACE();
         }
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         mAdminLock.Unlock();
     }
 
