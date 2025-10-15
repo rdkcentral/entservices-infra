@@ -350,8 +350,18 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
-        TestChannel() : PluginHost::Channel() {}
-        uint32_t Id() const override { return 123; }
+        TestChannel() : PluginHost::Channel("test") {}
+        
+        void LinkBody(Core::ProxyType<Request>& request) override {}
+        void Received(Core::ProxyType<Request>& request) override {}
+        void Send(const Core::ProxyType<Web::Response>& response) override {}
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return 0; }
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return 0; }
+        void StateChange() override {}
+        void Send(const Core::ProxyType<Core::JSON::IElement>& element) override {}
+        Core::ProxyType<Core::JSON::IElement> Element(const string& identifier) override { return Core::ProxyType<Core::JSON::IElement>(); }
+        void Received(Core::ProxyType<Core::JSON::IElement>& element) override {}
+        void Received(const string& text) override {}
     };
 
     TestChannel channel;
@@ -360,11 +370,10 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
 }
 
 TEST_F(MessageControlL1Test, MessageOutputHandling) {
-    class TestOutput : public Core::IDispatchType<Core::Messaging::IEvent> {
+    class TestOutput : public Publishers::IPublish {
     public:
-        void Dispatch(Core::Messaging::IEvent* event) override {
+        void Dispatch(const string& information) override {
             dispatched = true;
-            delete event;
         }
         bool dispatched = false;
     };
@@ -376,13 +385,26 @@ TEST_F(MessageControlL1Test, MessageOutputHandling) {
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
     EXPECT_TRUE(output->dispatched);
+    delete output;
 }
 
 TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
-        TestChannel(uint32_t id) : _id(id) {}
-        uint32_t Id() const override { return _id; }
+        TestChannel(uint32_t id) : PluginHost::Channel("test"), _id(id) {}
+        
+        // Required implementations
+        void LinkBody(Core::ProxyType<Request>& request) override {}
+        void Received(Core::ProxyType<Request>& request) override {}
+        void Send(const Core::ProxyType<Web::Response>& response) override {}
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return 0; }
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return 0; }
+        void StateChange() override {}
+        void Send(const Core::ProxyType<Core::JSON::IElement>& element) override {}
+        Core::ProxyType<Core::JSON::IElement> Element(const string& identifier) override { return Core::ProxyType<Core::JSON::IElement>(); }
+        void Received(Core::ProxyType<Core::JSON::IElement>& element) override {}
+        void Received(const string& text) override {}
+        
     private:
         uint32_t _id;
     };
@@ -401,11 +423,10 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
 }
 
 TEST_F(MessageControlL1Test, OutputChaining) {
-    class TestOutput : public Core::IDispatchType<Core::Messaging::IEvent> {
+    class TestOutput : public Publishers::IPublish {
     public:
-        void Dispatch(Core::Messaging::IEvent* event) override {
+        void Dispatch(const string& information) override {
             dispatchCount++;
-            delete event;
         }
         int dispatchCount = 0;
     };
@@ -424,4 +445,8 @@ TEST_F(MessageControlL1Test, OutputChaining) {
     EXPECT_GT(output1->dispatchCount, 0);
     EXPECT_GT(output2->dispatchCount, 0);
     EXPECT_GT(output3->dispatchCount, 0);
+
+    delete output1;
+    delete output2;
+    delete output3;
 }
