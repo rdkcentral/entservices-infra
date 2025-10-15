@@ -285,56 +285,37 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
 }
 
 TEST_F(MessageControlL1Test, InitializeDeinitialize) {
-    class MockShell : public PluginHost::IShell {
+    class TestShell : public PluginHost::IShell {
     public:
-        MOCK_CONST_METHOD0(ConfigLine, string());
-        MOCK_CONST_METHOD0(VolatilePath, string());
-        MOCK_CONST_METHOD0(Background, bool());
-        MOCK_CONST_METHOD0(Accessor, string());
-        MOCK_CONST_METHOD0(WebPrefix, string());
-        MOCK_CONST_METHOD0(Locator, string());
-        MOCK_CONST_METHOD0(ClassName, string());
-        MOCK_CONST_METHOD0(Versions, string());
-        MOCK_CONST_METHOD0(Callsign, string());
-        MOCK_CONST_METHOD0(PersistentPath, string());
-        MOCK_CONST_METHOD0(DataPath, string());
-        MOCK_CONST_METHOD0(ProxyStubPath, string());
-        MOCK_CONST_METHOD0(SystemPath, string());
-        MOCK_CONST_METHOD0(PluginPath, string());
-        MOCK_CONST_METHOD0(SystemRootPath, string());
-        MOCK_METHOD1(SystemRootPath, Core::hresult(const string&));
-        MOCK_CONST_METHOD0(Startup, startup());
-        MOCK_METHOD1(Startup, Core::hresult(startup));
-        MOCK_CONST_METHOD1(Substitute, string(const string&));
-        MOCK_CONST_METHOD0(Resumed, bool());
-        MOCK_METHOD1(Resumed, Core::hresult(bool));
-        MOCK_CONST_METHOD0(HashKey, string());
-        MOCK_METHOD1(ConfigLine, Core::hresult(const string&));
-        MOCK_CONST_METHOD1(Metadata, Core::hresult(string&));
-        MOCK_METHOD0(SubSystems, ISubSystem*());
-        MOCK_METHOD1(Notify, void(const string&));
-        MOCK_CONST_METHOD0(State, state());
-        MOCK_CONST_METHOD0(AddRef, void());
-        MOCK_METHOD0(Release, uint32_t());
-        MOCK_METHOD1(QueryInterface, void*(uint32_t));
-        MOCK_METHOD1(EnableWebServer, void(const string&, const string&));
-        MOCK_METHOD0(DisableWebServer, void());
-        MOCK_METHOD1(Register, void(IPlugin::INotification*));
-        MOCK_METHOD1(Unregister, void(IPlugin::INotification*));
+        string ConfigLine() const override { return R"({"console":true,"syslog":false,"filename":""})"; }
+        string VolatilePath() const override { return "/tmp/"; }
+        bool Background() const override { return false; }
+        void AddRef() const override {}
+        uint32_t Release() override { return 0; }
+        void* QueryInterface(uint32_t) override { return nullptr; }
+        void EnableWebServer(const string&, const string&) override {}
+        void DisableWebServer() override {}
+        void Register(PluginHost::IPlugin::INotification*) override {}
+        void Unregister(PluginHost::IPlugin::INotification*) override {}
+        string Model() const override { return ""; }
+        bool IsSupported(const uint8_t) const override { return false; }
+        string Accessor() const override { return ""; }
+        string WebPrefix() const override { return ""; }
+        string Callsign() const override { return ""; }
+        string HashKey() const override { return ""; }
+        string PersistentPath() const override { return ""; }
+        string DataPath() const override { return ""; }
+        string Substitute(const string&) const override { return ""; }
+        string SystemPath() const override { return ""; }
+        string PluginPath() const override { return ""; }
+        string ProxyStubPath() const override { return ""; }
+        state State() const override { return state::ACTIVATED; }
     };
 
-    MockShell shell;
-
-    EXPECT_CALL(shell, ConfigLine())
-        .WillOnce(::testing::Return(R"({"console":true,"syslog":false,"filename":""})"));
-    EXPECT_CALL(shell, VolatilePath())
-        .WillOnce(::testing::Return("/tmp/"));
-    EXPECT_CALL(shell, Background())
-        .WillOnce(::testing::Return(false));
-    
-    string result = plugin->Initialize(&shell);
+    TestShell* shell = new TestShell();
+    string result = plugin->Initialize(shell);
     EXPECT_TRUE(result.empty());
     
-    plugin->Deinitialize(&shell);
+    plugin->Deinitialize(shell);
+    delete shell;
 }
-
