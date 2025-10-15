@@ -1615,8 +1615,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
     // Register the notification
     mPackageManagerImpl->Register(&notification);
-    notification.SetStatusParams(statusParams);
-
+    
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1632,7 +1631,9 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
             }));
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
-
+    
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
+    notification.SetStatusParams(statusParams);
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
@@ -1644,7 +1645,8 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
 	// TC-47: Failure on uninstall using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Uninstall(packageId, errorReason));
-
+    
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
@@ -1788,7 +1790,6 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 
     // Register the notification
     mPackageManagerImpl->Register(&notification);
-    notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1798,7 +1799,9 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
             }));
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
-
+    
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
+    notification.SetStatusParams(statusParams);
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
@@ -1897,7 +1900,6 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 
     // Register the notification
     mPackageManagerImpl->Register(&notification);
-    notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1908,6 +1910,8 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
+    notification.SetStatusParams(statusParams);
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
