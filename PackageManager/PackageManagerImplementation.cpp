@@ -533,7 +533,7 @@ namespace Plugin {
                     state.blockedInstallData.keyValues = keyValues;
                     state.blockedInstallData.fileLocator = fileLocator;
                 }
-                return result;
+                return result;      // Installtion delayed, not Failed
             }
         }
 
@@ -547,8 +547,6 @@ namespace Plugin {
         it = mState.find( key );
         if (it != mState.end()) {
             State &state = it->second;
-
-#if 1
             result = Install(packageId, version, keyValues, fileLocator, state);
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
