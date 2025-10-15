@@ -287,7 +287,6 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
 TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     class TestShell : public PluginHost::IShell {
     public:
-        // Basic IShell methods
         string ConfigLine() const override { return R"({"console":true,"syslog":false,"filename":""})"; }
         string VolatilePath() const override { return "/tmp/"; }
         bool Background() const override { return false; }
@@ -306,13 +305,11 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
         string Versions() const override { return ""; }
         string Model() const override { return ""; }
         
-        // State methods
         state State() const override { return state::ACTIVATED; }
         bool Resumed() const override { return true; }
         Core::hresult Resumed(const bool) override { return Core::ERROR_NONE; }
         reason Reason() const override { return reason::REQUESTED; }
         
-        // IShell required methods
         PluginHost::ISubSystem* SubSystems() override { return nullptr; }
         startup Startup() const override { return startup::DEACTIVATED; }
         Core::hresult Startup(const startup) override { return Core::ERROR_NONE; }
@@ -324,22 +321,18 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
         void Notify(const string&) override {}
         void* QueryInterfaceByCallsign(const uint32_t, const string&) override { return nullptr; }
         
-        // Control methods
         Core::hresult Activate(const reason) override { return Core::ERROR_NONE; }
         Core::hresult Deactivate(const reason) override { return Core::ERROR_NONE; }
         Core::hresult Unavailable(const reason) override { return Core::ERROR_NONE; }
         Core::hresult Hibernate(const uint32_t) override { return Core::ERROR_NONE; }
         uint32_t Submit(const uint32_t, const Core::ProxyType<Core::JSON::IElement>&) override { return Core::ERROR_NONE; }
         
-        // WebServer methods
         void EnableWebServer(const string&, const string&) override {}
         void DisableWebServer() override {}
-        
-        // Plugin notification methods  
+         
         void Register(PluginHost::IPlugin::INotification*) override {}
         void Unregister(PluginHost::IPlugin::INotification*) override {}
         
-        // IUnknown methods
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
@@ -352,4 +345,83 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     EXPECT_TRUE(result.empty());
     
     plugin->Deinitialize(&shell);
+}
+
+TEST_F(MessageControlL1Test, AttachDetachChannel) {
+    class TestChannel : public PluginHost::Channel {
+    public:
+        TestChannel() : PluginHost::Channel() {}
+        uint32_t Id() const override { return 123; }
+    };
+
+    TestChannel channel;
+    EXPECT_TRUE(plugin->Attach(channel));
+    plugin->Detach(channel);
+}
+
+TEST_F(MessageControlL1Test, MessageOutputHandling) {
+    class TestOutput : public Core::IDispatchType<Core::Messaging::IEvent> {
+    public:
+        void Dispatch(Core::Messaging::IEvent* event) override {
+            dispatched = true;
+            delete event;
+        }
+        bool dispatched = false;
+    };
+
+    TestOutput* output = new TestOutput();
+    plugin->Announce(output);
+
+    Core::hresult hr = plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module", true);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+
+    EXPECT_TRUE(output->dispatched);
+}
+
+TEST_F(MessageControlL1Test, MultipleAttachDetach) {
+    class TestChannel : public PluginHost::Channel {
+    public:
+        TestChannel(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+    private:
+        uint32_t _id;
+    };
+
+    TestChannel channel1(1);
+    TestChannel channel2(2);
+    TestChannel channel3(3);
+
+    EXPECT_TRUE(plugin->Attach(channel1));
+    EXPECT_TRUE(plugin->Attach(channel2));
+    EXPECT_TRUE(plugin->Attach(channel3));
+
+    plugin->Detach(channel2);
+    plugin->Detach(channel1); 
+    plugin->Detach(channel3);
+}
+
+TEST_F(MessageControlL1Test, OutputChaining) {
+    class TestOutput : public Core::IDispatchType<Core::Messaging::IEvent> {
+    public:
+        void Dispatch(Core::Messaging::IEvent* event) override {
+            dispatchCount++;
+            delete event;
+        }
+        int dispatchCount = 0;
+    };
+
+    TestOutput* output1 = new TestOutput();
+    TestOutput* output2 = new TestOutput();
+    TestOutput* output3 = new TestOutput();
+
+    plugin->Announce(output1);
+    plugin->Announce(output2);
+    plugin->Announce(output3);
+
+    plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module1", true);
+    plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "test", "module2", true);
+
+    EXPECT_GT(output1->dispatchCount, 0);
+    EXPECT_GT(output2->dispatchCount, 0);
+    EXPECT_GT(output3->dispatchCount, 0);
 }
