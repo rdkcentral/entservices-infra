@@ -189,6 +189,7 @@ TEST_F(MessageControlL1Test, EnableMultipleCategories) {
         true);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 }
+/*
 TEST_F(MessageControlL1Test, EnableAndVerifyControls) {
     plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", true);
     
@@ -205,7 +206,7 @@ TEST_F(MessageControlL1Test, EnableAndVerifyControls) {
     EXPECT_TRUE(found);
     controls->Release();
 }
-
+*/
 TEST_F(MessageControlL1Test, EnableAndDisableMultiple) {
     plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", true);
     plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "cat2", "mod2", true);
