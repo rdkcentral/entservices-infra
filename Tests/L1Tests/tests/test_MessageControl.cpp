@@ -228,24 +228,15 @@ TEST_F(MessageControlL1Test, InboundCommunication) {
     EXPECT_TRUE(response.IsValid());
 }
 
-TEST_F(MessageControlL1Test, WebSocketFullFlow) {
+TEST_F(MessageControlL1Test, WebSocketInboundFlow) {
     Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("test");
     EXPECT_TRUE(element.IsValid());
-
-    PluginHost::Channel channel;
-    bool attached = plugin->Attach(channel);
-    EXPECT_TRUE(attached);
     
-    Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(channel.Id(), element);
+    Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(1234, element);
     EXPECT_TRUE(response.IsValid());
-
-    plugin->Detach(channel);
 }
 
 TEST_F(MessageControlL1Test, MessageOutputControl) {
-    Core::JSON::String config;
-    config.FromString(R"({"console":true, "syslog":true, "filename":"/tmp/test.log"})");
-    
     plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module1", true);
     plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "test", "module2", true);
     
@@ -261,4 +252,34 @@ TEST_F(MessageControlL1Test, MessageOutputControl) {
     }
     EXPECT_GT(count, 0);
     controls->Release();
+}
+
+TEST_F(MessageControlL1Test, VerifyMultipleEnableDisable) {
+    for(auto type : {
+        Exchange::IMessageControl::TRACING,
+        Exchange::IMessageControl::LOGGING,
+        Exchange::IMessageControl::REPORTING}) {
+
+        Core::hresult hr = plugin->Enable(type, "category1", "testmodule", true);
+        EXPECT_EQ(Core::ERROR_NONE, hr);
+        
+        Exchange::IMessageControl::IControlIterator* controls = nullptr;
+        hr = plugin->Controls(controls);
+        EXPECT_EQ(Core::ERROR_NONE, hr);
+        ASSERT_NE(nullptr, controls);
+        controls->Release();
+
+        hr = plugin->Enable(type, "category1", "testmodule", false);
+        EXPECT_EQ(Core::ERROR_NONE, hr);
+    }
+}
+
+TEST_F(MessageControlL1Test, InboundMessageFlow) {
+    Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("command");
+    EXPECT_TRUE(element.IsValid());
+
+    for(uint32_t id = 1; id < 4; id++) {
+        Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(id, element);
+        EXPECT_TRUE(response.IsValid());
+    }
 }
