@@ -80,7 +80,7 @@ namespace WPEFramework
             return WPEFramework::Core::ERROR_NONE;
         }
 
-        Core::hresult MigrationImplementation::GetMigrationStatus(MigrationStatus& migrationStatus)
+        Core::hresult MigrationImplementation::GetMigrationStatus(MigrationStatusInfo& migrationStatusInfo)
         {
             bool status = false;
             RFC_ParamData_t param = {0};
@@ -101,7 +101,7 @@ namespace WPEFramework
 
                 auto it = stringToStatus.find(migrationStatusStr);
                 if (it != stringToStatus.end()) {
-                    migrationStatus = it->second;
+                    migrationStatusInfo.migrationStatus = it->second;
                     LOGINFO("Current ENTOS Migration Status is: %s\n", migrationStatusStr.c_str());
                     status = true;
                 }
@@ -112,7 +112,7 @@ namespace WPEFramework
             return (status ? static_cast<uint32_t>(WPEFramework::Core::ERROR_NONE) : static_cast<uint32_t>(ERROR_FILE_IO));
         }
 
-        Core::hresult MigrationImplementation::GetBootTypeInfo(BootType& bootType)
+        Core::hresult MigrationImplementation::GetBootTypeInfo(BootTypeInfo& bootTypeInfo)
         {
             bool status = false;
             const char* filename = "/tmp/bootType";
@@ -129,7 +129,7 @@ namespace WPEFramework
 
                 auto it = stringToBootType.find(bootTypeStr);
                 if (it != stringToBootType.end()) {
-                    bootType = it->second;
+                    bootTypeInfo.bootType = it->second;
                     LOGINFO("Boot type changed to: %s, current OS Class: rdke\n", bootTypeStr.c_str());
                     status = true;
                 }
