@@ -283,3 +283,26 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
         EXPECT_TRUE(response.IsValid());
     }
 }
+TEST_F(MessageControlL1Test, InitializeDeinitialize) {
+    class MinimalShell : public PluginHost::IShell {
+    public:
+        string ConfigLine() const override { 
+            return R"({"console":true,"syslog":false,"filename":""})"; 
+        }
+        string VolatilePath() const override { return "/tmp/"; }
+        bool Background() const override { return false; }
+        uint32_t AddRef() const override { return 1; }
+        uint32_t Release() override { return 1; }
+        void* QueryInterface(const uint32_t id) override { return nullptr; }
+        void Register(IPlugin::INotification*) override {}
+        void Unregister(IPlugin::INotification*) override {}
+        void EnableWebServer(const string&, const string&) override {}
+        void DisableWebServer() override {}
+    };
+
+    MinimalShell shell;
+    string result = plugin->Initialize(&shell);
+    EXPECT_TRUE(result.empty());
+    
+    plugin->Deinitialize(&shell);
+}
