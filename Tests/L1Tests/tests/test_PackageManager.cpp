@@ -315,9 +315,6 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
             m_status_signal = PackageManager_invalidStatus;
             return status_signal;
         }
-
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
     };
 
 /* Test Case for verifying registered methods using JsonRpc
