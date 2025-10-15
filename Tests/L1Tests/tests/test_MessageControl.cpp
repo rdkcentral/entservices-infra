@@ -350,18 +350,31 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
-        TestChannel() : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")) {}
+        TestChannel() 
+            : PluginHost::Channel(PluginHost::Channel::INTERNAL, Core::NodeId()) 
+            , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
+            State(PluginHost::Channel::OPEN);
+        }
+        
+        bool IsOpen() const { return true; }
+        string RemoteId() const override { return "TestChannel"; }
+        bool IsSuspended() const override { return false; }
         
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
-        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return 0; }
-        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return 0; }
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return maxSendSize; }
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return receivedSize; }
         void StateChange() override {}
         void Send(const Core::ProxyType<Core::JSON::IElement>& element) override {}
-        Core::ProxyType<Core::JSON::IElement> Element(const string& identifier) override { return Core::ProxyType<Core::JSON::IElement>(); }
+        Core::ProxyType<Core::JSON::IElement> Element(const string& identifier) override { 
+            return Core::ProxyType<Core::JSON::IElement>(); 
+        }
         void Received(Core::ProxyType<Core::JSON::IElement>& element) override {}
         void Received(const string& text) override {}
+
+    private:
+        uint32_t _baseTime;
     };
 
     TestChannel channel;
@@ -372,20 +385,32 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
 TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
-        TestChannel(uint32_t id) : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")), _id(id) {}
+        TestChannel(uint32_t id) 
+            : PluginHost::Channel(PluginHost::Channel::INTERNAL, Core::NodeId())
+            , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
+            , _id(id) {
+            State(PluginHost::Channel::OPEN);
+        }
+        
+        bool IsOpen() const { return true; }
+        string RemoteId() const override { return "TestChannel" + std::to_string(_id); }
+        bool IsSuspended() const override { return false; }
         
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
-        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return 0; }
-        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return 0; }
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return maxSendSize; }
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return receivedSize; }
         void StateChange() override {}
         void Send(const Core::ProxyType<Core::JSON::IElement>& element) override {}
-        Core::ProxyType<Core::JSON::IElement> Element(const string& identifier) override { return Core::ProxyType<Core::JSON::IElement>(); }
+        Core::ProxyType<Core::JSON::IElement> Element(const string& identifier) override { 
+            return Core::ProxyType<Core::JSON::IElement>(); 
+        }
         void Received(Core::ProxyType<Core::JSON::IElement>& element) override {}
         void Received(const string& text) override {}
         
     private:
+        uint32_t _baseTime;
         uint32_t _id;
     };
 
