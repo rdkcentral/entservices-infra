@@ -287,42 +287,41 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
 TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     class TestShell : public PluginHost::IShell {
     public:
-        // Basic methods
+        // Basic IShell methods
         string ConfigLine() const override { return R"({"console":true,"syslog":false,"filename":""})"; }
         string VolatilePath() const override { return "/tmp/"; }
         bool Background() const override { return false; }
-        
-        // Path methods
-        string SystemPath() const override { return "/tmp/"; }
-        string SystemRootPath() const override { return "/tmp/"; }
-        Core::hresult SystemRootPath(const string&) override { return Core::ERROR_NONE; }
-        string PluginPath() const override { return "/tmp/"; }
-        string PersistentPath() const override { return "/tmp/"; }
-        string DataPath() const override { return "/tmp/"; }
-        string ProxyStubPath() const override { return "/tmp/"; }
-        
-        // State/startup methods
-        state State() const override { return state::ACTIVATED; }
-        startup Startup() const override { return startup::INITIALIZED; }
-        Core::hresult Startup(const startup) override { return Core::ERROR_NONE; }
-        bool Resumed() const override { return true; }
-        Core::hresult Resumed(const bool) override { return Core::ERROR_NONE; }
-        reason Reason() const override { return reason::REQUESTED; }
-        
-        // Config/metadata methods
-        Core::hresult ConfigLine(const string&) override { return Core::ERROR_NONE; }
-        Core::hresult Metadata(string&) const override { return Core::ERROR_NONE; }
-        string Metadata() const override { return ""; }
-        void Persist() const override {}
-        string Model() const override { return ""; }
         string Accessor() const override { return ""; }
         string WebPrefix() const override { return ""; }
         string Callsign() const override { return ""; }
         string HashKey() const override { return ""; }
+        string PersistentPath() const override { return "/tmp/"; }
+        string DataPath() const override { return "/tmp/"; }
+        string ProxyStubPath() const override { return "/tmp/"; }
+        string SystemPath() const override { return "/tmp/"; }
+        string PluginPath() const override { return "/tmp/"; }
+        string SystemRootPath() const override { return "/tmp/"; }
         string Locator() const override { return ""; }
         string ClassName() const override { return ""; }
-        string Substitute(const string&) const override { return ""; }
         string Versions() const override { return ""; }
+        string Model() const override { return ""; }
+        
+        // State methods
+        state State() const override { return state::ACTIVATED; }
+        bool Resumed() const override { return true; }
+        Core::hresult Resumed(const bool) override { return Core::ERROR_NONE; }
+        reason Reason() const override { return reason::REQUESTED; }
+        
+        // IShell required methods
+        PluginHost::ISubSystem* SubSystems() override { return nullptr; }
+        startup Startup() const override { return startup::DEACTIVATED; }
+        Core::hresult Startup(const startup) override { return Core::ERROR_NONE; }
+        Core::hresult SystemRootPath(const string&) override { return Core::ERROR_NONE; }
+        string Substitute(const string&) const override { return ""; }
+        Core::hresult ConfigLine(const string&) override { return Core::ERROR_NONE; }
+        Core::hresult Metadata(string& info) const override { return Core::ERROR_NONE; }
+        void Notify(const string&) override {}
+        void* QueryInterfaceByCallsign(const uint32_t, const string&) override { return nullptr; }
         
         // Control methods
         Core::hresult Activate(const reason) override { return Core::ERROR_NONE; }
@@ -331,15 +330,11 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
         Core::hresult Hibernate(const uint32_t) override { return Core::ERROR_NONE; }
         uint32_t Submit(const uint32_t, const Core::ProxyType<Core::JSON::IElement>&) override { return Core::ERROR_NONE; }
         
-        // Subsystem/interface methods
-        ISubSystem* SubSystems() override { return nullptr; }
-        void* QueryInterfaceByCallsign(const uint32_t, const string&) override { return nullptr; }
-        ICOMLink* COMLink() override { return nullptr; }
-        
-        // Event methods
-        void Notify(const string&) override {}
+        // WebServer methods
         void EnableWebServer(const string&, const string&) override {}
         void DisableWebServer() override {}
+        
+        // Plugin notification methods  
         void Register(PluginHost::IPlugin::INotification*) override {}
         void Unregister(PluginHost::IPlugin::INotification*) override {}
         
@@ -348,7 +343,6 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
         uint32_t Release() const override { return 0; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
         
-        // Support methods
         bool IsSupported(const uint8_t) const override { return false; }
     };
 
