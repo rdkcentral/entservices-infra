@@ -647,15 +647,18 @@ namespace Plugin {
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             auto &state = it->second;
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             getRuntimeConfig(state.runtimeConfig, runtimeConfig);
         } else {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_GENERAL;
         }
-
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         return result;
     }
 
@@ -795,6 +798,7 @@ namespace Plugin {
     // XXX: right way to do this is via copy ctor, when we move to Thunder 5.2 and have commone struct RuntimeConfig
     void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig)
     {
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         runtimeConfig.dial = config.dial;
         runtimeConfig.wanLanAccess = config.wanLanAccess;
         runtimeConfig.thunder = config.thunder;
@@ -811,6 +815,7 @@ namespace Plugin {
         runtimeConfig.appPath = config.appPath;
         runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     #ifdef USE_LIBPACKAGE
