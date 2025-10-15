@@ -351,12 +351,11 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
-            : PluginHost::Channel(-1, Core::NodeId(Core::NodeId::TYPE_IPV4, "127.0.0.1", 8080))
+            : PluginHost::Channel(-1, Core::NodeId("127.0.0.1:8080"))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
-            State(PluginHost::Channel::OPEN, true);
+            State(ChannelState::INITIALIZED, true);
         }
         
-        // Required implementations
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -383,13 +382,12 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel(uint32_t id) 
-            : PluginHost::Channel(-1, Core::NodeId(Core::NodeId::TYPE_IPV4, "127.0.0.1", 8080 + id))
+            : PluginHost::Channel(-1, Core::NodeId(string("127.0.0.1:") + std::to_string(8080 + id)))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
-            State(PluginHost::Channel::OPEN, true);
+            State(ChannelState::INITIALIZED, true);
         }
         
-        // Required implementations
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
