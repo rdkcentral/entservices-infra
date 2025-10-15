@@ -316,6 +316,7 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
         PluginHost::ISubSystem* SubSystems() override { return nullptr; }
         startup Startup() const override { return startup::DEACTIVATED; }
         Core::hresult Startup(const startup) override { return Core::ERROR_NONE; }
+        ICOMLink* COMLink() override { return nullptr; }
         Core::hresult SystemRootPath(const string&) override { return Core::ERROR_NONE; }
         string Substitute(const string&) const override { return ""; }
         Core::hresult ConfigLine(const string&) override { return Core::ERROR_NONE; }
