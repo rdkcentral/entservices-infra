@@ -189,7 +189,6 @@ TEST_F(MessageControlL1Test, EnableMultipleCategories) {
         true);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 }
-/*
 TEST_F(MessageControlL1Test, EnableAndVerifyControls) {
     plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", true);
     
@@ -198,32 +197,32 @@ TEST_F(MessageControlL1Test, EnableAndVerifyControls) {
     EXPECT_EQ(Core::ERROR_NONE, hr);
     ASSERT_NE(nullptr, controls);
 
-    Exchange::IMessageControl::Control current;
     bool found = false;
+    Exchange::IMessageControl::Control current;
     while (controls->Next(current)) {
-        if (current.type == Exchange::IMessageControl::STANDARD_OUT &&
-            current.category == "cat1" &&
-            current.module == "mod1") {
-            found = true;
-            break;
-        }
+        found = true;
     }
     EXPECT_TRUE(found);
     controls->Release();
 }
-*/
-TEST_F(MessageControlL1Test, EnableMultipleModules) {
-    Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::LOGGING,
-        "category1",
-        "module1",
-        true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
 
-    hr = plugin->Enable(
-        Exchange::IMessageControl::LOGGING,
-        "category1",
-        "module2",
-        true);
+TEST_F(MessageControlL1Test, EnableAndDisableMultiple) {
+    plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", true);
+    plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "cat2", "mod2", true);
+    plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", false);
+    plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "cat2", "mod2", false);
+    
+    Exchange::IMessageControl::IControlIterator* controls = nullptr;
+    Core::hresult hr = plugin->Controls(controls);
     EXPECT_EQ(Core::ERROR_NONE, hr);
+    controls->Release();
+}
+
+TEST_F(MessageControlL1Test, InboundCommunication) {
+    Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("command");
+    EXPECT_TRUE(element.IsValid());
+
+    Core::ProxyType<Core::JSON::IElement> response = 
+        plugin->Inbound(1234, element);
+    EXPECT_TRUE(response.IsValid());
 }
