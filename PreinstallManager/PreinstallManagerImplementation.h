@@ -173,6 +173,9 @@ namespace WPEFramework
 
         public: /* public methods */
             // void updateCurrentAction(const std::string &appId, CurrentAction action);
-        };
+#ifdef UNIT_TEST                
+    friend class PreinstallManagerTest; 
+#endif
+	};
     } /* namespace Plugin */
 } /* namespace WPEFramework */
