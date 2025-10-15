@@ -286,18 +286,25 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
 TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     class MinimalShell : public PluginHost::IShell {
     public:
+        // IShell methods
         string ConfigLine() const override { 
             return R"({"console":true,"syslog":false,"filename":""})"; 
         }
         string VolatilePath() const override { return "/tmp/"; }
         bool Background() const override { return false; }
-        uint32_t AddRef() const override { return 1; }
-        uint32_t Release() override { return 1; }
-        void* QueryInterface(const uint32_t id) override { return nullptr; }
-        void Register(IPlugin::INotification*) override {}
-        void Unregister(IPlugin::INotification*) override {}
+        
+        // IUnknown methods
+        void AddRef() const override { }
+        uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t interfaceNumber) override { return nullptr; }
+
+        // Additional IShell required methods
+        string Model() const override { return ""; }  
+        bool IsSupported(const uint8_t) const override { return false; }
         void EnableWebServer(const string&, const string&) override {}
         void DisableWebServer() override {}
+        void Register(PluginHost::IPlugin::INotification*) override {}
+        void Unregister(PluginHost::IPlugin::INotification*) override {}
     };
 
     MinimalShell shell;
@@ -306,3 +313,4 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     
     plugin->Deinitialize(&shell);
 }
+
