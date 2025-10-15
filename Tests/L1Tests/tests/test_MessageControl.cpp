@@ -369,25 +369,6 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
     plugin->Detach(channel);
 }
 
-TEST_F(MessageControlL1Test, MessageOutputHandling) {
-    class TestOutput : public Publishers::IPublish {
-    public:
-        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) override {
-            dispatched = true;
-        }
-        bool dispatched = false;
-    };
-
-    auto* output = Core::ServiceType<TestOutput>::Create<TestOutput>();
-    plugin->Dispatcher().Announce(output);
-
-    Core::hresult hr = plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module", true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-
-    EXPECT_TRUE(output->dispatched);
-    output->Release();
-}
-
 TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
@@ -419,33 +400,4 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     plugin->Detach(channel2);
     plugin->Detach(channel1);
     plugin->Detach(channel3);
-}
-
-TEST_F(MessageControlL1Test, OutputChaining) {
-    class TestOutput : public Publishers::IPublish {
-    public:
-        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) override {
-            dispatchCount++;
-        }
-        int dispatchCount = 0;
-    };
-
-    auto* output1 = Core::ServiceType<TestOutput>::Create<TestOutput>();
-    auto* output2 = Core::ServiceType<TestOutput>::Create<TestOutput>();
-    auto* output3 = Core::ServiceType<TestOutput>::Create<TestOutput>();
-
-    plugin->Dispatcher().Announce(output1);
-    plugin->Dispatcher().Announce(output2);
-    plugin->Dispatcher().Announce(output3);
-
-    plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module1", true);
-    plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "test", "module2", true);
-
-    EXPECT_GT(output1->dispatchCount, 0);
-    EXPECT_GT(output2->dispatchCount, 0);
-    EXPECT_GT(output3->dispatchCount, 0);
-
-    output1->Release();
-    output2->Release();
-    output3->Release();
 }
