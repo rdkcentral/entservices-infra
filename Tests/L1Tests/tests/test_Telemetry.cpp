@@ -566,3 +566,4 @@ TEST_F(TelemetryTest, uploadLogs)
 
     EVENT_UNSUBSCRIBE(0, _T("onReportUpload"), _T("org.rdk.Telemetry"), message);
 }
+
