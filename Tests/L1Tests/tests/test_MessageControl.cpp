@@ -346,14 +346,21 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     
     plugin->Deinitialize(&shell);
 }
+
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
-            : PluginHost::Channel(-1, Core::NodeId("127.0.0.1", 8080))
+            : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8080))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
-            State(static_cast<ChannelState>(1), true);
+            
+            Open(Core::infinite);
+            State(static_cast<ChannelState>(3), true); // Set LINK state
         }
+
+        bool IsWebSocket() const override { return true; }
+        string RemoteId() const override { return "TestChannel"; }
+        bool IsSuspended() const override { return false; }
         
         // Required implementations
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
@@ -382,12 +389,19 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel(uint32_t id) 
-            : PluginHost::Channel(-1, Core::NodeId("127.0.0.1", 8080 + id))
+            : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8080 + id))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
-            State(static_cast<ChannelState>(1), true);
+            
+            Open(Core::infinite);
+            State(static_cast<ChannelState>(3), true); // Set LINK state
         }
+
+        bool IsWebSocket() const override { return true; }
+        string RemoteId() const override { return "TestChannel" + std::to_string(_id); }
+        bool IsSuspended() const override { return false; }
         
+        // Required implementations
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
