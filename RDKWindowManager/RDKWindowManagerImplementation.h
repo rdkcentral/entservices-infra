@@ -38,7 +38,7 @@ namespace Plugin {
     struct CreateDisplayRequest
     {
         CreateDisplayRequest(std::string client, std::string displayName, uint32_t displayWidth=0, uint32_t displayHeight=0, bool virtualDisplayEnabled=false,
-                             uint32_t virtualWidth=0, uint32_t virtualHeight=0, bool topmost = false, bool focus = false);
+                             uint32_t virtualWidth=0, uint32_t virtualHeight=0, bool topmost = false, bool focus = false, int32_t ownerId = 0, int32_t groupId = 0);
 
         ~CreateDisplayRequest();
 
@@ -53,7 +53,8 @@ namespace Plugin {
         bool mFocus;
         sem_t mSemaphore;
         bool mResult;
-        bool mAutoDestroy;
+        int32_t mOwnerId;
+        int32_t mGroupId;
     };
 
     class RDKWindowManagerImplementation : public Exchange::IRDKWindowManager{
@@ -71,7 +72,14 @@ namespace Plugin {
     public:
         enum Event {
                 RDK_WINDOW_MANAGER_EVENT_UNKNOWN,
-                RDK_WINDOW_MANAGER_EVENT_ON_USER_INACTIVITY
+                RDK_WINDOW_MANAGER_EVENT_ON_USER_INACTIVITY,
+                RDK_WINDOW_MANAGER_EVENT_APPLICATION_DISCONNECTED,
+                RDK_WINDOW_MANAGER_EVENT_ON_READY,
+                RDK_WINDOW_MANAGER_EVENT_APPLICATION_CONNECTED,
+                RDK_WINDOW_MANAGER_EVENT_APPLICATION_VISIBLE,
+                RDK_WINDOW_MANAGER_EVENT_APPLICATION_HIDDEN,
+                RDK_WINDOW_MANAGER_EVENT_APPLICATION_FOCUS,
+                RDK_WINDOW_MANAGER_EVENT_APPLICATION_BLUR
             };
 
         class EXTERNAL Job : public Core::IDispatch {
@@ -115,11 +123,11 @@ namespace Plugin {
 
     public:
         Core::hresult Initialize(PluginHost::IShell* service) override;
-        void Deinitialize(PluginHost::IShell* service) override;
+        Core::hresult Deinitialize(PluginHost::IShell* service) override;
         Core::hresult Register(INotification *notification) override;
         Core::hresult Unregister(INotification *notification) override;
         Core::hresult CreateDisplay(const string &displayParams) override;
-        Core::hresult GetClients(string &clients) const override;
+        Core::hresult GetApps(string &appsIds) const override;
         Core::hresult AddKeyIntercept(const string &intercept) override;
         Core::hresult AddKeyIntercepts(const string &intercepts) override;
         Core::hresult RemoveKeyIntercept(const string &intercept) override;
@@ -135,11 +143,15 @@ namespace Plugin {
         Core::hresult IgnoreKeyInputs(bool ignore) override;
         Core::hresult EnableInputEvents(const string &clients, bool enable) override;
         Core::hresult KeyRepeatConfig(const string &input, const string &keyConfig) override;
+        Core::hresult SetFocus(const string &client) override;
+        Core::hresult SetVisible(const std::string &client, bool visible) override;
+        Core::hresult RenderReady(const string& client, bool &status) const override;
+        Core::hresult EnableDisplayRender(const string& client, bool enable) override;
 
     private: /*internal methods*/
         bool createDisplay(const string& client, const string& displayName, const uint32_t displayWidth = 0, const uint32_t displayHeight = 0,
                            const bool virtualDisplay = false, const uint32_t virtualWidth = 0, const uint32_t virtualHeight = 0,
-                           const bool topmost = false, const bool focus = false);
+                           const bool topmost = false, const bool focus = false, const int32_t ownerId = 0, int32_t groupId=0);
         bool getClients(JsonArray& clients);
         bool addKeyIntercept(const uint32_t& keyCode, const JsonArray& modifiers, const string& client);
         bool addKeyIntercepts(const JsonArray& intercepts);
@@ -169,6 +181,13 @@ namespace Plugin {
 
             /* Events listeners */
             virtual void onUserInactive(const double minutes);
+            virtual void onApplicationDisconnected(const std::string& client);
+            virtual void onReady(const std::string& client);
+            virtual void onApplicationConnected(const std::string& client);
+            virtual void onApplicationVisible(const std::string& client);
+            virtual void onApplicationHidden(const std::string& client);
+            virtual void onApplicationFocus(const std::string& client);
+            virtual void onApplicationBlur(const std::string& client);
 
           private:
               RDKWindowManagerImplementation *mRDKWindowManagerImpl;

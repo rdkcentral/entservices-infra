@@ -17,6 +17,6 @@
 * limitations under the License.
 **/
 
-#include "Module.h"
+#pragma once
 
-MODULE_NAME_DECLARATION(BUILD_REFERENCE)
+#define UNUSED(expr)(void)(expr)
