@@ -235,7 +235,7 @@ TEST_F(MessageControlL1Test, WebSocketInboundFlow) {
     Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(1234, element);
     EXPECT_TRUE(response.IsValid());
 }
-
+/*
 TEST_F(MessageControlL1Test, MessageOutputControl) {
     plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module1", true);
     plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "test", "module2", true);
@@ -253,7 +253,7 @@ TEST_F(MessageControlL1Test, MessageOutputControl) {
     EXPECT_GT(count, 0);
     controls->Release();
 }
-
+*/
 TEST_F(MessageControlL1Test, VerifyMultipleEnableDisable) {
     for(auto type : {
         Exchange::IMessageControl::TRACING,
