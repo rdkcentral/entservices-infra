@@ -128,8 +128,18 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
 }
 
 TEST_F(MessageControlL1Test, Initialize) {
-    string result = plugin->Initialize(nullptr);
-    EXPECT_FALSE(result.empty()); 
+    class MinimalShell : public PluginHost::IShell {
+    public:
+        string ConfigLine() const override { return "{}"; }
+        string VolatilePath() const override { return "/tmp/"; }
+        bool Background() const override { return false; }
+        uint32_t Release() const override { return 0; }
+        uint32_t AddRef() const override { return 1; }
+    };
+
+    MinimalShell* shell = new MinimalShell();
+    string result = plugin->Initialize(shell);
+    EXPECT_TRUE(result.empty());
 }
 
 /*
