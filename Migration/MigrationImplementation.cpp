@@ -121,6 +121,7 @@ namespace WPEFramework
 
             if (Utils::readPropertyFromFile(filename, propertyName, bootTypeStr)) {
                 static const std::unordered_map<std::string, BootType> stringToBootType = {
+                    {"BOOT_INIT",         BOOT_TYPE_INIT},
                     {"BOOT_NORMAL",       BOOT_TYPE_NORMAL},
                     {"BOOT_MIGRATION",    BOOT_TYPE_MIGRATION},
                     {"BOOT_UPDATE",       BOOT_TYPE_UPDATE},
