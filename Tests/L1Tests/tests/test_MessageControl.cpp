@@ -350,10 +350,10 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
-        TestChannel() : PluginHost::Channel("test") {}
+        TestChannel() : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")) {}
         
-        void LinkBody(Core::ProxyType<Request>& request) override {}
-        void Received(Core::ProxyType<Request>& request) override {}
+        void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
+        void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
         uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return 0; }
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return 0; }
@@ -372,30 +372,29 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
 TEST_F(MessageControlL1Test, MessageOutputHandling) {
     class TestOutput : public Publishers::IPublish {
     public:
-        void Dispatch(const string& information) override {
+        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) override {
             dispatched = true;
         }
         bool dispatched = false;
     };
 
-    TestOutput* output = new TestOutput();
-    plugin->Announce(output);
+    auto* output = Core::ServiceType<TestOutput>::Create<TestOutput>();
+    plugin->Dispatcher().Announce(output);
 
     Core::hresult hr = plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module", true);
     EXPECT_EQ(Core::ERROR_NONE, hr);
 
     EXPECT_TRUE(output->dispatched);
-    delete output;
+    output->Release();
 }
 
 TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
-        TestChannel(uint32_t id) : PluginHost::Channel("test"), _id(id) {}
+        TestChannel(uint32_t id) : PluginHost::Channel(0, Core::NodeId("127.0.0.1:8080")), _id(id) {}
         
-        // Required implementations
-        void LinkBody(Core::ProxyType<Request>& request) override {}
-        void Received(Core::ProxyType<Request>& request) override {}
+        void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
+        void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
         uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return 0; }
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return 0; }
@@ -418,26 +417,26 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     EXPECT_TRUE(plugin->Attach(channel3));
 
     plugin->Detach(channel2);
-    plugin->Detach(channel1); 
+    plugin->Detach(channel1);
     plugin->Detach(channel3);
 }
 
 TEST_F(MessageControlL1Test, OutputChaining) {
     class TestOutput : public Publishers::IPublish {
     public:
-        void Dispatch(const string& information) override {
+        void Message(const Core::Messaging::MessageInfo& metadata, const string& text) override {
             dispatchCount++;
         }
         int dispatchCount = 0;
     };
 
-    TestOutput* output1 = new TestOutput();
-    TestOutput* output2 = new TestOutput();
-    TestOutput* output3 = new TestOutput();
+    auto* output1 = Core::ServiceType<TestOutput>::Create<TestOutput>();
+    auto* output2 = Core::ServiceType<TestOutput>::Create<TestOutput>();
+    auto* output3 = Core::ServiceType<TestOutput>::Create<TestOutput>();
 
-    plugin->Announce(output1);
-    plugin->Announce(output2);
-    plugin->Announce(output3);
+    plugin->Dispatcher().Announce(output1);
+    plugin->Dispatcher().Announce(output2);
+    plugin->Dispatcher().Announce(output3);
 
     plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module1", true);
     plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "test", "module2", true);
@@ -446,7 +445,7 @@ TEST_F(MessageControlL1Test, OutputChaining) {
     EXPECT_GT(output2->dispatchCount, 0);
     EXPECT_GT(output3->dispatchCount, 0);
 
-    delete output1;
-    delete output2;
-    delete output3;
+    output1->Release();
+    output2->Release();
+    output3->Release();
 }
