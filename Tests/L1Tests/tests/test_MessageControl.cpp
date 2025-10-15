@@ -351,11 +351,12 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
-            : PluginHost::Channel(socketHandle, Core::NodeId("127.0.0.1:8080"))
+            : PluginHost::Channel(-1, Core::NodeId(Core::NodeId::TYPE_IPV4, "127.0.0.1", 8080))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
-            State(1);
+            State(PluginHost::Channel::OPEN, true);
         }
         
+        // Required implementations
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -370,7 +371,6 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
         void Received(const string& text) override {}
 
     private:
-        static constexpr int socketHandle = -1; // Test socket handle
         uint32_t _baseTime;
     };
 
@@ -383,12 +383,13 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel(uint32_t id) 
-            : PluginHost::Channel(socketHandle, Core::NodeId("127.0.0.1:" + std::to_string(8080 + id)))
+            : PluginHost::Channel(-1, Core::NodeId(Core::NodeId::TYPE_IPV4, "127.0.0.1", 8080 + id))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
-            State(1);
+            State(PluginHost::Channel::OPEN, true);
         }
         
+        // Required implementations
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -403,7 +404,6 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
         void Received(const string& text) override {}
         
     private:
-        static constexpr int socketHandle = -1;
         uint32_t _baseTime;
         uint32_t _id;
     };
