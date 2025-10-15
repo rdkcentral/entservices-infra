@@ -357,12 +357,7 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
             Open(Core::infinite);
             State(static_cast<ChannelState>(3), true); // Set LINK state
         }
-
-        bool IsWebSocket() const override { return true; }
-        string RemoteId() const override { return "TestChannel"; }
-        bool IsSuspended() const override { return false; }
-        
-        // Required implementations
+    
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -396,12 +391,7 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
             Open(Core::infinite);
             State(static_cast<ChannelState>(3), true); // Set LINK state
         }
-
-        bool IsWebSocket() const override { return true; }
-        string RemoteId() const override { return "TestChannel" + std::to_string(_id); }
-        bool IsSuspended() const override { return false; }
         
-        // Required implementations
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
