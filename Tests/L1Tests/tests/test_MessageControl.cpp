@@ -351,14 +351,10 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
-            : PluginHost::Channel(PluginHost::Channel::INTERNAL, Core::NodeId()) 
+            : PluginHost::Channel(socketHandle, Core::NodeId("127.0.0.1:8080"))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
-            State(PluginHost::Channel::OPEN);
+            State(1);
         }
-        
-        bool IsOpen() const { return true; }
-        string RemoteId() const override { return "TestChannel"; }
-        bool IsSuspended() const override { return false; }
         
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
@@ -374,6 +370,7 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
         void Received(const string& text) override {}
 
     private:
+        static constexpr int socketHandle = -1; // Test socket handle
         uint32_t _baseTime;
     };
 
@@ -386,15 +383,11 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel(uint32_t id) 
-            : PluginHost::Channel(PluginHost::Channel::INTERNAL, Core::NodeId())
+            : PluginHost::Channel(socketHandle, Core::NodeId("127.0.0.1:" + std::to_string(8080 + id)))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
-            State(PluginHost::Channel::OPEN);
+            State(1);
         }
-        
-        bool IsOpen() const { return true; }
-        string RemoteId() const override { return "TestChannel" + std::to_string(_id); }
-        bool IsSuspended() const override { return false; }
         
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
@@ -410,6 +403,7 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
         void Received(const string& text) override {}
         
     private:
+        static constexpr int socketHandle = -1;
         uint32_t _baseTime;
         uint32_t _id;
     };
