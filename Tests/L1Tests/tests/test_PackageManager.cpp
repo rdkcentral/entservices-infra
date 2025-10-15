@@ -1493,6 +1493,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // Register the notification
     mPackageManagerImpl->Register(&notification);
 
+	signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
+
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -1506,7 +1508,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-    
+
+	signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     notification.SetStatusParams(statusParams);
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
