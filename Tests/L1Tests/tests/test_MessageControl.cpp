@@ -227,3 +227,38 @@ TEST_F(MessageControlL1Test, InboundCommunication) {
         plugin->Inbound(1234, element);
     EXPECT_TRUE(response.IsValid());
 }
+
+TEST_F(MessageControlL1Test, WebSocketFullFlow) {
+    Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("test");
+    EXPECT_TRUE(element.IsValid());
+
+    PluginHost::Channel channel;
+    bool attached = plugin->Attach(channel);
+    EXPECT_TRUE(attached);
+    
+    Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(channel.Id(), element);
+    EXPECT_TRUE(response.IsValid());
+
+    plugin->Detach(channel);
+}
+
+TEST_F(MessageControlL1Test, MessageOutputControl) {
+    Core::JSON::String config;
+    config.FromString(R"({"console":true, "syslog":true, "filename":"/tmp/test.log"})");
+    
+    plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module1", true);
+    plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "test", "module2", true);
+    
+    Exchange::IMessageControl::IControlIterator* controls = nullptr;
+    Core::hresult hr = plugin->Controls(controls);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
+    ASSERT_NE(nullptr, controls);
+
+    int count = 0;
+    Exchange::IMessageControl::Control current;
+    while (controls->Next(current)) {
+        count++;
+    }
+    EXPECT_GT(count, 0);
+    controls->Release();
+}
