@@ -287,35 +287,52 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
 TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     class TestShell : public PluginHost::IShell {
     public:
+        // IShell methods
         string ConfigLine() const override { return R"({"console":true,"syslog":false,"filename":""})"; }
         string VolatilePath() const override { return "/tmp/"; }
         bool Background() const override { return false; }
-        void AddRef() const override {}
-        uint32_t Release() override { return 0; }
-        void* QueryInterface(uint32_t) override { return nullptr; }
-        void EnableWebServer(const string&, const string&) override {}
-        void DisableWebServer() override {}
-        void Register(PluginHost::IPlugin::INotification*) override {}
-        void Unregister(PluginHost::IPlugin::INotification*) override {}
-        string Model() const override { return ""; }
-        bool IsSupported(const uint8_t) const override { return false; }
         string Accessor() const override { return ""; }
         string WebPrefix() const override { return ""; }
         string Callsign() const override { return ""; }
         string HashKey() const override { return ""; }
         string PersistentPath() const override { return ""; }
         string DataPath() const override { return ""; }
-        string Substitute(const string&) const override { return ""; }
+        string ProxyStubPath() const override { return ""; }
         string SystemPath() const override { return ""; }
         string PluginPath() const override { return ""; }
-        string ProxyStubPath() const override { return ""; }
+        string SystemRootPath() const override { return ""; }
+        string Locator() const override { return ""; }
+        string ClassName() const override { return ""; }
+        string Versions() const override { return ""; }
         state State() const override { return state::ACTIVATED; }
+        bool Resumed() const override { return true; }
+        bool IsSupported(const uint8_t) const override { return false; }
+        string Model() const override { return ""; }
+        string Substitute(const string&) const override { return ""; }
+
+        // IUnknown methods
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+        void* QueryInterface(uint32_t) override { return nullptr; }
+        
+        // More IShell methods
+        void EnableWebServer(const string&, const string&) override {}
+        void DisableWebServer() override {}
+        void Register(PluginHost::IPlugin::INotification*) override {}
+        void Unregister(PluginHost::IPlugin::INotification*) override {}
+        Core::hresult SystemRootPath(const string&) override { return Core::ERROR_NONE; }
+        Core::hresult Resumed(const bool) override { return Core::ERROR_NONE; }
+        Core::hresult Startup(const startup) override { return Core::ERROR_NONE; }
+        startup Startup() const override { return startup::INITIALIZED; }
+        Core::hresult ConfigLine(const string&) override { return Core::ERROR_NONE; }
+        Core::hresult Metadata(string&) const override { return Core::ERROR_NONE; }
+        void Notify(const string&) override {}
+        ISubSystem* SubSystems() override { return nullptr; }
     };
 
-    TestShell* shell = new TestShell();
-    string result = plugin->Initialize(shell);
+    TestShell shell;
+    string result = plugin->Initialize(&shell);
     EXPECT_TRUE(result.empty());
     
-    plugin->Deinitialize(shell);
-    delete shell;
+    plugin->Deinitialize(&shell);
 }
