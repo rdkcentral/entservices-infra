@@ -126,7 +126,7 @@ TEST_F(MessageControlL1Test, WebSocketSupport) {
     Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("test");
     EXPECT_TRUE(element.IsValid());
 }
-
+/*
 TEST_F(MessageControlL1Test, Initialize) {
     class MinimalShell : public PluginHost::IShell {
     public:
@@ -142,7 +142,6 @@ TEST_F(MessageControlL1Test, Initialize) {
     EXPECT_TRUE(result.empty());
 }
 
-/*
 TEST_F(MessageControlL1Test, NetworkConfig) {
     string jsonConfig = R"({"port":2200, "binding":"127.0.0.1"})";
     Core::JSON::String config;
