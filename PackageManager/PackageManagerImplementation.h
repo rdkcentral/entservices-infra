@@ -208,7 +208,7 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        string GetInstalledVersion(const string& id) {
+        inline string GetInstalledVersion(const string& id) {
             for (auto const& [key, state] : mState) {
                 if ((id.compare(key.first) == 0) &&
                     (state.installState == InstallState::INSTALLED || state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
@@ -217,11 +217,8 @@ namespace Plugin {
             }
             return "";
         }
-        Core::hresult Install(const string &packageId, const string &version,
-            const packagemanager::NameValues &keyValues, const string &fileLocator,
-            State& state
-            //Exchange::IPackageInstaller::FailReason &failReason
-        );
+        inline bool IsInstallBlocked(const string &packageId, const packagemanager::NameValues &keyValues, const string &fileLocator);
+        Core::hresult Install(const string &packageId, const string &version, const packagemanager::NameValues &keyValues, const string &fileLocator, State& state);
 
         void InitializeState();
         void downloader(int n);
