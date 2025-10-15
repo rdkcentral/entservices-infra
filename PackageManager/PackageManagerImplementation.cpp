@@ -444,50 +444,6 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version,
-        const packagemanager::NameValues &keyValues, const string &fileLocator,
-        State& state
-        )
-    {
-        Core::hresult result = Core::ERROR_GENERAL;
-
-        if (nullptr == mStorageManagerObject) { // XXX: ?!?!?!
-            if (Core::ERROR_NONE != createStorageManagerObject()) {
-                LOGERR("Failed to create StorageManager");
-            }
-        }
-        ASSERT (nullptr != mStorageManagerObject);
-        if (nullptr != mStorageManagerObject) {
-            string path = "";
-            string errorReason = "";
-            if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
-                LOGINFO("CreateStorage path [%s]", path.c_str());
-                state.installState = InstallState::INSTALLING;
-                NotifyInstallStatus(packageId, version, state);
-                #ifdef USE_LIBPACKAGE
-                packagemanager::ConfigMetaData config;
-                packagemanager::Result pmResult = (state.installState == InstallState::INSTALLATION_BLOCKED)
-                    ? packageImpl->Install(packageId, version, state.blockedInstallData.keyValues, state.blockedInstallData.fileLocator, config)
-                    : packageImpl->Install(packageId, version, keyValues, fileLocator, config);
-                if (pmResult == packagemanager::SUCCESS) {
-                    result = Core::ERROR_NONE;
-                    state.installState = InstallState::INSTALLED;
-                } else {
-                    state.installState = InstallState::INSTALL_FAILURE;
-                    state.failReason = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
-                        FailReason::PACKAGE_MISMATCH_FAILURE : FailReason::SIGNATURE_VERIFICATION_FAILURE;
-                    LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
-                }
-                #endif
-            } else {
-                LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
-                state.failReason = FailReason::PERSISTENCE_FAILURE;
-            }
-            NotifyInstallStatus(packageId, version, state);
-        }
-
-        return result;
-    }
 
     // IPackageInstaller methods
     Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version,
@@ -511,43 +467,27 @@ namespace Plugin {
         }
 
         packagemanager::NameValues keyValues;
-        struct IPackageInstaller::KeyValue kv;
         if (additionalMetadata != nullptr) {
+            struct IPackageInstaller::KeyValue kv;
             while (additionalMetadata->Next(kv) == true) {
                 LOGDBG("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
                 keyValues.push_back(std::make_pair(kv.name, kv.value));
             }
-        } else {
-            LOGDBG("additionalMetadata is null");
         }
-
-        string installedVersion = GetInstalledVersion(packageId);
-        if (!installedVersion.empty()) {
+        if (IsInstallBlocked(packageId, keyValues, fileLocator)) {
             StateKey key { packageId, version };
             auto it = mState.find( key );
-            if (it == mState.end()) {
-                State &state = it->second;
-                if ( state.mLockCount ) {
-                    LOGWARN("App is locked id: '%s' ver: '%s' count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
-                    state.installState = InstallState::INSTALLATION_BLOCKED;
-                    state.blockedInstallData.keyValues = keyValues;
-                    state.blockedInstallData.fileLocator = fileLocator;
-                }
-                return result;      // Installtion delayed, not Failed
-            }
-        }
+            State tempState;
+            bool found = it != mState.end();
+            State &state = found ? it->second : tempState;
 
-        StateKey key { packageId, version };
-        auto it = mState.find( key );
-        if (it == mState.end()) {
-            State state;
-            mState.insert( { key, state } );    // XXX: if the install fails should this be in the cache ???
-        }
-
-        it = mState.find( key );
-        if (it != mState.end()) {
-            State &state = it->second;
             result = Install(packageId, version, keyValues, fileLocator, state);
+            if ((result == Core::ERROR_NONE) && !found) {
+                LOGDBG("Inserting Package: %s Version: %s", packageId.c_str(), version.c_str());
+                mState.insert( { key, state } );
+            } else {
+                LOGDBG("Package: %s Version: %s found=%d result=%d", packageId.c_str(), version.c_str(), found, result);
+            }
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
                         ? PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE
@@ -611,13 +551,13 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
         }
 
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+        }
         recordAndPublishTelemetryData(((PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE == packageFailureErrorCode) ? TELEMETRY_MARKER_INSTALL_TIME : TELEMETRY_MARKER_INSTALL_ERROR),
                                                     packageId,
                                                     requestTime,
                                                     packageFailureErrorCode);
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
-
+        }
         return result;
     }
 
@@ -1027,6 +967,7 @@ namespace Plugin {
         return result;
     }
 
+    // Internal functions
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
@@ -1116,6 +1057,71 @@ namespace Plugin {
                 mInprogressDownload.reset();
             }
         }
+    }
+
+        Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version,
+        const packagemanager::NameValues &keyValues, const string &fileLocator,
+        State& state
+        )
+    {
+        Core::hresult result = Core::ERROR_GENERAL;
+
+        if (nullptr == mStorageManagerObject) { // XXX: ?!?!?!
+            if (Core::ERROR_NONE != createStorageManagerObject()) {
+                LOGERR("Failed to create StorageManager");
+            }
+        }
+        ASSERT (nullptr != mStorageManagerObject);
+        if (nullptr != mStorageManagerObject) {
+            string path = "";
+            string errorReason = "";
+            if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
+                LOGINFO("CreateStorage path [%s]", path.c_str());
+                state.installState = InstallState::INSTALLING;
+                NotifyInstallStatus(packageId, version, state);
+                #ifdef USE_LIBPACKAGE
+                packagemanager::ConfigMetaData config;
+                packagemanager::Result pmResult = (state.installState == InstallState::INSTALLATION_BLOCKED)
+                    ? packageImpl->Install(packageId, version, state.blockedInstallData.keyValues, state.blockedInstallData.fileLocator, config)
+                    : packageImpl->Install(packageId, version, keyValues, fileLocator, config);
+                if (pmResult == packagemanager::SUCCESS) {
+                    result = Core::ERROR_NONE;
+                    state.installState = InstallState::INSTALLED;
+                } else {
+                    state.installState = InstallState::INSTALL_FAILURE;
+                    state.failReason = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
+                        FailReason::PACKAGE_MISMATCH_FAILURE : FailReason::SIGNATURE_VERIFICATION_FAILURE;
+                    LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
+                }
+                #endif
+            } else {
+                LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
+                state.failReason = FailReason::PERSISTENCE_FAILURE;
+            }
+            NotifyInstallStatus(packageId, version, state);
+        }
+
+        return result;
+    }
+
+    bool PackageManagerImplementation::IsInstallBlocked(const string &packageId, const packagemanager::NameValues &keyValues, const string &fileLocator) {
+        bool blocked = false;
+        string installedVersion = GetInstalledVersion(packageId);
+        if (!installedVersion.empty()) {
+            StateKey key { packageId, installedVersion };
+            auto it = mState.find( key );
+            if (it == mState.end()) {
+                State &state = it->second;
+                if ( state.mLockCount ) {
+                    LOGWARN("App is locked id: '%s' ver: '%s' count:%d", packageId.c_str(), installedVersion.c_str(), state.mLockCount);
+                    state.installState = InstallState::INSTALLATION_BLOCKED;
+                    state.blockedInstallData.keyValues = keyValues;
+                    state.blockedInstallData.fileLocator = fileLocator;
+                }
+                blocked = true;
+            }
+        }
+        return blocked;
     }
 
     void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason)
