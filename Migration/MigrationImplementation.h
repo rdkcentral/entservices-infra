@@ -46,9 +46,9 @@ namespace WPEFramework
                 END_INTERFACE_MAP
 
             public:
-                Core::hresult GetBootTypeInfo(BootType& bootType) override;
+                Core::hresult GetBootTypeInfo(BootTypeInfo& bootTypeInfo) override;
                 Core::hresult SetMigrationStatus(const MigrationStatus status, MigrationResult& migrationResult) override;
-                Core::hresult GetMigrationStatus(MigrationStatus& migrationStatus) override;
+                Core::hresult GetMigrationStatus(MigrationStatusInfo& migrationStatusInfo) override;
         };
     } // namespace Plugin
 } // namespace WPEFramework
