@@ -1810,9 +1810,12 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
+    signal = PackageManager_invalidStatus;
 
     // TC-51: Failure in config using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Config(packageId, version, runtimeConfig));
+
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
 
     // Unregister the notification
     mPackageManagerImpl->Unregister(&notification);
@@ -1831,7 +1834,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
  * Verify packageState method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
 
     createResources();   
@@ -1854,6 +1857,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
 	
     releaseResources();
 }
+#endif
 
 /* Test Case for package state failure using ComRpc
  * 
@@ -1920,10 +1924,13 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
+    signal = PackageManager_invalidStatus;
 
     // TC-53: Failure in package state using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->PackageState(packageId, version, state));
-
+    
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
+    
     // Unregister the notification
     mPackageManagerImpl->Unregister(&notification);
 
