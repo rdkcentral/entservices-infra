@@ -25,6 +25,10 @@
 #include <mutex>
 #include <chrono>
 #include <condition_variable>
+#include <dirent.h>
+#include <cstring>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
@@ -97,8 +101,9 @@ protected:
             .Times(::testing::AnyNumber())
             .WillRepeatedly(::testing::Invoke(
                 [&](const uint32_t id, const std::string& name) -> void* {
-                    if (name == "org.rdk.PackageManagerRDKEMS") {
+                    if (name == "org.rdk.PackageManagerRDKEMS" || name == "PackageManager") {
                         if (id == Exchange::IPackageInstaller::ID) {
+                            mPackageInstallerMock->AddRef();
                             return reinterpret_cast<void*>(mPackageInstallerMock);
                         }
                     }
@@ -106,11 +111,17 @@ protected:
                 }));
 
         EXPECT_CALL(*mPackageInstallerMock, Register(::testing::_))
-            .WillOnce(::testing::Invoke(
+            .WillRepeatedly(::testing::Invoke(
                 [&](Exchange::IPackageInstaller::INotification* notification) {
                     mPackageInstallerNotification_cb = notification;
                     return Core::ERROR_NONE;
                 }));
+        
+        EXPECT_CALL(*mPackageInstallerMock, AddRef())
+            .WillRepeatedly(::testing::Return(1));
+        
+        EXPECT_CALL(*mPackageInstallerMock, Release())
+            .WillRepeatedly(::testing::Return(0));
 
         ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
             .WillByDefault(::testing::Return(-1));
@@ -129,9 +140,9 @@ protected:
 
         if (mPackageInstallerMock != nullptr && mPackageInstallerNotification_cb != nullptr)
         {
-            ON_CALL(*mPackageInstallerMock, Unregister(::testing::_))
-                .WillByDefault(::testing::Invoke([&]() {
-                    return 0;
+            EXPECT_CALL(*mPackageInstallerMock, Unregister(::testing::_))
+                .WillRepeatedly(::testing::Invoke([&](Exchange::IPackageInstaller::INotification*) {
+                    return Core::ERROR_NONE;
                 }));
             mPackageInstallerNotification_cb = nullptr;
         }
@@ -264,6 +275,44 @@ TEST_F(PreinstallManagerTest, StartPreinstallUsingComRpcSuccess)
         releaseResources();
     };
 
+    // Mock stat to return success for preinstall directory and files
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrContains("/opt/preinstall"), ::testing::_))
+        .WillRepeatedly(::testing::DoAll(
+            ::testing::Invoke([](const char* path, struct stat* buf) {
+                buf->st_mode = S_IFDIR | 0755; // Directory with read/write/execute permissions
+                return 0;
+            })));
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrContains(".tar.gz"), ::testing::_))
+        .WillRepeatedly(::testing::DoAll(
+            ::testing::Invoke([](const char* path, struct stat* buf) {
+                buf->st_mode = S_IFREG | 0644; // Regular file with read/write permissions
+                buf->st_size = 1024; // File size
+                return 0;
+            })));
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    
+    // Mock access to return success for file access checks
+    EXPECT_CALL(*p_wrapsImplMock, access(::testing::StrContains("/opt/preinstall"), ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    EXPECT_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    
+    // Create a mock dirent structure for package discovery
+    static struct dirent mockDirent1;
+    snprintf(mockDirent1.d_name, sizeof(mockDirent1.d_name), "%s.tar.gz", PREINSTALL_MANAGER_PACKAGE_ID);
+    
+    // Mock directory operations for directory scanning
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrContains("/opt/preinstall")))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x12345678))); // Non-null DIR*
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x12345678))); // Non-null DIR*
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(&mockDirent1)) // Return our mock package file
+        .WillRepeatedly(::testing::Return(nullptr)); // Then end of directory
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+
     EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AtLeast(1))
         .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
@@ -299,6 +348,44 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstallUsingComRpcSuccess)
         }
         releaseResources();
     };
+
+    // Mock stat to return success for preinstall directory and files
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrContains("/opt/preinstall"), ::testing::_))
+        .WillRepeatedly(::testing::DoAll(
+            ::testing::Invoke([](const char* path, struct stat* buf) {
+                buf->st_mode = S_IFDIR | 0755; // Directory with read/write/execute permissions
+                return 0;
+            })));
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrContains(".tar.gz"), ::testing::_))
+        .WillRepeatedly(::testing::DoAll(
+            ::testing::Invoke([](const char* path, struct stat* buf) {
+                buf->st_mode = S_IFREG | 0644; // Regular file with read/write permissions
+                buf->st_size = 1024; // File size
+                return 0;
+            })));
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    
+    // Mock access to return success for file access checks
+    EXPECT_CALL(*p_wrapsImplMock, access(::testing::StrContains("/opt/preinstall"), ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    EXPECT_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+    
+    // Create a mock dirent structure for package discovery
+    static struct dirent mockDirent2;
+    snprintf(mockDirent2.d_name, sizeof(mockDirent2.d_name), "%s.tar.gz", PREINSTALL_MANAGER_PACKAGE_ID);
+    
+    // Mock directory operations for directory scanning
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrContains("/opt/preinstall")))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x12345678))); // Non-null DIR*
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x12345678))); // Non-null DIR*
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(&mockDirent)) // Return our mock package file
+        .WillRepeatedly(::testing::Return(nullptr)); // Then end of directory
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillRepeatedly(::testing::Return(0));
 
     EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AtLeast(1))
