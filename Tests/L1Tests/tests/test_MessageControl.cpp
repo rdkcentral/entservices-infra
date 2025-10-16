@@ -342,63 +342,14 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
 }
 
 TEST_F(MessageControlL1Test, InitializeDeinitialize) {
-    class TestShell : public PluginHost::IShell {
-    public:
-        string ConfigLine() const override { return R"({"console":true,"syslog":false,"filename":""})"; }
-        string VolatilePath() const override { return "/tmp/"; }
-        bool Background() const override { return false; }
-        string Accessor() const override { return ""; }
-        string WebPrefix() const override { return ""; }
-        string Callsign() const override { return ""; }
-        string HashKey() const override { return ""; }
-        string PersistentPath() const override { return "/tmp/"; }
-        string DataPath() const override { return "/tmp/"; }
-        string ProxyStubPath() const override { return "/tmp/"; }
-        string SystemPath() const override { return "/tmp/"; }
-        string PluginPath() const override { return "/tmp/"; }
-        string SystemRootPath() const override { return "/tmp/"; }
-        string Locator() const override { return ""; }
-        string ClassName() const override { return ""; }
-        string Versions() const override { return ""; }
-        string Model() const override { return ""; }
-        
-        state State() const override { return state::ACTIVATED; }
-        bool Resumed() const override { return true; }
-        Core::hresult Resumed(const bool) override { return Core::ERROR_NONE; }
-        reason Reason() const override { return reason::REQUESTED; }
-        
-        PluginHost::ISubSystem* SubSystems() override { return nullptr; }
-        startup Startup() const override { return startup::DEACTIVATED; }
-        Core::hresult Startup(const startup) override { return Core::ERROR_NONE; }
-        ICOMLink* COMLink() override { return nullptr; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
-        
-        void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
-        void DisableWebServer() override {}
-        Core::hresult SystemRootPath(const string& systemRootPath) override { return Core::ERROR_NONE; }
-        string Substitute(const string& input) const override { return input; }
-        Core::hresult ConfigLine(const string& config) override { return Core::ERROR_NONE; }
-        Core::hresult Metadata(string& info) const override { return Core::ERROR_NONE; }
-        bool IsSupported(const uint8_t version) const override { return true; }
-        void Notify(const string& message) override {}
-        void Register(PluginHost::IPlugin::INotification* sink) override {}
-        void Unregister(PluginHost::IPlugin::INotification* sink) override {}
-        void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
-        Core::hresult Activate(const reason why) override { return Core::ERROR_NONE; }
-        Core::hresult Deactivate(const reason why) override { return Core::ERROR_NONE; }
-        Core::hresult Unavailable(const reason why) override { return Core::ERROR_NONE; }
-        Core::hresult Hibernate(const uint32_t timeout) override { return Core::ERROR_NONE; }
-        uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
-    };
+    TestShell* shell = new TestShell();
+    ASSERT_NE(nullptr, shell);
 
-    TestShell shell;
-    string result = plugin->Initialize(&shell);
+    string result = plugin->Initialize(shell);
     EXPECT_TRUE(result.empty());
     
-    plugin->Deinitialize(&shell);
+    plugin->Deinitialize(shell);
+    delete shell;
 }
 
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
