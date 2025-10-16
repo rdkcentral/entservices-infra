@@ -457,14 +457,15 @@ namespace Plugin {
         time_t requestTime = getCurrentTimestamp();
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
-        LOGDBG("Installing '%s' ver:'%s' fileLocator: '%s'", packageId.c_str(), version.c_str(), fileLocator.c_str());
         CHECK_CACHE()
         if (fileLocator.empty()) {
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             recordAndPublishTelemetryData(TELEMETRY_MARKER_INSTALL_ERROR, packageId, requestTime, PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE);
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+            LOGERR("fileLocator is empty '%s' ver:'%s'", packageId.c_str(), version.c_str());
             return Core::ERROR_INVALID_SIGNATURE;
         }
+        LOGDBG("Installing '%s' ver:'%s' fileLocator: '%s'", packageId.c_str(), version.c_str(), fileLocator.c_str());
 
         packagemanager::NameValues keyValues;
         if (additionalMetadata != nullptr) {
@@ -474,7 +475,7 @@ namespace Plugin {
                 keyValues.push_back(std::make_pair(kv.name, kv.value));
             }
         }
-        if (IsInstallBlocked(packageId, keyValues, fileLocator)) {
+        if (!IsInstallBlocked(packageId, keyValues, fileLocator)) {
             StateKey key { packageId, version };
             auto it = mState.find( key );
             State tempState;
@@ -1059,7 +1060,7 @@ namespace Plugin {
         }
     }
 
-        Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version,
+    Core::hresult PackageManagerImplementation::Install(const string &packageId, const string &version,
         const packagemanager::NameValues &keyValues, const string &fileLocator,
         State& state
         )
@@ -1104,7 +1105,8 @@ namespace Plugin {
         return result;
     }
 
-    bool PackageManagerImplementation::IsInstallBlocked(const string &packageId, const packagemanager::NameValues &keyValues, const string &fileLocator) {
+    bool PackageManagerImplementation::IsInstallBlocked(const string &packageId, const packagemanager::NameValues &keyValues, const string &fileLocator)
+    {
         bool blocked = false;
         string installedVersion = GetInstalledVersion(packageId);
         if (!installedVersion.empty()) {
@@ -1121,6 +1123,7 @@ namespace Plugin {
                 blocked = true;
             }
         }
+        LOGDBG("blocked=%d", blocked);
         return blocked;
     }
 
