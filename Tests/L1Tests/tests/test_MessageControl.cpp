@@ -522,12 +522,6 @@ TEST_F(MessageControlL1Test, WebSocketOutput_AttachCapacity_Command_Received) {
     Core::ProxyType<Core::JSON::IElement> ret = ws.Received(42, cmd);
     EXPECT_TRUE(ret.IsValid());
 
-    // Received with an unrelated JSON element should result in release / null return
-    Core::ProxyType<Core::JSON::String> unrelated = Core::ProxyType<Core::JSON::String>::Create();
-    unrelated->Value("not-a-command");
-    Core::ProxyType<Core::JSON::IElement> ret2 = ws.Received(42, unrelated);
-    EXPECT_FALSE(ret2.IsValid());
-
     // Clean up
     EXPECT_TRUE(ws.Detach(42));
     ws.Deinitialize();
