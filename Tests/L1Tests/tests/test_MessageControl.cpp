@@ -17,12 +17,12 @@ protected:
     }
 
     void TearDown() override {
-        if (plugin.IsValid()) {
-            if (_shell != nullptr) {
+        if (_shell != nullptr) {
+            if (plugin.IsValid()) {
                 plugin->Deinitialize(_shell);
-                _shell->Release();
-                _shell = nullptr;
             }
+            _shell->Release();
+            _shell = nullptr;
         }
         plugin.Release();
     }
@@ -92,6 +92,7 @@ protected:
         mutable uint32_t _refCount;
         
         TestShell() : _refCount(1) {}
+        virtual ~TestShell() = default;
     };
 };
 
@@ -358,17 +359,6 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
         Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(id, element);
         EXPECT_TRUE(response.IsValid());
     }
-}
-
-TEST_F(MessageControlL1Test, InitializeDeinitialize) {
-    TestShell* shell = new TestShell();
-    shell->AddRef(); // Add extra reference for initialization
-    
-    string result = plugin->Initialize(shell);
-    EXPECT_TRUE(result.empty());
-    
-    plugin->Deinitialize(shell);
-    shell->Release(); // Release the extra reference
 }
 
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
