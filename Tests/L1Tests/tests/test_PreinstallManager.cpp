@@ -465,7 +465,8 @@ TEST_F(PreinstallManagerTest, QueryInterface)
     
     // Test querying IPreinstallManager interface
     Exchange::IPreinstallManager* preinstallInterface = 
-        mPreinstallManagerImpl->QueryInterface(Exchange::IPreinstallManager::ID);
+        static_cast<Exchange::IPreinstallManager*>(
+            mPreinstallManagerImpl->QueryInterface(Exchange::IPreinstallManager::ID));
     
     EXPECT_TRUE(preinstallInterface != nullptr);
     
