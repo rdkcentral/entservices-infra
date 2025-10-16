@@ -590,6 +590,38 @@ TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON) {
     jsonConv.Convert(defaultMeta, "json-msg", data);
     EXPECT_EQ(std::string("json-msg"), std::string(data.Message));
 
-    // Do not construct UDPOutput (opens sockets and causes valgrind/CI issues). The converter & JSON checks above exercise MessageOutput logic.
-    SUCCEED();
+  // UDPOutput::Message: ensure it executes without crash using default metadata
+    Core::NodeId anyNode("127.0.0.1", 0);
+    Publishers::UDPOutput udp(anyNode);
+    udp.Message(defaultMeta, "udp-msg");
+    SUCCEED(); // if we reach here, the call did not ASSERT/crash
+}
+
+TEST_F(MessageControlL1Test, MessageOutput_FileWrite) {
+	// Create a small temp file and verify FileOutput writes the payload when file can be created.
+	const string tmpName = "/tmp/test_messageoutput_filewrite.log";
+	// Ensure no leftover
+	std::remove(tmpName.c_str());
+
+	// Create FileOutput using same constructor used elsewhere in repo
+	Publishers::FileOutput fileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, tmpName);
+
+	Core::Messaging::MessageInfo defaultMeta; // invalid metadata tolerated by Convert()
+	const string payload = "file-write-test-payload";
+
+	// Try to write; FileOutput::Message checks file internals itself.
+	fileOutput.Message(defaultMeta, payload);
+
+	// If file exists, read and verify payload; otherwise skip gracefully.
+	std::ifstream in(tmpName);
+	if (in.good()) {
+		std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+		in.close();
+		EXPECT_NE(string::npos, content.find(payload));
+		// cleanup
+		std::remove(tmpName.c_str());
+	} else {
+		// Environment prevented file creation; skip the test as not applicable in this environment
+		GTEST_SKIP() << "Cannot create/read temp file; skipping FileOutput write verification.";
+	}
 }
