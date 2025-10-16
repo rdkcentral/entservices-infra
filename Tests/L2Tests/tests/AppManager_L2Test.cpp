@@ -1087,7 +1087,7 @@ TEST_F(AppManagerTest, GetLoadedAppsSuccessCaseUsingJsonRpc)
     JsonObject resultJson;
     Core::JSON::String resultString;
     string apps = "";
-    string expectedApps = "\"[{\\\"appId\\\":\\\"com.example.myapp\\\",\\\"type\\\":1,\\\"lifecycleState\\\":0,\\\"targetLifecycleState\\\":2,\\\"activeSessionId\\\":\\\"\\\",\\\"appInstanceId\\\":\\\"\\\"}]\"";
+    string expectedApps = "\"[{\\\"appId\\\":\\\"com.example.myapp\\\",\\\"type\\\":\\\"INTERACTIVE_APP\\\",\\\"lifecycleState\\\":0,\\\"targetLifecycleState\\\":2,\\\"activeSessionId\\\":\\\"\\\",\\\"appInstanceId\\\":\\\"\\\"}]\"";
 
     TEST_LOG("Testing GetLoadedAppsSuccessCaseUsingJsonRpc ");
 
