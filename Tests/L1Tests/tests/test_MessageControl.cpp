@@ -24,7 +24,8 @@ protected:
             if (plugin.IsValid()) {
                 plugin->Deinitialize(_shell);
             }
-            _shell->Release();
+            // Explicitly delete the shell we created in tests to avoid double-delete
+            delete _shell;
             _shell = nullptr;
         }
         plugin.Release();
@@ -63,16 +64,15 @@ protected:
         ICOMLink* COMLink() override { return nullptr; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
         
+        // Make AddRef/Release no-op for test shell to avoid framework-driven deletion.
+        // Lifetime is managed by the fixture (delete in TearDown).
         void AddRef() const override {
-            Core::InterlockedIncrement(_refCount);
+            // no-op for test shell
         }
 
         uint32_t Release() const override {
-            if (Core::InterlockedDecrement(_refCount) == 0) {
-                delete this;
-                return 0;
-            }
-            return _refCount;
+            // report a non-zero refcount to avoid indicating object should be freed by callers
+            return 1;
         }
         
         void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
@@ -93,7 +93,7 @@ protected:
         uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
         
         mutable uint32_t _refCount;
-        
+
         TestShell() : _refCount(1) {}
         virtual ~TestShell() = default;
     };
@@ -449,6 +449,30 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     plugin->Detach(channel3);
 }
 
+TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON) {
+    // Use default MessageInfo (invalid) to ensure functions don't ASSERT and do return sensible values.
+
+    Core::Messaging::MessageInfo defaultMeta; // default/invalid metadata
+
+    // Text::Convert: should return string containing the payload even with invalid metadata
+    Publishers::Text textConv(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
+    const string payload = "hello-text";
+    const string result = textConv.Convert(defaultMeta, payload);
+    EXPECT_NE(string::npos, result.find(payload));
+
+    // JSON::Convert: should set Data.Message at minimum
+    Publishers::JSON::Data data;
+    Publishers::JSON jsonConv;
+    jsonConv.Convert(defaultMeta, "json-msg", data);
+    EXPECT_EQ(std::string("json-msg"), std::string(data.Message));
+
+	// UDPOutput::Message: ensure it executes without crash using default metadata
+    Core::NodeId anyNode("127.0.0.1", 0);
+    Publishers::UDPOutput udp(anyNode);
+    udp.Message(defaultMeta, "udp-msg");
+    SUCCEED(); // if we reach here, the call did not ASSERT/crash
+}
+
 TEST_F(MessageControlL1Test, MessageOutput_FileWrite) {
 	// Create a small temp file and verify FileOutput writes the payload when file can be created.
 	const string tmpName = "/tmp/test_messageoutput_filewrite.log";
@@ -473,7 +497,7 @@ TEST_F(MessageControlL1Test, MessageOutput_FileWrite) {
 		// cleanup
 		std::remove(tmpName.c_str());
 	} else {
-		// Environment prevented file creation; exercise code path above is still useful
-		SUCCEED();
+		// Environment prevented file creation; skip the test as not applicable in this environment
+		GTEST_SKIP() << "Cannot create/read temp file; skipping FileOutput write verification.";
 	}
 }
