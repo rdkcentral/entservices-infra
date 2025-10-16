@@ -354,7 +354,6 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8080))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
             
-            Open(Core::infinite);
             State(static_cast<ChannelState>(3), true); // Set LINK state
         }
     
@@ -388,7 +387,6 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
             
-            Open(Core::infinite);
             State(static_cast<ChannelState>(3), true); // Set LINK state
         }
         
