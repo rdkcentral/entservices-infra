@@ -13,17 +13,50 @@ protected:
     void SetUp() override {
         plugin = Core::ProxyType<MessageControl>::Create();
         
-        TestShell* shell = new TestShell();
-        // Add websocket config
-        shell->ConfigLine = []() -> string { 
-            return R"({"console":true,"syslog":false,"remote":{"port":8899,"binding":"0.0.0.0"}})"; 
-        };
-        plugin->Initialize(shell);
+        // Initialize plugin with shell
+        plugin->Initialize(new TestShell());
     }
 
     void TearDown() override {
         plugin.Release();
     }
+
+    class TestShell : public PluginHost::IShell {
+    public:
+        string ConfigLine() const override { 
+            return R"({"console":true,"syslog":false,"remote":{"port":8899,"binding":"0.0.0.0"}})"; 
+        }
+        string VolatilePath() const override { return "/tmp/"; }
+        bool Background() const override { return false; }
+        string Accessor() const override { return ""; }
+        string WebPrefix() const override { return ""; }
+        string Callsign() const override { return "MessageControl"; }
+        string HashKey() const override { return ""; }
+        string PersistentPath() const override { return "/tmp/"; }
+        string DataPath() const override { return "/tmp/"; }
+        string ProxyStubPath() const override { return "/tmp/"; }
+        string SystemPath() const override { return "/tmp/"; }
+        string PluginPath() const override { return "/tmp/"; }
+        string SystemRootPath() const override { return "/tmp/"; }
+        string Locator() const override { return ""; }
+        string ClassName() const override { return ""; }
+        string Versions() const override { return ""; }
+        string Model() const override { return ""; }
+        
+        state State() const override { return state::ACTIVATED; }
+        bool Resumed() const override { return true; }
+        Core::hresult Resumed(const bool) override { return Core::ERROR_NONE; }
+        reason Reason() const override { return reason::REQUESTED; }
+        
+        PluginHost::ISubSystem* SubSystems() override { return nullptr; }
+        startup Startup() const override { return startup::ACTIVATED; }
+        Core::hresult Startup(const startup) override { return Core::ERROR_NONE; }
+        ICOMLink* COMLink() override { return nullptr; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
+        
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+    };
 };
 
 TEST_F(MessageControlL1Test, Construction) {
@@ -358,16 +391,11 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
-            : PluginHost::Channel(Channel::WebSocket, Core::NodeId("127.0.0.1:8899"))
+            : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
-            State(Channel::WebServer, true);
+            State(static_cast<ChannelState>(1), true);
         }
         
-        // Required implementations
-        string Name() const override { return "TestChannel"; }
-        bool IsWebSocket() const override { return true; }
-        bool IsUpgraded() const override { return true; }
-        bool IsCompleted() const override { return true; }
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -394,17 +422,12 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel(uint32_t id) 
-            : PluginHost::Channel(Channel::WebSocket, Core::NodeId("127.0.0.1:8899"))
+            : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
-            State(Channel::WebServer, true);
+            State(static_cast<ChannelState>(1), true);
         }
         
-        // Required implementations
-        string Name() const override { return "TestChannel" + std::to_string(_id); }
-        bool IsWebSocket() const override { return true; }
-        bool IsUpgraded() const override { return true; }
-        bool IsCompleted() const override { return true; }
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
