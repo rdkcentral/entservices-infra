@@ -350,9 +350,9 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("unlock")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getLockedInfo")));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for adding download request to a queue(priority/regular) using JsonRpc
@@ -388,9 +388,9 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    deinitforJsonRpc();
-
     releaseResources();
+
+    deinitforJsonRpc();    
 }
 
 /* Test Case for checking download request error when internet is unavailable using JsonRpc
@@ -416,10 +416,10 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
     
     // TC-4: Download request error when internet is unavailable using JsonRpc
     EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    
+    releaseResources();
 
     deinitforJsonRpc();
-
-    releaseResources();
 }
 
 /* Test Case for adding download request to a queue(priority/regular) using ComRpc
@@ -479,10 +479,10 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
     // Unregister the notification
     mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
     #endif
+    
+    releaseResources();
 
 	deinitforComRpc();
-	
-    releaseResources();
 }
 
 /* Test Case for checking download request error when internet is unavailable using ComRpc
@@ -521,9 +521,10 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
     // Unregister the notification
     mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
     #endif
-	deinitforComRpc();
-	
+
     releaseResources();
+
+	deinitforComRpc();    
 }
 
 /* Test Case for pausing download via ID using JsonRpc
@@ -556,10 +557,10 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     // TC-8: Pause download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+ 
+    releaseResources();
 
 	deinitforJsonRpc();
-	
-    releaseResources();
 }
 
 /* Test Case for pausing failed using JsonRpc
@@ -579,9 +580,9 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
     // TC-10: Failure in pausing download using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
-    deinitforJsonRpc();
-
     releaseResources();
+
+    deinitforJsonRpc();
 }
 
 /* Test Case for pausing download via ID using ComRpc
@@ -629,9 +630,9 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
     // Unregister the notification
     //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
-	deinitforComRpc();
-
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for pausing failed using ComRpc
@@ -653,9 +654,9 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
     // TC-13: Failure in pausing download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Pause(downloadId));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();    
 }
 
 /* Test Case for resuming download via ID using JsonRpc
@@ -688,9 +689,9 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
     // TC-14: Resume download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
  /* Test Case for resuming failed using JsonRpc
@@ -710,9 +711,9 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
     // TC-16: Failure in resuming download using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
  /* Test Case for resuming download via ID using ComRpc
@@ -758,9 +759,9 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
     // Unregister the notification
     //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
-    deinitforComRpc();
-
     releaseResources();
+
+    deinitforComRpc();
 }
 
  /* Test Case for resuming failed using ComRpc
@@ -782,9 +783,9 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
     // TC-19: Failure in resuming download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Resume(downloadId));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for cancelling download via ID using JsonRpc
@@ -817,9 +818,9 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
     // TC-20: Cancel download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for cancelling failed using JsonRpc
@@ -839,9 +840,9 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
     // TC-22: Failure in cancelling download using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for cancelling download via ID using ComRpc
@@ -887,9 +888,9 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
     // Unregister the notification
     //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();    
 }
 
 /* Test Case for cancelling failed using ComRpc
@@ -911,9 +912,9 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
     // TC-25: Failure in cancelling download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Cancel(downloadId));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+    deinitforComRpc();
 }
 
 /* Test Case for delete download failure when download in progress using JsonRpc
@@ -946,9 +947,9 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcInProgressFail) {
     // TC-26: Delete download failure when download in progress using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for delete failed using JsonRpc
@@ -968,9 +969,9 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
     // TC-27: Failure in delete using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();    
 }
 
 /* Test Case for delete download failure when download in progress using ComRpc
@@ -1017,9 +1018,9 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcInProgressFail) {
     // Unregister the notification
     //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for deleting failed using ComRpc
@@ -1041,9 +1042,9 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
     // TC-29: Failure in delete using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for download progress via ID using JsonRpc
@@ -1078,9 +1079,9 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse, "");
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for download progress failure using JsonRpc
@@ -1100,9 +1101,9 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     // TC-31: Download progress failure using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"testDownloadId\", \"progress\": {}}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for download progress via ID using ComRpc
@@ -1151,10 +1152,9 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     // Unregister the notification
     //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
-	deinitforComRpc();
-	
     releaseResources();
 
+	deinitforComRpc();
 }
 
 /* Test Case for download progress failure using ComRpc
@@ -1178,9 +1178,9 @@ TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
     // TC-33: Progress failure via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Progress(downloadId, progress));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();   
 }
 
 /* Test Case for getting storage details using JsonRpc
@@ -1200,9 +1200,9 @@ TEST_F(PackageManagerTest, getStorageDetailsusingJsonRpc) {
     // TC-34: Get Storage Details using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getStorageDetails"), _T("{\"quotaKB\": \"1024\", \"usedKB\": \"568\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for getting storage details using ComRpc
@@ -1225,9 +1225,9 @@ TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
     // TC-35: Get Storage Details using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->GetStorageDetails(quotaKB, usedKB));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for setting rate limit via ID using JsonRpc
@@ -1260,9 +1260,9 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
     // TC-36: Set rate limit via downloadID using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"1001\", \"limit\": 1024}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();   
 }
 
  /* Test Case for setting rate limit failure using JsonRpc
@@ -1282,9 +1282,9 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcFailure) {
     // TC-38: Rate limit failure using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"1001\", \"limit\": 1024}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
  /* Test Case for setting rate limit via ID using ComRpc
@@ -1331,9 +1331,9 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     // Unregister the notification
     //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
  /* Test Case for failure in setting rateLimit using ComRpc
@@ -1356,9 +1356,9 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     // TC-41: Rate limit failure using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->RateLimit(downloadId, limit));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();   
 }
 
 // IPackageInstaller methods
@@ -1380,9 +1380,9 @@ TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
     // TC-42: Error on install due to invalid signature using JsonRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"\", \"reason\": 1}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for install failure using JsonRpc
@@ -1409,9 +1409,9 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
     // TC-43: Failure on install using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/package1001\", \"reason\": 1}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+    deinitforJsonRpc();
 }
 
  /* Test Case for error on install due to invalid signature using ComRpc
@@ -1439,9 +1439,9 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // TC-44: Error on install due to invalid signature using ComRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+    deinitforComRpc();
 }
 
 /* Test Case for install failure using ComRpc
@@ -1521,9 +1521,9 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for uninstall failure using JsonRpc
@@ -1561,9 +1561,9 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
     // TC-46: Failure on uninstall using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\", \"errorReason\": \"no error\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for uninstall failure using ComRpc
@@ -1658,9 +1658,9 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     // Unregister the notification
     mPackageManagerImpl->Unregister(&notification);
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for list packages method success using JsonRpc
@@ -1680,9 +1680,9 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
 	// TC-48: list packages using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("listPackages"), _T("{\"packages\": {}}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for list packages method success using ComRpc
@@ -1706,9 +1706,9 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 	// TC-49: list packages using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for config method failure using JsonRpc
@@ -1741,7 +1741,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 #endif
 
@@ -1820,9 +1820,9 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     // Unregister the notification
     mPackageManagerImpl->Unregister(&notification);
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for package state failure using JsonRpc
@@ -1855,7 +1855,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 #endif
 
@@ -1934,9 +1934,9 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     // Unregister the notification
     mPackageManagerImpl->Unregister(&notification);
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
  /* Test Case for get config for package error due to invalid signature using JsonRpc
@@ -1956,9 +1956,9 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcInvalidSignature) {
     // TC-54: Error in get config for packages due to empty file locator using JsonRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"\", \"id\": \"1001\", \"version\": \"2.0\", \"config\": {}}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for get config for package failure using JsonRpc
@@ -1978,9 +1978,9 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcFailure) {
     // TC-55: Failure in get config for packages using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"/opt/CDL/package1001\", \"id\": \"1001\", \"version\": \"2.0\", \"config\": {}}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for get config for packages error due to invalid signature using ComRpc
@@ -2006,9 +2006,9 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcInvalidSignature) {
     // TC-56: Error in get config for packages due to empty file locator using ComRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->GetConfigForPackage(fileLocator, id, version, config));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for get config for package failure using ComRpc
@@ -2034,9 +2034,9 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
     // TC-57: Failure in get config for packages using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->GetConfigForPackage(fileLocator, id, version, config));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 // IPackageHandler methods
@@ -2058,9 +2058,9 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
     // TC-58: Error on lock using JsonRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("lock"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"lockReason\": 0, \"lockId\": 132, \"unpackedPath\": \"testPath\", \"configMetadata\": {}, \"appMetadata\": {}}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();   
 }
 
 /* Test Case for lock error using ComRpc
@@ -2090,9 +2090,9 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
 	// TC-59: Error on lock using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for unlock error using JsonRpc
@@ -2112,9 +2112,9 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 	// TC-60: Error on unlock using JsonRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for unlock error using ComRpc
@@ -2137,9 +2137,9 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
     // TC-61: Error on unlock using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Unlock(packageId, version));
 
-	deinitforComRpc();
-	
     releaseResources();
+
+	deinitforComRpc();
 }
 
 /* Test Case for get locked info error using JsonRpc
@@ -2159,9 +2159,9 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
     // TC-62: Error on get locked info using JsonRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("getLockedInfo"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"unpackedPath\": \"testPath\", \"configMetadata\": {}, \"gatewayMetadataPath\": \"testgatewayMetadataPath\", \"locked\": true}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
-	
     releaseResources();
+
+	deinitforJsonRpc();
 }
 
 /* Test Case for get locked info error using ComRpc
@@ -2188,7 +2188,7 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
     // TC-63: Error on get locked info using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked));
 
-	deinitforComRpc();
-	
     releaseResources();
+    
+	deinitforComRpc();
 }
