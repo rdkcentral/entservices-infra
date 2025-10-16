@@ -238,14 +238,9 @@ protected:
 
 class NotificationTest : public Exchange::IPreinstallManager::INotification 
 {
-    private:
-        BEGIN_INTERFACE_MAP(NotificationTest)
-        INTERFACE_ENTRY(Exchange::IPreinstallManager::INotification)
-        END_INTERFACE_MAP
-    
-    public:
+        public:
         NotificationTest() : _refCount(1) {}
-        virtual ~NotificationTest() {}
+        virtual ~NotificationTest() = default;
         
         void AddRef() const override 
         {
@@ -265,7 +260,10 @@ class NotificationTest : public Exchange::IPreinstallManager::INotification
         {
             TEST_LOG("OnAppInstallationStatus called with: %s", jsonresponse.c_str());
         }
-        
+
+        BEGIN_INTERFACE_MAP(NotificationTest)
+        INTERFACE_ENTRY(Exchange::IPreinstallManager::INotification)
+        END_INTERFACE_MAP
     private:
         mutable uint32_t _refCount;
 };
