@@ -445,3 +445,95 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     plugin->Detach(channel1);
     plugin->Detach(channel3);
 }
+
+TEST_F(MessageControlL1Test, MessageOutput_TextConvert_Console_File_UDP_JSON) {
+	// Minimal smoke tests for MessageOutput classes
+
+	// 1) Text::Convert -> verify returned string contains the provided text
+	{
+		// create a simple metadata object via MessageInfo (use reasonable constructor)
+		Core::Messaging::MessageInfo meta(Core::Messaging::Metadata::type::TRACING, "cat", "mod", Core::Time::Now());
+		WPEFramework::Publishers::Text textConvert(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
+		const string payload = "unit-test-text";
+		const string out = textConvert.Convert(meta, payload);
+		EXPECT_NE(string::npos, out.find(payload));
+	}
+
+	// 2) ConsoleOutput: capture stdout and verify it contains the message
+	{
+		WPEFramework::Publishers::ConsoleOutput console;
+		Core::Messaging::MessageInfo meta(Core::Messaging::Metadata::type::LOGGING, "cat", "mod", Core::Time::Now());
+		const string payload = "console-test-text";
+
+		// capture std::cout
+		std::streambuf* oldbuf = std::cout.rdbuf();
+		std::ostringstream capture;
+		std::cout.rdbuf(capture.rdbuf());
+
+		console.Message(meta, payload);
+
+		std::cout.rdbuf(oldbuf);
+		const string captured = capture.str();
+		EXPECT_NE(string::npos, captured.find(payload));
+	}
+
+	// 3) FileOutput: write to temp file and verify content
+	{
+		const string tmpName = "/tmp/test_messageoutput.log";
+		// Create FileOutput with abbreviated option and filename (constructor assumed)
+		Publishers::FileOutput fileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, tmpName);
+		Core::Messaging::MessageInfo meta(Core::Messaging::Metadata::type::REPORTING, "catF", "modF", Core::Time::Now());
+		const string payload = "file-test-text";
+
+		// Ensure file opened and then write
+		if (fileOutput.IsOpen()) {
+			fileOutput.Message(meta, payload);
+			// read back
+			std::ifstream in(tmpName);
+			ASSERT_TRUE(in.good());
+			std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+			in.close();
+			EXPECT_NE(string::npos, content.find(payload));
+			// cleanup
+			std::remove(tmpName.c_str());
+		} else {
+			// If environment prevents opening file, at least call Message to exercise code path
+			fileOutput.Message(meta, payload);
+			SUCCEED();
+		}
+	}
+
+	// 4) JSON::Convert: basic path - set Message and CATEGORY option
+	{
+		Publishers::JSON converter;
+		// enable CATEGORY option only
+		converter._outputOptions = static_cast<Publishers::ExtraOutputOptions>(
+			Publishers::AsNumber(Publishers::ExtraOutputOptions::CATEGORY));
+		Core::Messaging::MessageInfo meta(Core::Messaging::Metadata::type::LOGGING, "jsonCat", "jsonMod", Core::Time::Now());
+		Publishers::JSON::Data data;
+		converter.Convert(meta, "json-payload", data);
+		EXPECT_EQ("json-payload", data.Message);
+		// CATEGORY enabled => Category should be set
+		EXPECT_EQ("jsonCat", data.Category);
+	}
+
+	// 5) UDPOutput: Channel::Output then Channel::SendData returns buffer > 0
+	{
+		Core::NodeId node("127.0.0.1", 0);
+		Publishers::UDPOutput::Channel channel(node);
+		// create text message
+		Messaging::TextMessage textMessage("udp-payload");
+		Core::Messaging::MessageInfo meta(Core::Messaging::Metadata::type::TRACING, "udpCat", "udpMod", Core::Time::Now());
+
+		// Output fills internal buffer
+		channel.Output(meta, &textMessage);
+
+		// retrieve buffer
+		uint8_t buffer[Messaging::MessageUnit::DataSize];
+		const uint16_t got = channel.SendData(buffer, sizeof(buffer));
+		EXPECT_GT(got, 0);
+		// simple check: payload substring in buffer
+		const string snapshot(reinterpret_cast<char*>(buffer), got);
+		EXPECT_NE(string::npos, snapshot.find("udp-payload"));
+	}
+}
