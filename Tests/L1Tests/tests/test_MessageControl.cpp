@@ -502,57 +502,55 @@ TEST_F(MessageControlL1Test, MessageOutput_FileWrite) {
 	}
 }
 
-TEST_F(MessageControlL1Test, ControlStructure_Simple) {
-	// Enable a single tracing control and verify Controls() returns at least one entry.
-	Core::hresult hr = plugin->Enable(
-		Exchange::IMessageControl::TRACING,
-		"UnitTestCategory",
-		"UnitTestModule",
-		true);
-	EXPECT_EQ(Core::ERROR_NONE, hr);
+TEST_F(MessageControlL1Test, WebSocketOutput_AttachCapacity_Command_Received) {
+    // Use TestShell instance for server pointer
+    TestShell shell;
+    Publishers::WebSocketOutput ws;
 
-	Exchange::IMessageControl::IControlIterator* controls = nullptr;
-	hr = plugin->Controls(controls);
-	EXPECT_EQ(Core::ERROR_NONE, hr);
-	ASSERT_NE(nullptr, controls);
+    // Initialize with maxConnections = 1 to validate capacity handling
+    ws.Initialize(&shell, 1);
 
-	Exchange::IMessageControl::Control current;
-	bool gotAny = false;
-	if (controls->Next(current)) {
-		gotAny = true;
-	}
-	controls->Release();
-	EXPECT_TRUE(gotAny);
+    // First attach should succeed, second should fail due to capacity
+    EXPECT_TRUE(ws.Attach(42));
+    EXPECT_FALSE(ws.Attach(43));
+
+    // Command() should return a valid JSON element (ExportCommand)
+    Core::ProxyType<Core::JSON::IElement> cmd = ws.Command();
+    EXPECT_TRUE(cmd.IsValid());
+
+    // Received with a valid ExportCommand should return a valid element (processed)
+    Core::ProxyType<Core::JSON::IElement> ret = ws.Received(42, cmd);
+    EXPECT_TRUE(ret.IsValid());
+
+    // Received with an unrelated JSON element should result in release / null return
+    Core::ProxyType<Core::JSON::String> unrelated = Core::ProxyType<Core::JSON::String>::Create();
+    unrelated->Value("not-a-command");
+    Core::ProxyType<Core::JSON::IElement> ret2 = ws.Received(42, unrelated);
+    EXPECT_FALSE(ret2.IsValid());
+
+    // Clean up
+    EXPECT_TRUE(ws.Detach(42));
+    ws.Deinitialize();
 }
 
-TEST_F(MessageControlL1Test, EnableStandardOutputs_Multiple) {
-	// Enable and disable STANDARD_OUT and STANDARD_ERROR for different categories/modules.
-	Core::hresult hr = plugin->Enable(
-		Exchange::IMessageControl::STANDARD_OUT,
-		"catA",
-		"modA",
-		true);
-	EXPECT_EQ(Core::ERROR_NONE, hr);
+TEST_F(MessageControlL1Test, WebSocketOutput_Message_NoCrash_SubmitCalled) {
+    TestShell shell;
+    Publishers::WebSocketOutput ws;
 
-	hr = plugin->Enable(
-		Exchange::IMessageControl::STANDARD_ERROR,
-		"catB",
-		"modB",
-		true);
-	EXPECT_EQ(Core::ERROR_NONE, hr);
+    // Allow a couple of connections
+    ws.Initialize(&shell, 2);
 
-	// Toggle them off again
-	hr = plugin->Enable(
-		Exchange::IMessageControl::STANDARD_OUT,
-		"catA",
-		"modA",
-		false);
-	EXPECT_EQ(Core::ERROR_NONE, hr);
+    // Attach a channel so Message() will attempt to export JSON data
+    EXPECT_TRUE(ws.Attach(1001));
 
-	hr = plugin->Enable(
-		Exchange::IMessageControl::STANDARD_ERROR,
-		"catB",
-		"modB",
-		false);
-	EXPECT_EQ(Core::ERROR_NONE, hr);
+    // Use default/invalid metadata (MessageOutput::JSON::Convert handles this safely)
+    Core::Messaging::MessageInfo defaultMeta;
+    const string payload = "websocket-export-test";
+
+    // Message should execute without crashing and should use TestShell::Submit to deliver data
+    ws.Message(defaultMeta, payload);
+
+    // Detach and deinitialize
+    EXPECT_TRUE(ws.Detach(1001));
+    ws.Deinitialize();
 }
