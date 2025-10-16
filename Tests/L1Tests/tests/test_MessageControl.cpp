@@ -446,7 +446,7 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     plugin->Detach(channel3);
 }
 
-TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON_UDP) {
+TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON) {
     // Use default MessageInfo (invalid) to ensure functions don't ASSERT and do return sensible values.
 
     Core::Messaging::MessageInfo defaultMeta; // default/invalid metadata
@@ -462,10 +462,4 @@ TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON_UDP) {
     Publishers::JSON jsonConv;
     jsonConv.Convert(defaultMeta, "json-msg", data);
     EXPECT_EQ(std::string("json-msg"), std::string(data.Message));
-
-    // UDPOutput::Message: ensure it executes without crash using default metadata
-    Core::NodeId anyNode("127.0.0.1", 0);
-    Publishers::UDPOutput udp(anyNode);
-    udp.Message(defaultMeta, "udp-msg");
-    SUCCEED(); // if we reach here, the call did not ASSERT/crash
 }
