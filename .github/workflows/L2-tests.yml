@@ -512,7 +512,7 @@ jobs:
           -DDS_FOUND=ON
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           &&
-          cmake --build build/entservices-infra -j8
+          cmake --build build/entservices-infra -j6
           &&
           cmake --install build/entservices-infra
 
