@@ -9,15 +9,22 @@ using namespace WPEFramework::Plugin;
 class MessageControlL1Test : public ::testing::Test {
 protected:
     Core::ProxyType<MessageControl> plugin;
+    PluginHost::IShell* _shell;
 
     void SetUp() override {
         plugin = Core::ProxyType<MessageControl>::Create();
-        
-        // Initialize plugin with shell
-        plugin->Initialize(new TestShell());
+        _shell = new TestShell();
+        plugin->Initialize(_shell);
     }
 
     void TearDown() override {
+        if (plugin.IsValid()) {
+            plugin->Deinitialize(_shell);
+        }
+        if (_shell != nullptr) {
+            delete _shell;
+            _shell = nullptr;
+        }
         plugin.Release();
     }
 
@@ -54,8 +61,17 @@ protected:
         ICOMLink* COMLink() override { return nullptr; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
         
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
+        void AddRef() const override {
+            Core::InterlockedIncrement(_refCount);
+        }
+
+        uint32_t Release() const override {
+            if (Core::InterlockedDecrement(_refCount) == 0) {
+                delete this;
+                return 0;
+            }
+            return _refCount;
+        }
         
         void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
         void DisableWebServer() override {}
@@ -73,6 +89,10 @@ protected:
         Core::hresult Unavailable(const reason why) override { return Core::ERROR_NONE; }
         Core::hresult Hibernate(const uint32_t timeout) override { return Core::ERROR_NONE; }
         uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
+        
+        mutable uint32_t _refCount;
+        
+        TestShell() : _refCount(1) {}
     };
 };
 
@@ -349,7 +369,7 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     EXPECT_TRUE(result.empty());
     
     plugin->Deinitialize(shell);
-    delete shell;
+    shell->Release();  // Use Release() instead of delete
 }
 
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
