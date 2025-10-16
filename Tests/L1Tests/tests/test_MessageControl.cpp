@@ -22,10 +22,12 @@ protected:
     void TearDown() override {
         if (_shell != nullptr) {
             if (plugin.IsValid()) {
+                // Let the plugin deinitialize and release the shell (plugin called AddRef in Initialize)
                 plugin->Deinitialize(_shell);
+            } else {
+                // Plugin not initialized with this shell, release ownership here
+                _shell->Release();
             }
-            // Release the test shell using refcount semantics (will delete when refcount == 0)
-            _shell->Release();
             _shell = nullptr;
         }
         plugin.Release();
