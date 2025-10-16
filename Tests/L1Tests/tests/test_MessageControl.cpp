@@ -13,17 +13,16 @@ protected:
 
     void SetUp() override {
         plugin = Core::ProxyType<MessageControl>::Create();
-        _shell = new TestShell();
-        plugin->Initialize(_shell);
+        _shell = nullptr;
     }
 
     void TearDown() override {
         if (plugin.IsValid()) {
-            plugin->Deinitialize(_shell);
-        }
-        if (_shell != nullptr) {
-            delete _shell;
-            _shell = nullptr;
+            if (_shell != nullptr) {
+                plugin->Deinitialize(_shell);
+                _shell->Release();
+                _shell = nullptr;
+            }
         }
         plugin.Release();
     }
@@ -363,13 +362,13 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
 
 TEST_F(MessageControlL1Test, InitializeDeinitialize) {
     TestShell* shell = new TestShell();
-    ASSERT_NE(nullptr, shell);
-
+    shell->AddRef(); // Add extra reference for initialization
+    
     string result = plugin->Initialize(shell);
     EXPECT_TRUE(result.empty());
     
     plugin->Deinitialize(shell);
-    shell->Release();  // Use Release() instead of delete
+    shell->Release(); // Release the extra reference
 }
 
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
