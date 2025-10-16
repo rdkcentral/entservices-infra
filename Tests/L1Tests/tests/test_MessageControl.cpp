@@ -2,6 +2,9 @@
 #include <gmock/gmock.h>
 #include "MessageControl.h"
 #include <core/core.h>
+#include <fstream>
+#include <iterator>
+#include <cstdio>
 
 using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
