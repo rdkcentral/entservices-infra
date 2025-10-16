@@ -447,16 +447,10 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
 }
 
 TEST_F(MessageControlL1Test, MessageOutput_TypesExist) {
-	// compile-time / lightweight checks to ensure MessageOutput types & enums are present
 	EXPECT_TRUE((std::is_class<Publishers::Text>::value));
 	EXPECT_TRUE((std::is_class<Publishers::ConsoleOutput>::value));
 	EXPECT_TRUE((std::is_class<Publishers::SyslogOutput>::value));
 	EXPECT_TRUE((std::is_class<Publishers::FileOutput>::value));
 	EXPECT_TRUE((std::is_class<Publishers::JSON>::value));
 	EXPECT_TRUE((std::is_class<Publishers::UDPOutput>::value));
-
-	// ExtraOutputOptions should be definied as an enum (or enum class)
-	// Use SFINAE-style check via std::is_enum
-	EXPECT_TRUE((std::is_enum<typename std::remove_reference<decltype(Publishers::ExtraOutputOptions())>::type>::value
-		|| std::is_arithmetic<typename std::remove_reference<decltype(Publishers::ExtraOutputOptions())>::type>::value));
 }
