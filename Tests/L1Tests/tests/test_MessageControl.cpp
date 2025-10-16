@@ -12,6 +12,13 @@ protected:
 
     void SetUp() override {
         plugin = Core::ProxyType<MessageControl>::Create();
+        
+        TestShell* shell = new TestShell();
+        // Add websocket config
+        shell->ConfigLine = []() -> string { 
+            return R"({"console":true,"syslog":false,"remote":{"port":8899,"binding":"0.0.0.0"}})"; 
+        };
+        plugin->Initialize(shell);
     }
 
     void TearDown() override {
@@ -351,12 +358,16 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
-            : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8080))
+            : PluginHost::Channel(Channel::WebSocket, Core::NodeId("127.0.0.1:8899"))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
-            
-            State(static_cast<ChannelState>(3), true); // Set LINK state
+            State(Channel::WebServer, true);
         }
-    
+        
+        // Required implementations
+        string Name() const override { return "TestChannel"; }
+        bool IsWebSocket() const override { return true; }
+        bool IsUpgraded() const override { return true; }
+        bool IsCompleted() const override { return true; }
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -383,13 +394,17 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel(uint32_t id) 
-            : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8080 + id))
+            : PluginHost::Channel(Channel::WebSocket, Core::NodeId("127.0.0.1:8899"))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
-            
-            State(static_cast<ChannelState>(3), true); // Set LINK state
+            State(Channel::WebServer, true);
         }
         
+        // Required implementations
+        string Name() const override { return "TestChannel" + std::to_string(_id); }
+        bool IsWebSocket() const override { return true; }
+        bool IsUpgraded() const override { return true; }
+        bool IsCompleted() const override { return true; }
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
