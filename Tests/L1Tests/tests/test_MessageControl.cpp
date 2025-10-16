@@ -65,8 +65,8 @@ protected:
         Core::hresult Metadata(string& info) const override { return Core::ERROR_NONE; }
         bool IsSupported(const uint8_t version) const override { return true; }
         void Notify(const string& message) override {}
-        void Register(IPlugin::INotification* sink) override {}
-        void Unregister(IPlugin::INotification* sink) override {}
+        void Register(PluginHost::IPlugin::INotification* sink) override {}
+        void Unregister(PluginHost::IPlugin::INotification* sink) override {}
         void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
         Core::hresult Activate(const reason why) override { return Core::ERROR_NONE; }
         Core::hresult Deactivate(const reason why) override { return Core::ERROR_NONE; }
@@ -384,8 +384,8 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
         Core::hresult Metadata(string& info) const override { return Core::ERROR_NONE; }
         bool IsSupported(const uint8_t version) const override { return true; }
         void Notify(const string& message) override {}
-        void Register(IPlugin::INotification* sink) override {}
-        void Unregister(IPlugin::INotification* sink) override {}
+        void Register(PluginHost::IPlugin::INotification* sink) override {}
+        void Unregister(PluginHost::IPlugin::INotification* sink) override {}
         void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
         Core::hresult Activate(const reason why) override { return Core::ERROR_NONE; }
         Core::hresult Deactivate(const reason why) override { return Core::ERROR_NONE; }
