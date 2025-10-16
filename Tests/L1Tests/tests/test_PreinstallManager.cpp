@@ -133,7 +133,7 @@ protected:
     Exchange::IConfiguration* mPreinstallManagerConfigure = nullptr;
     PackageInstallerMock* mPackageInstallerMock = nullptr;
     PackageIteratorMock* mPackageIteratorMock = nullptr;
-    ServiceMock* mServiceMock = nullptr;
+ServiceMock* mServiceMock = nullptr;
     Core::ProxyType<WorkerPoolImplementation> workerPool;
     uint32_t event_signal;
     PackageInstallerMock* mPackageInstallerMock = nullptr;
@@ -164,7 +164,7 @@ protected:
 
     virtual ~PreinstallManagerTest() override
     Core::hresult createResources()
-    {
+{
 		interface->Release();
 
         Core::IWorkerPool::Assign(nullptr);
@@ -185,8 +185,8 @@ protected:
 		
 		// Set up mocks and expect calls
         Core::hresult status = Core::ERROR_GENERAL;
-        mServiceMock = new NiceMock<ServiceMock>;
-        mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
+mServiceMock = new NiceMock<ServiceMock>;
+mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         mPackageIteratorMock = new NiceMock<PackageIteratorMock>;
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
@@ -200,7 +200,7 @@ protected:
         
         TEST_LOG("In createResources!");
         
-        EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Invoke(
               [&](const uint32_t, const std::string& name) -> void* {
@@ -247,16 +247,16 @@ protected:
         status = Core::ERROR_NONE;
 
         return status;
-    }
+}
 
-    void releaseResources()
-    {
+void releaseResources()
+{
 	    // Clean up mocks
 		if (mServiceMock != nullptr)
         TEST_LOG("In releaseResources!");
 
         if (mPackageInstallerMock != nullptr && mPackageInstallerNotification_cb != nullptr)
-        {
+{
 			EXPECT_CALL(*mServiceMock, Release())
               .WillOnce(::testing::Invoke(
               [&]() {
@@ -269,10 +269,10 @@ protected:
                     return 0;
                 }));
             mPackageInstallerNotification_cb = nullptr;
-        }
+}
 
-        if (mPackageInstallerMock != nullptr)
-        {
+if (mPackageInstallerMock != nullptr)
+{
 			EXPECT_CALL(*mPackageInstallerMock, Unregister(::testing::_))
               .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
 
@@ -289,12 +289,12 @@ protected:
                         delete mPackageInstallerMock;
                         return 0;
                     }));
-        }
+}
 
         if (mPackageIteratorMock != nullptr)
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr)
-        {
+{
 			EXPECT_CALL(*mPackageIteratorMock, Release())
               .WillOnce(::testing::Invoke(
               [&]() {
@@ -304,7 +304,7 @@ protected:
 					}));
             delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
-        }
+}
 
 		// Clean up the PreinstallManager
         mPreinstallManagerConfigure->Release();
@@ -329,7 +329,7 @@ protected:
         plugin->Deinitialize(mServiceMock);
         delete mServiceMock;
         mPreinstallManagerImpl = nullptr;
-    }
+}
 };
 
 /* Test Case for Registering and Unregistering Notification
@@ -450,7 +450,7 @@ TEST_F(PreinstallManagerTest, StartPreinstall_ForceInstall_Success)
  ********************************************************************************************************************/
 TEST_F(PreinstallManagerTest, RegisteredMethodsUsingJsonRpcSuccess)
 {
-    createResources();
+createResources();
 
     // TC-3: Test StartPreinstall with force install enabled
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -471,7 +471,7 @@ TEST_F(PreinstallManagerTest, RegisteredMethodsUsingJsonRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, interface->StartPreinstall(forceInstall));
     EXPECT_TRUE(mJsonRpcHandler.Exists(_T("startPreinstall")));
 
-    releaseResources();
+releaseResources();
 }
 
 /* Test Case for StartPreinstall with forceInstall disabled and newer version available
@@ -491,11 +491,11 @@ TEST_F(PreinstallManagerTest, RegisteredMethodsUsingJsonRpcSuccess)
  * Calling StartPreinstall() with forceInstall=false using QueryInterface
  * Verifying the return of the API
  * Releasing the PreinstallManager Interface object and all related test resources
- */
+*/
 TEST_F(PreinstallManagerTest, StartPreinstall_NewerVersion_Success)
 TEST_F(PreinstallManagerTest, StartPreinstallUsingComRpcSuccess)
 {
-    createResources();
+createResources();
 
     // TC-4: Test StartPreinstall with newer version available
     Exchange::IPackageInstaller::Package existingPackage;
@@ -530,7 +530,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallUsingComRpcSuccess)
         releaseResources();
     };
 
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Invoke([&](const string& packageId, const string& version, Exchange::IPackageInstaller::IKeyValueIterator* const& metadata, const string& fileLocator, Exchange::IPackageInstaller::FailReason& reason) {
             reason = Exchange::IPackageInstaller::FailReason::NONE;
             return Core::ERROR_NONE;
@@ -565,11 +565,11 @@ TEST_F(PreinstallManagerTest, StartPreinstallUsingComRpcSuccess)
  * Calling StartPreinstall() with forceInstall=true using QueryInterface
  * Verifying the return of the API
  * Releasing the PreinstallManager Interface object and all related test resources
- */
+*/
 TEST_F(PreinstallManagerTest, StartPreinstall_OlderVersion_Skip)
 TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstallUsingComRpcSuccess)
 {
-    createResources();
+createResources();
 
     // TC-5: Test StartPreinstall with older version available - should skip installation
     Exchange::IPackageInstaller::Package existingPackage;
@@ -637,7 +637,7 @@ TEST_F(PreinstallManagerTest, StartPreinstall_InstallationFailure)
         releaseResources();
     };
 
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Invoke([&](const string& packageId, const string& version, Exchange::IPackageInstaller::IKeyValueIterator* const& metadata, const string& fileLocator, Exchange::IPackageInstaller::FailReason& reason) {
             reason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
             return Core::ERROR_GENERAL;
@@ -668,7 +668,7 @@ TEST_F(PreinstallManagerTest, StartPreinstall_InstallationFailure)
  * Setting up only PreinstallManager Plugin and creating required COM-RPC resources
  * PackageInstaller Interface object is not created and hence the API should return error
  * Releasing the PreinstallManager Interface object only
- */
+*/
 TEST_F(PreinstallManagerTest, StartPreinstall_InvalidPackageConfig)
 TEST_F(PreinstallManagerTest, StartPreinstallUsingComRpcFailurePackageInstallerObjectIsNull)
 {
@@ -745,17 +745,23 @@ TEST_F(PreinstallManagerTest, StartPreinstallUsingComRpcFailurePackageInstallerO
  * Verifying successful registration
  * Unregistering the notification and verifying successful unregistration
  * Releasing the PreinstallManager Interface object and all related test resources
- */
+*/
 TEST_F(PreinstallManagerTest, HandleOnAppInstallationStatus_Success)
 TEST_F(PreinstallManagerTest, RegisterNotificationUsingComRpcSuccess)
 {
-    createResources();
+createResources();
 
+    Core::Sink<NotificationTest> notification;
+    interface->Register(&notification);
     // Get the IPreinstallManager interface using QueryInterface
     Exchange::IPreinstallManager* preinstallInterface = static_cast<Exchange::IPreinstallManager*>(
         plugin->QueryInterface(Exchange::IPreinstallManager::ID));
     ASSERT_NE(preinstallInterface, nullptr);
 
+    // TC-8: Test handleOnAppInstallationStatus event handling
+    string testJsonResponse = R"({"packageId":"com.test.app","version":"1.0.0","status":"INSTALLED"})";
+    
+    mPreinstallManagerImpl->handleOnAppInstallationStatus(testJsonResponse);
     // Use RAII-style cleanup
     auto cleanup = [&]() {
         if (preinstallInterface) {
@@ -764,35 +770,20 @@ TEST_F(PreinstallManagerTest, RegisterNotificationUsingComRpcSuccess)
         releaseResources();
     };
 
-    {
-        // Test event handling with NotificationTest
-        Core::Sink<NotificationTest> eventNotification;
-        interface->Register(&eventNotification);
-        
-        // TC-8: Test handleOnAppInstallationStatus event handling
-        string testJsonResponse = R"({"packageId":"com.test.app","version":"1.0.0","status":"INSTALLED"})";
-        
-        mPreinstallManagerImpl->handleOnAppInstallationStatus(testJsonResponse);
-
-        // Wait for event to be processed with timeout
-        uint32_t eventResult = eventNotification.WaitForEventStatus(TIMEOUT, PreinstallManager_onAppInstallationStatusEvent);
-        EXPECT_EQ(PreinstallManager_onAppInstallationStatusEvent, eventResult);
-        EXPECT_EQ(testJsonResponse, eventNotification.receivedJsonResponse);
-        
-        interface->Unregister(&eventNotification);
-    }
+    // Wait for event to be processed with timeout
+    uint32_t result = notification.WaitForEventStatus(TIMEOUT, PreinstallManager_onAppInstallationStatusEvent);
+    EXPECT_EQ(PreinstallManager_onAppInstallationStatusEvent, result);
+    EXPECT_EQ(testJsonResponse, notification.receivedJsonResponse);
+    Core::Sink<NotificationHandler> notification;
     
-    {
-        // Test Register/Unregister with NotificationHandler
-        Core::Sink<NotificationHandler> notificationHandler;
-        
-        Core::hresult regResult = preinstallInterface->Register(&notificationHandler);
-        EXPECT_EQ(regResult, Core::ERROR_NONE);
+    Core::hresult result = preinstallInterface->Register(&notification);
+    EXPECT_EQ(result, Core::ERROR_NONE);
 
-        Core::hresult unregResult = preinstallInterface->Unregister(&notificationHandler);
-        EXPECT_EQ(unregResult, Core::ERROR_NONE);
-    }
+    interface->Unregister(&notification);
+    result = preinstallInterface->Unregister(&notification);
+    EXPECT_EQ(result, Core::ERROR_NONE);
 
+    releaseResources();
     cleanup();
     preinstallInterface = nullptr;
 }
@@ -809,17 +800,27 @@ TEST_F(PreinstallManagerTest, RegisterNotificationUsingComRpcSuccess)
  * Creating a notification handler but not registering it
  * Attempting to unregister the notification should fail using QueryInterface
  * Releasing the PreinstallManager Interface object and all related test resources
- */
+*/
 TEST_F(PreinstallManagerTest, HandleOnAppInstallationStatus_EmptyResponse)
 TEST_F(PreinstallManagerTest, UnregisterNotificationWithoutRegisterUsingComRpcFailure)
 {
-    createResources();
+createResources();
 
+    Core::Sink<NotificationTest> notification;
+    interface->Register(&notification);
     // Get the IPreinstallManager interface using QueryInterface
     Exchange::IPreinstallManager* preinstallInterface = static_cast<Exchange::IPreinstallManager*>(
         plugin->QueryInterface(Exchange::IPreinstallManager::ID));
     ASSERT_NE(preinstallInterface, nullptr);
 
+    // TC-9: Test handleOnAppInstallationStatus with empty response
+    string emptyJsonResponse = "";
+    
+    mPreinstallManagerImpl->handleOnAppInstallationStatus(emptyJsonResponse);
+
+    // Wait for event - should timeout since empty response shouldn't trigger event
+    uint32_t result = notification.WaitForEventStatus(200, PreinstallManager_onAppInstallationStatusEvent);
+    EXPECT_EQ(PreinstallManager_invalidEvent, result); // Should timeout
     // Use RAII-style cleanup
     auto cleanup = [&]() {
         if (preinstallInterface) {
@@ -828,31 +829,13 @@ TEST_F(PreinstallManagerTest, UnregisterNotificationWithoutRegisterUsingComRpcFa
         releaseResources();
     };
 
-    {
-        // Test event handling with NotificationTest
-        Core::Sink<NotificationTest> eventNotification;
-        interface->Register(&eventNotification);
-        
-        // TC-9: Test handleOnAppInstallationStatus with empty response
-        string emptyJsonResponse = "";
-        
-        mPreinstallManagerImpl->handleOnAppInstallationStatus(emptyJsonResponse);
-
-        // Wait for event - should timeout since empty response shouldn't trigger event
-        uint32_t eventResult = eventNotification.WaitForEventStatus(200, PreinstallManager_onAppInstallationStatusEvent);
-        EXPECT_EQ(PreinstallManager_invalidEvent, eventResult); // Should timeout
-        
-        interface->Unregister(&eventNotification);
-    }
+    interface->Unregister(&notification);
+    Core::Sink<NotificationHandler> notification;
     
-    {
-        // Test Unregister without prior Register - should fail
-        Core::Sink<NotificationHandler> notificationHandler;
-        
-        Core::hresult unregResult = preinstallInterface->Unregister(&notificationHandler);
-        EXPECT_EQ(unregResult, Core::ERROR_GENERAL);
-    }
+    Core::hresult result = preinstallInterface->Unregister(&notification);
+    EXPECT_EQ(result, Core::ERROR_GENERAL);
 
+    releaseResources();
     cleanup();
     preinstallInterface = nullptr;
 }
@@ -872,11 +855,11 @@ TEST_F(PreinstallManagerTest, UnregisterNotificationWithoutRegisterUsingComRpcFa
  * Simulating an installation status callback from PackageInstaller
  * Verifying that the notification is received
  * Releasing the PreinstallManager Interface object and all related test resources
- */
+*/
 TEST_F(PreinstallManagerTest, StartPreinstall_ListPackagesFailure)
 TEST_F(PreinstallManagerTest, OnAppInstallationStatusNotificationSuccess)
 {
-    createResources();
+createResources();
 
     // TC-10: Test StartPreinstall when ListPackages fails
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
