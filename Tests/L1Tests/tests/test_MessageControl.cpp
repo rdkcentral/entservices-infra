@@ -362,12 +362,18 @@ TEST_F(MessageControlL1Test, InboundMessageFlow) {
 }
 
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
+    // Initialize shell first
+    _shell = new TestShell();
+    ASSERT_NE(nullptr, _shell);
+    string result = plugin->Initialize(_shell);
+    EXPECT_TRUE(result.empty());
+
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
-            State(static_cast<ChannelState>(1), true);
+            State(static_cast<ChannelState>(2), true); // Use ACTIVATED state
         }
         
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
@@ -393,13 +399,20 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
 }
 
 TEST_F(MessageControlL1Test, MultipleAttachDetach) {
+    // Initialize shell first
+    _shell = new TestShell();
+    ASSERT_NE(nullptr, _shell);
+    string result = plugin->Initialize(_shell);
+    EXPECT_TRUE(result.empty());
+
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel(uint32_t id) 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
-            State(static_cast<ChannelState>(1), true);
+            State(static_cast<ChannelState>(2), true); // Use ACTIVATED state
+            
         }
         
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
