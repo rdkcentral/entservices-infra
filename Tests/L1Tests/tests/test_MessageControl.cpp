@@ -501,3 +501,36 @@ TEST_F(MessageControlL1Test, MessageOutput_FileWrite) {
 		GTEST_SKIP() << "Cannot create/read temp file; skipping FileOutput write verification.";
 	}
 }
+
+TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
+    // Capture stdout to verify ConsoleOutput writes the converted text
+    Publishers::ConsoleOutput console;
+    Core::Messaging::MessageInfo defaultMeta; // invalid metadata tolerated by Convert()
+    const string payload = "console-output-test";
+
+    std::streambuf* oldbuf = std::cout.rdbuf();
+    std::ostringstream capture;
+    std::cout.rdbuf(capture.rdbuf());
+
+    console.Message(defaultMeta, payload);
+
+    std::cout.rdbuf(oldbuf);
+    const string captured = capture.str();
+    EXPECT_NE(string::npos, captured.find(payload));
+}
+
+TEST_F(MessageControlL1Test, SyslogOutput_Message_NoCrash) {
+    // Call SyslogOutput::Message to exercise syslog path. Avoid asserting on syslog output.
+    Publishers::SyslogOutput syslogOut;
+    Core::Messaging::MessageInfo defaultMeta; // invalid metadata tolerated by Convert()
+    const string payload = "syslog-output-test";
+
+    // Ensure call does not crash/abort in test environment
+    syslogOut.Message(defaultMeta, payload);
+	// Validate the converter output that is passed to syslog (safe to check, no syslog access)
+    Publishers::Text textConv(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
+    const string converted = textConv.Convert(defaultMeta, payload);
+    EXPECT_NE(string::npos, converted.find(payload));
+
+    SUCCEED();
+}
