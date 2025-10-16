@@ -84,7 +84,6 @@ protected:
     PLUGINHOST_DISPATCHER *dispatcher;
     FactoriesImplementation factoriesImplementation;
 
-    Core::ProxyType<Plugin::PackageManagerImplementation> mPackageManagerImpl;
     Core::ProxyType<WorkerPoolImplementation> workerPool;
 
     Exchange::IPackageDownloader* pkgdownloaderInterface = nullptr;
@@ -106,14 +105,6 @@ protected:
       mJsonRpcHandler(*plugin),
       INIT_CONX(1,0)
     {
-        mPackageManagerImpl = Core::ProxyType<Plugin::PackageManagerImplementation>::Create();
-
-        pkgdownloaderInterface = static_cast<Exchange::IPackageDownloader*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageDownloader::ID));
-
-        pkginstallerInterface = static_cast<Exchange::IPackageInstaller*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageInstaller::ID));
-
-        pkghandlerInterface = static_cast<Exchange::IPackageHandler*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageHandler::ID));
-
 		Core::IWorkerPool::Assign(&(*workerPool));
 		workerPool->Run();
     }
@@ -148,21 +139,14 @@ protected:
 
 		EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
-    }
 
-    void initforJsonRpc() 
-    {    
-        // Activate the dispatcher and initialize the plugin for JSON-RPC
+        EXPECT_CALL(*mServiceMock, Register(::testing::_))
+          .Times(::testing::AnyNumber());
+
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(mServiceMock);
         plugin->Initialize(mServiceMock);
-    }
-
-    void initforComRpc() 
-    {
-        // Initialize the plugin for COM-RPC
-        pkgdownloaderInterface->Initialize(mServiceMock);
     }
 
     void getDownloadParams()
@@ -178,19 +162,7 @@ protected:
     }
 
     void releaseResources()
-    {
-	    // Clean up mocks
-		if (mServiceMock != nullptr)
-        {
-			EXPECT_CALL(*mServiceMock, Release())
-              .WillOnce(::testing::Invoke(
-              [&]() {
-						delete mServiceMock;
-						mServiceMock = nullptr;
-						return 0;
-					}));    
-        }
-
+    {	
         if (mStorageManagerMock != nullptr)
         {
 			EXPECT_CALL(*mStorageManagerMock, Release())
@@ -201,21 +173,23 @@ protected:
 						return 0;
 					}));
         }
-    }
 
-    void deinitforJsonRpc() 
-    {
-        // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
+        EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
+              .Times(::testing::AnyNumber());
+
+		EXPECT_CALL(*mServiceMock, Release())
+              .Times(::testing::AnyNumber());
+
         dispatcher->Deactivate();
         dispatcher->Release();
 
         plugin->Deinitialize(mServiceMock);
-    }
 
-    void deinitforComRpc()
-    {
-        // Deinitialize the plugin for COM-RPC
-        pkgdownloaderInterface->Deinitialize(mServiceMock);
+        delete mServiceMock;
+		mServiceMock = nullptr;
+
+        delete mSubSystemMock;
+        mSubSystemMock = nullptr;
     }
 
     #if 0
@@ -263,7 +237,6 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
 
         void SetStatusParams(const StatusParams& statusParam)
         {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             m_status_param = statusParam;
         }
 
@@ -329,8 +302,6 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 
     createResources();
 
-    initforJsonRpc();
-
     // TC-1: Check if the listed methods exist using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("download")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("pause")));
@@ -351,8 +322,6 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getLockedInfo")));
 
     releaseResources();
-
-	deinitforJsonRpc();
 }
 
 /* Test Case for adding download request to a queue(priority/regular) using JsonRpc
@@ -368,8 +337,6 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
     
     createResources();
-
-    initforJsonRpc();
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -388,9 +355,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    releaseResources();
-
-    deinitforJsonRpc();    
+    releaseResources();   
 }
 
 /* Test Case for checking download request error when internet is unavailable using JsonRpc
