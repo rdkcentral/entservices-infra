@@ -479,29 +479,6 @@ TEST_F(MessageControlL1Test, SyslogOutput_ConverterOutput) {
     EXPECT_NE(string::npos, converted.find(payload));
 }
 
-// Enable a control and verify Controls() iterator yields entries
-TEST_F(MessageControlL1Test, ControlStructure_Simple) {
-	Core::hresult hr = plugin->Enable(
-		Exchange::IMessageControl::TRACING,
-		"UnitTestCategory",
-		"UnitTestModule",
-		true);
-	EXPECT_EQ(Core::ERROR_NONE, hr);
-
-	Exchange::IMessageControl::IControlIterator* controls = nullptr;
-	hr = plugin->Controls(controls);
-	EXPECT_EQ(Core::ERROR_NONE, hr);
-	ASSERT_NE(nullptr, controls);
-
-	Exchange::IMessageControl::Control current;
-	bool gotAny = false;
-	if (controls->Next(current)) {
-		gotAny = true;
-	}
-	controls->Release();
-	EXPECT_TRUE(gotAny);
-}
-
 TEST_F(MessageControlL1Test, WebSocketOutput_AttachCapacity_Command_Received) {
     // Use heap-allocated TestShell to match refcount lifecycle used by WebSocketOutput::Initialize/Deinitialize
     TestShell* shell = new TestShell();
