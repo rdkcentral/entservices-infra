@@ -124,8 +124,7 @@ namespace WPEFramework
                     {"BOOT_INIT",         BOOT_TYPE_INIT},
                     {"BOOT_NORMAL",       BOOT_TYPE_NORMAL},
                     {"BOOT_MIGRATION",    BOOT_TYPE_MIGRATION},
-                    {"BOOT_UPDATE",       BOOT_TYPE_UPDATE},
-                    {"BOOT_INCONCLUSIVE", BOOT_TYPE_INCONCLUSIVE}
+                    {"BOOT_UPDATE",       BOOT_TYPE_UPDATE}
                 };
 
                 auto it = stringToBootType.find(bootTypeStr);
