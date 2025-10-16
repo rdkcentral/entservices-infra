@@ -56,6 +56,23 @@ protected:
         
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
+        
+        void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
+        void DisableWebServer() override {}
+        Core::hresult SystemRootPath(const string& systemRootPath) override { return Core::ERROR_NONE; }
+        string Substitute(const string& input) const override { return input; }
+        Core::hresult ConfigLine(const string& config) override { return Core::ERROR_NONE; }
+        Core::hresult Metadata(string& info) const override { return Core::ERROR_NONE; }
+        bool IsSupported(const uint8_t version) const override { return true; }
+        void Notify(const string& message) override {}
+        void Register(IPlugin::INotification* sink) override {}
+        void Unregister(IPlugin::INotification* sink) override {}
+        void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
+        Core::hresult Activate(const reason why) override { return Core::ERROR_NONE; }
+        Core::hresult Deactivate(const reason why) override { return Core::ERROR_NONE; }
+        Core::hresult Unavailable(const reason why) override { return Core::ERROR_NONE; }
+        Core::hresult Hibernate(const uint32_t timeout) override { return Core::ERROR_NONE; }
+        uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
     };
 };
 
@@ -354,30 +371,27 @@ TEST_F(MessageControlL1Test, InitializeDeinitialize) {
         startup Startup() const override { return startup::DEACTIVATED; }
         Core::hresult Startup(const startup) override { return Core::ERROR_NONE; }
         ICOMLink* COMLink() override { return nullptr; }
-        Core::hresult SystemRootPath(const string&) override { return Core::ERROR_NONE; }
-        string Substitute(const string&) const override { return ""; }
-        Core::hresult ConfigLine(const string&) override { return Core::ERROR_NONE; }
-        Core::hresult Metadata(string& info) const override { return Core::ERROR_NONE; }
-        void Notify(const string&) override {}
-        void* QueryInterfaceByCallsign(const uint32_t, const string&) override { return nullptr; }
-        
-        Core::hresult Activate(const reason) override { return Core::ERROR_NONE; }
-        Core::hresult Deactivate(const reason) override { return Core::ERROR_NONE; }
-        Core::hresult Unavailable(const reason) override { return Core::ERROR_NONE; }
-        Core::hresult Hibernate(const uint32_t) override { return Core::ERROR_NONE; }
-        uint32_t Submit(const uint32_t, const Core::ProxyType<Core::JSON::IElement>&) override { return Core::ERROR_NONE; }
-        
-        void EnableWebServer(const string&, const string&) override {}
-        void DisableWebServer() override {}
-         
-        void Register(PluginHost::IPlugin::INotification*) override {}
-        void Unregister(PluginHost::IPlugin::INotification*) override {}
+        void* QueryInterface(const uint32_t) override { return nullptr; }
         
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
         
-        bool IsSupported(const uint8_t) const override { return false; }
+        void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
+        void DisableWebServer() override {}
+        Core::hresult SystemRootPath(const string& systemRootPath) override { return Core::ERROR_NONE; }
+        string Substitute(const string& input) const override { return input; }
+        Core::hresult ConfigLine(const string& config) override { return Core::ERROR_NONE; }
+        Core::hresult Metadata(string& info) const override { return Core::ERROR_NONE; }
+        bool IsSupported(const uint8_t version) const override { return true; }
+        void Notify(const string& message) override {}
+        void Register(IPlugin::INotification* sink) override {}
+        void Unregister(IPlugin::INotification* sink) override {}
+        void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
+        Core::hresult Activate(const reason why) override { return Core::ERROR_NONE; }
+        Core::hresult Deactivate(const reason why) override { return Core::ERROR_NONE; }
+        Core::hresult Unavailable(const reason why) override { return Core::ERROR_NONE; }
+        Core::hresult Hibernate(const uint32_t timeout) override { return Core::ERROR_NONE; }
+        uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
     };
 
     TestShell shell;
