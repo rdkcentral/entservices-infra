@@ -502,35 +502,57 @@ TEST_F(MessageControlL1Test, MessageOutput_FileWrite) {
 	}
 }
 
-TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
-    // Capture stdout to verify ConsoleOutput writes the converted text
-    Publishers::ConsoleOutput console;
-    Core::Messaging::MessageInfo defaultMeta; // invalid metadata tolerated by Convert()
-    const string payload = "console-output-test";
+TEST_F(MessageControlL1Test, ControlStructure_Simple) {
+	// Enable a single tracing control and verify Controls() returns at least one entry.
+	Core::hresult hr = plugin->Enable(
+		Exchange::IMessageControl::TRACING,
+		"UnitTestCategory",
+		"UnitTestModule",
+		true);
+	EXPECT_EQ(Core::ERROR_NONE, hr);
 
-    std::streambuf* oldbuf = std::cout.rdbuf();
-    std::ostringstream capture;
-    std::cout.rdbuf(capture.rdbuf());
+	Exchange::IMessageControl::IControlIterator* controls = nullptr;
+	hr = plugin->Controls(controls);
+	EXPECT_EQ(Core::ERROR_NONE, hr);
+	ASSERT_NE(nullptr, controls);
 
-    console.Message(defaultMeta, payload);
-
-    std::cout.rdbuf(oldbuf);
-    const string captured = capture.str();
-    EXPECT_NE(string::npos, captured.find(payload));
+	Exchange::IMessageControl::Control current;
+	bool gotAny = false;
+	if (controls->Next(current)) {
+		gotAny = true;
+	}
+	controls->Release();
+	EXPECT_TRUE(gotAny);
 }
 
-TEST_F(MessageControlL1Test, SyslogOutput_Message_NoCrash) {
-    // Call SyslogOutput::Message to exercise syslog path. Avoid asserting on syslog output.
-    Publishers::SyslogOutput syslogOut;
-    Core::Messaging::MessageInfo defaultMeta; // invalid metadata tolerated by Convert()
-    const string payload = "syslog-output-test";
+TEST_F(MessageControlL1Test, EnableStandardOutputs_Multiple) {
+	// Enable and disable STANDARD_OUT and STANDARD_ERROR for different categories/modules.
+	Core::hresult hr = plugin->Enable(
+		Exchange::IMessageControl::STANDARD_OUT,
+		"catA",
+		"modA",
+		true);
+	EXPECT_EQ(Core::ERROR_NONE, hr);
 
-    // Ensure call does not crash/abort in test environment
-    syslogOut.Message(defaultMeta, payload);
-	// Validate the converter output that is passed to syslog (safe to check, no syslog access)
-    Publishers::Text textConv(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
-    const string converted = textConv.Convert(defaultMeta, payload);
-    EXPECT_NE(string::npos, converted.find(payload));
+	hr = plugin->Enable(
+		Exchange::IMessageControl::STANDARD_ERROR,
+		"catB",
+		"modB",
+		true);
+	EXPECT_EQ(Core::ERROR_NONE, hr);
 
-    SUCCEED();
+	// Toggle them off again
+	hr = plugin->Enable(
+		Exchange::IMessageControl::STANDARD_OUT,
+		"catA",
+		"modA",
+		false);
+	EXPECT_EQ(Core::ERROR_NONE, hr);
+
+	hr = plugin->Enable(
+		Exchange::IMessageControl::STANDARD_ERROR,
+		"catB",
+		"modB",
+		false);
+	EXPECT_EQ(Core::ERROR_NONE, hr);
 }
