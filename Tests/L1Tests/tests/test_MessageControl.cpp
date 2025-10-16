@@ -446,11 +446,26 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     plugin->Detach(channel3);
 }
 
-TEST_F(MessageControlL1Test, MessageOutput_TypesExist) {
-	EXPECT_TRUE((std::is_class<Publishers::Text>::value));
-	EXPECT_TRUE((std::is_class<Publishers::ConsoleOutput>::value));
-	EXPECT_TRUE((std::is_class<Publishers::SyslogOutput>::value));
-	EXPECT_TRUE((std::is_class<Publishers::FileOutput>::value));
-	EXPECT_TRUE((std::is_class<Publishers::JSON>::value));
-	EXPECT_TRUE((std::is_class<Publishers::UDPOutput>::value));
+TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON_UDP) {
+    // Use default MessageInfo (invalid) to ensure functions don't ASSERT and do return sensible values.
+
+    Core::Messaging::MessageInfo defaultMeta; // default/invalid metadata
+
+    // Text::Convert: should return string containing the payload even with invalid metadata
+    Publishers::Text textConv(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
+    const string payload = "hello-text";
+    const string result = textConv.Convert(defaultMeta, payload);
+    EXPECT_NE(string::npos, result.find(payload));
+
+    // JSON::Convert: should set Data.Message at minimum
+    Publishers::JSON::Data data;
+    Publishers::JSON jsonConv;
+    jsonConv.Convert(defaultMeta, "json-msg", data);
+    EXPECT_EQ(std::string("json-msg"), std::string(data.Message));
+
+    // UDPOutput::Message: ensure it executes without crash using default metadata
+    Core::NodeId anyNode("127.0.0.1", 0);
+    Publishers::UDPOutput udp(anyNode);
+    udp.Message(defaultMeta, "udp-msg");
+    SUCCEED(); // if we reach here, the call did not ASSERT/crash
 }
