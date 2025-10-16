@@ -85,6 +85,11 @@ if(AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
     add_definitions(-DENABLE_AIMANAGERS_TELEMETRY_METRICS)
 endif(AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
 
+if(RDK_APP_MANAGER_DEBUG)
+    message(STATUS "Enable APP Manager debug support")
+    add_definitions("-DRDK_APP_MANAGER_DEBUG")
+endif()
+
 include_directories(../helpers)
 
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
