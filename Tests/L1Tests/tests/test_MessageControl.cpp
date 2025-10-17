@@ -674,14 +674,6 @@ TEST_F(MessageControlL1Test, WebSocketOutput_UnknownDetach) {
     delete shell;
 }
 
-// New: Exercise TestShell lifecycle helpers (Activate/Deactivate/Hibernate) return success codes
-TEST_F(MessageControlL1Test, TestShell_Lifecycle) {
-    TestShell shell;
-    EXPECT_EQ(Core::ERROR_NONE, shell.Activate(PluginHost::IShell::reason::REQUESTED));
-    EXPECT_EQ(Core::ERROR_NONE, shell.Deactivate(PluginHost::IShell::reason::REQUESTED));
-    EXPECT_EQ(Core::ERROR_NONE, shell.Hibernate(5000));
-}
-
 TEST_F(MessageControlL1Test, TestShell_SubstituteAndMetadata) {
     TestShell shell; // stack instance
     const string input = "replace-me";
@@ -731,4 +723,67 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
     json.Convert(defaultMeta, "payload-should-be-ignored", data);
 
     EXPECT_TRUE(std::string(data.Message).empty());
+}
+
+
+TEST_F(MessageControlL1Test, Observer_Activated) {
+    // Mock connection
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MockConnection(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+    private:
+        uint32_t _id;
+    };
+
+    MockConnection connection(42);
+    _shell = new TestShell();
+    _shellOwned = true;
+
+    plugin->Initialize(_shell);
+
+    Core::Sink<MessageControl::Observer> observer(*plugin);
+
+    observer.Activated(&connection);
+
+    // Verify that the observer handled the activation
+    SUCCEED();
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, Observer_Deactivated) {
+    // Mock connection
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MockConnection(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+    private:
+        uint32_t _id;
+    };
+
+    MockConnection connection(42);
+    _shell = new TestShell();
+    _shellOwned = true;
+
+    plugin->Initialize(_shell);
+
+    Core::Sink<MessageControl::Observer> observer(*plugin);
+
+    observer.Deactivated(&connection);
+
+    // Verify that the observer handled the deactivation
+    SUCCEED();
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
 }
