@@ -668,3 +668,80 @@ TEST_F(MessageControlL1Test, TestShell_SubstituteAndMetadata) {
     // Metadata result is not strictly specified; ensure call succeeds and returns a string (possibly empty)
     EXPECT_TRUE(meta.size() >= 0);
 }
+
+// New: ensure WebSocketOutput::Message actually invokes IShell::Submit for attached channels
+TEST_F(MessageControlL1Test, WebSocketOutput_Message_TriggersSubmit) {
+    // CountingShell inherits the TestShell above and overrides Submit to count calls.
+    class CountingShell : public TestShell {
+    public:
+        CountingShell()
+            : TestShell()
+            , Count(0)
+        {
+        }
+        uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override {
+            ++Count;
+            LastId = id;
+            // store a shallow reference to allow basic inspection if needed
+            Last = response;
+            return Core::ERROR_NONE;
+        }
+        std::atomic<int> Count;
+        uint32_t LastId{0};
+        Core::ProxyType<Core::JSON::IElement> Last;
+    };
+
+    CountingShell* shell = new CountingShell();
+    Publishers::WebSocketOutput ws;
+
+    ws.Initialize(shell, 2);
+    EXPECT_EQ(2u, ws.MaxConnections());
+
+    EXPECT_TRUE(ws.Attach(100));
+    EXPECT_TRUE(ws.Attach(200));
+
+    Core::Messaging::MessageInfo defaultMeta;
+    // Send a message; this should result in one Submit per attached, non-paused channel.
+    ws.Message(defaultMeta, "trigger-submit-test");
+
+    // Give a small window (if implementation asynchronous) — but Message is synchronous here.
+    EXPECT_GT(shell->Count.load(), 0);
+    EXPECT_TRUE((shell->LastId == 100) || (shell->LastId == 200));
+
+    ws.Detach(100);
+    ws.Detach(200);
+    ws.Deinitialize();
+
+    delete shell;
+}
+
+// New: JSON::Convert should do nothing when Paused bit is set
+TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
+    Publishers::JSON json;
+    Publishers::JSON::Data data;
+    // Ensure paused prevents any conversion (data.Message should remain empty)
+    json.Paused(true);
+
+    Core::Messaging::MessageInfo defaultMeta;
+    json.Convert(defaultMeta, "payload-should-be-ignored", data);
+
+    EXPECT_TRUE(std::string(data.Message).empty());
+}
+
+// New: WebSocketOutput::Received should accept a null/unrecognized element and return null
+TEST_F(MessageControlL1Test, WebSocketOutput_Received_NullElement) {
+    TestShell* shell = new TestShell();
+    Publishers::WebSocketOutput ws;
+
+    ws.Initialize(shell, 1);
+    EXPECT_TRUE(ws.Attach(42));
+
+    Core::ProxyType<Core::JSON::IElement> nullElement; // default-constructed == nullptr
+    Core::ProxyType<Core::JSON::IElement> ret = ws.Received(42, nullElement);
+    EXPECT_FALSE(ret.IsValid());
+
+    ws.Detach(42);
+    ws.Deinitialize();
+    delete shell;
+}
+
