@@ -85,10 +85,7 @@ protected:
     FactoriesImplementation factoriesImplementation;
 
     Core::ProxyType<WorkerPoolImplementation> workerPool;
-
-    Exchange::IPackageDownloader* plugin = nullptr;
-    Exchange::IPackageInstaller* plugin = nullptr;
-    Exchange::IPackageHandler* plugin = nullptr;
+    
     Exchange::IPackageDownloader::Options options;
     Exchange::IPackageDownloader::DownloadId downloadId;
     Exchange::IPackageDownloader::ProgressInfo progress;
