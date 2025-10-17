@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iterator>
 #include <cstdio>
+#include <atomic> // added for std::atomic used by CountingShell
 
 using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
@@ -29,7 +30,6 @@ protected:
             }
             // Only delete the shell here if the fixture allocated it and thus owns it.
             if (_shellOwned) {
-                // Release() no longer deletes the object; tests/fixture must free heap objects explicitly.
                 delete _shell;
             }
             _shell = nullptr;
@@ -37,6 +37,31 @@ protected:
         }
         plugin.Release();
     }
+
+    class CountingShell : public TestShell {
+    public:
+        CountingShell()
+            : TestShell()
+            , Count(0)
+        {
+        }
+
+        uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override {
+            ++Count;
+            LastId = id;
+            Last = response; // store a shallow reference for inspection
+            return Core::ERROR_NONE;
+        }
+
+        ~CountingShell() override {
+            // Ensure proper cleanup of resources
+            Last.Release();
+        }
+
+        std::atomic<int> Count;
+        uint32_t LastId{0};
+        Core::ProxyType<Core::JSON::IElement> Last;
+    };
 
     class TestShell : public PluginHost::IShell {
     public:
@@ -80,12 +105,12 @@ protected:
         
         // Proper refcount implementation
         void AddRef() const override {
+            // Restore safe refcount behavior (do not delete 'this' here)
             Core::InterlockedIncrement(_refCount);
         }
 
         uint32_t Release() const override {
-            // Decrement refcount and return the result. Do NOT delete 'this' here:
-            // some tests create TestShell on the stack; deleting that would be undefined behavior.
+            // Decrement and return the new count. Tests delete heap instances explicitly.
             return Core::InterlockedDecrement(_refCount);
         }
         
@@ -671,26 +696,6 @@ TEST_F(MessageControlL1Test, TestShell_SubstituteAndMetadata) {
 
 // New: ensure WebSocketOutput::Message actually invokes IShell::Submit for attached channels
 TEST_F(MessageControlL1Test, WebSocketOutput_Message_TriggersSubmit) {
-    // CountingShell inherits the TestShell above and overrides Submit to count calls.
-    class CountingShell : public TestShell {
-    public:
-        CountingShell()
-            : TestShell()
-            , Count(0)
-        {
-        }
-        uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override {
-            ++Count;
-            LastId = id;
-            // store a shallow reference to allow basic inspection if needed
-            Last = response;
-            return Core::ERROR_NONE;
-        }
-        std::atomic<int> Count;
-        uint32_t LastId{0};
-        Core::ProxyType<Core::JSON::IElement> Last;
-    };
-
     CountingShell* shell = new CountingShell();
     Publishers::WebSocketOutput ws;
 
@@ -712,7 +717,7 @@ TEST_F(MessageControlL1Test, WebSocketOutput_Message_TriggersSubmit) {
     ws.Detach(200);
     ws.Deinitialize();
 
-    delete shell;
+    delete shell; // Explicitly delete the shell to avoid memory leaks
 }
 
 // New: JSON::Convert should do nothing when Paused bit is set
