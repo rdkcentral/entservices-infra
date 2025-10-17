@@ -1,0 +1,168 @@
+{
+    "resolutions": {
+        "AcknowledgeChallenge.onRequestChallenge": {
+            "alias": "org.rdk.App2AppProvider.registerProvider",
+            "providerCapability": "AcknowledgeChallenge.challenge"
+        },
+        "Discovery.onNavigateTo": {
+            "alias": "org.rdk.LaunchDelegate",
+            "event": "Discovery.onNavigateTo"
+        },
+        "Device.setName": {
+            "alias": "org.rdk.FbSettings.setName"
+        },
+        "Localization.addAdditionalInfo": {
+            "alias": "org.rdk.FbSettings.addAdditionalInfo"
+        },
+        "PinChallenge.onRequestChallenge": {
+            "alias": "org.rdk.App2AppProvider.registerProvider",
+            "providerCapability": "PinChallenge.challenge"
+        },
+        "Keyboard.onRequestPassword": {
+            "alias": "org.rdk.App2AppProvider.registerProvider",
+            "providerCapability": "Keyboard.password"
+        },
+        "Keyboard.onRequestEmail": {
+            "alias": "org.rdk.App2AppProvider.registerProvider",
+            "providerCapability": "Keyboard.email"
+        },
+        "Keyboard.onRequestStandard": {
+            "alias": "org.rdk.App2AppProvider.registerProvider",
+            "providerCapability": "Keyboard.standard"
+        },
+        "Advertising.advertisingId": {
+            "alias": "org.rdk.FbAdvertising.advertisingId",
+            "includeContext": true
+        },
+        "Lifecycle.ready": {
+            "alias": "org.rdk.LaunchDelegate.ready",
+            "includeContext": true
+        },
+        "Lifecycle.close": {
+            "alias": "org.rdk.LaunchDelegate.close",
+            "includeContext": true
+        },
+        "Lifecycle.finished": {
+            "alias": "org.rdk.LaunchDelegate.finished",
+            "includeContext": true
+        },
+        "Lifecycle.state": {
+            "alias": "org.rdk.LaunchDelegate.state",
+            "includeContext": true
+        },
+        "Parameters.initialization": {
+            "alias": "org.rdk.LaunchDelegate.Initialization",
+            "includeContext": true
+        },
+        "Lifecycle.onForeground": {
+            "alias": "org.rdk.LaunchDelegate",
+            "event": "Lifecycle.onForeground"
+        },
+        "Lifecycle.onBackground": {
+            "alias": "org.rdk.LaunchDelegate",
+            "event": "Lifecycle.onBackground"
+        },
+        "Lifecycle.onInactive": {
+            "alias": "org.rdk.LaunchDelegate",
+            "event": "Lifecycle.onInactive"
+        },
+        "Lifecycle.onSuspended": {
+            "alias": "org.rdk.LaunchDelegate",
+            "event": "Lifecycle.onSuspended"
+        },
+        "Lifecycle.onUnloading": {
+            "alias": "org.rdk.LaunchDelegate",
+            "event": "Lifecycle.onUnloading"
+        },
+        "device.make": {
+            "alias": "org.rdk.FbSettings.getDeviceMake"
+        },
+        "device.name": {
+            "alias": "org.rdk.FbSettings.getDeviceName"
+        },
+        "device.setName": {
+            "alias": "org.rdk.FbSettings.setDeviceName"
+        },
+        "device.sku": {
+            "alias": "org.rdk.FbSettings.getDeviceSku"
+        },
+        "localization.countryCode": {
+            "alias": "org.rdk.FbSettings.getCountryCode"
+        },
+        "localization.setCountryCode": {
+            "alias": "org.rdk.FbSettings.setCountryCode"
+        },
+        "localization.timeZone": {
+            "alias": "org.rdk.FbSettings.getTimeZone"
+        },
+        "localization.setTimeZone": {
+            "alias": "org.rdk.FbSettings.setTimeZone"
+        },
+        "secondscreen.friendlyName": {
+            "alias": "org.rdk.FbSettings.getSecondScreenFriendlyName"
+        },
+        "localization.language": {
+            "alias": "org.rdk.FbSettings.getPresentationLanguage"
+        },
+        "localization.locale": {
+            "alias": "org.rdk.FbSettings.getPresentationLanguage"
+        },
+        "localization.setLocale": {
+            "alias": "org.rdk.FbSettings.setPresentationLanguage"
+        },
+        "localization.preferredAudioLanguages": {
+            "alias": "org.rdk.FbSettings.getPreferredAudioLanguages"
+        },
+        "localization.setPreferredAudioLanguages": {
+            "alias": "org.rdk.FbSettings.setPreferredAudioLanguages"
+        },
+        "voiceguidance.setEnabled": {
+            "alias": "org.rdk.FbSettings.setVoiceGuidance"
+        },
+        "voiceguidance.setSpeed": {
+            "alias": "org.rdk.FbSettings.setVoiceGuidanceRate"
+        },
+        "accessibility.audioDescriptionSettings": {
+            "alias": "org.rdk.FbSettings.getAudioDescription"
+        },
+        "audiodescriptions.enabled": {
+            "alias": "org.rdk.FbSettings.getAudioDescription"
+        },
+        "audiodescriptions.setEnabled": {
+            "alias": "org.rdk.FbSettings.setAudioDescription"
+        },
+        "accessibility.highContrastUI": {
+            "alias": "org.rdk.FbSettings.getHighContrast"
+        },
+        "closedcaptions.enabled": {
+            "alias": "org.rdk.FbSettings.getCaptions"
+        },
+        "closedcaptions.setEnabled": {
+            "alias": "org.rdk.FbSettings.setCaptions"
+        },
+        "closedcaptions.preferredLanguages": {
+            "alias": "org.rdk.FbSettings.getPreferredCaptionsLanguages"
+        },
+        "closedcaptions.setPreferredLanguages": {
+            "alias": "org.rdk.FbSettings.setPreferredCaptionsLanguages"
+        },
+        "voiceguidance.navigationHints": {
+            "alias": "org.rdk.FbSettings.getVoiceGuidanceHints"
+        },
+        "voiceguidance.setNavigationHints": {
+            "alias": "org.rdk.FbSettings.setVoiceGuidanceHints"
+        },
+        "voiceguidance.rate": {
+            "alias": "org.rdk.FbSettings.getVoiceGuidanceRate"
+        },
+        "voiceguidance.setRate": {
+            "alias": "org.rdk.FbSettings.setVoiceGuidanceRate"
+        },
+        "voiceguidance.enabled": {
+            "alias": "org.rdk.FbSettings.getVoiceGuidance"
+        },
+        "voiceguidance.speed": {
+            "alias": "org.rdk.FbSettings.getVoiceGuidanceRate"
+        }
+    }
+}
