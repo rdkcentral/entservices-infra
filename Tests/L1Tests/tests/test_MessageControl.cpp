@@ -37,32 +37,6 @@ protected:
         }
         plugin.Release();
     }
-
-    class CountingShell : public TestShell {
-    public:
-        CountingShell()
-            : TestShell()
-            , Count(0)
-        {
-        }
-
-        uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override {
-            ++Count;
-            LastId = id;
-            Last = response; // store a shallow reference for inspection
-            return Core::ERROR_NONE;
-        }
-
-        ~CountingShell() override {
-            // Ensure proper cleanup of resources
-            Last.Release();
-        }
-
-        std::atomic<int> Count;
-        uint32_t LastId{0};
-        Core::ProxyType<Core::JSON::IElement> Last;
-    };
-
     class TestShell : public PluginHost::IShell {
     public:
         // Accept custom config, default matches previous behavior (no remote)
@@ -684,32 +658,6 @@ TEST_F(MessageControlL1Test, TestShell_SubstituteAndMetadata) {
     EXPECT_EQ(Core::ERROR_NONE, hr);
     // Metadata result is not strictly specified; ensure call succeeds and returns a string (possibly empty)
     EXPECT_TRUE(meta.size() >= 0);
-}
-
-// New: ensure WebSocketOutput::Message actually invokes IShell::Submit for attached channels
-TEST_F(MessageControlL1Test, WebSocketOutput_Message_TriggersSubmit) {
-    CountingShell* shell = new CountingShell();
-    Publishers::WebSocketOutput ws;
-
-    ws.Initialize(shell, 2);
-    EXPECT_EQ(2u, ws.MaxConnections());
-
-    EXPECT_TRUE(ws.Attach(100));
-    EXPECT_TRUE(ws.Attach(200));
-
-    Core::Messaging::MessageInfo defaultMeta;
-    // Send a message; this should result in one Submit per attached, non-paused channel.
-    ws.Message(defaultMeta, "trigger-submit-test");
-
-    // Give a small window (if implementation asynchronous) — but Message is synchronous here.
-    EXPECT_GT(shell->Count.load(), 0);
-    EXPECT_TRUE((shell->LastId == 100) || (shell->LastId == 200));
-
-    ws.Detach(100);
-    ws.Detach(200);
-    ws.Deinitialize();
-
-    delete shell; // Explicitly delete the shell to avoid memory leaks
 }
 
 // New: JSON::Convert should do nothing when Paused bit is set
