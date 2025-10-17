@@ -726,12 +726,12 @@ namespace WPEFramework
 		    loadedAppInfo.activeSessionId = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
 
 		    appInfo.targetAppState = mapAppLifecycleState(
-                        static_cast<Exchange::ILifecycleManager::LifecycleState>(
+                    static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "targetLifecycleState")));
                     loadedAppInfo.targetLifecycleState = appInfo.targetAppState;
                     appInfo.appNewState = mapAppLifecycleState(
-                        static_cast<Exchange::ILifecycleManager::LifecycleState>(
-                            getIntJsonField(loadedAppsObject, "currentLifecycleState")));
+                    static_cast<Exchange::ILifecycleManager::LifecycleState>(
+                            getIntJsonField(loadedAppsObject, "lifecycleState")));
                     loadedAppInfo.lifecycleState = appInfo.appNewState;
 
                     //Add loaded info
