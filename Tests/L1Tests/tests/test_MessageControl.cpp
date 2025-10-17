@@ -78,16 +78,19 @@ protected:
         void* QueryInterface(const uint32_t) override { return nullptr; }
         
         // Proper refcount implementation
-        void AddRef() const override {
-            Core::InterlockedIncrement(_refCount);
+        uint32_t AddRef() const override {
+            return Core::InterlockedIncrement(_refCount);
         }
 
         uint32_t Release() const override {
-            // Avoid deleting 'this' here to prevent potential double-delete
-            // scenarios observed under Valgrind when external code calls
-            // Release() in different code paths (e.g. Deinitialize + test).
-            // Keep decrement behavior but do not perform delete this.
-            return Core::InterlockedDecrement(_refCount);
+            const uint32_t value = Core::InterlockedDecrement(_refCount);
+            if (value == 0) {
+                // Standard COM-style behavior: delete the object when refcount hits zero.
+                // Capture the return value before deleting; after delete the object is gone.
+                delete this;
+                return 0;
+            }
+            return value;
         }
         
         void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
@@ -719,18 +722,15 @@ TEST_F(MessageControlL1Test, TestShell_RefCountAndConfig) {
     // ConfigLine preserved
     EXPECT_EQ(R"({"console":false,"syslog":true})", shell->ConfigLine());
 
-    // Refcount: initial 1, AddRef -> 2, Release -> 1, Release -> 0 (object not deleted by Release())
+    // Refcount: initial 1, AddRef -> 2, Release -> 1, Release -> 0 (Release deletes object when it hits 0)
     shell->AddRef(); // now 2
     uint32_t v = shell->Release(); // now 1
     EXPECT_EQ(1u, v);
-    v = shell->Release(); // now 0
+    v = shell->Release(); // now 0, Release deleted the object
     EXPECT_EQ(0u, v);
 
-    // Manual delete since Release() does not delete in this test shell
-    delete shell;
+    // Do not delete 'shell' here: Release() has already deleted it when refcount hit zero.
 }
-
-// New: verify Substitute and Metadata helpers on TestShell behave as simple passthroughs.
 TEST_F(MessageControlL1Test, TestShell_SubstituteAndMetadata) {
     TestShell shell; // stack instance
     const string input = "replace-me";
