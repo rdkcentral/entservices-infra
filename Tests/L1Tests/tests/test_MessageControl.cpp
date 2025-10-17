@@ -672,8 +672,8 @@ TEST_F(MessageControlL1Test, WebSocketOutput_UnknownDetach) {
 // New: Exercise TestShell lifecycle helpers (Activate/Deactivate/Hibernate) return success codes
 TEST_F(MessageControlL1Test, TestShell_Lifecycle) {
     TestShell shell;
-    EXPECT_EQ(Core::ERROR_NONE, shell.Activate(reason::REQUESTED));
-    EXPECT_EQ(Core::ERROR_NONE, shell.Deactivate(reason::REQUESTED));
+    EXPECT_EQ(Core::ERROR_NONE, shell.Activate(PluginHost::IShell::reason::REQUESTED));
+    EXPECT_EQ(Core::ERROR_NONE, shell.Deactivate(PluginHost::IShell::reason::REQUESTED));
     EXPECT_EQ(Core::ERROR_NONE, shell.Hibernate(5000));
 }
 // New: verify that a specific control entry can be found via the Controls iterator.
