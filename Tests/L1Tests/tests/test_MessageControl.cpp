@@ -27,9 +27,10 @@ protected:
                 // Let the plugin deinitialize and release the shell (plugin called AddRef in Initialize)
                 plugin->Deinitialize(_shell);
             }
-            // Only release the shell here if the fixture allocated it and thus owns it.
+            // Only delete the shell here if the fixture allocated it and thus owns it.
             if (_shellOwned) {
-                _shell->Release();
+                // Release() no longer deletes the object; tests/fixture must free heap objects explicitly.
+                delete _shell;
             }
             _shell = nullptr;
             _shellOwned = false;
@@ -83,16 +84,9 @@ protected:
         }
 
         uint32_t Release() const override {
-            // Standard ref-count semantics: decrement and delete when reaching zero.
-            // Deleting from a const-qualified method is acceptable here because the refcount
-            // is mutable and the object lifetime semantics require self-deletion.
-            const uint32_t result = Core::InterlockedDecrement(_refCount);
-            if (result == 0) {
-                // remove constness and delete
-                delete this;
-                return 0;
-            }
-            return result;
+            // Decrement refcount and return the result. Do NOT delete 'this' here:
+            // some tests create TestShell on the stack; deleting that would be undefined behavior.
+            return Core::InterlockedDecrement(_refCount);
         }
         
         void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
@@ -510,8 +504,8 @@ TEST_F(MessageControlL1Test, WebSocketOutput_AttachCapacity_Command_Received) {
     EXPECT_TRUE(ws.Detach(42));
     ws.Deinitialize();
 
-    // Release shell (Deinitialize released once; this release will delete the shell)
-    shell->Release();
+    // Release shell (Deinitialize released once); free heap-allocated shell explicitly.
+    delete shell;
 }
 
 TEST_F(MessageControlL1Test, WebSocketOutput_Message_NoCrash_SubmitCalled) {
@@ -527,7 +521,8 @@ TEST_F(MessageControlL1Test, WebSocketOutput_Message_NoCrash_SubmitCalled) {
     EXPECT_TRUE(ws.Detach(1001));
     ws.Deinitialize();
 
-    shell->Release();
+    // Explicitly free heap-allocated TestShell
+    delete shell;
 }
 
 // Ensure plugin Initialize creates a FileOutput when 'filepath' is present in config and file is writable.
@@ -550,8 +545,8 @@ TEST_F(MessageControlL1Test, MessageControl_InitializeCreatesFileOutput) {
     }
 
     plugin->Deinitialize(shell);
-    // Deinitialize performed one Release; release the test shell created by the test to allow deletion.
-    shell->Release();
+    // Deinitialize performed one Release; explicitly delete the heap-allocated test shell.
+    delete shell;
 }
 
 // Validate JSON option setters/getters and that Convert sets Message even with default metadata.
@@ -650,7 +645,8 @@ TEST_F(MessageControlL1Test, WebSocketOutput_UnknownDetach) {
     // Detach an id that was never attached; expect false
     EXPECT_FALSE(ws.Detach(9999));
     ws.Deinitialize();
-    shell->Release();
+    // Explicit delete instead of relying on Release() to free memory
+    delete shell;
 }
 
 // New: Exercise TestShell lifecycle helpers (Activate/Deactivate/Hibernate) return success codes
