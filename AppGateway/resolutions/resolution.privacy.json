@@ -1,0 +1,13 @@
+{
+    "resolutions": {
+        "Privacy.allowACRCollection": {
+            "alias": "org.rdk.FbPrivacy.allowACRCollection"
+        },
+        "Privacy.allowAppContentAdTargeting": {
+            "alias": "org.rdk.FbPrivacy.allowAppContentAdTargeting"
+        },
+        "Privacy.allowCameraAnalytics": {
+            "alias": "org.rdk.FbPrivacy.allowCameraAnalytics"
+        }
+    }
+}

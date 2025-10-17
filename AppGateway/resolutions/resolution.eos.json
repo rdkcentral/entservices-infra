@@ -1,0 +1,92 @@
+{
+    "resolutions": {
+        "TextToSpeech.isttsenabled": {
+            "alias": "org.rdk.TextToSpeech.isttsenabled"
+        },
+        "TextToSpeech.listvoices": {
+            "alias": "org.rdk.TextToSpeech.listvoices"
+        },
+        "TextToSpeech.getttsconfiguration": {
+            "alias": "org.rdk.TextToSpeech.getttsconfiguration"
+        },
+        "TextToSpeech.speak": {
+            "alias": "org.rdk.TextToSpeech.speak"
+        },
+        "TextToSpeech.setttsconfiguration": {
+            "alias": "org.rdk.TextToSpeech.setttsconfiguration"
+        },
+        "TextToSpeech.pause": {
+            "alias": "org.rdk.TextToSpeech.pause"
+        },
+        "TextToSpeech.resume": {
+            "alias": "org.rdk.TextToSpeech.resume"
+        },
+        "TextToSpeech.cancel": {
+            "alias": "org.rdk.TextToSpeech.cancel"
+        },
+        "TextToSpeech.getspeechstate": {
+            "alias": "org.rdk.TextToSpeech.getspeechstate"
+        },
+        "TextToSpeech.onWillspeak": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.WillSpeak"
+        },
+        "TextToSpeech.onSpeechstart": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.SpeechStart"
+        },
+        "TextToSpeech.onSpeechpause": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.SpeechPause"
+        },
+        "TextToSpeech.onSpeechresume": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.SpeechResume"
+        },
+        "TextToSpeech.onSpeechcomplete": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.SpeechComplete"
+        },
+        "TextToSpeech.onSpeechinterrupted": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.SpeechInterrupted"
+        },
+        "TextToSpeech.onNetworkerror": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.NetworkError"
+        },
+        "TextToSpeech.onTtsstatechanged": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.Enabled"
+        },
+        "TextToSpeech.onVoicechanged": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.VoiceChanged"
+        },
+        "TextToSpeech.onPlaybackerror": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.PlaybackError"
+        },
+        "ContentProtection.openDrmSession": {
+            "alias": "org.rdk.ContentProtection.openDrmSession"
+        },
+        "ContentProtection.setDrmSessionState": {
+            "alias": "org.rdk.ContentProtection.setDrmSessionState"
+        },
+        "ContentProtection.updateDrmSession": {
+            "alias": "org.rdk.ContentProtection.updateDrmSession"
+        },
+        "ContentProtection.closeDrmSession": {
+            "alias": "org.rdk.ContentProtection.closeDrmSession"
+        },
+        "ContentProtection.setPlaybackPosition": {
+            "alias": "org.rdk.ContentProtection.setPlaybackPosition"
+        },
+        "ContentProtection.showWatermark": {
+            "alias": "org.rdk.ContentProtection.showWatermark"
+        },
+        "ContentProtection.onWatermarkStatusChanged": {
+            "alias": "org.rdk.ContentProtection.onWatermarkStatusChanged"
+        }
+    }
+}
