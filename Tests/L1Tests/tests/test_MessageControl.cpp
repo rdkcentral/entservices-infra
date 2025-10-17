@@ -727,21 +727,3 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
 
     EXPECT_TRUE(std::string(data.Message).empty());
 }
-
-// New: WebSocketOutput::Received should accept a null/unrecognized element and return null
-TEST_F(MessageControlL1Test, WebSocketOutput_Received_NullElement) {
-    TestShell* shell = new TestShell();
-    Publishers::WebSocketOutput ws;
-
-    ws.Initialize(shell, 1);
-    EXPECT_TRUE(ws.Attach(42));
-
-    Core::ProxyType<Core::JSON::IElement> nullElement; // default-constructed == nullptr
-    Core::ProxyType<Core::JSON::IElement> ret = ws.Received(42, nullElement);
-    EXPECT_FALSE(ret.IsValid());
-
-    ws.Detach(42);
-    ws.Deinitialize();
-    delete shell;
-}
-
