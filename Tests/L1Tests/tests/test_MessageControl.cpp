@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iterator>
 #include <cstdio>
+#include <atomic>
 
 using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
@@ -77,19 +78,21 @@ protected:
         ICOMLink* COMLink() override { return nullptr; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
         
-        // Proper refcount implementation (match Core::IReferenceCounted: void AddRef() const)
+        // Proper refcount implementation (thread-safe)
         void AddRef() const override {
-            Core::InterlockedIncrement(_refCount);
+            // increment in a thread-safe manner
+            _refCount.fetch_add(1, std::memory_order_relaxed);
         }
 
         uint32_t Release() const override {
-            const uint32_t value = Core::InterlockedDecrement(_refCount);
-            if (value == 0) {
-                // Standard COM-style behavior: delete the object when refcount hits zero.
+            // decrement and get the new value in a thread-safe manner
+            const uint32_t newValue = _refCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
+            if (newValue == 0) {
+                // delete only when refcount reaches zero
                 delete this;
                 return 0;
             }
-            return value;
+            return newValue;
         }
         
         void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
@@ -112,7 +115,7 @@ protected:
     private:
         // keep declaration order matching constructor initializer list to avoid reorder warnings
         string _config;
-        mutable uint32_t _refCount;
+        mutable std::atomic<uint32_t> _refCount;
     };
 
 };
