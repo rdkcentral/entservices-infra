@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iterator>
 #include <cstdio>
+// Added for thread-safe refcount to address Valgrind race reports
+#include <atomic>
 
 using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
@@ -77,17 +79,18 @@ protected:
         ICOMLink* COMLink() override { return nullptr; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
         
-        // Proper refcount implementation
+        // Proper refcount implementation (thread-safe)
         void AddRef() const override {
-            Core::InterlockedIncrement(_refCount);
+            _refCount.fetch_add(1, std::memory_order_relaxed);
         }
 
         uint32_t Release() const override {
-            if (Core::InterlockedDecrement(_refCount) == 0) {
+            const uint32_t newValue = _refCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
+            if (newValue == 0) {
                 delete this;
                 return 0;
             }
-            return _refCount;
+            return newValue;
         }
         
         void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
@@ -108,8 +111,9 @@ protected:
         uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
         
     private:
-        mutable uint32_t _refCount;
+        // keep declaration order matching constructor initializer list to avoid reorder warnings
         string _config;
+        mutable std::atomic<uint32_t> _refCount;
     };
 
 };
