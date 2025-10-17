@@ -77,16 +77,15 @@ protected:
         ICOMLink* COMLink() override { return nullptr; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
         
-        // Proper refcount implementation
-        uint32_t AddRef() const override {
-            return Core::InterlockedIncrement(_refCount);
+        // Proper refcount implementation (match Core::IReferenceCounted: void AddRef() const)
+        void AddRef() const override {
+            Core::InterlockedIncrement(_refCount);
         }
 
         uint32_t Release() const override {
             const uint32_t value = Core::InterlockedDecrement(_refCount);
             if (value == 0) {
                 // Standard COM-style behavior: delete the object when refcount hits zero.
-                // Capture the return value before deleting; after delete the object is gone.
                 delete this;
                 return 0;
             }
@@ -111,8 +110,9 @@ protected:
         uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
         
     private:
-        mutable uint32_t _refCount;
+        // keep declaration order matching constructor initializer list to avoid reorder warnings
         string _config;
+        mutable uint32_t _refCount;
     };
 
 };
