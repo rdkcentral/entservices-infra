@@ -102,6 +102,7 @@ protected:
         Core::hresult status = Core::ERROR_GENERAL;
         mServiceMock = new NiceMock<ServiceMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
+        testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
 
@@ -274,13 +275,13 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
     auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
+    testing::Mock::AllowLeak(mockNotification.operator->()); // Allow leak since ProxyType manages lifecycle
     Core::hresult status = mPreinstallManagerImpl->Register(mockNotification.operator->());
     
     EXPECT_EQ(Core::ERROR_NONE, status);
     
     // Cleanup
     mPreinstallManagerImpl->Unregister(mockNotification.operator->());
-    mockNotification.Release(); // Explicitly release ProxyType to prevent mock leaks
     releaseResources();
 }
 
@@ -296,6 +297,7 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
     auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
+    testing::Mock::AllowLeak(mockNotification.operator->()); // Allow leak since ProxyType manages lifecycle
     
     // First register
     Core::hresult registerStatus = mPreinstallManagerImpl->Register(mockNotification.operator->());
@@ -305,7 +307,6 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
     Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, unregisterStatus);
     
-    mockNotification.Release(); // Explicitly release ProxyType to prevent mock leaks
     releaseResources();
 }
 
@@ -421,6 +422,7 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
+    testing::Mock::AllowLeak(mockNotification.operator->()); // Allow leak since ProxyType manages lifecycle
     
     // Use a promise/future to wait for the asynchronous notification
     std::promise<void> notificationPromise;
@@ -447,7 +449,6 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     
     // Cleanup
     mPreinstallManagerImpl->Unregister(mockNotification.operator->());
-    mockNotification.Release(); // Explicitly release ProxyType to prevent mock leaks
     releaseResources();
 }
 
