@@ -694,14 +694,14 @@ TEST_F(MessageControlL1Test, Observer_Activated) {
         uint32_t _id;
     };
 
-    MockConnection connection(42);
+    MockConnection* connection = new MockConnection(42); // Use heap allocation
     _shell = new TestShell();
     _shellOwned = true;
 
     plugin->Initialize(_shell);
 
     // Simulate activation
-    plugin->Attach(connection.Id());
+    plugin->Attach(connection->Id());
 
     // Verify that the activation was handled
     SUCCEED();
@@ -710,6 +710,8 @@ TEST_F(MessageControlL1Test, Observer_Activated) {
     delete _shell;
     _shell = nullptr;
     _shellOwned = false;
+
+    delete connection; // Cleanup
 }
 
 TEST_F(MessageControlL1Test, Observer_Deactivated) {
@@ -730,15 +732,14 @@ TEST_F(MessageControlL1Test, Observer_Deactivated) {
     private:
         uint32_t _id;
     };
-
-    MockConnection connection(42);
+    MockConnection* connection = new MockConnection(42); // Use heap allocation
     _shell = new TestShell();
     _shellOwned = true;
 
     plugin->Initialize(_shell);
 
     // Simulate deactivation
-    plugin->Detach(connection.Id());
+    plugin->Detach(connection->Id());
 
     // Verify that the deactivation was handled
     SUCCEED();
@@ -747,4 +748,6 @@ TEST_F(MessageControlL1Test, Observer_Deactivated) {
     delete _shell;
     _shell = nullptr;
     _shellOwned = false;
+
+    delete connection; // Cleanup
 }
