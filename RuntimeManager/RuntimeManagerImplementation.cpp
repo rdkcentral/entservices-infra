@@ -985,7 +985,7 @@ err_ret:
                     }
                     else if ((success == false) || (status != Core::ERROR_NONE))
                     {
-                        LOGERR("Failed to StopContainer to terminate %s",errorReason.c_str());
+                        LOGERR("StopContainer failed to terminate %s",errorReason.c_str());
                     }
                     else
                     {
