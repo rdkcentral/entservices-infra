@@ -25,6 +25,7 @@
 #include <mutex>
 #include <chrono>
 #include <condition_variable>
+#include <future>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cstring>
@@ -279,6 +280,7 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
     
     // Cleanup
     mPreinstallManagerImpl->Unregister(mockNotification.operator->());
+    mockNotification.Release(); // Explicitly release ProxyType to prevent mock leaks
     releaseResources();
 }
 
@@ -303,6 +305,7 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
     Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, unregisterStatus);
     
+    mockNotification.Release(); // Explicitly release ProxyType to prevent mock leaks
     releaseResources();
 }
 
@@ -419,9 +422,16 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     
     auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
     
-    // Expect the notification method to be called
+    // Use a promise/future to wait for the asynchronous notification
+    std::promise<void> notificationPromise;
+    std::future<void> notificationFuture = notificationPromise.get_future();
+    
+    // Expect the notification method to be called and signal completion
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
-        .Times(1);
+        .Times(1)
+        .WillOnce(::testing::InvokeWithoutArgs([&notificationPromise]() {
+            notificationPromise.set_value();
+        }));
     
     mPreinstallManagerImpl->Register(mockNotification.operator->());
     
@@ -431,8 +441,13 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     // Call the handler directly since it's a friend class
     mPreinstallManagerImpl->handleOnAppInstallationStatus(testJsonResponse);
     
+    // Wait for the asynchronous notification (with timeout)
+    auto status = notificationFuture.wait_for(std::chrono::seconds(2));
+    EXPECT_EQ(std::future_status::ready, status) << "Notification was not received within timeout";
+    
     // Cleanup
     mPreinstallManagerImpl->Unregister(mockNotification.operator->());
+    mockNotification.Release(); // Explicitly release ProxyType to prevent mock leaks
     releaseResources();
 }
 
