@@ -86,9 +86,9 @@ protected:
 
     Core::ProxyType<WorkerPoolImplementation> workerPool;
 
-    Exchange::IPackageDownloader* pkgdownloaderInterface = nullptr;
-    Exchange::IPackageInstaller* pkginstallerInterface = nullptr;
-    Exchange::IPackageHandler* pkghandlerInterface = nullptr;
+    Exchange::IPackageDownloader* plugin = nullptr;
+    Exchange::IPackageInstaller* plugin = nullptr;
+    Exchange::IPackageHandler* plugin = nullptr;
     Exchange::IPackageDownloader::Options options;
     Exchange::IPackageDownloader::DownloadId downloadId;
     Exchange::IPackageDownloader::ProgressInfo progress;
@@ -207,7 +207,7 @@ protected:
         statusParams.reason = nreason;
 
         // Register the notification
-        mPackageManagerImpl->Register(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+        plugin->Register(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
         downloadNotification.SetStatusParams(statusParams);
     }
     #endif
@@ -414,7 +414,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
     #endif
     
     // TC-5: Add download request to priority queue using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Download(uri, options, downloadId));
     
     EXPECT_EQ(downloadId.downloadId, "1001");
     
@@ -428,7 +428,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
     options.priority = false;
 
     // TC-6: Add download request to regular queue using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
     
@@ -438,7 +438,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
     EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
     
     // Unregister the notification
-    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    plugin->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
     #endif
     
     releaseResources();
@@ -473,14 +473,14 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
     //handleDownloadNotification();
     
     // TC-7: Download request error when internet is unavailable using ComRpc
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, plugin->Download(uri, options, downloadId));
     #if 0
     downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
     downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
     EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    plugin->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
     #endif
 
     releaseResources();
@@ -574,7 +574,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     //handleDownloadNotification();
     
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
     
@@ -586,10 +586,10 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
     string downloadId = "1001";
 
     // TC-11: Pause download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Pause(downloadId));
 
     // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    //plugin->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
     releaseResources();
 
@@ -613,7 +613,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
     string downloadId = "1001";
 
     // TC-13: Failure in pausing download using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Pause(downloadId));
 
     releaseResources();
 
@@ -705,7 +705,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     //handleDownloadNotification();
 
-   	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+   	EXPECT_EQ(Core::ERROR_NONE, plugin->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
     
@@ -715,10 +715,10 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
     EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
     #endif
     // TC-17: Resume download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId.downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Resume(downloadId.downloadId));
     
     // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    //plugin->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
     releaseResources();
 
@@ -742,7 +742,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
     string downloadId = "1001";
 
     // TC-19: Failure in resuming download using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Resume(downloadId));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Resume(downloadId));
 
     releaseResources();
 
@@ -834,7 +834,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     //handleDownloadNotification();
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
     
@@ -844,10 +844,10 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
     EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
     #endif
     // TC-23: Cancel download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId.downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Cancel(downloadId.downloadId));
     
     // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    //plugin->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
     releaseResources();
 
@@ -871,7 +871,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
     string downloadId = "1001";
 
     // TC-25: Failure in cancelling download using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Cancel(downloadId));
 
     releaseResources();
 
@@ -963,7 +963,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcInProgressFail) {
 
     //handleDownloadNotification();
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
     #if 0
@@ -974,10 +974,10 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcInProgressFail) {
     string fileLocator = "/opt/CDL/package1001";
 
     // TC-28: Delete download failure when download in progress using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Delete(fileLocator));
 
     // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    //plugin->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
     releaseResources();
 
@@ -1001,7 +1001,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
     string fileLocator = "/opt/CDL/package1001";
 
     // TC-29: Failure in delete using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Delete(fileLocator));
 
     releaseResources();
 
@@ -1097,7 +1097,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     //handleDownloadNotification();
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
     #if 0
@@ -1106,12 +1106,12 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
     #endif
     // TC-32: Download progress via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId.downloadId, progress));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Progress(downloadId.downloadId, progress));
 
     EXPECT_NE(progress.progress, 0);
 
     // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    //plugin->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
     releaseResources();
 
@@ -1137,7 +1137,7 @@ TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
     string downloadId = "1001";
 
     // TC-33: Progress failure via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Progress(downloadId, progress));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Progress(downloadId, progress));
 
     releaseResources();
 
@@ -1184,7 +1184,7 @@ TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
     string usedKB = "568";
 
     // TC-35: Get Storage Details using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->GetStorageDetails(quotaKB, usedKB));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->GetStorageDetails(quotaKB, usedKB));
 
     releaseResources();
 
@@ -1278,7 +1278,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     //handleDownloadNotification();
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
     #if 0
@@ -1287,10 +1287,10 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
     #endif
     // TC-39: Set rate limit via downloadID using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId.downloadId, limit));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->RateLimit(downloadId.downloadId, limit));
     
     // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    //plugin->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
     releaseResources();
 
@@ -1315,7 +1315,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     string downloadId = "1001";
 
     // TC-41: Rate limit failure using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->RateLimit(downloadId, limit));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->RateLimit(downloadId, limit));
 
     releaseResources();
 
@@ -1398,7 +1398,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
 
     // TC-44: Error on install due to invalid signature using ComRpc
-    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, plugin->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     releaseResources();
 
@@ -1449,7 +1449,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     list.ToString(jsonstr);
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    plugin->Register(&notification);
+
 
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
@@ -1461,7 +1462,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
             }));
 
     // TC-45: Failure on install using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
@@ -1478,7 +1479,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    plugin->Unregister(&notification);
 
     DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
@@ -1575,7 +1576,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     list.ToString(jsonstr);
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    plugin->Register(&notification);
     
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1591,7 +1592,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Install(packageId, version, additionalMetadata, fileLocator, reason));
     
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     notification.SetStatusParams(statusParams);
@@ -1605,7 +1606,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     signal = PackageManager_invalidStatus;
 
 	// TC-47: Failure on uninstall using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Uninstall(packageId, errorReason));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Uninstall(packageId, errorReason));
     
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     notification.OnAppInstallationStatus(jsonstr);
@@ -1617,7 +1618,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    plugin->Unregister(&notification);
 
     releaseResources();
 
@@ -1665,7 +1666,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
     auto packages = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
 
 	// TC-49: list packages using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
+    EXPECT_EQ(Core::ERROR_NONE, plugin->ListPackages(packages));
 
     releaseResources();
 
@@ -1751,7 +1752,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     list.ToString(jsonstr);
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    plugin->Register(&notification);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1760,7 +1761,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Install(packageId, version, additionalMetadata, fileLocator, reason));
     
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     notification.SetStatusParams(statusParams);
@@ -1774,12 +1775,12 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     signal = PackageManager_invalidStatus;
 
     // TC-51: Failure in config using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Config(packageId, version, runtimeConfig));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Config(packageId, version, runtimeConfig));
 
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    plugin->Unregister(&notification);
 
     releaseResources();
 
@@ -1865,7 +1866,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     list.ToString(jsonstr);
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    plugin->Register(&notification);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1874,7 +1875,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     notification.SetStatusParams(statusParams);
@@ -1888,12 +1889,12 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     signal = PackageManager_invalidStatus;
 
     // TC-53: Failure in package state using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->PackageState(packageId, version, state));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->PackageState(packageId, version, state));
     
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    plugin->Unregister(&notification);
 
     releaseResources();
 
@@ -1965,7 +1966,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcInvalidSignature) {
     Exchange::RuntimeConfig config = {};
 
     // TC-56: Error in get config for packages due to empty file locator using ComRpc
-    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->GetConfigForPackage(fileLocator, id, version, config));
+    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, plugin->GetConfigForPackage(fileLocator, id, version, config));
 
     releaseResources();
 
@@ -1993,7 +1994,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
     Exchange::RuntimeConfig config = {};
 
     // TC-57: Failure in get config for packages using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->GetConfigForPackage(fileLocator, id, version, config));
+    EXPECT_EQ(Core::ERROR_GENERAL, plugin->GetConfigForPackage(fileLocator, id, version, config));
 
     releaseResources();
 
@@ -2049,7 +2050,7 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
     auto appMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageHandler::ILockIterator>>::Create<Exchange::IPackageHandler::ILockIterator>(additionalLock);
 
 	// TC-59: Error on lock using ComRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
+    EXPECT_EQ(Core::ERROR_BAD_REQUEST, plugin->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
 
     releaseResources();
 
@@ -2096,7 +2097,7 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
     string version = "2.0";
 
     // TC-61: Error on unlock using ComRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Unlock(packageId, version));
+    EXPECT_EQ(Core::ERROR_BAD_REQUEST, plugin->Unlock(packageId, version));
 
     releaseResources();
 
@@ -2147,7 +2148,7 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
     bool locked = true;
 
     // TC-63: Error on get locked info using ComRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked));
+    EXPECT_EQ(Core::ERROR_BAD_REQUEST, plugin->GetLockedInfo(packageId, version, unpackedPath, configMetadata, gatewayMetadataPath, locked));
 
     releaseResources();
     
