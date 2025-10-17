@@ -37,6 +37,7 @@ protected:
         }
         plugin.Release();
     }
+
     class TestShell : public PluginHost::IShell {
     public:
         // Accept custom config, default matches previous behavior (no remote)
@@ -106,8 +107,8 @@ protected:
         uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
         
     private:
+        string _config; // Reordered to match constructor initialization order
         mutable uint32_t _refCount;
-        string _config;
     };
 
 };
@@ -673,6 +674,7 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
     EXPECT_TRUE(std::string(data.Message).empty());
 }
 
+
 TEST_F(MessageControlL1Test, Observer_Activated) {
     // Mock connection
     class MockConnection : public RPC::IRemoteConnection {
@@ -681,6 +683,7 @@ TEST_F(MessageControlL1Test, Observer_Activated) {
         uint32_t Id() const override { return _id; }
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
         uint32_t RemoteId() const override { return _id; }
         void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
         void Terminate() override {}
@@ -717,6 +720,7 @@ TEST_F(MessageControlL1Test, Observer_Deactivated) {
         uint32_t Id() const override { return _id; }
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
         uint32_t RemoteId() const override { return _id; }
         void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
         void Terminate() override {}
