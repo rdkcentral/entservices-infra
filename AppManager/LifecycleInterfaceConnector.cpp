@@ -732,7 +732,7 @@ namespace WPEFramework
                     loadedAppInfo.targetLifecycleState = appInfo.targetAppState;
                     appInfo.appNewState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
-                            getIntJsonField(loadedAppsObject, "currentLifecycleState")));
+                            getIntJsonField(loadedAppsObject, "lifecycleState")));
                     loadedAppInfo.currentLifecycleState = appInfo.appNewState;
 
                     //Add loaded info
