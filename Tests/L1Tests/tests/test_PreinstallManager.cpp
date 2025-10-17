@@ -273,12 +273,12 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
     auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
-    Core::hresult status = mPreinstallManagerImpl->Register(mockNotification);
+    Core::hresult status = mPreinstallManagerImpl->Register(mockNotification.operator->());
     
     EXPECT_EQ(Core::ERROR_NONE, status);
     
     // Cleanup
-    mPreinstallManagerImpl->Unregister(mockNotification);
+    mPreinstallManagerImpl->Unregister(mockNotification.operator->());
     releaseResources();
 }
 
@@ -296,11 +296,11 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
     auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
     
     // First register
-    Core::hresult registerStatus = mPreinstallManagerImpl->Register(mockNotification);
+    Core::hresult registerStatus = mPreinstallManagerImpl->Register(mockNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, registerStatus);
     
     // Then unregister
-    Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification);
+    Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, unregisterStatus);
     
     releaseResources();
@@ -423,7 +423,7 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
         .Times(1);
     
-    mPreinstallManagerImpl->Register(mockNotification);
+    mPreinstallManagerImpl->Register(mockNotification.operator->());
     
     // Simulate installation status notification
     string testJsonResponse = R"({"packageId":"testApp","version":"1.0.0","status":"SUCCESS"})";
@@ -432,7 +432,7 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     mPreinstallManagerImpl->handleOnAppInstallationStatus(testJsonResponse);
     
     // Cleanup
-    mPreinstallManagerImpl->Unregister(mockNotification);
+    mPreinstallManagerImpl->Unregister(mockNotification.operator->());
     releaseResources();
 }
 
