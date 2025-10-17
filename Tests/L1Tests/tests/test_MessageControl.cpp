@@ -83,11 +83,11 @@ protected:
         }
 
         uint32_t Release() const override {
-            if (Core::InterlockedDecrement(_refCount) == 0) {
-                delete this;
-                return 0;
-            }
-            return _refCount;
+            // Avoid deleting 'this' here to prevent potential double-delete
+            // scenarios observed under Valgrind when external code calls
+            // Release() in different code paths (e.g. Deinitialize + test).
+            // Keep decrement behavior but do not perform delete this.
+            return Core::InterlockedDecrement(_refCount);
         }
         
         void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
