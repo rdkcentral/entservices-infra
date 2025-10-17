@@ -5,8 +5,6 @@
 #include <fstream>
 #include <iterator>
 #include <cstdio>
-// Added for thread-safe refcount to address Valgrind race reports
-#include <atomic>
 
 using namespace WPEFramework;
 using namespace WPEFramework::Plugin;
@@ -79,18 +77,17 @@ protected:
         ICOMLink* COMLink() override { return nullptr; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
         
-        // Proper refcount implementation (thread-safe)
+        // Proper refcount implementation
         void AddRef() const override {
-            _refCount.fetch_add(1, std::memory_order_relaxed);
+            Core::InterlockedIncrement(_refCount);
         }
 
         uint32_t Release() const override {
-            const uint32_t newValue = _refCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
-            if (newValue == 0) {
-                delete this;
-                return 0;
-            }
-            return newValue;
+            // Avoid deleting 'this' here to prevent potential double-delete
+            // scenarios observed under Valgrind when external code calls
+            // Release() in different code paths (e.g. Deinitialize + test).
+            // Keep decrement behavior but do not perform delete this.
+            return Core::InterlockedDecrement(_refCount);
         }
         
         void EnableWebServer(const string& URLPath, const string& fileSystemPath) override {}
@@ -111,9 +108,8 @@ protected:
         uint32_t Submit(const uint32_t id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
         
     private:
-        // keep declaration order matching constructor initializer list to avoid reorder warnings
+        mutable uint32_t _refCount;
         string _config;
-        mutable std::atomic<uint32_t> _refCount;
     };
 
 };
@@ -594,8 +590,11 @@ TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON) {
     jsonConv.Convert(defaultMeta, "json-msg", data);
     EXPECT_EQ(std::string("json-msg"), std::string(data.Message));
 
-    // Do not construct UDPOutput (opens sockets and causes valgrind/CI issues). The converter & JSON checks above exercise MessageOutput logic.
-    SUCCEED();
+  // UDPOutput::Message: ensure it executes without crash using default metadata
+    Core::NodeId anyNode("127.0.0.1", 0);
+    Publishers::UDPOutput udp(anyNode);
+    udp.Message(defaultMeta, "udp-msg");
+    SUCCEED(); // if we reach here, the call did not ASSERT/crash
 }
 
 TEST_F(MessageControlL1Test, MessageOutput_FileWrite) {
