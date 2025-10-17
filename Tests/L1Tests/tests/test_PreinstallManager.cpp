@@ -236,18 +236,20 @@ protected:
     }
 };
 
-class NotificationTest : public Exchange::IPreinstallManager::INotification 
+// Mock notification class using GMock
+class MockNotificationTest : public Exchange::IPreinstallManager::INotification 
 {
-    private:
-        BEGIN_INTERFACE_MAP(NotificationTest)
-        INTERFACE_ENTRY(Exchange::IPreinstallManager::INotification)
-        END_INTERFACE_MAP
+public:
+    MockNotificationTest() = default;
+    virtual ~MockNotificationTest() = default;
     
-    public:
-        void OnAppInstallationStatus(const string& jsonresponse) override 
-        {
-            TEST_LOG("OnAppInstallationStatus called with: %s", jsonresponse.c_str());
-        }
+    MOCK_METHOD(void, OnAppInstallationStatus, (const string& jsonresponse), (override));
+    MOCK_METHOD(void, AddRef, (), (const, override));
+    MOCK_METHOD(uint32_t, Release, (), (const, override));
+
+    BEGIN_INTERFACE_MAP(MockNotificationTest)
+    INTERFACE_ENTRY(Exchange::IPreinstallManager::INotification)
+    END_INTERFACE_MAP
 };
 
 /*Test cases for PreinstallManager Plugin*/
@@ -270,13 +272,13 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
-    NotificationTest notification;
-    Core::hresult status = mPreinstallManagerImpl->Register(&notification);
+    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
+    Core::hresult status = mPreinstallManagerImpl->Register(mockNotification);
     
     EXPECT_EQ(Core::ERROR_NONE, status);
     
     // Cleanup
-    mPreinstallManagerImpl->Unregister(&notification);
+    mPreinstallManagerImpl->Unregister(mockNotification);
     releaseResources();
 }
 
@@ -291,14 +293,14 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
-    NotificationTest notification;
+    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
     
     // First register
-    Core::hresult registerStatus = mPreinstallManagerImpl->Register(&notification);
+    Core::hresult registerStatus = mPreinstallManagerImpl->Register(mockNotification);
     EXPECT_EQ(Core::ERROR_NONE, registerStatus);
     
     // Then unregister
-    Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(&notification);
+    Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification);
     EXPECT_EQ(Core::ERROR_NONE, unregisterStatus);
     
     releaseResources();
@@ -415,8 +417,13 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    NotificationTest notification;
-    mPreinstallManagerImpl->Register(&notification);
+    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
+    
+    // Expect the notification method to be called
+    EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
+        .Times(1);
+    
+    mPreinstallManagerImpl->Register(mockNotification);
     
     // Simulate installation status notification
     string testJsonResponse = R"({"packageId":"testApp","version":"1.0.0","status":"SUCCESS"})";
@@ -425,7 +432,7 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     mPreinstallManagerImpl->handleOnAppInstallationStatus(testJsonResponse);
     
     // Cleanup
-    mPreinstallManagerImpl->Unregister(&notification);
+    mPreinstallManagerImpl->Unregister(mockNotification);
     releaseResources();
 }
 
