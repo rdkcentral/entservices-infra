@@ -673,7 +673,6 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
     EXPECT_TRUE(std::string(data.Message).empty());
 }
 
-
 TEST_F(MessageControlL1Test, Observer_Activated) {
     // Mock connection
     class MockConnection : public RPC::IRemoteConnection {
@@ -682,6 +681,12 @@ TEST_F(MessageControlL1Test, Observer_Activated) {
         uint32_t Id() const override { return _id; }
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
+        uint32_t RemoteId() const override { return _id; }
+        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
+        void Terminate() override {}
+        uint32_t Launch() override { return 0; }
+        void PostMortem() override {}
+
     private:
         uint32_t _id;
     };
@@ -692,11 +697,10 @@ TEST_F(MessageControlL1Test, Observer_Activated) {
 
     plugin->Initialize(_shell);
 
-    Core::Sink<MessageControl::Observer> observer(*plugin);
+    // Simulate activation
+    plugin->Attach(connection.Id());
 
-    observer.Activated(&connection);
-
-    // Verify that the observer handled the activation
+    // Verify that the activation was handled
     SUCCEED();
 
     plugin->Deinitialize(_shell);
@@ -713,6 +717,12 @@ TEST_F(MessageControlL1Test, Observer_Deactivated) {
         uint32_t Id() const override { return _id; }
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
+        uint32_t RemoteId() const override { return _id; }
+        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
+        void Terminate() override {}
+        uint32_t Launch() override { return 0; }
+        void PostMortem() override {}
+
     private:
         uint32_t _id;
     };
@@ -723,11 +733,10 @@ TEST_F(MessageControlL1Test, Observer_Deactivated) {
 
     plugin->Initialize(_shell);
 
-    Core::Sink<MessageControl::Observer> observer(*plugin);
+    // Simulate deactivation
+    plugin->Detach(connection.Id());
 
-    observer.Deactivated(&connection);
-
-    // Verify that the observer handled the deactivation
+    // Verify that the deactivation was handled
     SUCCEED();
 
     plugin->Deinitialize(_shell);
