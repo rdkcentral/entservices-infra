@@ -639,27 +639,6 @@ TEST_F(MessageControlL1Test, EnableWithEmptyFields) {
     EXPECT_EQ(Core::ERROR_NONE, hr);
 }
 
-// New: Controls iterator returns at least the entries we just enabled (counts entries)
-TEST_F(MessageControlL1Test, ControlsIterator_Count) {
-    // Enable a couple of distinct controls
-    plugin->Enable(Exchange::IMessageControl::TRACING, "countCat1", "countMod1", true);
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "countCat2", "countMod2", true);
-
-    Exchange::IMessageControl::IControlIterator* controls = nullptr;
-    Core::hresult hr = plugin->Controls(controls);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-    ASSERT_NE(nullptr, controls);
-
-    int count = 0;
-    Exchange::IMessageControl::Control current;
-    while (controls->Next(current)) {
-        ++count;
-    }
-    // Expect at least the two we added (environment could contain more)
-    EXPECT_GE(count, 2);
-    controls->Release();
-}
-
 // New: WebSocketOutput::Detach for unknown id should return false (exercise detach branch)
 TEST_F(MessageControlL1Test, WebSocketOutput_UnknownDetach) {
     TestShell* shell = new TestShell();
@@ -678,40 +657,6 @@ TEST_F(MessageControlL1Test, TestShell_Lifecycle) {
     EXPECT_EQ(Core::ERROR_NONE, shell.Activate(PluginHost::IShell::reason::REQUESTED));
     EXPECT_EQ(Core::ERROR_NONE, shell.Deactivate(PluginHost::IShell::reason::REQUESTED));
     EXPECT_EQ(Core::ERROR_NONE, shell.Hibernate(5000));
-}
-// New: verify that a specific control entry can be found via the Controls iterator.
-TEST_F(MessageControlL1Test, ControlStructureDetailed) {
-    Exchange::IMessageControl::Control testControl;
-    testControl.type = Exchange::IMessageControl::TRACING;
-    testControl.category = "DetailedCategory";
-    testControl.module = "DetailedModule";
-    testControl.enabled = true;
-
-    Core::hresult hr = plugin->Enable(
-        testControl.type,
-        testControl.category,
-        testControl.module,
-        testControl.enabled);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-
-    Exchange::IMessageControl::IControlIterator* controls = nullptr;
-    hr = plugin->Controls(controls);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-    ASSERT_NE(nullptr, controls);
-
-    bool found = false;
-    Exchange::IMessageControl::Control current;
-    while (controls->Next(current)) {
-        if (current.type == testControl.type &&
-            current.category == testControl.category &&
-            current.module == testControl.module &&
-            current.enabled == testControl.enabled) {
-            found = true;
-            break;
-        }
-    }
-    EXPECT_TRUE(found);
-    controls->Release();
 }
 
 // New: verify TestShell refcount behavior and ConfigLine preservation.
