@@ -244,32 +244,10 @@ class NotificationTest : public Exchange::IPreinstallManager::INotification
         END_INTERFACE_MAP
     
     public:
-        NotificationTest() : _refCount(1) {}
-        virtual ~NotificationTest() = default;
-        
-        // Required IReferenceCounted methods
-        void AddRef() const override 
-        {
-            Core::InterlockedIncrement(_refCount);
-        }
-        
-        uint32_t Release() const override 
-        {
-            uint32_t result = Core::InterlockedDecrement(_refCount);
-            if (result == 0) {
-                delete this;
-                return Core::ERROR_DESTRUCTION_SUCCEEDED;
-            }
-            return Core::ERROR_NONE;
-        }
-        
         void OnAppInstallationStatus(const string& jsonresponse) override 
         {
             TEST_LOG("OnAppInstallationStatus called with: %s", jsonresponse.c_str());
         }
-        
-    private:
-        mutable uint32_t _refCount;
 };
 
 /*Test cases for PreinstallManager Plugin*/
@@ -292,14 +270,13 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
-    NotificationTest* notification = new NotificationTest();
-    Core::hresult status = mPreinstallManagerImpl->Register(notification);
+    NotificationTest notification;
+    Core::hresult status = mPreinstallManagerImpl->Register(&notification);
     
     EXPECT_EQ(Core::ERROR_NONE, status);
     
     // Cleanup
-    mPreinstallManagerImpl->Unregister(notification);
-    notification->Release();
+    mPreinstallManagerImpl->Unregister(&notification);
     releaseResources();
 }
 
@@ -314,17 +291,16 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
-    NotificationTest* notification = new NotificationTest();
+    NotificationTest notification;
     
     // First register
-    Core::hresult registerStatus = mPreinstallManagerImpl->Register(notification);
+    Core::hresult registerStatus = mPreinstallManagerImpl->Register(&notification);
     EXPECT_EQ(Core::ERROR_NONE, registerStatus);
     
     // Then unregister
-    Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(notification);
+    Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(&notification);
     EXPECT_EQ(Core::ERROR_NONE, unregisterStatus);
     
-    notification->Release();
     releaseResources();
 }
 
@@ -439,8 +415,8 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    NotificationTest* notification = new NotificationTest();
-    mPreinstallManagerImpl->Register(notification);
+    NotificationTest notification;
+    mPreinstallManagerImpl->Register(&notification);
     
     // Simulate installation status notification
     string testJsonResponse = R"({"packageId":"testApp","version":"1.0.0","status":"SUCCESS"})";
@@ -449,8 +425,7 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     mPreinstallManagerImpl->handleOnAppInstallationStatus(testJsonResponse);
     
     // Cleanup
-    mPreinstallManagerImpl->Unregister(notification);
-    notification->Release();
+    mPreinstallManagerImpl->Unregister(&notification);
     releaseResources();
 }
 
