@@ -171,6 +171,7 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/devicesettings
         ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks/thunder
         ${CMAKE_SOURCE_DIR}/../Thunder/Source/plugins
+    ${CMAKE_INSTALL_PREFIX}/include
         )
 
 target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)

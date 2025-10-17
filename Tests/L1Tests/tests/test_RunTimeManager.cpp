@@ -48,6 +48,9 @@ protected:
     OCIContainerMock* mociContainerMock = nullptr;
     WindowManagerMock* mWindowManagerMock = nullptr;
     Core::ProxyType<WorkerPoolImplementation> workerPool;
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+    RialtoConnector* mRltConnector = nullptr;
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
 
     RuntimeManagerTest()
         : workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
@@ -162,6 +165,47 @@ protected:
         ASSERT_TRUE(interface != nullptr);
     }
 };
+
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+TEST_F(RuntimeManagerTest, CreateRialtoAppSession)
+{  
+    string appId("com.rdk.app.cobalt2025");
+    string westerosSocket("/tmp/westeros-3325-SG3uP6");
+
+    EXPECT_EQ(true, createResources());
+
+    EXPECT_CALL( mRltConnector->createAppSession(appId, westerosSocket,appId))
+    EXPECT_CALL( mRltConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS)
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const string&, bool force, bool& success, string& errorReason) {
+                success = true;
+                errorReason = "No Error";
+                return WPEFramework::Core::ERROR_NONE;
+          }));
+
+    releaseResources();
+}
+
+TEST_F(RuntimeManagerTest, CreateRialtoAppSessionNoAppId)
+{  
+    string appId("");
+    string westerosSocket("");
+
+    EXPECT_EQ(true, createResources());
+
+    EXPECT_CALL( mRltConnector->createAppSession(appId, westerosSocket,appId))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const string&, bool force, bool& success, string& errorReason) {
+                success = true;
+                errorReason = "No Error";
+                return WPEFramework::Core::ERROR_NONE;
+          }));
+
+    releaseResources();
+}
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
 
 /* Test Case for TerminateMethods
  * 
