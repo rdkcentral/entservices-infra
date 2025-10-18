@@ -190,7 +190,7 @@ protected:
         plugin->Deinitialize(mServiceMock);
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-        
+
 		// Clean up mocks
 		if (mServiceMock != nullptr)
         {
@@ -218,14 +218,6 @@ protected:
 						return 0;
 					}));
         }
-
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-		
-		if(mSubSystemMock != nullptr)
-        {
-            delete mSubSystemMock;
-            mSubSystemMock = nullptr;
-		}
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
