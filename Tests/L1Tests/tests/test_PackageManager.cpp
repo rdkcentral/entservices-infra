@@ -183,7 +183,14 @@ protected:
     }
 
     void releaseResources()
-    {	
+    {	 
+        dispatcher->Deactivate();
+        dispatcher->Release();
+
+        plugin->Deinitialize(mServiceMock);
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 		// Clean up mocks
 		if (mServiceMock != nullptr)
         {
@@ -219,13 +226,6 @@ protected:
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
 		}
-
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-
-        dispatcher->Deactivate();
-        dispatcher->Release();
-
-        plugin->Deinitialize(mServiceMock);
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
