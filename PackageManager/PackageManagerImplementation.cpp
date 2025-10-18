@@ -310,6 +310,8 @@ namespace Plugin {
             return Core::ERROR_UNAVAILABLE;
         }
 
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
         std::lock_guard<std::mutex> lock(mMutex);
 
         DownloadInfoPtr di = DownloadInfoPtr(new DownloadInfo(url, std::to_string(++mNextDownloadId), options.retries, options.rateLimit));
@@ -323,6 +325,8 @@ namespace Plugin {
         cv.notify_one();
 
         downloadId.downloadId = di->GetId();
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
         return result;
     }

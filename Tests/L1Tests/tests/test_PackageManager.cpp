@@ -127,6 +127,8 @@ protected:
 	
 	void createResources() 
 	{		
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 		// Set up mocks and expect calls
         mServiceMock = new NiceMock<ServiceMock>;
         mStorageManagerMock = new NiceMock<StorageManagerMock>;
@@ -142,6 +144,10 @@ protected:
             return nullptr;
         }));
 
+        EXPECT_CALL(*mServiceMock, ConfigLine())
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/CDL/\"}"));
+
         EXPECT_CALL(*mServiceMock, SubSystems())
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Return(mSubSystemMock));
@@ -156,10 +162,14 @@ protected:
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(mServiceMock);
         plugin->Initialize(mServiceMock);
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     void getDownloadParams()
     {
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Initialize the parameters required for COM-RPC with default values
         uri = "http://test.com";
 
@@ -168,12 +178,16 @@ protected:
         };
 
         downloadId = {};
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     void releaseResources()
     {	
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         if (mStorageManagerMock != nullptr)
         {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 			EXPECT_CALL(*mStorageManagerMock, Release())
               .WillOnce(::testing::Invoke(
               [&]() {
@@ -182,6 +196,8 @@ protected:
 						return 0;
 					}));
         }
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
         EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
               .Times(::testing::AnyNumber());
@@ -194,11 +210,17 @@ protected:
 
         plugin->Deinitialize(mServiceMock);
 
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
         delete mServiceMock;
 		mServiceMock = nullptr;
 
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
         delete mSubSystemMock;
         mSubSystemMock = nullptr;
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     #if 0
