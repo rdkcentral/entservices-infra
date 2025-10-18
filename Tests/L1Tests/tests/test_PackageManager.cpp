@@ -212,7 +212,7 @@ protected:
 					}));
         }
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------")
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 		
 		if(mSubSystemMock != nullptr)
         {
