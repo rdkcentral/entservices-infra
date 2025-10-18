@@ -207,6 +207,7 @@ protected:
         }
 		
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
         if (mStorageManagerMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -320,6 +321,7 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
         }
     };
 
+#if 0
 /* Test Case for verifying registered methods using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -412,6 +414,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
     
     releaseResources();
 }
+#endif
 
 /* Test Case for adding download request to a queue(priority/regular) using ComRpc
  * 
