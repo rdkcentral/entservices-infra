@@ -221,6 +221,12 @@ protected:
         }
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
+        if(mSubSystemMock != nullptr) 
+        {
+            delete mSubSystemMock;
+            mSubSystemMock = nullptr;
+        }
     }
 
     #if 0
