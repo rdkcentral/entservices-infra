@@ -420,7 +420,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
     
     releaseResources();
 }
-#endif
+
 
 /* Test Case for adding download request to a queue(priority/regular) using ComRpc
  * 
@@ -1587,6 +1587,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
     
     releaseResources();
 }
+#endif
 
 /* Test Case for config method failure using ComRpc
  * 
