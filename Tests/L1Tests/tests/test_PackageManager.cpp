@@ -187,7 +187,7 @@ protected:
         dispatcher->Deactivate();
         dispatcher->Release();
 
-        pkgdownloadInterface->Deinitialize(mServiceMock);
+        pkgdownloaderInterface->Deinitialize(mServiceMock);
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
