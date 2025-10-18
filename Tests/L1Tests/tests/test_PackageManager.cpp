@@ -1356,7 +1356,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     list.ToString(jsonstr);
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    pkginstallerInterface->Register(&notification);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1379,7 +1379,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    pkginstallerInterface->Unregister(&notification);
 
     releaseResources();
 }
@@ -1466,7 +1466,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     list.ToString(jsonstr);
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    pkginstallerInterface->Register(&notification);
     
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1508,7 +1508,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    pkginstallerInterface->Unregister(&notification);
 
     releaseResources();
 }
@@ -1625,7 +1625,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     list.ToString(jsonstr);
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    pkginstallerInterface->Register(&notification);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1653,7 +1653,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
 
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    pkginstallerInterface->Unregister(&notification);
 
     releaseResources();	
 }
