@@ -161,7 +161,7 @@ protected:
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(mServiceMock);
-        plugin->Initialize(mServiceMock);
+        pkgdownloadInterface->Initialize(mServiceMock);
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
@@ -187,7 +187,7 @@ protected:
         dispatcher->Deactivate();
         dispatcher->Release();
 
-        plugin->Deinitialize(mServiceMock);
+        pkgdownloadInterface->Deinitialize(mServiceMock);
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
