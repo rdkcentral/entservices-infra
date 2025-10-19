@@ -188,11 +188,6 @@ protected:
 
     void releaseResources()
     {	 
-        dispatcher->Deactivate();
-        dispatcher->Release();
-
-        pkgdownloaderInterface->Deinitialize(mServiceMock);
-
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
 		// Clean up mocks
@@ -231,6 +226,11 @@ protected:
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
         }
+
+		dispatcher->Deactivate();
+        dispatcher->Release();
+
+        pkgdownloaderInterface->Deinitialize(mServiceMock);
     }
 
     #if 0
