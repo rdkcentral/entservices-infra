@@ -55,27 +55,35 @@ namespace Plugin {
 
     PackageManagerImplementation::~PackageManagerImplementation()
     {
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         LOGINFO("dtor PackageManagerImplementation: %p", this);
 
         std::list<Exchange::IPackageInstaller::INotification*>::iterator index(mInstallNotifications.begin());
         {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             while (index != mInstallNotifications.end()) {
+                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
                 (*index)->Release();
                 index++;
             }
         }
         mInstallNotifications.clear();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
         releaseStorageManagerObject();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
         std::list<Exchange::IPackageDownloader::INotification*>::iterator itDownloader(mDownloaderNotifications.begin());
         {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             while (itDownloader != mDownloaderNotifications.end()) {
+                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
                 (*itDownloader)->Release();
                 itDownloader++;
             }
         }
         mDownloaderNotifications.clear();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     Core::hresult PackageManagerImplementation::Register(Exchange::IPackageDownloader::INotification* notification)
@@ -175,6 +183,8 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
 
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         if (nullptr != mTelemetryMetricsObject)
         {
@@ -184,8 +194,12 @@ namespace Plugin {
         }
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
         mCurrentservice->Release();
         mCurrentservice = nullptr;
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
         return result;
     }
@@ -207,11 +221,14 @@ namespace Plugin {
 
     void PackageManagerImplementation::releaseStorageManagerObject()
     {
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         ASSERT(nullptr != mStorageManagerObject);
         if(mStorageManagerObject) {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             mStorageManagerObject->Release();
             mStorageManagerObject = nullptr;
         }
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -710,16 +727,24 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGINFO();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         mAdminLock.Lock();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         auto item = std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification);
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         if (item != mInstallNotifications.end()) {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             notification->Release();
             mInstallNotifications.erase(item);
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
         else {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             result = Core::ERROR_GENERAL;
         }
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         mAdminLock.Unlock();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
         return result;
     }
