@@ -121,6 +121,10 @@ protected:
     // Destructor
     virtual ~PackageManagerTest() override
     {
+		pkgdownloaderInterface->Release();
+		pkginstallerInterface->Release();
+		pkghandlerInterface->Release();
+		
         Core::IWorkerPool::Assign(nullptr);
 		workerPool.Release();
     }
