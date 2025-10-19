@@ -1591,7 +1591,6 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
     
     releaseResources();
 }
-#endif
 
 /* Test Case for config method failure using ComRpc
  * 
@@ -1697,6 +1696,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
 
     releaseResources();
 }
+#endif
 
 /* Test Case for package state failure using ComRpc
  * 
@@ -1741,7 +1741,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     list.ToString(jsonstr);
 
     // Register the notification
-    mPackageManagerImpl->Register(&notification);
+    pkginstallerInterface->Register(&notification);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1769,7 +1769,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     
     // Unregister the notification
-    mPackageManagerImpl->Unregister(&notification);
+    pkginstallerInterface->Unregister(&notification);
 
     releaseResources();
 }
