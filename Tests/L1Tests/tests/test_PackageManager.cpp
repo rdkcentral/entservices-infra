@@ -332,7 +332,6 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
         }
     };
 
-#if 0
 /* Test Case for verifying registered methods using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1593,6 +1592,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
     releaseResources();
 }
 
+#if 0
 /* Test Case for config method failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -1668,6 +1668,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 
     releaseResources();	
 }
+#endif
 
 /* Test Case for package state failure using JsonRpc
  * 
@@ -1697,8 +1698,8 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
 
     releaseResources();
 }
-#endif
 
+#if 0
 /* Test Case for package state failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -1782,6 +1783,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 
     releaseResources();
 }
+#endif
 
  /* Test Case for get config for package error due to invalid signature using JsonRpc
  * 
