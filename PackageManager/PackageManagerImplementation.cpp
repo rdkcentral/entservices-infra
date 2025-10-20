@@ -31,6 +31,7 @@ namespace Plugin {
     SERVICE_REGISTRATION(PackageManagerImplementation, 1, 0);
 
     #define CHECK_CACHE() { if ((packageImpl.get() == nullptr) || (!cacheInitialized)) { \
+        LOGERR("Cache is not initialized!"); \
         return Core::ERROR_UNAVAILABLE; \
     }}
 
@@ -479,21 +480,21 @@ namespace Plugin {
             result = Install(packageId, version, keyValues, fileLocator, state);
             if ((result == Core::ERROR_NONE) && !found) {
                 LOGDBG("Inserting Package: %s Version: %s", packageId.c_str(), version.c_str());
-                mState.insert( { key, state } );
+                mState.insert( { key, state } );    // XXX: may need protection
             } else {
                 LOGDBG("Package: %s Version: %s found=%d result=%d", packageId.c_str(), version.c_str(), found, result);
             }
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-        if (result != Core::ERROR_NONE) {
-            packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
-                ? PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE
-                : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
+            if (result != Core::ERROR_NONE) {
+                packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
+                    ? PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE
+                    : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
 
-        }
-        recordAndPublishTelemetryData(((PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE == packageFailureErrorCode) ? TELEMETRY_MARKER_INSTALL_TIME : TELEMETRY_MARKER_INSTALL_ERROR),
-                                                    packageId,
-                                                    requestTime,
-                                                    packageFailureErrorCode);
+            }
+            recordAndPublishTelemetryData(((PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE == packageFailureErrorCode) ? TELEMETRY_MARKER_INSTALL_TIME : TELEMETRY_MARKER_INSTALL_ERROR),
+                                                        packageId,
+                                                        requestTime,
+                                                        packageFailureErrorCode);
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
         }
         return result;
