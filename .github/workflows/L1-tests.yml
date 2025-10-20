@@ -140,13 +140,12 @@ jobs:
           path: entservices-infra
           ref: develop
           
+      # Rialto checkout 
       - name: Checkout rialto
-        if: ${{ inputs.caller_source == 'testframework' }}
-        uses: actions/checkout@v3
-        with:
-          repository: rdkcentral/rialto
-          path: rialto
-          ref: develop
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/rialto
+          git checkout https://github.com/rdkcentral/rialto.git
+          cp rialto/serverManager/public/include/* $GITHUB_WORKSPACE/rialto/
           
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
@@ -326,7 +325,7 @@ jobs:
           Dobby/Public/Dobby/IDobbyProxy.h
           Dobby/IpcService/IpcFactory.h
           &&
-          cp -r /usr/include/rialto /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h /usr/include/libdrm/drm.h /usr/include/libdrm/drm_mode.h /usr/include/xf86drm.h .
+          cp -r  /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h /usr/include/libdrm/drm.h /usr/include/libdrm/drm_mode.h /usr/include/xf86drm.h .
 
       - name: Set clang toolchain
         if: ${{ matrix.compiler == 'clang' }}
