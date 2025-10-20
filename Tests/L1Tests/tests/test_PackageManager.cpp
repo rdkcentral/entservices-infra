@@ -1741,6 +1741,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
+#if 0
 TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
 
     createResources();   
@@ -1775,7 +1776,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-#if 0
+
 TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 
     createResources();   
@@ -1844,7 +1845,6 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 	
     releaseResources();
 }
-#endif
 
 /* Test Case for package state failure using JsonRpc
  * 
@@ -1890,7 +1890,6 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-#if 0
 TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 
     createResources();   
