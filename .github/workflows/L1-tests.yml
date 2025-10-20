@@ -143,9 +143,9 @@ jobs:
       # Rialto checkout 
       - name: Checkout rialto
         run: |
-          mkdir -p $GITHUB_WORKSPACE/rialto
+          mkdir -p $GITHUB_WORKSPACE/RuntimeManager/rialto
           git clone https://github.com/rdkcentral/rialto.git
-          cp rialto/serverManager/public/include/* $GITHUB_WORKSPACE/rialto/
+          cp rialto/serverManager/public/include/*  $GITHUB_WORKSPACE/RuntimeManager/rialto/
           
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
