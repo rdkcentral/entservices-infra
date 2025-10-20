@@ -146,6 +146,8 @@ jobs:
           mkdir -p $GITHUB_WORKSPACE/RuntimeManager/rialto
           git clone https://github.com/rdkcentral/rialto.git
           cp rialto/serverManager/public/include/*  $GITHUB_WORKSPACE/RuntimeManager/rialto/
+          ls $GITHUB_WORKSPACE/RuntimeManager/rialto/
+          echo work space dir $GITHUB_WORKSPACE
           
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
