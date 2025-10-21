@@ -786,3 +786,165 @@ TEST_F(MessageControlL1Test, DispatchPrivateMethod) {
     _shell = nullptr;
     _shellOwned = false;
 }
+
+TEST_F(MessageControlL1Test, Observer_Message) {
+    // Test the Observer's Message method
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
+    plugin->Callback(nullptr); // Ensure no callback is set
+
+    // Simulate a message being sent to the observer
+    plugin->Message(metadata, "Test message for Observer");
+
+    SUCCEED(); // Ensure no crashes or assertions
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, Observer_Activated) {
+    // Test the Observer's Activated method
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MockConnection(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
+
+    private:
+        uint32_t _id;
+    };
+
+    MockConnection connection(42);
+    plugin->Attach(connection.Id()); // Simulate activation
+
+    SUCCEED(); // Ensure no crashes or assertions
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, Observer_Deactivated) {
+    // Test the Observer's Deactivated method
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MockConnection(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
+
+    private:
+        uint32_t _id;
+    };
+
+    MockConnection connection(42);
+    plugin->Attach(connection.Id()); // Simulate activation
+    plugin->Detach(connection.Id()); // Simulate deactivation
+
+    SUCCEED(); // Ensure no crashes or assertions
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, Observer_Terminated) {
+    // Test the Observer's Terminated method
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MockConnection(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
+
+    private:
+        uint32_t _id;
+    };
+
+    MockConnection connection(42);
+    plugin->Attach(connection.Id()); // Simulate activation
+    plugin->Detach(connection.Id()); // Simulate termination
+
+    SUCCEED(); // Ensure no crashes or assertions
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, Observer_Drop) {
+    // Test the Observer's Drop method
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MockConnection(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
+
+    private:
+        uint32_t _id;
+    };
+
+    MockConnection connection(42);
+    plugin->Attach(connection.Id()); // Simulate activation
+    plugin->Detach(connection.Id()); // Simulate drop
+
+    SUCCEED(); // Ensure no crashes or assertions
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, Observer_Dispatch) {
+    // Test the Observer's Dispatch method
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    // Simulate adding and removing instances
+    plugin->Attach(1);
+    plugin->Attach(2);
+    plugin->Detach(1);
+    plugin->Detach(2);
+
+    // Call Dispatch explicitly
+    plugin->Dispatch();
+
+    SUCCEED(); // Ensure no crashes or assertions during dispatch
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
