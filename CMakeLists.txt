@@ -176,7 +176,6 @@ endif()
 
 if(PLUGIN_FBSETTINGS)
 	add_subdirectory(FbSettings)
->>>>>>> 71cc1df (test)
 endif()
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
