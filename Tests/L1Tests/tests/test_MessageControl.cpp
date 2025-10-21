@@ -699,11 +699,25 @@ TEST_F(MessageControlL1Test, SyslogOutput_Message) {
 
     Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
 	
-    testing::internal::CaptureStdout();
-    syslogOutput.Message(messageInfo, "Test message for SyslogOutput");
-    std::string output = testing::internal::GetCapturedStdout();
+    // Redirect syslog to a temporary file for testing
+    const std::string tempSyslogFile = "/tmp/test_syslog_output.log";
+    setlogmask(LOG_UPTO(LOG_NOTICE));
+    openlog("TestSyslog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
 
-    EXPECT_NE(output.find("Test message for SyslogOutput"), std::string::npos);
-    EXPECT_NE(output.find("SyslogCategory"), std::string::npos);
-    EXPECT_NE(output.find("SyslogModule"), std::string::npos);
+    syslogOutput.Message(messageInfo, "Test message for SyslogOutput");
+
+    // Close syslog and verify the output
+    closelog();
+
+    std::ifstream syslogFile(tempSyslogFile);
+    ASSERT_TRUE(syslogFile.good()) << "Syslog file not created.";
+    std::string content((std::istreambuf_iterator<char>(syslogFile)), std::istreambuf_iterator<char>());
+    syslogFile.close();
+
+    EXPECT_NE(content.find("Test message for SyslogOutput"), std::string::npos);
+    EXPECT_NE(content.find("SyslogCategory"), std::string::npos);
+    EXPECT_NE(content.find("SyslogModule"), std::string::npos);
+
+    // Cleanup
+    std::remove(tempSyslogFile.c_str());
 }
