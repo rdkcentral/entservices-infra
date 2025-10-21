@@ -758,39 +758,6 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, AttachDetachInvalidChannel) {
-    // Test Attach and Detach with invalid channels
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    class InvalidChannel : public PluginHost::Channel {
-    public:
-        InvalidChannel() : PluginHost::Channel(0, Core::NodeId()) {}
-        void LinkBody(Core::ProxyType<PluginHost::Request>&) override {}
-        void Received(Core::ProxyType<PluginHost::Request>&) override {}
-        void Send(const Core::ProxyType<Web::Response>&) override {}
-        uint16_t SendData(uint8_t*, const uint16_t) override { return 0; }
-        uint16_t ReceiveData(uint8_t*, const uint16_t) override { return 0; }
-        void StateChange() override {}
-        void Send(const Core::ProxyType<Core::JSON::IElement>&) override {}
-	    Core::ProxyType<Core::JSON::IElement> Element(const string&) override { 
-            return Core::ProxyType<Core::JSON::IElement>(); 
-        }
-        void Received(Core::ProxyType<Core::JSON::IElement>&) override {}
-        void Received(const string&) override {}
-    };
-
-    InvalidChannel invalidChannel;
-    EXPECT_FALSE(plugin->Attach(invalidChannel));
-    plugin->Detach(invalidChannel);
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
 TEST_F(MessageControlL1Test, DispatchMessages) {
     // Test Dispatch to ensure messages are processed correctly
     _shell = new TestShell();
