@@ -2226,8 +2226,4 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 	deinitforComRpc();
 	
     releaseResources();
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> c6f934255be7a1674b4052d41fd3feac86769118
