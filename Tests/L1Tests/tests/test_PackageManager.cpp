@@ -1741,6 +1741,8 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 	// TC-49: list packages using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
 
+    packages->Release();
+
 	deinitforComRpc();
 	
     releaseResources();
