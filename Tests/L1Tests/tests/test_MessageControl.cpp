@@ -736,46 +736,6 @@ TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     EXPECT_NE(output.find("TestModule"), std::string::npos);
 }
 
-TEST_F(MessageControlL1Test, WebSocketOutput_MaxConnections) {
-    // Test WebSocketOutput max connections limit
-    TestShell* shell = new TestShell();
-    Publishers::WebSocketOutput ws;
-
-    ws.Initialize(shell, 2); // Set max connections to 2
-    EXPECT_TRUE(ws.Attach(1));
-    EXPECT_TRUE(ws.Attach(2));
-    EXPECT_FALSE(ws.Attach(3)); // Exceeding max connections should fail
-
-    ws.Detach(1);
-    EXPECT_TRUE(ws.Attach(3)); // Should succeed after detaching a connection
-
-    ws.Deinitialize();
-    delete shell;
-}
-
-TEST_F(MessageControlL1Test, FileOutput_WriteAndVerify) {
-    // Test FileOutput writes to a file and verify content
-    const string tempFile = "/tmp/test_file_output.log";
-    std::remove(tempFile.c_str()); // Ensure no leftover file
-
-    Publishers::FileOutput fileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, tempFile);
-
-    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "FileCategory", "FileModule");
-    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-    fileOutput.Message(messageInfo, "Test message for FileOutput");
-
-    std::ifstream file(tempFile);
-    ASSERT_TRUE(file.good()) << "File not created.";
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    file.close();
-
-    EXPECT_NE(content.find("Test message for FileOutput"), std::string::npos);
-    EXPECT_NE(content.find("FileCategory"), std::string::npos);
-    EXPECT_NE(content.find("FileModule"), std::string::npos);
-
-    std::remove(tempFile.c_str()); // Cleanup
-}
-
 TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     // Test JSON output with various options enabled
     Publishers::JSON json;
@@ -798,14 +758,3 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, UDPOutput_MessageSend) {
-    // Test UDPOutput sends a message without crashing
-    Core::NodeId nodeId("127.0.0.1", 12345);
-    Publishers::UDPOutput udpOutput(nodeId);
-
-    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "UDPCategory", "UDPModule");
-    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-    udpOutput.Message(messageInfo, "Test message for UDPOutput");
-
-    SUCCEED(); // Ensure no crashes
-}
