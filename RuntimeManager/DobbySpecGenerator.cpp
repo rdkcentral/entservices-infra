@@ -226,7 +226,7 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     spec["mounts"] = createMounts(config, runtimeConfig);
     spec["env"] = createEnvVars(config, runtimeConfig);
 
-#ifdef RDK_APP_MANAGER_DEBUG
+#ifdef RDK_APPMANAGERS_DEBUG
     addHolePunchPortToSpec(spec, 22222);
 #endif
 
