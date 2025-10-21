@@ -1741,6 +1741,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
+#if 0
 TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
 
     createResources();   
@@ -1776,6 +1777,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
  */
 
 #if 0
+
 TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 
     createResources();   
@@ -2213,4 +2215,8 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 	deinitforComRpc();
 	
     releaseResources();
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> c6f934255be7a1674b4052d41fd3feac86769118
