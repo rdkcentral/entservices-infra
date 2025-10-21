@@ -131,10 +131,13 @@ protected:
 	
 	void createResources() 
 	{		
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 		// Set up mocks and expect calls
         mServiceMock = new NiceMock<ServiceMock>;
         mStorageManagerMock = new NiceMock<StorageManagerMock>;
         mSubSystemMock = new NiceMock<SubSystemMock>;
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 
         EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
           .Times(::testing::AnyNumber())
@@ -159,15 +162,19 @@ protected:
 
 		EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     void initforJsonRpc() 
     {    
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Activate the dispatcher and initialize the plugin for JSON-RPC
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(mServiceMock);
         plugin->Initialize(mServiceMock);
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     void initforComRpc() 
@@ -190,9 +197,11 @@ protected:
 
     void releaseResources()
     {
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 	    // Clean up mocks
 		if (mServiceMock != nullptr)
         {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
               .Times(::testing::AnyNumber());
 
@@ -207,6 +216,7 @@ protected:
 
         if (mStorageManagerMock != nullptr)
         {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
 			EXPECT_CALL(*mStorageManagerMock, Release())
               .WillOnce(::testing::Invoke(
               [&]() {
@@ -218,18 +228,23 @@ protected:
 
         if(mSubSystemMock != nullptr)
         {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
         }
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     void deinitforJsonRpc() 
     {
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
         dispatcher->Deactivate();
         dispatcher->Release();
 
         plugin->Deinitialize(mServiceMock);
+
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     void deinitforComRpc()
@@ -1961,7 +1976,6 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 	
     releaseResources();
 }
-#endif
 
  /* Test Case for get config for package error due to invalid signature using JsonRpc
  * 
@@ -2062,6 +2076,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 	
     releaseResources();
 }
+#endif
 
 // IPackageHandler methods
 
