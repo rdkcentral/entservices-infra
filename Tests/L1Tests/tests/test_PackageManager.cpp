@@ -1972,7 +1972,6 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 	
     releaseResources();
 }
-#endif
 
  /* Test Case for get config for package error due to invalid signature using JsonRpc
  * 
@@ -2073,6 +2072,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 	
     releaseResources();
 }
+#endif
 
 // IPackageHandler methods
 
