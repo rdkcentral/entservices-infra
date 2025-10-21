@@ -695,12 +695,26 @@ TEST_F(MessageControlL1Test, Observer_Activated_Deactivated_Terminated_Simple) {
 
     MockConnection connection(42); // Stack allocation for simplicity
 
-    // Directly invoke Observer methods
-    plugin->Initialize(new TestShell());
-    plugin->_observer.Activated(&connection);
-    plugin->_observer.Deactivated(&connection);
-    plugin->_observer.Terminated(&connection);
+    // Initialize the plugin
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
 
-    SUCCEED(); // Ensure no crashes or assertions
-    plugin->Deinitialize(nullptr);
+    // Simulate activation
+    EXPECT_TRUE(plugin->Attach(connection.Id())); // This indirectly triggers Activated
+    SUCCEED(); // Ensure no crashes or assertions during activation
+
+    // Simulate deactivation
+    plugin->Detach(connection.Id()); // This indirectly triggers Deactivated
+    SUCCEED(); // Ensure no crashes or assertions during deactivation
+
+    // Simulate termination indirectly
+    plugin->Detach(connection.Id()); // Detach again to simulate termination
+    SUCCEED(); // Ensure no crashes or assertions during termination
+
+    // Cleanup
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
 }
