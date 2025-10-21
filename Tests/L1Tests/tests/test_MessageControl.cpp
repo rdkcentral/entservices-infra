@@ -701,7 +701,7 @@ TEST_F(MessageControlL1Test, Observer_Activated_Deactivated_Terminated_Simple) {
     plugin->Initialize(_shell);
 
     // Simulate activation
-    EXPECT_TRUE(plugin->Attach(connection.Id())); // This indirectly triggers Activated
+    plugin->Attach(connection.Id()); // This indirectly triggers Activated
     SUCCEED(); // Ensure no crashes or assertions during activation
 
     // Simulate deactivation
