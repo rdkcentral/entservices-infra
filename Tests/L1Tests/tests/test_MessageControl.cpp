@@ -758,3 +758,58 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
+
+TEST_F(MessageControlL1Test, NetworkNode_CopyConstructor) {
+    // Test the copy constructor of NetworkNode
+    MessageControl::Config::NetworkNode originalNode;
+    originalNode.Port = 8080;
+    originalNode.Binding = "127.0.0.1";
+
+    MessageControl::Config::NetworkNode copiedNode(originalNode);
+
+    EXPECT_EQ(originalNode.Port.Value(), copiedNode.Port.Value());
+    EXPECT_EQ(originalNode.Binding.Value(), copiedNode.Binding.Value());
+}
+
+TEST_F(MessageControlL1Test, SyslogOutput_Message) {
+    // Test SyslogOutput behavior
+    Publishers::SyslogOutput syslogOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
+
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
+    ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::LOGGING);
+
+    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
+
+#ifndef __WINDOWS__
+    // Redirect syslog to a temporary file for testing
+    const std::string tempSyslogFile = "/tmp/test_syslog_output.log";
+    setlogmask(LOG_UPTO(LOG_NOTICE));
+    openlog("TestSyslog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
+
+    syslogOutput.Message(messageInfo, "Test message for SyslogOutput");
+
+    // Close syslog and verify the output
+    closelog();
+
+    std::ifstream syslogFile(tempSyslogFile);
+    ASSERT_TRUE(syslogFile.good()) << "Syslog file not created.";
+    std::string content((std::istreambuf_iterator<char>(syslogFile)), std::istreambuf_iterator<char>());
+    syslogFile.close();
+
+    EXPECT_NE(content.find("Test message for SyslogOutput"), std::string::npos);
+    EXPECT_NE(content.find("SyslogCategory"), std::string::npos);
+    EXPECT_NE(content.find("SyslogModule"), std::string::npos);
+
+    // Cleanup
+    std::remove(tempSyslogFile.c_str());
+#else
+    // On Windows or unsupported environments, fallback to console output testing
+    testing::internal::CaptureStdout();
+    syslogOutput.Message(messageInfo, "Test message for SyslogOutput");
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_NE(output.find("Test message for SyslogOutput"), std::string::npos);
+    EXPECT_NE(output.find("SyslogCategory"), std::string::npos);
+    EXPECT_NE(output.find("SyslogModule"), std::string::npos);
+#endif
+}
