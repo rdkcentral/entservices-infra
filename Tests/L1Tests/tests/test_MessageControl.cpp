@@ -676,7 +676,7 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
 
 TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     Publishers::ConsoleOutput consoleOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
-    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
+	Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::TRACING, "TestCategory", "TestModule");
 
     testing::internal::CaptureStdout(); // Capture console output
     consoleOutput.Message(metadata, "Test message for ConsoleOutput");
