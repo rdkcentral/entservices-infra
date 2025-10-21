@@ -676,10 +676,12 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
 
 TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     Publishers::ConsoleOutput consoleOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
-	Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::TRACING, "TestCategory", "TestModule");
+
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::TRACING, "TestCategory", "TestModule");
+    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
 
     testing::internal::CaptureStdout(); // Capture console output
-    consoleOutput.Message(metadata, "Test message for ConsoleOutput");
+    consoleOutput.Message(messageInfo, "Test message for ConsoleOutput");
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_NE(output.find("Test message for ConsoleOutput"), std::string::npos);
@@ -689,10 +691,12 @@ TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
 
 TEST_F(MessageControlL1Test, SyslogOutput_Message) {
     Publishers::SyslogOutput syslogOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
-    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
+
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
+    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
 
     testing::internal::CaptureStdout();
-    syslogOutput.Message(metadata, "Test message for SyslogOutput");
+    syslogOutput.Message(messageInfo, "Test message for SyslogOutput");
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_NE(output.find("Test message for SyslogOutput"), std::string::npos);
