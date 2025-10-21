@@ -414,6 +414,10 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
     TestChannel channel;
     EXPECT_TRUE(plugin->Attach(channel));
     plugin->Detach(channel);
+	 plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
 }
 
 TEST_F(MessageControlL1Test, MultipleAttachDetach) {
@@ -463,6 +467,10 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     plugin->Detach(channel2);
     plugin->Detach(channel1);
     plugin->Detach(channel3);
+	plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
 }
 
 // Validate Text::Convert output (console-like formatting) without constructing ConsoleOutput
