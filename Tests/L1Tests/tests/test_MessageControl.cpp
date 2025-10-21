@@ -676,11 +676,7 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
 
 TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     Publishers::ConsoleOutput consoleOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
-
-    Core::Messaging::MessageInfo metadata;
-    metadata.Type(Core::Messaging::Metadata::type::TRACING);
-    metadata.Category("TestCategory");
-    metadata.Module("TestModule");
+    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
 
     testing::internal::CaptureStdout(); // Capture console output
     consoleOutput.Message(metadata, "Test message for ConsoleOutput");
@@ -693,11 +689,7 @@ TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
 
 TEST_F(MessageControlL1Test, SyslogOutput_Message) {
     Publishers::SyslogOutput syslogOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
-
-    Core::Messaging::MessageInfo metadata;
-    metadata.Type(Core::Messaging::Metadata::type::LOGGING);
-    metadata.Category("SyslogCategory");
-    metadata.Module("SyslogModule");
+    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
 
     testing::internal::CaptureStdout();
     syslogOutput.Message(metadata, "Test message for SyslogOutput");
