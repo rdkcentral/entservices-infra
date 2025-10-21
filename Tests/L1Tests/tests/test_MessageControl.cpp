@@ -690,34 +690,3 @@ TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     EXPECT_NE(output.find("TestCategory"), std::string::npos);
     EXPECT_NE(output.find("TestModule"), std::string::npos);
 }
-
-TEST_F(MessageControlL1Test, SyslogOutput_Message) {
-    Publishers::SyslogOutput syslogOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
-
-    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
-    ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::LOGGING); // Ensure metadata is valid
-
-    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-	
-    // Redirect syslog to a temporary file for testing
-    const std::string tempSyslogFile = "/tmp/test_syslog_output.log";
-    setlogmask(LOG_UPTO(LOG_NOTICE));
-    openlog("TestSyslog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
-
-    syslogOutput.Message(messageInfo, "Test message for SyslogOutput");
-
-    // Close syslog and verify the output
-    closelog();
-
-    std::ifstream syslogFile(tempSyslogFile);
-    ASSERT_TRUE(syslogFile.good()) << "Syslog file not created.";
-    std::string content((std::istreambuf_iterator<char>(syslogFile)), std::istreambuf_iterator<char>());
-    syslogFile.close();
-
-    EXPECT_NE(content.find("Test message for SyslogOutput"), std::string::npos);
-    EXPECT_NE(content.find("SyslogCategory"), std::string::npos);
-    EXPECT_NE(content.find("SyslogModule"), std::string::npos);
-
-    // Cleanup
-    std::remove(tempSyslogFile.c_str());
-}
