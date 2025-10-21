@@ -1791,8 +1791,6 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-#if 0
-
 TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 
     createResources();   
@@ -1861,7 +1859,6 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
 	
     releaseResources();
 }
-#endif
 
 /* Test Case for package state failure using JsonRpc
  * 
@@ -1907,7 +1904,6 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-#if 0
 TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 
     createResources();   
@@ -1976,6 +1972,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
 	
     releaseResources();
 }
+#endif
 
  /* Test Case for get config for package error due to invalid signature using JsonRpc
  * 
@@ -2076,7 +2073,6 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 	
     releaseResources();
 }
-#endif
 
 // IPackageHandler methods
 
