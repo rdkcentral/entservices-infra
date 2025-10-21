@@ -677,10 +677,8 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
 TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     Publishers::ConsoleOutput consoleOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
 
-    Core::Messaging::Metadata metadata;
-    metadata.Type(Core::Messaging::Metadata::type::TRACING);
-    metadata.Category("TestCategory");
-    metadata.Module("TestModule");
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::TRACING, "TestCategory", "TestModule");
+    ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::TRACING); // Ensure metadata is valid
 
     Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
 
@@ -696,10 +694,8 @@ TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
 TEST_F(MessageControlL1Test, SyslogOutput_Message) {
     Publishers::SyslogOutput syslogOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
 
-    Core::Messaging::Metadata metadata;
-    metadata.Type(Core::Messaging::Metadata::type::LOGGING);
-    metadata.Category("SyslogCategory");
-    metadata.Module("SyslogModule");
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
+    ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::LOGGING); // Ensure metadata is valid
 
     Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
 
