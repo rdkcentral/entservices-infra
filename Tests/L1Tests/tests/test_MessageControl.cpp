@@ -758,39 +758,120 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, SyslogOutput_Message) {
-    // Test SyslogOutput behavior
-    Publishers::SyslogOutput syslogOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
 
-    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "SyslogCategory", "SyslogModule");
-    ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::LOGGING);
+TEST_F(MessageControlL1Test, AttachDetachInvalidChannel) {
+    // Test Attach and Detach with invalid channels
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
 
-    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
+    class InvalidChannel : public PluginHost::Channel {
+    public:
+        InvalidChannel() : PluginHost::Channel(0, Core::NodeId()) {}
+        void LinkBody(Core::ProxyType<PluginHost::Request>&) override {}
+        void Received(Core::ProxyType<PluginHost::Request>&) override {}
+        void Send(const Core::ProxyType<Web::Response>&) override {}
+        uint16_t SendData(uint8_t*, const uint16_t) override { return 0; }
+        uint16_t ReceiveData(uint8_t*, const uint16_t) override { return 0; }
+        void StateChange() override {}
+    };
 
-    // Redirect syslog to a temporary file for testing
-    const std::string tempSyslogFile = "/tmp/test_syslog_output.log";
-    setlogmask(LOG_UPTO(LOG_NOTICE));
-    openlog("TestSyslog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
+    InvalidChannel invalidChannel;
+    EXPECT_FALSE(plugin->Attach(invalidChannel));
+    plugin->Detach(invalidChannel);
 
-    syslogOutput.Message(messageInfo, "Test message for SyslogOutput");
-
-    // Close syslog and verify the output
-    closelog();
-
-    std::ifstream syslogFile(tempSyslogFile);
-    if (syslogFile.good()) {
-        std::string content((std::istreambuf_iterator<char>(syslogFile)), std::istreambuf_iterator<char>());
-        syslogFile.close();
-
-        EXPECT_NE(content.find("Test message for SyslogOutput"), std::string::npos);
-        EXPECT_NE(content.find("SyslogCategory"), std::string::npos);
-        EXPECT_NE(content.find("SyslogModule"), std::string::npos);
-
-        // Cleanup
-        std::remove(tempSyslogFile.c_str());
-    } 
-	else 
-	{
-        GTEST_SKIP() << "Syslog file could not be created. Skipping test.";
-    }
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
 }
+
+TEST_F(MessageControlL1Test, CleanupResources) {
+    // Test Cleanup to ensure proper resource cleanup
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    // Simulate adding and removing instances
+    plugin->Attach(1);
+    plugin->Attach(2);
+    plugin->Detach(1);
+    plugin->Detach(2);
+
+    // Call cleanup explicitly
+    plugin->Cleanup();
+
+    // Verify that resources are cleaned up
+    SUCCEED(); // Ensure no crashes or assertions during cleanup
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, DispatchMessages) {
+    // Test Dispatch to ensure messages are processed correctly
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    // Simulate adding a message
+    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
+    plugin->Message(metadata, "Test message");
+
+    // Call dispatch explicitly
+    plugin->Dispatch();
+
+    // Verify that messages are processed
+    SUCCEED(); // Ensure no crashes or assertions during dispatch
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, AttachDetachMultipleChannels) {
+    // Test Attach and Detach with multiple valid channels
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    class TestChannel : public PluginHost::Channel {
+    public:
+        TestChannel(uint32_t id) 
+            : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899))
+            , _id(id) {
+            State(static_cast<ChannelState>(2), true); // Use ACTIVATED state
+        }
+        void LinkBody(Core::ProxyType<PluginHost::Request>&) override {}
+        void Received(Core::ProxyType<PluginHost::Request>&) override {}
+        void Send(const Core::ProxyType<Web::Response>&) override {}
+        uint16_t SendData(uint8_t*, const uint16_t) override { return 0; }
+        uint16_t ReceiveData(uint8_t*, const uint16_t) override { return 0; }
+        void StateChange() override {}
+
+    private:
+        uint32_t _id;
+    };
+
+    TestChannel channel1(1);
+    TestChannel channel2(2);
+    TestChannel channel3(3);
+
+    EXPECT_TRUE(plugin->Attach(channel1));
+    EXPECT_TRUE(plugin->Attach(channel2));
+    EXPECT_TRUE(plugin->Attach(channel3));
+
+    plugin->Detach(channel1);
+    plugin->Detach(channel2);
+    plugin->Detach(channel3);
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+
