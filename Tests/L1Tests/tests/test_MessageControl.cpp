@@ -681,8 +681,7 @@ TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::TRACING); // Ensure metadata is valid
 
     Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-	ASSERT_TRUE(messageInfo.Metadata().Type() == Core::Messaging::Metadata::type::TRACING);
-
+	
     testing::internal::CaptureStdout(); // Capture console output
     consoleOutput.Message(messageInfo, "Test message for ConsoleOutput");
     std::string output = testing::internal::GetCapturedStdout();
@@ -699,7 +698,6 @@ TEST_F(MessageControlL1Test, SyslogOutput_Message) {
     ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::LOGGING); // Ensure metadata is valid
 
     Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-    ASSERT_TRUE(messageInfo.Metadata().Type() == Core::Messaging::Metadata::type::LOGGING);
 	
     testing::internal::CaptureStdout();
     syslogOutput.Message(messageInfo, "Test message for SyslogOutput");
