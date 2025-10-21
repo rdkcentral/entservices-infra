@@ -674,8 +674,7 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
     EXPECT_TRUE(std::string(data.Message).empty());
 }
 
-
-TEST_F(MessageControlL1Test, Observer_Activated) {
+TEST_F(MessageControlL1Test, Observer_Activated_Deactivated_Terminated_Simple) {
     // Mock connection
     class MockConnection : public RPC::IRemoteConnection {
     public:
@@ -694,60 +693,14 @@ TEST_F(MessageControlL1Test, Observer_Activated) {
         uint32_t _id;
     };
 
-    MockConnection* connection = new MockConnection(42); // Use heap allocation
-    _shell = new TestShell();
-    _shellOwned = true;
+    MockConnection connection(42); // Stack allocation for simplicity
 
-    plugin->Initialize(_shell);
+    // Directly invoke Observer methods
+    plugin->Initialize(new TestShell());
+    plugin->_observer.Activated(&connection);
+    plugin->_observer.Deactivated(&connection);
+    plugin->_observer.Terminated(&connection);
 
-    // Simulate activation
-    plugin->Attach(connection->Id());
-
-    // Verify that the activation was handled
-    SUCCEED();
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-
-    delete connection; // Cleanup
-}
-
-TEST_F(MessageControlL1Test, Observer_Deactivated) {
-    // Mock connection
-    class MockConnection : public RPC::IRemoteConnection {
-    public:
-        MockConnection(uint32_t id) : _id(id) {}
-        uint32_t Id() const override { return _id; }
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        uint32_t RemoteId() const override { return _id; }
-        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
-        void Terminate() override {}
-        uint32_t Launch() override { return 0; }
-        void PostMortem() override {}
-
-    private:
-        uint32_t _id;
-    };
-    MockConnection* connection = new MockConnection(42); // Use heap allocation
-    _shell = new TestShell();
-    _shellOwned = true;
-
-    plugin->Initialize(_shell);
-
-    // Simulate deactivation
-    plugin->Detach(connection->Id());
-
-    // Verify that the deactivation was handled
-    SUCCEED();
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-
-    delete connection; // Cleanup
+    SUCCEED(); // Ensure no crashes or assertions
+    plugin->Deinitialize(nullptr);
 }
