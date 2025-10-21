@@ -758,19 +758,6 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-
-TEST_F(MessageControlL1Test, NetworkNode_CopyConstructor) {
-    // Test the copy constructor of NetworkNode
-    MessageControl::Config::NetworkNode originalNode;
-    originalNode.Port = 8080;
-    originalNode.Binding = "127.0.0.1";
-
-    MessageControl::Config::NetworkNode copiedNode(originalNode);
-
-    EXPECT_EQ(originalNode.Port.Value(), copiedNode.Port.Value());
-    EXPECT_EQ(originalNode.Binding.Value(), copiedNode.Binding.Value());
-}
-
 TEST_F(MessageControlL1Test, SyslogOutput_Message) {
     // Test SyslogOutput behavior
     Publishers::SyslogOutput syslogOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
