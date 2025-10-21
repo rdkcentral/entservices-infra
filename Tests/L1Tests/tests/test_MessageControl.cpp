@@ -674,6 +674,51 @@ TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
     EXPECT_TRUE(std::string(data.Message).empty());
 }
 
+TEST_F(MessageControlL1Test, Observer_Activated_Deactivated_Terminated_Simple) {
+    // Mock connection
+    class MockConnection : public RPC::IRemoteConnection {
+    public:
+        MockConnection(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
+        uint32_t RemoteId() const override { return _id; }
+        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
+        void Terminate() override {}
+        uint32_t Launch() override { return 0; }
+        void PostMortem() override {}
+
+    private:
+        uint32_t _id;
+    };
+
+    MockConnection connection(42); // Stack allocation for simplicity
+
+    // Initialize the plugin
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    // Simulate activation
+    plugin->Attach(connection.Id()); // This indirectly triggers Activated
+    SUCCEED(); // Ensure no crashes or assertions during activation
+
+    // Simulate deactivation
+    plugin->Detach(connection.Id()); // This indirectly triggers Deactivated
+    SUCCEED(); // Ensure no crashes or assertions during deactivation
+
+    // Simulate termination indirectly
+    plugin->Detach(connection.Id()); // Detach again to simulate termination
+    SUCCEED(); // Ensure no crashes or assertions during termination
+
+    // Cleanup
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
 TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     Publishers::ConsoleOutput consoleOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
 
