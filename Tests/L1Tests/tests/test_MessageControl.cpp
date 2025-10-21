@@ -774,7 +774,9 @@ TEST_F(MessageControlL1Test, AttachDetachInvalidChannel) {
         uint16_t ReceiveData(uint8_t*, const uint16_t) override { return 0; }
         void StateChange() override {}
         void Send(const Core::ProxyType<Core::JSON::IElement>&) override {}
-        Core::ProxyType<Core::JSON::IElement> Element(const string&) override { return nullptr; }
+	    Core::ProxyType<Core::JSON::IElement> Element(const string&) override { 
+            return Core::ProxyType<Core::JSON::IElement>().Release(); 
+        }
         void Received(Core::ProxyType<Core::JSON::IElement>&) override {}
         void Received(const string&) override {}
     };
@@ -830,7 +832,9 @@ TEST_F(MessageControlL1Test, AttachDetachMultipleChannels) {
         uint16_t ReceiveData(uint8_t*, const uint16_t) override { return 0; }
         void StateChange() override {}
         void Send(const Core::ProxyType<Core::JSON::IElement>&) override {}
-        Core::ProxyType<Core::JSON::IElement> Element(const string&) override { return nullptr; }
+	    Core::ProxyType<Core::JSON::IElement> Element(const string&) override { 
+            return Core::ProxyType<Core::JSON::IElement>().Release(); 
+        }
         void Received(Core::ProxyType<Core::JSON::IElement>&) override {}
         void Received(const string&) override {}
 
