@@ -1087,10 +1087,22 @@ TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
 TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
 {
     Core::hresult status;
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    ExpectedAppLifecycleEvent expectedEvent;
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+    expectedEvent.intent = APPMANAGER_APP_INTENT;
+    expectedEvent.source = "";
 
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::SUSPENDED);
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, struct stat* info) {
@@ -1103,7 +1115,10 @@ TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
+    mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
