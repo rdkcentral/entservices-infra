@@ -136,6 +136,10 @@ if(PLUGIN_PACKAGE_MANAGER)
     add_subdirectory(PackageManager)
 endif()
 
+if(PLUGIN_DOWNLOADMANAGER)
+    add_subdirectory(DownloadManager)
+endif()
+
 if(PLUGIN_NATIVEJS)
     add_subdirectory(NativeJS)
 endif()
@@ -146,6 +150,14 @@ endif()
 
 if(PLUGIN_TELEMETRYMETRICS)
     add_subdirectory(TelemetryMetrics)
+endif()
+
+if(PLUGIN_PREINSTALL_MANAGER)
+    add_subdirectory(PreinstallManager)
+endif()
+
+if(PLUGIN_MIGRATION)
+    add_subdirectory(Migration)
 endif()
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)

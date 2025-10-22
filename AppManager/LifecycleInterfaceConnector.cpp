@@ -26,6 +26,7 @@
 #include <thread>
 #include <fstream>
 #include <sstream>
+#include <list>
 #include <unistd.h>
 #include <plugins/System.h>
 
@@ -669,11 +670,12 @@ namespace WPEFramework
         }
 
         /* GetLoadedApps invokes it */
-        Core::hresult LifecycleInterfaceConnector::getLoadedApps(string& apps)
+        Core::hresult LifecycleInterfaceConnector::getLoadedApps(Exchange::IAppManager::ILoadedAppInfoIterator*& apps)
         {
             LOGINFO("getLoadedApps Entered");
             Core::hresult result = Core::ERROR_GENERAL;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
+            std::list<WPEFramework::Exchange::IAppManager::LoadedAppInfo> loadedAppInfoList;
 
             mAdminLock.Lock();
             /* Checking if mLifecycleManagerRemoteObject is not valid then create the object */
@@ -706,8 +708,8 @@ namespace WPEFramework
                 }
 
                 auto getIntJsonField = [&](JsonObject& obj, const char* key) -> int {
-	                return obj.HasLabel(key) ? static_cast<int>(obj[key].Number()) : 0;
-	            };
+                    return obj.HasLabel(key) ? static_cast<int>(obj[key].Number()) : 0;
+                };
 
                 // Iterate through each app JSON object in the array
                 for (size_t i = 0; i < loadedAppsJsonArray.Length(); ++i)
@@ -717,25 +719,29 @@ namespace WPEFramework
                     LOGINFO("Loaded appId: %s", appId.c_str());
                     auto& appInfo = appManagerImplInstance->mAppInfo[appId];
 
-                    JsonObject loadedAppJson;
-                    loadedAppJson["appId"] = appId;
-                    loadedAppJson["appInstanceId"] = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
-                    loadedAppJson["activeSessionId"] = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
-                    appInfo.targetAppState = mapAppLifecycleState(
+                    Exchange::IAppManager::LoadedAppInfo loadedAppInfo = {};
+		    loadedAppInfo.appId = appId;
+        //TODO - populate type field and rename currentLifecycleState to lifecycleState             
+        //loadedAppJson["type"] = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);              
+		    loadedAppInfo.appInstanceId = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
+		    loadedAppInfo.activeSessionId = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
+
+		    appInfo.targetAppState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "targetLifecycleState")));
-                    loadedAppJson["targetLifecycleState"] = static_cast<int>(appInfo.targetAppState);
+                    loadedAppInfo.targetLifecycleState = appInfo.targetAppState;
                     appInfo.appNewState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "currentLifecycleState")));
-                    loadedAppJson["currentLifecycleState"] = static_cast<int>(appInfo.appNewState);
+                    loadedAppInfo.currentLifecycleState = appInfo.appNewState;
 
-                    loadedAppsArray.Add(loadedAppJson);
+                    //Add loaded info
+		    loadedAppInfoList.push_back(loadedAppInfo);
                 }
-                // Convert the JSON array back to string to return
-                loadedAppsArray.ToString(apps);
-                LOGINFO("getLoadedApps result JSON: %s", apps.c_str());
-                result = Core::ERROR_NONE;
+
+                apps = Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>> \
+		   ::Create<Exchange::IAppManager::ILoadedAppInfoIterator>(loadedAppInfoList);
+		result = Core::ERROR_NONE;
             }
             else
             {

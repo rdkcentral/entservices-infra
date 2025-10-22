@@ -187,31 +187,31 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_NONE;
             JsonArray appsInformation;
             std::list<ApplicationContext*>::iterator iter = mLoadedApplications.end();
-	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
-	    {
+            for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
+            {
                 if (nullptr != *iter)
                 {
                     JsonObject appData;
                     ApplicationContext* context = (*iter);
                     appData["appInstanceID"] = context->getAppInstanceId();
                     appData["appId"] = context->getAppId();
-		    struct timespec lastStateChangeTime = context->getLastLifecycleStateChangeTime();
+                    struct timespec lastStateChangeTime = context->getLastLifecycleStateChangeTime();
                     char timeData[200];
                     char timeDataExpanded[1000];
-		    memset(timeData, 0, sizeof(timeData));
-		    memset(timeDataExpanded, 0, sizeof(timeDataExpanded));
+                    memset(timeData, 0, sizeof(timeData));
+                    memset(timeDataExpanded, 0, sizeof(timeDataExpanded));
                     strftime(timeData, sizeof timeData, "%D %T", gmtime(&lastStateChangeTime.tv_sec));
                     sprintf(timeDataExpanded, "%s.%09ld", timeData, lastStateChangeTime.tv_nsec);
-                    appData["currentLifecycleState"] = (uint32_t) context->getCurrentLifecycleState();
+                    appData["lifecycleState"] = (uint32_t) context->getCurrentLifecycleState();
                     appData["timeOfLastLifecycleStateChange"] = string(timeDataExpanded);
                     appData["activeSessionId"] = context->getActiveSessionId();
                     appData["targetLifecycleState"] = (uint32_t) context->getTargetLifecycleState();
                     appData["mostRecentIntent"] = context->getMostRecentIntent();
                     if (verbose)
-		    {	    
+                    {
                         RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
-			if (nullptr != runtimeManagerHandler)
-			{
+                        if (nullptr != runtimeManagerHandler)
+                        {
                             string runtimeStats("");
                             bool runtimeStatsResult = runtimeManagerHandler->getRuntimeStats(context->getAppInstanceId(), runtimeStats);
                             if (true == runtimeStatsResult)
@@ -227,7 +227,7 @@ namespace WPEFramework
                     }
                     appsInformation.Add(appData);
                 }
-	    }
+            }
             appsInformation.ToString(apps);
             return status;
         }
@@ -238,7 +238,7 @@ namespace WPEFramework
             loaded = false;
             ApplicationContext* context = getContext("", appId);
             if (nullptr != context)
-	    {
+            {
                 loaded = true;
             }
             return status;
