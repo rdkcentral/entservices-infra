@@ -910,7 +910,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
     // TC-17: Resume download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId.downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId));
 
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
     EXPECT_TRUE(signal & PackageManager_AppDownloadStatus);
