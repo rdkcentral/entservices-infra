@@ -904,6 +904,8 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
    	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
+
+    string downloadId = "1001";
     
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
@@ -953,9 +955,11 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = "1002";
+    string downloadId = "1001";
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
+    downloadId = "1002";
 
     // TC-18: Error while resuming download via different downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, pkgdownloaderInterface->Resume(downloadId));
@@ -1012,14 +1016,6 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
         .WillOnce(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
-            }));
-
-    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                onAppDownloadStatus.SetEvent();
-                return Core::ERROR_NONE;
             }));
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
@@ -1279,7 +1275,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
+TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     createResources();
 
@@ -1293,8 +1289,6 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
             }));
-
-    //handleDownloadNotification();
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
@@ -1436,7 +1430,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
     // TC-32: Download progress via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId.downloadId, progress));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
 
     EXPECT_NE(progress.progress, 0);
     
@@ -1653,10 +1647,12 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
+    string downloadId = "1001";
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
     // TC-39: Set rate limit via downloadID using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId.downloadId, limit));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId, limit));
     
 	deinitforComRpc();
 	
@@ -1697,9 +1693,11 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
+    string downloadId = "1001";
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
-    string downloadId = "1002";
+    downloadId = "1002";
 
     // TC-40: Rate limit error when passing different downloadID using ComRpc
     EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, pkgdownloaderInterface->RateLimit(downloadId, limit));
