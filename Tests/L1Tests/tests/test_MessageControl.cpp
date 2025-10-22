@@ -769,7 +769,7 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, Observer_ActivatedDeactivatedTerminated) {
+TEST_F(MessageControlL1Test, Observer_ExplicitActivatedDeactivatedTerminated) {
     // Initialize the plugin
     _shell = new TestShell();
     _shellOwned = true;
@@ -795,16 +795,19 @@ TEST_F(MessageControlL1Test, Observer_ActivatedDeactivatedTerminated) {
 
     MockConnection connection(42); // Simulate a connection with ID 42
 
+    // Access the Observer instance from the plugin
+    auto observer = plugin->Callback();
+
     // Simulate activation
-    plugin->Attach(connection.Id()); // This indirectly triggers Activated
+    observer->Activated(&connection); // Directly invoke Activated
     SUCCEED(); // Ensure no crashes or assertions during activation
 
     // Simulate deactivation
-    plugin->Detach(connection.Id()); // This indirectly triggers Deactivated
+    observer->Deactivated(&connection); // Directly invoke Deactivated
     SUCCEED(); // Ensure no crashes or assertions during deactivation
 
     // Simulate termination
-    plugin->Detach(connection.Id()); // Detach again to simulate termination
+    observer->Terminated(&connection); // Directly invoke Terminated
     SUCCEED(); // Ensure no crashes or assertions during termination
 
     // Cleanup
@@ -813,4 +816,3 @@ TEST_F(MessageControlL1Test, Observer_ActivatedDeactivatedTerminated) {
     _shell = nullptr;
     _shellOwned = false;
 }
-
