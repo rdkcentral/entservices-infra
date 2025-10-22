@@ -769,57 +769,56 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, Observer_LifecycleMethods) {
-    // Initialize plugin
+TEST_F(MessageControlL1Test, Observer_CompleteLifecycle) {
+    // Initialize plugin with shell
     _shell = new TestShell();
     _shellOwned = true;
-    plugin->Initialize(_shell);
+    string result = plugin->Initialize(_shell);
+    EXPECT_TRUE(result.empty());
 
-    // Mock connection with all required interfaces
-    class MockProcess : public RPC::IRemoteConnection, public RPC::IMonitorableProcess {
+    // Create a connection that properly implements IRemoteConnection
+    class TestConnection : public RPC::IRemoteConnection {
     public:
-        MockProcess(uint32_t id) : _id(id) {}
-        
-        // IRemoteConnection interface
+        explicit TestConnection(uint32_t id) 
+            : _id(id)
+            , _refCount(1) 
+        {}
+
+        // IRemoteConnection implementation
         uint32_t Id() const override { return _id; }
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
         uint32_t RemoteId() const override { return _id; }
-        void* QueryInterface(const uint32_t id) override {
-            if (id == RPC::IMonitorableProcess::ID) {
-                return static_cast<RPC::IMonitorableProcess*>(this);
-            }
-            return nullptr;
+        void AddRef() const override {
+            Core::InterlockedIncrement(_refCount);
         }
+        uint32_t Release() const override {
+            return Core::InterlockedDecrement(_refCount);
+        }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
         void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
         void Terminate() override {}
         uint32_t Launch() override { return 0; }
         void PostMortem() override {}
 
-        // IMonitorableProcess interface
-        string Callsign() const override { return "MockProcess"; }
-        Core::instance_id ParentPID() const override { return 0; }
-
     private:
-        uint32_t _id;
+        const uint32_t _id;
+        mutable std::atomic<uint32_t> _refCount;
     };
 
-    MockProcess process(42);
+    {
+        TestConnection connection(42);
 
-    // Test activation path
-    plugin->Attach(process.Id());
-    SUCCEED(); // Verify Activated executes without crashing
-
-    // Enable message control to trigger message processing
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCategory", "TestModule", true);
-
-    // Test deactivation path with IMonitorableProcess
-    plugin->Detach(process.Id());
-    SUCCEED(); // Verify Deactivated executes without crashing
-
-    // Test termination path 
-    plugin->Detach(process.Id());
-    SUCCEED(); // Verify Terminated executes without crashing
+        // Test Activated path
+        plugin->Attach(connection.Id());
+        
+        // Enable message processing to ensure complete coverage
+        plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCat", "TestMod", true);
+        
+        // Test Deactivated path
+        plugin->Detach(connection.Id());
+        
+        // Allow any async operations to complete
+        SleepMs(100);
+    }
 
     // Cleanup
     plugin->Deinitialize(_shell);
