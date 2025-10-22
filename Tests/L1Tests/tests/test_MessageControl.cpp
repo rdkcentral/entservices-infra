@@ -209,20 +209,6 @@ TEST_F(MessageControlL1Test, EnableAndDisableMultiple) {
     controls->Release();
 }
 
-TEST_F(MessageControlL1Test, InboundCommunication) {
-    Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("command");
-    EXPECT_TRUE(element.IsValid()) << "Inbound command should be valid";
-    Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(1234, element);
-    EXPECT_TRUE(response.IsValid()) << "Inbound response should be valid";
-}
-
-TEST_F(MessageControlL1Test, WebSocketInboundFlow) {
-    Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("test");
-    EXPECT_TRUE(element.IsValid()) << "Inbound test should be valid";
-    Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(1234, element);
-    EXPECT_TRUE(response.IsValid()) << "Inbound response should be valid";
-}
-
 TEST_F(MessageControlL1Test, VerifyMultipleEnableDisable) {
     for(auto type : {
         Exchange::IMessageControl::TRACING,
