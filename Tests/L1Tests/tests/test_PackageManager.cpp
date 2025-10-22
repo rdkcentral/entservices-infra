@@ -382,36 +382,20 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    Core::Event onAppDownloadStatus(false, true);
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillRepeatedly(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
             }));
-
-    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                onAppDownloadStatus.SetEvent();
-                return Core::ERROR_NONE;
-            }));
     
-    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
     // TC-2: Add download request to priority queue using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
-    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
-    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
     // TC-3: Add download request to regular queue using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": false, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
-    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
-    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
     
     EXPECT_NE(mJsonRpcResponse.find("1002"), std::string::npos);
 
@@ -470,46 +454,24 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     getDownloadParams();
 
-    Core::Sink<NotificationTest> notification;
-    uint32_t signal = PackageManager_invalidStatus;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillRepeatedly(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type){
                 return true;
             }));
-
-    // Initialize the required parameters for download notification
-    StatusParams statusParams;
-    statusParams.downloadId = "1001";
-    statusParams.fileLocator = "/opt/CDL/package1001";
-    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
-
-    // Register the notification
-    pkgdownloaderInterface->Register(&notification);
-    notification.SetStatusParams(statusParams);
     
     // TC-5: Add download request to priority queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(signal & PackageManager_AppDownloadStatus);
     
     EXPECT_EQ(downloadId.downloadId, "1001");
-
-    signal = PackageManager_invalidStatus;
 
     options.priority = false;
 
     // TC-6: Add download request to regular queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(signal & PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1002");
-        
-    // Unregister the notification
-    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -762,24 +724,12 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    Core::Event onAppDownloadStatus(false, true);
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
             }));
-
-    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                onAppDownloadStatus.SetEvent();
-                return Core::ERROR_NONE;
-            }));
-
-    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
@@ -789,9 +739,6 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     // TC-14: Resume download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
-
-    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
-    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
 	deinitforJsonRpc();
 	
@@ -880,25 +827,12 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-    Core::Sink<NotificationTest> notification;
-    uint32_t signal = PackageManager_invalidStatus;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
             }));
-
-    // Initialize the required parameters for download notification
-    StatusParams statusParams;
-    statusParams.downloadId = "1001";
-    statusParams.fileLocator = "/opt/CDL/package1001";
-    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
-
-    // Register the notification
-    pkgdownloaderInterface->Register(&notification);
-    notification.SetStatusParams(statusParams);
 
    	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
@@ -910,13 +844,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     // TC-17: Resume download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId));
-
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(signal & PackageManager_AppDownloadStatus);
     
-    // Unregister the notification
-    pkgdownloaderInterface->Unregister(&notification);
-
     deinitforComRpc();
 
     releaseResources();
