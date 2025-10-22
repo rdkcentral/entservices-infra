@@ -747,6 +747,28 @@ TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     EXPECT_NE(output.find("TestModule"), std::string::npos);
 }
 
+TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
+    // Test JSON output with various options enabled
+    Publishers::JSON json;
+    json.FileName(true);
+    json.LineNumber(true);
+    json.Category(true);
+    json.Module(true);
+    json.Callsign(true);
+    json.Date(true);
+
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::TRACING, "JSONCategory", "JSONModule");
+    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
+    Publishers::JSON::Data data;
+
+    json.Convert(messageInfo, "Test JSON message", data);
+
+    EXPECT_EQ(data.Category.Value(), "JSONCategory");
+    EXPECT_EQ(data.Module.Value(), "JSONModule");
+    EXPECT_EQ(data.Message.Value(), "Test JSON message");
+    EXPECT_FALSE(data.Time.Value().empty());
+}
+
 TEST_F(MessageControlL1Test, Observer_LifecycleMethods) {
     // Initialize plugin
     _shell = new TestShell();
