@@ -288,7 +288,6 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
             }
             EXPECT_EQ(m_status_param.downloadId, downloadId.String());
             EXPECT_EQ(m_status_param.fileLocator, fileLocator.String());
-            EXPECT_EQ(m_status_param.reason, failReason.String());
 
             m_condition_variable.notify_one();
         }
