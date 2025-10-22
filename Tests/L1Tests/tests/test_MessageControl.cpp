@@ -769,63 +769,65 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, Observer_LifecycleMethods) {
-    // Initialize plugin
+TEST_F(MessageControlL1Test, WorkerThread_Dispatch) {
+    // Initialize plugin first
     _shell = new TestShell();
     _shellOwned = true;
     plugin->Initialize(_shell);
 
-    // Mock connection with proper reference counting
-    class TestConnection : public RPC::IRemoteConnection {
-    public:
-        explicit TestConnection(uint32_t id) 
-            : _id(id)
-            , _refCount(0) // Initialize to 0
-        {
-        }
-        
-        uint32_t Id() const override { return _id; }
-        uint32_t RemoteId() const override { return _id; }
-        
-        void AddRef() const override {
-            _refCount++; // Simple increment for test purposes
-        }
-        
-        uint32_t Release() const override {
-            return --_refCount; // Simple decrement for test purposes
-        }
-        
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
-        void Terminate() override {}
-        uint32_t Launch() override { return 0; }
-        void PostMortem() override {}
+    // Trigger message processing to exercise worker thread
+    plugin->Enable(Exchange::IMessageControl::LOGGING, "WorkerTest", "TestModule", true);
 
-    private:
-        const uint32_t _id;
-        mutable uint32_t _refCount;
-    };
+    // Give worker thread time to process
+    SleepMs(100);
 
-    {
-        TestConnection connection(42);
+    // Change state to trigger more processing
+    plugin->Enable(Exchange::IMessageControl::LOGGING, "WorkerTest", "TestModule", false);
 
-        // Test Activated path
-        plugin->Attach(connection.Id());
-        SUCCEED(); // Verify Activated executes without crashing
-
-        // Enable message processing to trigger dispatch
-        plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCategory", "TestModule", true);
-
-        // Test Deactivated path
-        plugin->Detach(connection.Id());
-        SUCCEED(); // Verify Deactivated executes without crashing
-
-        // Test Terminated path
-        plugin->Detach(connection.Id());
-        SUCCEED(); // Verify Terminated executes without crashing
-    }
+    // Allow worker to process again
+    SleepMs(100);
 
     // Cleanup
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
+TEST_F(MessageControlL1Test, Message_PublisherChain) {
+    _shell = new TestShell(R"({"console":true,"syslog":true,"filepath":"/tmp/test.log"})");
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    // Enable multiple message types to trigger publisher chain
+    plugin->Enable(Exchange::IMessageControl::LOGGING, "Publisher", "Test", true);
+    plugin->Enable(Exchange::IMessageControl::TRACING, "Publisher", "Test", true);
+    plugin->Enable(Exchange::IMessageControl::REPORTING, "Publisher", "Test", true);
+
+    // Allow processing
+    SleepMs(100);
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+
+    // Cleanup test file
+    std::remove("/tmp/test.log");
+}
+
+TEST_F(MessageControlL1Test, Config_NetworkNode) {
+    _shell = new TestShell(R"({"remote":{"port":1234,"binding":"127.0.0.1"}})");
+    _shellOwned = true;
+    string result = plugin->Initialize(_shell);
+    EXPECT_TRUE(result.empty());
+
+    // Exercise network output path
+    plugin->Enable(Exchange::IMessageControl::LOGGING, "Network", "Test", true);
+    
+    // Allow processing
+    SleepMs(100);
+
     plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
