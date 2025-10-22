@@ -1052,7 +1052,7 @@ Core::hresult AppManagerImplementation::KillApp(const string& appId)
     return status;
 }
 
-Core::hresult AppManagerImplementation::GetLoadedApps(string& appData)
+Core::hresult AppManagerImplementation::GetLoadedApps(Exchange::IAppManager::ILoadedAppInfoIterator*& appData)
 {
     Core::hresult status = Core::ERROR_GENERAL;
     LOGINFO("GetLoadedApps Entered");
@@ -1301,9 +1301,9 @@ std::string AppManagerImplementation::getInstallAppType(ApplicationType type)
 {
     switch (type)
     {
-        case ApplicationType::APPLICATION_TYPE_INTERACTIVE : return "APPLICATION_TYPE_INTERACTIVE";
-        case ApplicationType::APPLICATION_TYPE_SYSTEM : return "APPLICATION_TYPE_SYSTEM";
-        default: return "APPLICATION_TYPE_UNKNOWN";
+        case ApplicationType::APPLICATION_TYPE_INTERACTIVE : return "INTERACTIVE_APP";
+        case ApplicationType::APPLICATION_TYPE_SYSTEM : return "SYSTEM_APP";
+        default: return "";
     }
 }
 
@@ -1328,7 +1328,7 @@ Core::hresult AppManagerImplementation::GetInstalledApps(std::string& apps)
                 JsonObject package;
                 package["appId"] = pkg.packageId;
                 package["versionString"] = pkg.version;
-                package["type"] =getInstallAppType(APPLICATION_TYPE_INTERACTIVE) ;
+                package["type"] = getInstallAppType(APPLICATION_TYPE_INTERACTIVE);
                 auto it = mAppInfo.find(pkg.packageId);
                 if (it != mAppInfo.end())
                 {
