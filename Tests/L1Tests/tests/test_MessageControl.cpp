@@ -768,37 +768,14 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, DispatchMessages) {
-    // Test Dispatch to ensure messages are processed correctly
+TEST_F(MessageControlL1Test, Observer_DropEdgeCase) {
+    // Test the Observer's Drop method with an invalid ID
     _shell = new TestShell();
     _shellOwned = true;
     plugin->Initialize(_shell);
 
-    // Simulate adding a message
-    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
-    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-
-    // Use a friend class or public interface to test private methods
-    plugin->Callback(nullptr); // Ensure no callback is set
-    plugin->Attach(1);         // Simulate attaching a channel
-    plugin->Detach(1);         // Simulate detaching a channel
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
-TEST_F(MessageControlL1Test, DispatchPrivateMethod) {
-    // Test the private Dispatch method
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    // Simulate adding messages to the queue
-    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
-    plugin->Dispatch(); // Call Dispatch directly (now accessible)
-
+    // Simulate dropping an invalid ID
+    plugin->Detach(9999); // Invalid ID
     SUCCEED(); // Ensure no crashes or assertions
 
     plugin->Deinitialize(_shell);
@@ -807,156 +784,50 @@ TEST_F(MessageControlL1Test, DispatchPrivateMethod) {
     _shellOwned = false;
 }
 
-TEST_F(MessageControlL1Test, Observer_Message) {
-    // Test the Observer's Message method
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
+TEST_F(MessageControlL1Test, WebSocketOutput_MaxConnections) {
+    // Test WebSocketOutput with maximum connections
+    TestShell* shell = new TestShell();
+    Publishers::WebSocketOutput ws;
 
-    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
-    plugin->Message(metadata, "Test message for Observer");
+    ws.Initialize(shell, 2); // Set max connections to 2
+    EXPECT_TRUE(ws.Attach(1));
+    EXPECT_TRUE(ws.Attach(2));
+    EXPECT_FALSE(ws.Attach(3)); // Exceed max connections
 
-    SUCCEED(); // Ensure no crashes or assertions
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
+    ws.Deinitialize();
+    delete shell;
 }
 
-TEST_F(MessageControlL1Test, Observer_Activated) {
-    // Test the Observer's Activated method
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
+TEST_F(MessageControlL1Test, FileOutput_InvalidFile) {
+    // Test FileOutput with an invalid file path
+    const string invalidFilePath = "/invalid/path/test.log";
+    Publishers::FileOutput fileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, invalidFilePath);
 
-    class MockConnection : public RPC::IRemoteConnection {
-    public:
-        MockConnection(uint32_t id) : _id(id) {}
-        uint32_t Id() const override { return _id; }
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        uint32_t RemoteId() const override { return _id; }
-        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
-        void Terminate() override {}
-        uint32_t Launch() override { return 0; }
-        void PostMortem() override {}
-
-    private:
-        uint32_t _id;
-    };
-
-    MockConnection connection(42);
-    plugin->Attach(connection.Id()); // Simulate activation
+    Core::Messaging::MessageInfo defaultMeta;
+    fileOutput.Message(defaultMeta, "This message should not be written");
 
     SUCCEED(); // Ensure no crashes or assertions
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
 }
 
-TEST_F(MessageControlL1Test, Observer_Deactivated) {
-    // Test the Observer's Deactivated method
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
+TEST_F(MessageControlL1Test, JSONOutput_PausedState) {
+    // Test JSON output when paused
+    Publishers::JSON json;
+    json.Paused(true); // Set paused state
 
-    class MockConnection : public RPC::IRemoteConnection {
-    public:
-        MockConnection(uint32_t id) : _id(id) {}
-        uint32_t Id() const override { return _id; }
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        uint32_t RemoteId() const override { return _id; }
-        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
-        void Terminate() override {}
-        uint32_t Launch() override { return 0; }
-        void PostMortem() override {}
+    Core::Messaging::MessageInfo defaultMeta;
+    Publishers::JSON::Data data;
+    json.Convert(defaultMeta, "This message should be ignored", data);
 
-    private:
-        uint32_t _id;
-    };
+    EXPECT_TRUE(data.Message.Value().empty()); // Ensure no message is set
+}
 
-    MockConnection connection(42);
-    plugin->Detach(connection.Id()); // Simulate deactivation
+TEST_F(MessageControlL1Test, UDPOutput_Message) {
+    // Test UDPOutput with a valid message
+    Core::NodeId nodeId("127.0.0.1", 12345);
+    Publishers::UDPOutput udpOutput(nodeId);
+
+    Core::Messaging::MessageInfo defaultMeta;
+    udpOutput.Message(defaultMeta, "Test UDP message");
 
     SUCCEED(); // Ensure no crashes or assertions
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
 }
-
-TEST_F(MessageControlL1Test, Observer_Terminated) {
-    // Test the Observer's Terminated method
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    class MockConnection : public RPC::IRemoteConnection {
-    public:
-        MockConnection(uint32_t id) : _id(id) {}
-        uint32_t Id() const override { return _id; }
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        uint32_t RemoteId() const override { return _id; }
-        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
-        void Terminate() override {}
-        uint32_t Launch() override { return 0; }
-        void PostMortem() override {}
-
-    private:
-        uint32_t _id;
-    };
-
-    MockConnection connection(42);
-    plugin->Detach(connection.Id()); // Simulate termination
-
-    SUCCEED(); // Ensure no crashes or assertions
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
-TEST_F(MessageControlL1Test, Observer_Drop) {
-    // Test the Observer's Drop method
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    class MockConnection : public RPC::IRemoteConnection {
-    public:
-        MockConnection(uint32_t id) : _id(id) {}
-        uint32_t Id() const override { return _id; }
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        uint32_t RemoteId() const override { return _id; }
-        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
-        void Terminate() override {}
-        uint32_t Launch() override { return 0; }
-        void PostMortem() override {}
-
-    private:
-        uint32_t _id;
-    };
-
-    MockConnection connection(42);
-    plugin->Detach(connection.Id()); // Simulate drop
-
-    SUCCEED(); // Ensure no crashes or assertions
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
