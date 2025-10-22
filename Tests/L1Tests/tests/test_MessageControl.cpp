@@ -796,7 +796,7 @@ TEST_F(MessageControlL1Test, Observer_ExplicitActivatedDeactivatedTerminated) {
     MockConnection connection(42); // Simulate a connection with ID 42
 
     // Access the Observer instance from the plugin
-    auto observer = plugin->Callback();
+    auto observer = plugin->GetObserver();
 
     // Simulate activation
     observer->Activated(&connection); // Directly invoke Activated
