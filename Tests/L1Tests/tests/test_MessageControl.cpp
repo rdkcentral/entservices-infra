@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "MessageControl.h"
@@ -539,4 +538,3 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_EQ(data.Message.Value(), "Test JSON message") << "Message should match";
     EXPECT_FALSE(data.Time.Value().empty()) << "Time should not be empty";
 }
-
