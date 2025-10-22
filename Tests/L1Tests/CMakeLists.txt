@@ -151,6 +151,12 @@ set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleMana
 set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
 add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
 
+# PLUGIN_PREINSTALL_MANAGER
+set (PREINSTALLMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PreinstallManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (PREINSTALLMANAGER_LIBS ${NAMESPACE}PreinstallManager ${NAMESPACE}PreinstallManagerImplementation)
+add_plugin_test_ex(PLUGIN_PREINSTALL_MANAGER tests/test_PreinstallManager.cpp "${PREINSTALLMANAGER_INC}" "${PREINSTALLMANAGER_LIBS}")
+
+
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
 if (RDK_SERVICES_L1_TEST)
