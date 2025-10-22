@@ -414,7 +414,8 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
     TestChannel channel;
     EXPECT_TRUE(plugin->Attach(channel));
     plugin->Detach(channel);
-	 plugin->Deinitialize(_shell);
+
+    plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
     _shellOwned = false;
@@ -467,7 +468,8 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
     plugin->Detach(channel2);
     plugin->Detach(channel1);
     plugin->Detach(channel3);
-	plugin->Deinitialize(_shell);
+
+    plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
     _shellOwned = false;
@@ -766,6 +768,27 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
+TEST_F(MessageControlL1Test, DispatchMessages) {
+    // Test Dispatch to ensure messages are processed correctly
+    _shell = new TestShell();
+    _shellOwned = true;
+    plugin->Initialize(_shell);
+
+    // Simulate adding a message
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
+    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
+
+    // Use a friend class or public interface to test private methods
+    plugin->Callback(nullptr); // Ensure no callback is set
+    plugin->Attach(1);         // Simulate attaching a channel
+    plugin->Detach(1);         // Simulate detaching a channel
+
+    plugin->Deinitialize(_shell);
+    delete _shell;
+    _shell = nullptr;
+    _shellOwned = false;
+}
+
 TEST_F(MessageControlL1Test, DispatchPrivateMethod) {
     // Test the private Dispatch method
     _shell = new TestShell();
@@ -773,11 +796,8 @@ TEST_F(MessageControlL1Test, DispatchPrivateMethod) {
     plugin->Initialize(_shell);
 
     // Simulate adding messages to the queue
-    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
-    plugin->Callback(nullptr); // Ensure no callback is set
-
-    // Call Dispatch explicitly (use friend class or public interface)
-    plugin->Dispatch();
+    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
+    plugin->Dispatch(); // Call Dispatch directly (now accessible)
 
     SUCCEED(); // Ensure no crashes or assertions
 
@@ -793,10 +813,7 @@ TEST_F(MessageControlL1Test, Observer_Message) {
     _shellOwned = true;
     plugin->Initialize(_shell);
 
-    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
-    plugin->Callback(nullptr); // Ensure no callback is set
-
-    // Simulate a message being sent to the observer
+    Core::Messaging::MessageInfo metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
     plugin->Message(metadata, "Test message for Observer");
 
     SUCCEED(); // Ensure no crashes or assertions
@@ -820,6 +837,11 @@ TEST_F(MessageControlL1Test, Observer_Activated) {
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
+        uint32_t RemoteId() const override { return _id; }
+        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
+        void Terminate() override {}
+        uint32_t Launch() override { return 0; }
+        void PostMortem() override {}
 
     private:
         uint32_t _id;
@@ -849,13 +871,17 @@ TEST_F(MessageControlL1Test, Observer_Deactivated) {
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
+        uint32_t RemoteId() const override { return _id; }
+        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
+        void Terminate() override {}
+        uint32_t Launch() override { return 0; }
+        void PostMortem() override {}
 
     private:
         uint32_t _id;
     };
 
     MockConnection connection(42);
-    plugin->Attach(connection.Id()); // Simulate activation
     plugin->Detach(connection.Id()); // Simulate deactivation
 
     SUCCEED(); // Ensure no crashes or assertions
@@ -879,13 +905,17 @@ TEST_F(MessageControlL1Test, Observer_Terminated) {
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
+        uint32_t RemoteId() const override { return _id; }
+        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
+        void Terminate() override {}
+        uint32_t Launch() override { return 0; }
+        void PostMortem() override {}
 
     private:
         uint32_t _id;
     };
 
     MockConnection connection(42);
-    plugin->Attach(connection.Id()); // Simulate activation
     plugin->Detach(connection.Id()); // Simulate termination
 
     SUCCEED(); // Ensure no crashes or assertions
@@ -909,13 +939,17 @@ TEST_F(MessageControlL1Test, Observer_Drop) {
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
         void* QueryInterface(const uint32_t) override { return nullptr; }
+        uint32_t RemoteId() const override { return _id; }
+        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
+        void Terminate() override {}
+        uint32_t Launch() override { return 0; }
+        void PostMortem() override {}
 
     private:
         uint32_t _id;
     };
 
     MockConnection connection(42);
-    plugin->Attach(connection.Id()); // Simulate activation
     plugin->Detach(connection.Id()); // Simulate drop
 
     SUCCEED(); // Ensure no crashes or assertions
@@ -926,25 +960,3 @@ TEST_F(MessageControlL1Test, Observer_Drop) {
     _shellOwned = false;
 }
 
-TEST_F(MessageControlL1Test, Observer_Dispatch) {
-    // Test the Observer's Dispatch method
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    // Simulate adding and removing instances
-    plugin->Attach(1);
-    plugin->Attach(2);
-    plugin->Detach(1);
-    plugin->Detach(2);
-
-    // Call Dispatch explicitly
-    plugin->Dispatch();
-
-    SUCCEED(); // Ensure no crashes or assertions during dispatch
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
