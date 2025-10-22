@@ -311,7 +311,7 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
 }
 
 /**
- * @brief Test StartPreinstall with force install enabled
+ * @brief Test StartPreinstall with the force install enabled
  *
  * @details Test verifies that:
  * - StartPreinstall can be called with forceInstall=true
