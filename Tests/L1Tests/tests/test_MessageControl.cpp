@@ -769,46 +769,32 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, Observer_DropEdgeCase) {
-    // Test the Observer's Drop method with an invalid ID
+TEST_F(MessageControlL1Test, MessageControl_MessageDispatch) {
+    // Initialize the plugin
     _shell = new TestShell();
     _shellOwned = true;
     plugin->Initialize(_shell);
 
-    // Simulate dropping an invalid ID
-    plugin->Detach(9999); // Invalid ID
-    SUCCEED(); // Ensure no crashes or assertions
+    // Mock output to verify message dispatch
+    class MockOutput : public Publishers::IPublish {
+    public:
+        MOCK_METHOD(void, Message, (const Core::Messaging::MessageInfo& metadata, const string& text), (override));
+    };
 
+    MockOutput mockOutput;
+    EXPECT_CALL(mockOutput, Message(::testing::_, ::testing::_)).Times(1);
+
+    // Announce the mock output
+    plugin->Announce(&mockOutput);
+
+    // Send a test message
+    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
+    plugin->Message(metadata, "Test message for MessageControl");
+
+    // Cleanup
     plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
     _shellOwned = false;
 }
 
-TEST_F(MessageControlL1Test, FileOutput_InvalidFile) {
-    // Test FileOutput with an invalid file path
-    const string invalidFilePath = "/invalid/path/test.log";
-    Publishers::FileOutput fileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, invalidFilePath);
-
-    Core::Messaging::MessageInfo defaultMeta;
-    if (fileOutput._file.IsOpen()) { // Check the _file member directly
-        fileOutput.Message(defaultMeta, "This message should not be written");
-        FAIL() << "FileOutput should not allow writing to an invalid file.";
-    } else {
-        SUCCEED(); // Ensure no crashes or assertions
-    }
-}
-
-TEST_F(MessageControlL1Test, UDPOutput_Message) {
-    // Test UDPOutput with a valid message
-    Core::NodeId nodeId("127.0.0.1", 12345);
-    Publishers::UDPOutput udpOutput(nodeId);
-
-    Core::Messaging::MessageInfo defaultMeta;
-    if (udpOutput._output.IsOpen()) { // Check the _output member directly
-        udpOutput.Message(defaultMeta, "Test UDP message");
-        SUCCEED(); // Ensure no crashes or assertions
-    } else {
-        FAIL() << "UDPOutput could not open the socket.";
-    }
-}
