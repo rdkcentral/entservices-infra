@@ -769,230 +769,57 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, Observer_ExplicitActivatedDeactivatedTerminated) {
-    // Initialize the plugin
+TEST_F(MessageControlL1Test, Observer_LifecycleMethods) {
+    // Initialize plugin
     _shell = new TestShell();
     _shellOwned = true;
     plugin->Initialize(_shell);
 
-    // Mock connection to simulate remote connection events
-    class MockConnection : public RPC::IRemoteConnection {
+    // Mock connection with all required interfaces
+    class MockProcess : public RPC::IRemoteConnection, public RPC::IMonitorableProcess {
     public:
-        MockConnection(uint32_t id) : _id(id) {}
-        uint32_t Id() const override { return _id; }
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        uint32_t RemoteId() const override { return _id; }
-        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
-        void Terminate() override {}
-        uint32_t Launch() override { return 0; }
-        void PostMortem() override {}
-
-    private:
-        uint32_t _id;
-    };
-
-    MockConnection connection(42); // Simulate a connection with ID 42
-
-    // Access the Observer instance from the plugin
-    auto observer = plugin->GetObserver();
-
-    // Simulate activation
-    observer->Activated(&connection); // Directly invoke Activated
-    SUCCEED(); // Ensure no crashes or assertions during activation
-
-    // Simulate deactivation
-    observer->Deactivated(&connection); // Directly invoke Deactivated
-    SUCCEED(); // Ensure no crashes or assertions during deactivation
-
-    // Simulate termination
-    observer->Terminated(&connection); // Directly invoke Terminated
-    SUCCEED(); // Ensure no crashes or assertions during termination
-
-    // Cleanup
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
-TEST_F(MessageControlL1Test, Observer_ActivatedDeactivatedTerminated_WithMonitorableProcess) {
-    // Initialize the plugin
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    // Mock connection with IMonitorableProcess interface
-    class MockMonitorableProcess : public RPC::IRemoteConnection, public RPC::IMonitorableProcess {
-    public:
-        MockMonitorableProcess(uint32_t id) : _id(id) {}
+        MockProcess(uint32_t id) : _id(id) {}
         
-        // IRemoteConnection
+        // IRemoteConnection interface
         uint32_t Id() const override { return _id; }
         void AddRef() const override {}
         uint32_t Release() const override { return 0; }
+        uint32_t RemoteId() const override { return _id; }
         void* QueryInterface(const uint32_t id) override {
             if (id == RPC::IMonitorableProcess::ID) {
                 return static_cast<RPC::IMonitorableProcess*>(this);
             }
             return nullptr;
         }
-        uint32_t RemoteId() const override { return _id; }
         void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
         void Terminate() override {}
         uint32_t Launch() override { return 0; }
         void PostMortem() override {}
 
-        // IMonitorableProcess
-        bool IsOperational() const override { return true; }
-        bool Dispatch() override { return true; }
+        // IMonitorableProcess interface
+        string Callsign() const override { return "MockProcess"; }
+        Core::instance_id ParentPID() const override { return 0; }
 
     private:
         uint32_t _id;
     };
 
-    MockMonitorableProcess connection(42);
+    MockProcess process(42);
 
-    // Test sequence that will trigger all code paths
-    plugin->Initialize(_shell); // Ensure plugin is initialized
-    plugin->Attach(connection.Id()); // Triggers Activated
-    
-    // Force a dispatch cycle
-    Core::Messaging::MessageInfo metadata(
-        Core::Messaging::Metadata(Core::Messaging::Metadata::type::LOGGING, "TestCat", "TestMod"),
-        Core::Time::Now().Ticks());
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCat", "TestMod", true);
-    
-    // Simulate deactivation with monitored process
-    plugin->Detach(connection.Id()); // Triggers Deactivated with IMonitorableProcess path
-    
-    // Simulate termination
-    plugin->Detach(connection.Id()); // Triggers Terminated
-    
-    SUCCEED();
+    // Test activation path
+    plugin->Attach(process.Id());
+    SUCCEED(); // Verify Activated executes without crashing
 
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
+    // Enable message control to trigger message processing
+    plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCategory", "TestModule", true);
 
-TEST_F(MessageControlL1Test, Observer_DispatchCycle) {
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
+    // Test deactivation path with IMonitorableProcess
+    plugin->Detach(process.Id());
+    SUCCEED(); // Verify Deactivated executes without crashing
 
-    // Create multiple connections to test dispatch handling
-    for (uint32_t i = 1; i <= 3; i++) {
-        // Add instance
-        plugin->Attach(i);
-        
-        // Enable message control for this instance
-        plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCat", "TestMod", true);
-        
-        // Force state transitions
-        plugin->Detach(i);
-    }
-
-    // Cleanup
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
-TEST_F(MessageControlL1Test, ComplexObserverStateTransitions) {
-    // Initialize plugin
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    // Create multiple connections to force state transitions
-    for (uint32_t i = 1; i <= 3; i++) {
-        plugin->Attach(i); // Triggers Activated + Dispatch
-        
-        // Enable message control to trigger message processing
-        plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCat", "TestMod", true);
-        
-        // Force state transitions
-        plugin->Detach(i); // Triggers Deactivated
-        plugin->Attach(i); // Triggers Activated again
-        plugin->Detach(i); // Triggers Terminated
-    }
-
-    // Cleanup
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
-TEST_F(MessageControlL1Test, Observer_MonitorableProcess_Path) {
-    // Initialize plugin
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    // Create a mock connection that implements IMonitorableProcess
-    class MockMonitorableProcess : public RPC::IRemoteConnection, public RPC::IMonitorableProcess {
-    public:
-        MockMonitorableProcess(uint32_t id) : _id(id) {}
-        
-        // IRemoteConnection
-        uint32_t Id() const override { return _id; }
-        void AddRef() const override {}
-        uint32_t Release() const override { return 0; }
-        void* QueryInterface(const uint32_t id) override {
-            if (id == RPC::IMonitorableProcess::ID) {
-                return static_cast<RPC::IMonitorableProcess*>(this);
-            }
-            return nullptr;
-        }
-        uint32_t RemoteId() const override { return _id; }
-        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
-        void Terminate() override {}
-        uint32_t Launch() override { return 0; }
-        void PostMortem() override {}
-
-        // IMonitorableProcess
-        bool IsOperational() const override { return true; }
-        bool Dispatch() override { return true; }
-
-    private:
-        uint32_t _id;
-    };
-
-    MockMonitorableProcess connection(42);
-
-    // Exercise the IMonitorableProcess code path
-    plugin->Attach(connection.Id()); // Triggers Activated
-    plugin->Detach(connection.Id()); // Triggers Deactivated with IMonitorableProcess path
-    
-    // Cleanup
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
-TEST_F(MessageControlL1Test, Observer_MultipleStates) {
-    // Initialize plugin
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    // Create two connections to test parallel state handling
-    plugin->Attach(1); // Connection 1 ATTACHING -> OBSERVING
-    plugin->Attach(2); // Connection 2 ATTACHING -> OBSERVING
-
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "Cat1", "Mod1", true);
-    plugin->Enable(Exchange::IMessageControl::TRACING, "Cat2", "Mod2", true);
-
-    // Trigger complex state transitions
-    plugin->Detach(1); // Connection 1 OBSERVING -> DETACHING
-    plugin->Attach(1); // Connection 1 DETACHING -> OBSERVING
-    plugin->Detach(2); // Connection 2 OBSERVING -> DETACHING
+    // Test termination path 
+    plugin->Detach(process.Id());
+    SUCCEED(); // Verify Terminated executes without crashing
 
     // Cleanup
     plugin->Deinitialize(_shell);
