@@ -2,7 +2,7 @@
 * If not stated otherwise in this file or this component's LICENSE
 * file the following copyright and licenses apply:
 *
-* Copyright 2024 RDK Management
+* Copyright 2025 RDK Management
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -91,7 +91,10 @@ protected:
     Exchange::IPackageDownloader::Options options;
     Exchange::IPackageDownloader::DownloadId downloadId;
     Exchange::IPackageDownloader::ProgressInfo progress;
-    
+    Exchange::IPackageDownloader::PackageInfo packageInfo;
+    std::list<Exchange::IPackageDownloader::PackageInfo> packageInfoList;
+    Exchange::IPackageDownloader::IPackageInfoIterator* packageInfoIterator = nullptr;
+
     // Constructor
     PackageManagerTest()
 	: workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
@@ -173,7 +176,7 @@ protected:
     void getDownloadParams()
     {
         // Initialize the parameters required for COM-RPC with default values
-        uri = "http://test.com";
+        uri = "https://curl.se/download/curl-8.16.0.tar.xz";
 
         options = { 
             true,2,1024
@@ -233,10 +236,12 @@ protected:
     }
 };
 
-class NotificationTest : public Exchange::IPackageInstaller::INotification
+class NotificationTest : public Exchange::IPackageDownloader::INotification, 
+                         public Exchange::IPackageInstaller::INotification
 {
     private:
         BEGIN_INTERFACE_MAP(Notification)
+        INTERFACE_ENTRY(Exchange::IPackageDownloader::INotification)
         INTERFACE_ENTRY(Exchange::IPackageInstaller::INotification)
         END_INTERFACE_MAP
 
@@ -259,19 +264,35 @@ class NotificationTest : public Exchange::IPackageInstaller::INotification
         {
             m_status_param = statusParam;
         }
-#if 0
+
         void OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos)
         {
             m_status_signal = PackageManager_AppDownloadStatus;
+            JsonValue downloadId;
+            JsonValue fileLocator;
+            JsonValue failReason;
 
             std::unique_lock<std::mutex> lock(m_mutex);
-            EXPECT_EQ(m_status_param.downloadId, downloadId);
-            EXPECT_EQ(m_status_param.fileLocator, fileLocator);
-            EXPECT_EQ(m_status_param.reason, reason);
+            if(packageInfos != nullptr) {
+                            
+            Exchange::IPackageDownloader::PackageInfo resultItem{};
+
+            while (packageInfos->Next(resultItem) == true)
+            {
+                downloadId = resultItem.downloadId;
+                fileLocator = resultItem.fileLocator;
+                failReason = (resultItem.reason == Exchange::IPackageDownloader::Reason::NONE) ? "NONE" :
+                             (resultItem.reason == Exchange::IPackageDownloader::Reason::DOWNLOAD_FAILURE) ? "DOWNLOAD_FAILURE" :
+                             (resultItem.reason == Exchange::IPackageDownloader::Reason::DISK_PERSISTENCE_FAILURE) ? "DISK_PERSISTENCE_FAILURE" : "UNKNOWN";
+            }
+            }
+            EXPECT_EQ(m_status_param.downloadId, downloadId.String());
+            EXPECT_EQ(m_status_param.fileLocator, fileLocator.String());
+            EXPECT_EQ(m_status_param.reason, failReason.String());
 
             m_condition_variable.notify_one();
         }
-#endif
+
         void OnAppInstallationStatus(const string& jsonresponse) override
         {
             m_status_signal = PackageManager_AppInstallStatus;
@@ -348,7 +369,7 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 
 /* Test Case for adding download request to a queue(priority/regular) using JsonRpc
  * 
- * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Set up and initialize required JSON-RPC resources, configurations, notifications/events, mocks and expectations
  * Invoke the download method using the JSON RPC handler, passing the required parameters and setting priority as true
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
  * Invoke the download method using the JSON RPC handler, passing the required parameters and setting priority as false
@@ -362,21 +383,37 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+    Core::Event onAppDownloadStatus(false, true);
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillRepeatedly(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
             }));
+
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
     
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
     // TC-2: Add download request to priority queue using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
     // TC-3: Add download request to regular queue using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": false, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
-
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": false, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
+    
     EXPECT_NE(mJsonRpcResponse.find("1002"), std::string::npos);
 
     deinitforJsonRpc();
@@ -406,7 +443,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
             }));
     
     // TC-4: Download request error when internet is unavailable using JsonRpc
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     deinitforJsonRpc();
 
@@ -415,12 +452,14 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
 
 /* Test Case for adding download request to a queue(priority/regular) using ComRpc
  * 
- * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
  * Obtain the required parameters for downloading using the getDownloadParams()
- * Call the Download method using the COM RPC interface along with the required parameters, setting priority as true
+ * Register the notification using the COM RPC interface and set the status params via the SetStatusParams()
+ * Call the Download method using the COM RPC interface along with the required parameters, setting priority as true and wait
  * Verify successful download request by asserting that it returns Core::ERROR_NONE and checking the downloadId
- * Call the Download method using the COM RPC interface again along with the required parameters, setting priority as false
+ * Call the Download method using the COM RPC interface again along with the required parameters, setting priority as false and wait
  * Verify successful download request by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Unregister the notification using the COM RPC interface
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
@@ -432,44 +471,46 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillRepeatedly(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type){
                 return true;
             }));
-    
-    #if 0
-    handleDownloadNotification();
-    #endif
+
+    // Initialize the required parameters for download notification
+    StatusParams statusParams;
+    statusParams.downloadId = "1001";
+    statusParams.fileLocator = "/opt/CDL/package1001";
+    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
     
     // TC-5: Add download request to priority queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    EXPECT_TRUE(signal & PackageManager_AppDownloadStatus);
     
     EXPECT_EQ(downloadId.downloadId, "1001");
-    
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
-    downloadSignal = PackageManager_invalidStatus;
-    #endif
+
+    signal = PackageManager_invalidStatus;
 
     options.priority = false;
 
     // TC-6: Add download request to regular queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    EXPECT_TRUE(signal & PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1002");
-    
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
-    
+        
     // Unregister the notification
-    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
-    #endif
+    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -499,19 +540,10 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
             [&](const PluginHost::ISubSystem::subsystem type){
                 return false;
             }));
-
-    //handleDownloadNotification();
     
     // TC-7: Download request error when internet is unavailable using ComRpc
     EXPECT_EQ(Core::ERROR_UNAVAILABLE, pkgdownloaderInterface->Download(uri, options, downloadId));
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
 
-    // Unregister the notification
-    mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
-    #endif
 	deinitforComRpc();
 	
     releaseResources();
@@ -526,8 +558,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
  * Verify that the pause method is invoked successfully by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
-// These TCs will fail - remove them
+
 TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     createResources();
@@ -541,8 +572,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
                 return true;
             }));
     
-    
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
     
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -553,7 +583,41 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 	
     releaseResources();
 }
-#endif
+
+/* Test Case for error while pausing download due to mismatch in ID using JsonRpc
+ * 
+ * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the download method using the JSON RPC handler, passing the required parameters
+ * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Invoke the pause method using the JSON RPC handler, passing different downloadId
+ * Verify pause method error by asserting that it returns Core::ERROR_UNKNOWN_KEY
+ * Deinitialize the JSON-RPC resources and clean-up related test resources
+ */
+
+TEST_F(PackageManagerTest, pauseMethodusingJsonRpcError) {
+
+    createResources();
+
+    initforJsonRpc();
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+
+    EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
+
+    // TC-9: Error while pausing download via different downloadId using JsonRpc
+    EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1002\"}"), mJsonRpcResponse));
+
+    deinitforJsonRpc();
+
+    releaseResources();
+}
 
 /* Test Case for pausing failed using JsonRpc
  * 
@@ -577,7 +641,6 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
     releaseResources();
 }
 
-#if 0
 /* Test Case for pausing download via ID using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -588,7 +651,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
  * Verify successful pause by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-// Remove - actually - keep this and mark it as failure and remove the other. Do this for all TCs
+
 TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     createResources();
@@ -604,30 +667,59 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    //handleDownloadNotification();
-    
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
-    
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
-    #endif
+
     string downloadId = "1001";
 
     // TC-11: Pause download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
-    // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
-
 	deinitforComRpc();
 
     releaseResources();
 }
-#endif
+
+/* Test Case for error while pausing download due to mismatch in ID using ComRpc
+ *
+ * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Obtain the required parameters for downloading using the getDownloadParams()
+ * Call the Download method using the COM RPC interface along with the required parameters
+ * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Call the pause method using the COM RPC interface, passing different downloadId
+ * Verify error while pausing by asserting that it returns Core::ERROR_UNKNOWN_KEY
+ * Deinitialize the COM-RPC resources and clean-up related test resources
+ */
+
+TEST_F(PackageManagerTest, pauseMethodusingComRpcError) {
+
+    createResources();
+
+    initforComRpc();
+
+	getDownloadParams();
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    EXPECT_EQ(downloadId.downloadId, "1001");
+
+    string downloadId = "1002";
+
+    // TC-12: Error while pausing download via different downloadId using ComRpc
+    EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, pkgdownloaderInterface->Pause(downloadId));
+
+    deinitforComRpc();
+
+    releaseResources();
+}
 
 /* Test Case for pausing failed using ComRpc
  *
@@ -652,18 +744,74 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
 	
     releaseResources();
 }
-#if 0
+
 /* Test Case for resuming download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Invoke the download method using the JSON RPC handler, passing the required parameters
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Invoke the pause method using the JSON RPC handler, passing the downloadId
+ * Verify that the pause method is invoked successfully by asserting that it returns Core::ERROR_NONE
  * Invoke the resume method using the JSON RPC handler, passing the downloadId
  * Verify that the resume method is invoked successfully by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
 TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
+
+    createResources();
+
+    initforJsonRpc();
+
+    Core::Event onAppDownloadStatus(false, true);
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+
+    EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    // TC-14: Resume download via downloadId using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
+
+	deinitforJsonRpc();
+	
+    releaseResources();
+}
+
+/* Test Case for error while resuming download due to mismatch in ID using JsonRpc
+ * 
+ * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the download method using the JSON RPC handler, passing the required parameters
+ * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Invoke the pause method using the JSON RPC handler, passing the downloadId
+ * Verify that the pause method is invoked successfully by asserting that it returns Core::ERROR_NONE
+ * Invoke the resume method using the JSON RPC handler, passing different downloadId
+ * Verify resume method error by asserting that it returns Core::ERROR_UNKNOWN_KEY
+ * Deinitialize the JSON-RPC resources and clean-up related test resources
+ */
+
+ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcError) {
 
     createResources();
 
@@ -676,18 +824,20 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    // TC-14: Resume download via downloadId using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    // TC-15: Error while resuming download via different downloadId using JsonRpc
+    EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"1002\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
     releaseResources();
 }
-#endif
+
  /* Test Case for resuming failed using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -709,19 +859,82 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 	
     releaseResources();
 }
-#if 0
+
  /* Test Case for resuming download via ID using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Obtain the required parameters for downloading using the getDownloadParams()
  * Call the Download method using the COM RPC interface along with the required parameters
  * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Call the pause method using the COM RPC interface, passing the downloadId
+ * Verify successful pause by asserting that it returns Core::ERROR_NONE
  * Call the resume method using the COM RPC interface, passing the downloadId
  * Verify successful resume by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
 TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
+
+    createResources();
+
+    initforComRpc();
+
+    getDownloadParams();
+
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    // Initialize the required parameters for download notification
+    StatusParams statusParams;
+    statusParams.downloadId = "1001";
+    statusParams.fileLocator = "/opt/CDL/package1001";
+    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
+
+   	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    EXPECT_EQ(downloadId.downloadId, "1001");
+    
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
+    // TC-17: Resume download via downloadId using ComRpc
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId.downloadId));
+
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    EXPECT_TRUE(signal & PackageManager_AppDownloadStatus);
+    
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
+
+    deinitforComRpc();
+
+    releaseResources();
+}
+
+/* Test Case for error while resuming download due to mismatch in ID using ComRpc
+ *
+ * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Obtain the required parameters for downloading using the getDownloadParams()
+ * Call the Download method using the COM RPC interface along with the required parameters
+ * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Call the pause method using the COM RPC interface, passing the downloadId
+ * Verify successful pause by asserting that it returns Core::ERROR_NONE
+ * Call the resume method using the COM RPC interface, passing different downloadId
+ * Verify error while resuming by asserting that it returns Core::ERROR_UNKNOWN_KEY
+ * Deinitialize the COM-RPC resources and clean-up related test resources
+ */
+
+ TEST_F(PackageManagerTest, resumeMethodusingComRpcError) {
 
     createResources();
 
@@ -736,28 +949,22 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    //handleDownloadNotification();
-
    	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
-    
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
-    #endif
-    // TC-17: Resume download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId.downloadId));
-    
-    // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
 
-    deinitforComRpc();
+    string downloadId = "1002";
 
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
+    // TC-18: Error while resuming download via different downloadId using ComRpc
+    EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, pkgdownloaderInterface->Resume(downloadId));
+
+	deinitforComRpc();
+	
     releaseResources();
 }
-#endif
+
  /* Test Case for resuming failed using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -781,12 +988,14 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 	
     releaseResources();
 }
-#if 0
+
 /* Test Case for cancelling download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Invoke the download method using the JSON RPC handler, passing the required parameters
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Invoke the pause method using the JSON RPC handler, passing the downloadId
+ * Verify that the pause method is invoked successfully by asserting that it returns Core::ERROR_NONE
  * Invoke the cancel method using the JSON RPC handler, passing the downloadId
  * Verify that the cancel method is invoked successfully by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
@@ -805,9 +1014,19 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
     // TC-20: Cancel download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
@@ -816,7 +1035,45 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 	
     releaseResources();
 }
-#endif
+
+/* Test Case for error while cancelling download due to mismatch in ID using JsonRpc
+ * 
+ * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the download method using the JSON RPC handler, passing the required parameters
+ * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Invoke the pause method using the JSON RPC handler, passing the downloadId
+ * Verify that the pause method is invoked successfully by asserting that it returns Core::ERROR_NONE
+ * Invoke the cancel method using the JSON RPC handler, passing different downloadId
+ * Verify cancel method error by asserting that it returns Core::ERROR_UNKNOWN_KEY
+ * Deinitialize the JSON-RPC resources and clean-up related test resources
+ */
+
+TEST_F(PackageManagerTest, cancelMethodusingJsonRpcError) {
+
+    createResources();
+
+    initforJsonRpc();
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+
+    EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    // TC-21: Error while cancelling download via different downloadId using JsonRpc
+    EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1002\"}"), mJsonRpcResponse));
+
+	deinitforJsonRpc();
+	
+    releaseResources();
+}
 
 /* Test Case for cancelling failed using JsonRpc
  * 
@@ -839,13 +1096,15 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 	
     releaseResources();
 }
-#if 0
+
 /* Test Case for cancelling download via ID using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Obtain the required parameters for downloading using the getDownloadParams()
  * Call the Download method using the COM RPC interface along with the required parameters
  * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Call the pause method using the COM RPC interface, passing the downloadId
+ * Verify successful pause by asserting that it returns Core::ERROR_NONE
  * Call the cancel method using the COM RPC interface, passing the downloadId
  * Verify successful cancel by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
@@ -866,28 +1125,68 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    //handleDownloadNotification();
-
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
+
+    string downloadId = "1001";
     
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
-    #endif
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
     // TC-23: Cancel download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId.downloadId));
-    
-    // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
 
 	deinitforComRpc();
 	
     releaseResources();
 }
-#endif
+
+/* Test Case for error while cancelling download due to mismatch in ID using ComRpc
+ *
+ * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Obtain the required parameters for downloading using the getDownloadParams()
+ * Call the Download method using the COM RPC interface along with the required parameters
+ * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Call the pause method using the COM RPC interface, passing downloadId
+ * Verify successful pause by asserting that it returns Core::ERROR_NONE
+ * Call the cancel method using the COM RPC interface, passing different downloadId
+ * Verify error while cancelling by asserting that it returns Core::ERROR_UNKNOWN_KEY
+ * Deinitialize the COM-RPC resources and clean-up related test resources
+ */
+
+ TEST_F(PackageManagerTest, cancelMethodusingComRpcError) {
+
+    createResources();
+
+    initforComRpc();
+
+    getDownloadParams();
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    EXPECT_EQ(downloadId.downloadId, "1001");
+
+    string downloadId = "1001";
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
+    downloadId = "1002";
+
+    // TC-24: Error while cancelling download via different downloadId using ComRpc
+    EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, pkgdownloaderInterface->Cancel(downloadId));
+
+	deinitforComRpc();
+	
+    releaseResources();
+}
+
 /* Test Case for cancelling failed using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -912,13 +1211,13 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
     releaseResources();
 }
 
-/* Test Case for delete download failure when download in progress using JsonRpc
+/* Test Case for delete download using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Invoke the download method using the JSON RPC handler, passing the required parameters
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
  * Invoke the delete method using the JSON RPC handler, passing the fileLocator
- * Verify failure in delete by asserting that it returns Core::ERROR_GENERAL
+ * Verify successful delete by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
@@ -935,11 +1234,11 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    // TC-26: Delete download failure when download in progress using JsonRpc
+    // TC-26: Delete download using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
@@ -969,38 +1268,14 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
     releaseResources();
 }
 
-/* Test Case for deleting failed using ComRpc
- *
- * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
- * Call the delete method using the COM RPC interface, passing fileLocator
- * Verify delete method failure by asserting that it returns Core::ERROR_GENERAL
- * Deinitialize the COM-RPC resources and clean-up related test resources
- */
-
-TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
-
-    createResources();
-
-    initforComRpc();
-
-    string fileLocator = "/opt/CDL/package1001";
-
-    // TC-29: Failure in delete using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
-
-	deinitforComRpc();
-	
-    releaseResources();
-}
-
-/* Test Case for delete download failure when download in progress using ComRpc
+/* Test Case for delete download using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Obtain the required parameters for downloading using the getDownloadParams()
  * Call the Download method using the COM RPC interface along with the required parameters
  * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
  * Call the delete method using the COM RPC interface, passing fileLocator
- * Verify failure in delete by asserting that it returns Core::ERROR_GENERAL
+ * Verify successful delete by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
@@ -1024,18 +1299,35 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);   
-    #endif
+
     string fileLocator = "/opt/CDL/package1001";
 
     // TC-28: Delete download failure when download in progress using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
 
-    // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+	deinitforComRpc();
+	
+    releaseResources();
+}
+
+/* Test Case for delete download failure using ComRpc
+ *
+ * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Call the delete method using the COM RPC interface, passing fileLocator
+ * Verify delete method failure by asserting that it returns Core::ERROR_GENERAL
+ * Deinitialize the COM-RPC resources and clean-up related test resources
+ */
+
+TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
+
+    createResources();
+
+    initforComRpc();
+
+    string fileLocator = "/opt/CDL/package1001";
+
+    // TC-29: Failure in delete using ComRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
 
 	deinitforComRpc();
 	
@@ -1044,14 +1336,16 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
 
 /* Test Case for download progress via ID using JsonRpc
  * 
- * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Set up and initialize required JSON-RPC resources, configurations, notifications/events, mocks and expectations
  * Invoke the download method using the JSON RPC handler, passing the required parameters
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Invoke the pause method using the JSON RPC handler, passing the downloadId
+ * Verify that the pause method is invoked successfully by asserting that it returns Core::ERROR_NONE
  * Invoke the progress method using the JSON RPC handler, passing the downloadId and progress info
  * Verify that the progress method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking that response is not empty string.
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 
     createResources();
@@ -1064,10 +1358,12 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
             }));
-
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"http://test.com\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+            
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
     // TC-30: Download progress via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\", \"progress\": {}}"), mJsonRpcResponse));
@@ -1078,7 +1374,6 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 	
     releaseResources();
 }
-#endif
 
 /* Test Case for download progress failure using JsonRpc
  * 
@@ -1108,11 +1403,13 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
  * Obtain the required parameters for downloading using the getDownloadParams()
  * Call the Download method using the COM RPC interface along with the required parameters
  * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Call the pause method using the COM RPC interface along with downloadId
+ * Verify successful pause by asserting that it returns Core::ERROR_NONE
  * Call the progress method using the COM RPC interface, passing the downloadId and progress info
  * Verify successful progress by asserting that it returns Core::ERROR_NONE and checking that progress is non-zero
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
  TEST_F(PackageManagerTest, progressMethodusingComRpcSuccess) {
 
     createResources();
@@ -1130,30 +1427,25 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     progress = {};
 
-    //handleDownloadNotification();
-
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
-    #endif
+
+    string downloadId = "1001";
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
     // TC-32: Download progress via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId.downloadId, progress));
 
     EXPECT_NE(progress.progress, 0);
-
-    // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
-
+    
 	deinitforComRpc();
 	
     releaseResources();
 
 }
-#endif
+
 /* Test Case for download progress failure using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -1232,12 +1524,53 @@ TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Invoke the download method using the JSON RPC handler, passing the required parameters
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Invoke the pause method using the JSON RPC handler, passing the downloadId
+ * Verify that the pause method is invoked successfully by asserting that it returns Core::ERROR_NONE
  * Invoke the rateLimit method using the JSON RPC handler, passing the downloadId and the limit
  * Verify that the rateLimit method is invoked successfully by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
+
+    createResources();
+
+    initforJsonRpc();
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://curl.se/download/curl-8.16.0.tar.xz\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+
+    EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    // TC-36: Set rate limit via downloadID using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"1001\", \"limit\": 1024}"), mJsonRpcResponse));
+
+	deinitforJsonRpc();
+	
+    releaseResources();
+}
+
+/* Test Case for error while setting rate limit due to mismatch in ID using JsonRpc
+ * 
+ * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the download method using the JSON RPC handler, passing the required parameters
+ * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Invoke the pause method using the JSON RPC handler, passing the downloadId
+ * Verify that the pause method is invoked successfully by asserting that it returns Core::ERROR_NONE
+ * Invoke the rateLimit method using the JSON RPC handler, passing different downloadId and limit
+ * Verify rateLimit method error by asserting that it returns Core::ERROR_UNKNOWN_KEY
+ * Deinitialize the JSON-RPC resources and clean-up related test resources
+ */
+
+ TEST_F(PackageManagerTest, rateLimitusingJsonRpcError) {
 
     createResources();
 
@@ -1254,14 +1587,16 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    // TC-36: Set rate limit via downloadID using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"1001\", \"limit\": 1024}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    // TC-37: Rate limit error when passing different downloadID using JsonRpc
+    EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"1002\", \"limit\": 1024}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
     releaseResources();
 }
-#endif
+
  /* Test Case for setting rate limit failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1284,17 +1619,19 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcFailure) {
     releaseResources();
 }
 
- /* Test Case for setting rate limit via ID using ComRpc
+/* Test Case for setting rate limit via ID using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Obtain the required parameters for downloading using the getDownloadParams()
  * Call the Download method using the COM RPC interface along with the required parameters
  * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Call the Pause method using the COM RPC interface along with downloadId
+ * Verify successful pause by asserting that it returns Core::ERROR_NONE
  * Call the rateLimit method using the COM RPC interface, passing the downloadId and limit
  * Verify rateLimit is set successfully by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     createResources();
@@ -1312,28 +1649,67 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     uint64_t limit = 1024;
 
-    //handleDownloadNotification();
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    EXPECT_EQ(downloadId.downloadId, "1001");
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
+    // TC-39: Set rate limit via downloadID using ComRpc
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId.downloadId, limit));
+    
+	deinitforComRpc();
+	
+    releaseResources();
+}
+
+ /* Test Case for error while setting rate limit due to mismatch in ID using ComRpc
+ *
+ * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Obtain the required parameters for downloading using the getDownloadParams()
+ * Call the Download method using the COM RPC interface along with the required parameters
+ * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
+ * Call the Pause method using the COM RPC interface along with downloadId
+ * Verify successful pause by asserting that it returns Core::ERROR_NONE
+ * Call the rateLimit method using the COM RPC interface, passing different downloadId and limit
+ * Verify error while setting rate limit by asserting that it returns Core::ERROR_UNKNOWN_KEY
+ * Deinitialize the COM-RPC resources and clean-up related test resources
+ */
+
+ TEST_F(PackageManagerTest, rateLimitusingComRpcError) {
+
+    createResources();
+
+    initforComRpc();
+
+    getDownloadParams();
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    uint64_t limit = 1024;
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
     EXPECT_EQ(downloadId.downloadId, "1001");
-    #if 0
-    downloadNotification.OnAppDownloadStatus(ndownloadId, nfileLocator, nreason);
-    downloadSignal = downloadNotification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-    EXPECT_TRUE(downloadSignal & PackageManager_AppDownloadStatus);
-    #endif
-    // TC-39: Set rate limit via downloadID using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId.downloadId, limit));
-    
-    // Unregister the notification
-    //mPackageManagerImpl->Unregister(static_cast<Exchange::IPackageDownloader::INotification*>(&downloadNotification));
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
+    string downloadId = "1002";
+
+    // TC-40: Rate limit error when passing different downloadID using ComRpc
+    EXPECT_EQ(Core::ERROR_UNKNOWN_KEY, pkgdownloaderInterface->RateLimit(downloadId, limit));
 
 	deinitforComRpc();
 	
     releaseResources();
 }
-#endif
- /* Test Case for failure in setting rateLimit using ComRpc
+
+/* Test Case for failure in setting rateLimit using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Call the rateLimit method using the COM RPC interface, passing downloadId and limit
