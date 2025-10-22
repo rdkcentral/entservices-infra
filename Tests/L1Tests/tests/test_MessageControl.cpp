@@ -770,40 +770,30 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
 }
 
 TEST_F(MessageControlL1Test, NetworkNode_Configuration) {
-    // Test network configuration through public interface
     _shell = new TestShell(R"({"remote":{"port":1234,"binding":"192.168.1.1"}})");
     _shellOwned = true;
-    
     string result = plugin->Initialize(_shell);
     EXPECT_TRUE(result.empty());
-    
-    // Validate network functionality indirectly through message sending
     plugin->Enable(Exchange::IMessageControl::LOGGING, "NetworkTest", "Module1", true);
-    
+    // Do not use plugin or shell after deinitialize
     plugin->Deinitialize(_shell);
+    _shellOwned = false;
     delete _shell;
     _shell = nullptr;
-    _shellOwned = false;
 }
 
 TEST_F(MessageControlL1Test, UDP_Communication) {
-    // Test UDP functionality through the public interface
     _shell = new TestShell(R"({"remote":{"port":9999,"binding":"127.0.0.1"}})");
     _shellOwned = true;
-    
     string result = plugin->Initialize(_shell);
     EXPECT_TRUE(result.empty());
-
-    // Enable messaging to trigger UDP operations
     plugin->Enable(Exchange::IMessageControl::LOGGING, "UDPTest", "Module1", true);
-    SleepMs(100); // Allow time for UDP setup
-    
+    SleepMs(100);
     plugin->Enable(Exchange::IMessageControl::LOGGING, "UDPTest", "Module1", false);
-    
     plugin->Deinitialize(_shell);
+    _shellOwned = false;
     delete _shell;
     _shell = nullptr;
-    _shellOwned = false;
 }
 
 TEST_F(MessageControlL1Test, WebSocketOutput_ConnectionManagement) {
@@ -812,7 +802,6 @@ TEST_F(MessageControlL1Test, WebSocketOutput_ConnectionManagement) {
     string result = plugin->Initialize(_shell);
     EXPECT_TRUE(result.empty());
 
-    // Test WebSocket connection management through public interface
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
@@ -834,20 +823,15 @@ TEST_F(MessageControlL1Test, WebSocketOutput_ConnectionManagement) {
         void Received(const string& text) override {}
     };
 
-    // Test connection limits
-    TestChannel channel1, channel2, channel3, channel4;
+    TestChannel channel1, channel2, channel3;
     EXPECT_TRUE(plugin->Attach(channel1));
     EXPECT_TRUE(plugin->Attach(channel2));
     EXPECT_TRUE(plugin->Attach(channel3));
-    
     plugin->Detach(channel1);
     plugin->Detach(channel2);
     plugin->Detach(channel3);
-
     plugin->Deinitialize(_shell);
+    _shellOwned = false;
     delete _shell;
     _shell = nullptr;
-    _shellOwned = false;
 }
-
-
