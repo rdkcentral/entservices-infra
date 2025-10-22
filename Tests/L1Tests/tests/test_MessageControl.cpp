@@ -769,67 +769,75 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, WorkerThread_Dispatch) {
-    // Initialize plugin first
-    _shell = new TestShell();
-    _shellOwned = true;
-    plugin->Initialize(_shell);
+TEST_F(MessageControlL1Test, NetworkConfig_Constructor) {
+    // Test NetworkNode constructor with default values
+    MessageControl::Config::NetworkNode node;
+    EXPECT_EQ(2200, node.Port.Value());
+    EXPECT_EQ("0.0.0.0", node.Binding.Value());
 
-    // Trigger message processing to exercise worker thread
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "WorkerTest", "TestModule", true);
-
-    // Give worker thread time to process
-    SleepMs(100);
-
-    // Change state to trigger more processing
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "WorkerTest", "TestModule", false);
-
-    // Allow worker to process again
-    SleepMs(100);
-
-    // Cleanup
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
+    // Test copy constructor
+    MessageControl::Config::NetworkNode copy(node);
+    EXPECT_EQ(node.Port.Value(), copy.Port.Value());
+    EXPECT_EQ(node.Binding.Value(), copy.Binding.Value());
 }
 
-TEST_F(MessageControlL1Test, Message_PublisherChain) {
-    _shell = new TestShell(R"({"console":true,"syslog":true,"filepath":"/tmp/test.log"})");
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    // Enable multiple message types to trigger publisher chain
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "Publisher", "Test", true);
-    plugin->Enable(Exchange::IMessageControl::TRACING, "Publisher", "Test", true);
-    plugin->Enable(Exchange::IMessageControl::REPORTING, "Publisher", "Test", true);
-
-    // Allow processing
-    SleepMs(100);
-
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-
-    // Cleanup test file
-    std::remove("/tmp/test.log");
+TEST_F(MessageControlL1Test, Channel_StateAndSendReceive) {
+    // Test UDP Channel functionality
+    Core::NodeId nodeId("127.0.0.1", 12345);
+    Publishers::UDPOutput::Channel channel(nodeId);
+    
+    uint8_t buffer[128];
+    
+    // Test SendData
+    EXPECT_EQ(128, channel.SendData(buffer, 128));
+    
+    // Test ReceiveData
+    EXPECT_EQ(128, channel.ReceiveData(buffer, 128));
+    
+    // Test StateChange
+    channel.StateChange(); // Should not crash
 }
 
-TEST_F(MessageControlL1Test, Config_NetworkNode) {
-    _shell = new TestShell(R"({"remote":{"port":1234,"binding":"127.0.0.1"}})");
+TEST_F(MessageControlL1Test, WebSocketOutput_MaxConnections) {
+    TestShell* shell = new TestShell();
+    Publishers::WebSocketOutput ws;
+    
+    // Test with custom max connections
+    const uint32_t maxConn = 3;
+    ws.Initialize(shell, maxConn);
+    
+    // Verify MaxConnections getter
+    EXPECT_EQ(maxConn, ws.MaxConnections());
+    
+    // Try to exceed max connections
+    EXPECT_TRUE(ws.Attach(1));
+    EXPECT_TRUE(ws.Attach(2));
+    EXPECT_TRUE(ws.Attach(3));
+    EXPECT_FALSE(ws.Attach(4)); // Should fail
+    
+    ws.Deinitialize();
+    delete shell;
+}
+
+TEST_F(MessageControlL1Test, Config_Background) {
+    // Test console/syslog initialization based on background mode
+    class BackgroundShell : public TestShell {
+    public:
+        bool Background() const override { return true; }
+    };
+    
+    _shell = new BackgroundShell();
     _shellOwned = true;
+    
+    // Initialize with syslog config
     string result = plugin->Initialize(_shell);
     EXPECT_TRUE(result.empty());
-
-    // Exercise network output path
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "Network", "Test", true);
     
-    // Allow processing
-    SleepMs(100);
-
+    plugin->Enable(Exchange::IMessageControl::LOGGING, "test", "module", true);
+    
     plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
     _shellOwned = false;
 }
+
