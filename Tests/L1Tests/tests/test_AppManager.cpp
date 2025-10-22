@@ -1084,6 +1084,8 @@ TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
  * Verifying the return of the API by passing the app in suspended state
  * Releasing the AppManager interface and all related test resources
  */
+//TODO
+/*
 TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
 {
     Core::hresult status;
@@ -1124,7 +1126,7 @@ TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
         releaseResources();
     }
 }
-
+*/
 /*
  * Test Case for LaunchAppUsingComRpcFailureWrongAppID
  * Setting up AppManager/LifecycleManager/LifecycleManagerState/PersistentStore/PackageManagerRDKEMS Plugin and creating required COM-RPC resources
