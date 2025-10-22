@@ -771,27 +771,31 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
 
 TEST_F(MessageControlL1Test, MessageControl_MessageDispatch) {
     // Initialize the plugin
-    _shell = new TestShell();
+    _shell = new TestShell(R"({"console":true,"syslog":false})");
     _shellOwned = true;
     plugin->Initialize(_shell);
 
-    // Mock output to verify message dispatch
-    class MockOutput : public Publishers::IPublish {
-    public:
-        MOCK_METHOD(void, Message, (const Core::Messaging::MessageInfo& metadata, const string& text), (override));
-    };
+    // Enable logging to console
+    Core::hresult hr = plugin->Enable(
+        Exchange::IMessageControl::LOGGING,
+        "TestCategory",
+        "TestModule",
+        true);
+    EXPECT_EQ(Core::ERROR_NONE, hr);
 
-    MockOutput mockOutput;
-    EXPECT_CALL(mockOutput, Message(::testing::_, ::testing::_)).Times(1);
-
-    // Announce the mock output
-    plugin->Announce(&mockOutput);
-
-	// Send a test message
+    // Send a test message through the plugin
     Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
     Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-    plugin->Message(messageInfo, "Test message for MessageControl");
-	
+
+    // Capture console output to verify the message dispatch
+    testing::internal::CaptureStdout();
+    plugin->Inbound("Test message for MessageControl");
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_NE(output.find("Test message for MessageControl"), std::string::npos);
+    EXPECT_NE(output.find("TestCategory"), std::string::npos);
+    EXPECT_NE(output.find("TestModule"), std::string::npos);
+
     // Cleanup
     plugin->Deinitialize(_shell);
     delete _shell;
