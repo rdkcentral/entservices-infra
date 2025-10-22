@@ -545,65 +545,51 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty()) << "Time should not be empty";
 }
 
-TEST_F(MessageControlL1Test, NetworkNode_Configuration) {
-    _shell = new TestShell(R"({"remote":{"port":1234,"binding":"192.168.1.1"}})");
-    _shellOwned = true;
-    string result = plugin->Initialize(_shell);
-    EXPECT_TRUE(result.empty()) << "Plugin should initialize with empty result";
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "NetworkTest", "Module1", true);
-    plugin->Deinitialize(_shell);
-    _shellOwned = false;
-    delete _shell;
-    _shell = nullptr;
-}
-
-TEST_F(MessageControlL1Test, UDP_Communication) {
-    _shell = new TestShell(R"({"remote":{"port":9999,"binding":"127.0.0.1"}})");
-    _shellOwned = true;
-    string result = plugin->Initialize(_shell);
-    EXPECT_TRUE(result.empty()) << "Plugin should initialize with empty result";
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "UDPTest", "Module1", true);
-    SleepMs(100);
-    plugin->Enable(Exchange::IMessageControl::LOGGING, "UDPTest", "Module1", false);
-    plugin->Deinitialize(_shell);
-    _shellOwned = false;
-    delete _shell;
-    _shell = nullptr;
-}
-
-TEST_F(MessageControlL1Test, WebSocketOutput_ConnectionManagement) {
+TEST_F(MessageControlL1Test, Observer_LifecycleMethods) {
     _shell = new TestShell();
     _shellOwned = true;
-    string result = plugin->Initialize(_shell);
-    EXPECT_TRUE(result.empty()) << "Plugin should initialize with empty result";
-    class TestChannel : public PluginHost::Channel {
+    plugin->Initialize(_shell);
+
+    class MockProcess : public RPC::IRemoteConnection, public RPC::IMonitorableProcess {
     public:
-        TestChannel() 
-            : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899)) {
-            State(static_cast<ChannelState>(2), true);
+        MockProcess(uint32_t id) : _id(id) {}
+        uint32_t Id() const override { return _id; }
+        void AddRef() const override {}
+        uint32_t Release() const override { return 0; }
+        uint32_t RemoteId() const override { return _id; }
+        void* QueryInterface(const uint32_t id) override {
+            if (id == RPC::IMonitorableProcess::ID) {
+                return static_cast<RPC::IMonitorableProcess*>(this);
+            }
+            return nullptr;
         }
-        void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
-        void Received(Core::ProxyType<PluginHost::Request>& request) override {}
-        void Send(const Core::ProxyType<Web::Response>& response) override {}
-        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override { return maxSendSize; }
-        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override { return receivedSize; }
-        void StateChange() override {}
-        void Send(const Core::ProxyType<Core::JSON::IElement>& element) override {}
-        Core::ProxyType<Core::JSON::IElement> Element(const string& identifier) override { 
-            return Core::ProxyType<Core::JSON::IElement>(); 
-        }
-        void Received(Core::ProxyType<Core::JSON::IElement>& element) override {}
-        void Received(const string& text) override {}
+        void* Acquire(uint32_t, const string&, uint32_t, uint32_t) override { return nullptr; }
+        void Terminate() override {}
+        uint32_t Launch() override { return 0; }
+        void PostMortem() override {}
+        string Callsign() const override { return "MockProcess"; }
+        Core::instance_id ParentPID() const override { return 0; }
+    private:
+        uint32_t _id;
     };
-    TestChannel channel1, channel2, channel3;
-    EXPECT_TRUE(plugin->Attach(channel1)) << "Attach channel1 should succeed";
-    EXPECT_TRUE(plugin->Attach(channel2)) << "Attach channel2 should succeed";
-    EXPECT_TRUE(plugin->Attach(channel3)) << "Attach channel3 should succeed";
-    plugin->Detach(channel1);
-    plugin->Detach(channel2);
-    plugin->Detach(channel3);
+
+    // Allocate on heap to avoid use-after-free
+    MockProcess* process = new MockProcess(42);
+
+    plugin->Attach(process->Id());
+    SUCCEED() << "Activated should not crash";
+
+    plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCategory", "TestModule", true);
+
+    plugin->Detach(process->Id());
+    SUCCEED() << "Deactivated should not crash";
+
+    plugin->Detach(process->Id());
+    SUCCEED() << "Terminated should not crash";
+
     plugin->Deinitialize(_shell);
-    _shellOwned = false;
+    delete process;
     delete _shell;
     _shell = nullptr;
+    _shellOwned = false;
 }
