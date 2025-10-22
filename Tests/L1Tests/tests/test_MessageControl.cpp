@@ -787,10 +787,11 @@ TEST_F(MessageControlL1Test, MessageControl_MessageDispatch) {
     // Announce the mock output
     plugin->Announce(&mockOutput);
 
-    // Send a test message
+	// Send a test message
     Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
-    plugin->Message(metadata, "Test message for MessageControl");
-
+    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
+    plugin->Message(messageInfo, "Test message for MessageControl");
+	
     // Cleanup
     plugin->Deinitialize(_shell);
     delete _shell;
