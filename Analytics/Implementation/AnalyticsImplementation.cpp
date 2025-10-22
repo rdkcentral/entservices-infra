@@ -85,7 +85,8 @@ namespace Plugin {
                                     const uint64_t epochTimestamp,
                                     const uint64_t uptimeTimestamp,
                                     const string& appId,
-                                    const string& eventPayload)
+                                    const string& eventPayload,
+                                    const string& additionalContext)
     {
         std::shared_ptr<Event> event = std::make_shared<Event>();
         event->eventName = eventName;
@@ -99,18 +100,27 @@ namespace Plugin {
         LOGINFO("Event Source Version: %s", eventSourceVersion.c_str());
         LOGINFO("cetList[]: ");
         std::string entry;
-        while (cetList->Next(entry) == true) {
-            event->cetList.push_back(entry);
-            LOGINFO("     %s ", entry.c_str());
+        if (cetList == nullptr)
+        {
+            LOGINFO("     <null>");
+        }
+        else
+        {
+            while (cetList->Next(entry) == true) {
+                event->cetList.push_back(entry);
+                LOGINFO("     %s ", entry.c_str());
+            }
         }
         event->epochTimestamp = epochTimestamp;
         event->uptimeTimestamp = uptimeTimestamp;
         event->appId = appId;
         event->eventPayload = eventPayload;
+        event->additionalContext = additionalContext;
 
         LOGINFO("Epoch Timestamp:  %" PRIu64, epochTimestamp);
         LOGINFO("Uptime Timestamp: %" PRIu64, uptimeTimestamp);
         LOGINFO("Event Payload: %s", eventPayload.c_str());
+        LOGINFO("Additional Context: %s", additionalContext.c_str());
 
         bool valid = true;
         if (eventName.empty())
@@ -356,6 +366,7 @@ namespace Plugin {
         backendEvent.eventPayload = event.eventPayload;
         backendEvent.appId = event.appId;
         backendEvent.cetList = event.cetList;
+        backendEvent.additionalContext = event.additionalContext;
 
         //TODO: Add mapping of event source/name to the desired backend
         if (mBackends.empty())

@@ -68,6 +68,7 @@ namespace Plugin {
             uint64_t uptimeTimestamp;
             std::string appId;
             std::string eventPayload;
+            std::string additionalContext;
         };
 
         struct Action
@@ -136,7 +137,8 @@ namespace Plugin {
                                    const uint64_t epochTimestamp,
                                    const uint64_t uptimeTimestamp,
                                    const string& appId,
-                                   const string& eventPayload) override;
+                                   const string& eventPayload,
+                                   const string& additionalContext) override;
 
 
         // IConfiguration interface
