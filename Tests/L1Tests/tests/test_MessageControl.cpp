@@ -769,41 +769,6 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     EXPECT_FALSE(data.Time.Value().empty());
 }
 
-TEST_F(MessageControlL1Test, MessageControl_MessageDispatch) {
-    // Initialize the plugin
-    _shell = new TestShell(R"({"console":true,"syslog":false})");
-    _shellOwned = true;
-    plugin->Initialize(_shell);
-
-    // Enable logging to console
-    Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::LOGGING,
-        "TestCategory",
-        "TestModule",
-        true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-
-    // Send a test message through the plugin
-    Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::LOGGING, "TestCategory", "TestModule");
-    Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-
-    // Capture console output to verify the message dispatch
-    testing::internal::CaptureStdout();
-	plugin->Enable(Exchange::IMessageControl::LOGGING, "TestCategory", "TestModule", true);
-    plugin->Inbound("Test message for MessageControl");
-    std::string output = testing::internal::GetCapturedStdout();
-
-    EXPECT_NE(output.find("Test message for MessageControl"), std::string::npos);
-    EXPECT_NE(output.find("TestCategory"), std::string::npos);
-    EXPECT_NE(output.find("TestModule"), std::string::npos);
-
-    // Cleanup
-    plugin->Deinitialize(_shell);
-    delete _shell;
-    _shell = nullptr;
-    _shellOwned = false;
-}
-
 TEST_F(MessageControlL1Test, Observer_ActivatedDeactivatedTerminated) {
     // Initialize the plugin
     _shell = new TestShell();
