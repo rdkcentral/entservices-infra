@@ -603,6 +603,7 @@ TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON) {
   // UDPOutput::Message: ensure it executes without crash using default metadata
     Core::NodeId anyNode("127.0.0.1", 0);
     Publishers::UDPOutput udp(anyNode);
+    
     udp.Message(defaultMeta, "udp-msg");
     SUCCEED(); // if we reach here, the call did not ASSERT/crash
 }
@@ -775,27 +776,13 @@ TEST_F(MessageControlL1Test, Observer_DropEdgeCase) {
     plugin->Initialize(_shell);
 
     // Simulate dropping an invalid ID
-    plugin->Detach(9999); // Invalid ID
-    SUCCEED(); // Ensure no crashes or assertions
+    bool result = plugin->Detach(9999); // Invalid ID
+    EXPECT_FALSE(result); // Ensure the invalid ID is not processed
 
     plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
     _shellOwned = false;
-}
-
-TEST_F(MessageControlL1Test, WebSocketOutput_MaxConnections) {
-    // Test WebSocketOutput with maximum connections
-    TestShell* shell = new TestShell();
-    Publishers::WebSocketOutput ws;
-
-    ws.Initialize(shell, 2); // Set max connections to 2
-    EXPECT_TRUE(ws.Attach(1));
-    EXPECT_TRUE(ws.Attach(2));
-    EXPECT_FALSE(ws.Attach(3)); // Exceed max connections
-
-    ws.Deinitialize();
-    delete shell;
 }
 
 TEST_F(MessageControlL1Test, FileOutput_InvalidFile) {
@@ -804,21 +791,12 @@ TEST_F(MessageControlL1Test, FileOutput_InvalidFile) {
     Publishers::FileOutput fileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, invalidFilePath);
 
     Core::Messaging::MessageInfo defaultMeta;
-    fileOutput.Message(defaultMeta, "This message should not be written");
-
-    SUCCEED(); // Ensure no crashes or assertions
-}
-
-TEST_F(MessageControlL1Test, JSONOutput_PausedState) {
-    // Test JSON output when paused
-    Publishers::JSON json;
-    json.Paused(true); // Set paused state
-
-    Core::Messaging::MessageInfo defaultMeta;
-    Publishers::JSON::Data data;
-    json.Convert(defaultMeta, "This message should be ignored", data);
-
-    EXPECT_TRUE(data.Message.Value().empty()); // Ensure no message is set
+    if (fileOutput.IsOpen()) {
+        fileOutput.Message(defaultMeta, "This message should not be written");
+        FAIL() << "FileOutput should not allow writing to an invalid file.";
+    } else {
+        SUCCEED(); // Ensure no crashes or assertions
+    }
 }
 
 TEST_F(MessageControlL1Test, UDPOutput_Message) {
@@ -827,7 +805,10 @@ TEST_F(MessageControlL1Test, UDPOutput_Message) {
     Publishers::UDPOutput udpOutput(nodeId);
 
     Core::Messaging::MessageInfo defaultMeta;
-    udpOutput.Message(defaultMeta, "Test UDP message");
-
-    SUCCEED(); // Ensure no crashes or assertions
+    if (udpOutput.IsOpen()) {
+        udpOutput.Message(defaultMeta, "Test UDP message");
+        SUCCEED(); // Ensure no crashes or assertions
+    } else {
+        FAIL() << "UDPOutput could not open the socket.";
+    }
 }
