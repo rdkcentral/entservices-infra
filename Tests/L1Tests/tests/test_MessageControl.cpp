@@ -114,11 +114,11 @@ protected:
 };
 
 TEST_F(MessageControlL1Test, Construction) {
-    EXPECT_NE(nullptr, plugin.operator->());
+    EXPECT_NE(nullptr, plugin.operator->()) << "Plugin instance should not be null";
 }
 
 TEST_F(MessageControlL1Test, InitialState) {
-    EXPECT_TRUE(plugin->Information().empty());
+    EXPECT_TRUE(plugin->Information().empty()) << "Initial plugin information should be empty";
 }
 
 TEST_F(MessageControlL1Test, EnableAllMessageTypes) {
@@ -129,54 +129,19 @@ TEST_F(MessageControlL1Test, EnableAllMessageTypes) {
         Exchange::IMessageControl::STANDARD_OUT,
         Exchange::IMessageControl::STANDARD_ERROR
     };
-
     for (auto type : types) {
         Core::hresult hr = plugin->Enable(type, "category1", "testmodule", true);
-        EXPECT_EQ(Core::ERROR_NONE, hr);
+        EXPECT_EQ(Core::ERROR_NONE, hr) << "Enable should succeed for type " << type;
     }
 }
-/*
-TEST_F(MessageControlL1Test, ControlStructure) {
-    Exchange::IMessageControl::Control testControl;
-    testControl.type = Exchange::IMessageControl::TRACING;
-    testControl.category = "TestCategory";
-    testControl.module = "TestModule";
-    testControl.enabled = true;
 
-    Core::hresult hr = plugin->Enable(
-        testControl.type,
-        testControl.category,
-        testControl.module,
-        testControl.enabled);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-
-    Exchange::IMessageControl::IControlIterator* controls = nullptr;
-    hr = plugin->Controls(controls);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-    ASSERT_NE(nullptr, controls);
-
-    bool found = false;
-    Exchange::IMessageControl::Control current;
-    while (controls->Next(current)) {
-        if (current.type == testControl.type &&
-            current.category == testControl.category &&
-            current.module == testControl.module &&
-            current.enabled == testControl.enabled) {
-            found = true;
-            break;
-        }
-    }
-    EXPECT_TRUE(found);
-    controls->Release();
-}
-*/
 TEST_F(MessageControlL1Test, EnableTracing) {
     Core::hresult hr = plugin->Enable(
         Exchange::IMessageControl::TRACING,
         "category1", 
         "testmodule",
         true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Enable tracing should succeed";
 }
 
 TEST_F(MessageControlL1Test, EnableLogging) {
@@ -185,7 +150,7 @@ TEST_F(MessageControlL1Test, EnableLogging) {
         "category1",
         "testmodule", 
         true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Enable logging should succeed";
 }
 
 TEST_F(MessageControlL1Test, EnableDisableWarning) {
@@ -194,206 +159,109 @@ TEST_F(MessageControlL1Test, EnableDisableWarning) {
         "category1",
         "testmodule",
         true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Enable tracing should succeed";
     hr = plugin->Enable(
         Exchange::IMessageControl::TRACING,
         "category1", 
         "testmodule",
         false);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Disable tracing should succeed";
 }
 
 TEST_F(MessageControlL1Test, ControlsIterator) {
     plugin->Enable(Exchange::IMessageControl::TRACING, "cat1", "mod1", true);
     plugin->Enable(Exchange::IMessageControl::LOGGING, "cat2", "mod2", true);
-
     Exchange::IMessageControl::IControlIterator* controls = nullptr;
     Core::hresult hr = plugin->Controls(controls);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-    ASSERT_NE(nullptr, controls);
-
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Controls should succeed";
+    ASSERT_NE(nullptr, controls) << "Controls iterator should not be null";
     controls->Release();
 }
 
 TEST_F(MessageControlL1Test, WebSocketSupport) {
     Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("test");
-    EXPECT_TRUE(element.IsValid());
-}
-/*
-TEST_F(MessageControlL1Test, Initialize) {
-    class MinimalShell : public PluginHost::IShell {
-    public:
-        string ConfigLine() const override { return "{}"; }
-        string VolatilePath() const override { return "/tmp/"; }
-        bool Background() const override { return false; }
-        uint32_t Release() const override { return 0; }
-        uint32_t AddRef() const override { return 1; }
-    };
-
-    MinimalShell* shell = new MinimalShell();
-    string result = plugin->Initialize(shell);
-    EXPECT_TRUE(result.empty());
+    EXPECT_TRUE(element.IsValid()) << "Inbound element should be valid";
 }
 
-TEST_F(MessageControlL1Test, NetworkConfig) {
-    string jsonConfig = R"({"port":2200, "binding":"127.0.0.1"})";
-    Core::JSON::String config;
-    config.FromString(jsonConfig);
-    
-    EXPECT_EQ(2200, plugin->_config.Remote.Port.Value());
-    EXPECT_STREQ("127.0.0.1", plugin->_config.Remote.Binding.Value().c_str());
-}
-
-TEST_F(MessageControlL1Test, OutputDirector) {
-    string testFileName = "/tmp/test.log";
-    
-    auto* fileOutput = new Publishers::FileOutput(
-        Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, 
-        testFileName);
-    plugin->Announce(fileOutput);
-
-    std::ifstream testFile(testFileName);
-    EXPECT_TRUE(testFile.good()) << "File " << testFileName << " was not created";
-    testFile.close();
-    Core::hresult hr = plugin->Enable(
-        Exchange::IMessageControl::TRACING,
-        "category1",
-        "testmodule",
-        true); 
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-
-    plugin->Deinitialize(nullptr);
-    std::ifstream checkFile(testFileName);
-    EXPECT_FALSE(checkFile.good()) << "File " << testFileName << " was not cleaned up";
-}
-*/
 TEST_F(MessageControlL1Test, EnableMultipleCategories) {
     Core::hresult hr = plugin->Enable(
         Exchange::IMessageControl::TRACING,
         "category1", 
         "module1",
         true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Enable tracing for category1 should succeed";
     hr = plugin->Enable(
         Exchange::IMessageControl::TRACING,
         "category2",
         "module1", 
         true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Enable tracing for category2 should succeed";
 }
-/*
-TEST_F(MessageControlL1Test, EnableAndVerifyControls) {
-    plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", true);
-    
-    Exchange::IMessageControl::IControlIterator* controls = nullptr;
-    Core::hresult hr = plugin->Controls(controls);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-    ASSERT_NE(nullptr, controls);
 
-    bool found = false;
-    Exchange::IMessageControl::Control current;
-    while (controls->Next(current)) {
-        found = true;
-    }
-    EXPECT_TRUE(found);
-    controls->Release();
-}
-*/
 TEST_F(MessageControlL1Test, EnableAndDisableMultiple) {
     plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", true);
     plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "cat2", "mod2", true);
     plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "cat1", "mod1", false);
     plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "cat2", "mod2", false);
-    
     Exchange::IMessageControl::IControlIterator* controls = nullptr;
     Core::hresult hr = plugin->Controls(controls);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Controls should succeed after enable/disable";
     controls->Release();
 }
 
 TEST_F(MessageControlL1Test, InboundCommunication) {
     Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("command");
-    EXPECT_TRUE(element.IsValid());
-
-    Core::ProxyType<Core::JSON::IElement> response = 
-        plugin->Inbound(1234, element);
-    EXPECT_TRUE(response.IsValid());
+    EXPECT_TRUE(element.IsValid()) << "Inbound command should be valid";
+    Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(1234, element);
+    EXPECT_TRUE(response.IsValid()) << "Inbound response should be valid";
 }
 
 TEST_F(MessageControlL1Test, WebSocketInboundFlow) {
     Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("test");
-    EXPECT_TRUE(element.IsValid());
-    
+    EXPECT_TRUE(element.IsValid()) << "Inbound test should be valid";
     Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(1234, element);
-    EXPECT_TRUE(response.IsValid());
+    EXPECT_TRUE(response.IsValid()) << "Inbound response should be valid";
 }
-/*
-TEST_F(MessageControlL1Test, MessageOutputControl) {
-    plugin->Enable(Exchange::IMessageControl::STANDARD_OUT, "test", "module1", true);
-    plugin->Enable(Exchange::IMessageControl::STANDARD_ERROR, "test", "module2", true);
-    
-    Exchange::IMessageControl::IControlIterator* controls = nullptr;
-    Core::hresult hr = plugin->Controls(controls);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-    ASSERT_NE(nullptr, controls);
 
-    int count = 0;
-    Exchange::IMessageControl::Control current;
-    while (controls->Next(current)) {
-        count++;
-    }
-    EXPECT_GT(count, 0);
-    controls->Release();
-}
-*/
 TEST_F(MessageControlL1Test, VerifyMultipleEnableDisable) {
     for(auto type : {
         Exchange::IMessageControl::TRACING,
         Exchange::IMessageControl::LOGGING,
         Exchange::IMessageControl::REPORTING}) {
-
         Core::hresult hr = plugin->Enable(type, "category1", "testmodule", true);
-        EXPECT_EQ(Core::ERROR_NONE, hr);
-        
+        EXPECT_EQ(Core::ERROR_NONE, hr) << "Enable should succeed for type " << type;
         Exchange::IMessageControl::IControlIterator* controls = nullptr;
         hr = plugin->Controls(controls);
-        EXPECT_EQ(Core::ERROR_NONE, hr);
-        ASSERT_NE(nullptr, controls);
+        EXPECT_EQ(Core::ERROR_NONE, hr) << "Controls should succeed for type " << type;
+        ASSERT_NE(nullptr, controls) << "Controls iterator should not be null";
         controls->Release();
-
         hr = plugin->Enable(type, "category1", "testmodule", false);
-        EXPECT_EQ(Core::ERROR_NONE, hr);
+        EXPECT_EQ(Core::ERROR_NONE, hr) << "Disable should succeed for type " << type;
     }
 }
 
 TEST_F(MessageControlL1Test, InboundMessageFlow) {
     Core::ProxyType<Core::JSON::IElement> element = plugin->Inbound("command");
-    EXPECT_TRUE(element.IsValid());
-
+    EXPECT_TRUE(element.IsValid()) << "Inbound command should be valid";
     for(uint32_t id = 1; id < 4; id++) {
         Core::ProxyType<Core::JSON::IElement> response = plugin->Inbound(id, element);
-        EXPECT_TRUE(response.IsValid());
+        EXPECT_TRUE(response.IsValid()) << "Inbound response for id " << id << " should be valid";
     }
 }
 
 TEST_F(MessageControlL1Test, AttachDetachChannel) {
-    // Initialize shell first
     _shell = new TestShell();
-    _shellOwned = true; // fixture owns this allocation
-    ASSERT_NE(nullptr, _shell);
+    _shellOwned = true;
+    ASSERT_NE(nullptr, _shell) << "Shell should not be null";
     string result = plugin->Initialize(_shell);
-    EXPECT_TRUE(result.empty());
-
+    EXPECT_TRUE(result.empty()) << "Plugin should initialize with empty result";
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks())) {
-            State(static_cast<ChannelState>(2), true); // Use ACTIVATED state
+            State(static_cast<ChannelState>(2), true);
         }
-        
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -406,15 +274,12 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
         }
         void Received(Core::ProxyType<Core::JSON::IElement>& element) override {}
         void Received(const string& text) override {}
-
     private:
         uint32_t _baseTime;
     };
-
     TestChannel channel;
-    EXPECT_TRUE(plugin->Attach(channel));
+    EXPECT_TRUE(plugin->Attach(channel)) << "Attach channel should succeed";
     plugin->Detach(channel);
-
     plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
@@ -422,23 +287,19 @@ TEST_F(MessageControlL1Test, AttachDetachChannel) {
 }
 
 TEST_F(MessageControlL1Test, MultipleAttachDetach) {
-    // Initialize shell first
     _shell = new TestShell();
-    _shellOwned = true; // fixture owns this allocation
-    ASSERT_NE(nullptr, _shell);
+    _shellOwned = true;
+    ASSERT_NE(nullptr, _shell) << "Shell should not be null";
     string result = plugin->Initialize(_shell);
-    EXPECT_TRUE(result.empty());
-
+    EXPECT_TRUE(result.empty()) << "Plugin should initialize with empty result";
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel(uint32_t id) 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899))
             , _baseTime(static_cast<uint32_t>(Core::Time::Now().Ticks()))
             , _id(id) {
-            State(static_cast<ChannelState>(2), true); // Use ACTIVATED state
-            
+            State(static_cast<ChannelState>(2), true);
         }
-        
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -451,242 +312,177 @@ TEST_F(MessageControlL1Test, MultipleAttachDetach) {
         }
         void Received(Core::ProxyType<Core::JSON::IElement>& element) override {}
         void Received(const string& text) override {}
-        
     private:
         uint32_t _baseTime;
         uint32_t _id;
     };
-
     TestChannel channel1(1);
     TestChannel channel2(2);
     TestChannel channel3(3);
-
-    EXPECT_TRUE(plugin->Attach(channel1));
-    EXPECT_TRUE(plugin->Attach(channel2));
-    EXPECT_TRUE(plugin->Attach(channel3));
-
+    EXPECT_TRUE(plugin->Attach(channel1)) << "Attach channel1 should succeed";
+    EXPECT_TRUE(plugin->Attach(channel2)) << "Attach channel2 should succeed";
+    EXPECT_TRUE(plugin->Attach(channel3)) << "Attach channel3 should succeed";
     plugin->Detach(channel2);
     plugin->Detach(channel1);
     plugin->Detach(channel3);
-
     plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
     _shellOwned = false;
 }
 
-// Validate Text::Convert output (console-like formatting) without constructing ConsoleOutput
 TEST_F(MessageControlL1Test, TextConvert_ForConsoleFormat) {
     Publishers::Text textConv(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
     Core::Messaging::MessageInfo defaultMeta;
     const string payload = "console-output-test";
-
     const string converted = textConv.Convert(defaultMeta, payload);
-    EXPECT_NE(string::npos, converted.find(payload));
-    EXPECT_NE(string::npos, converted.find("\n")); // console lines end with newline
+    EXPECT_NE(string::npos, converted.find(payload)) << "Converted text should contain payload";
+    EXPECT_NE(string::npos, converted.find("\n")) << "Converted text should contain newline";
 }
 
-// Validate converter output used by syslog (safe check, no syslog access)
 TEST_F(MessageControlL1Test, SyslogOutput_ConverterOutput) {
     Publishers::Text textConv(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
     Core::Messaging::MessageInfo defaultMeta;
     const string payload = "syslog-output-test";
-
     const string converted = textConv.Convert(defaultMeta, payload);
-    EXPECT_NE(string::npos, converted.find(payload));
+    EXPECT_NE(string::npos, converted.find(payload)) << "Converted text should contain payload";
 }
 
 TEST_F(MessageControlL1Test, WebSocketOutput_AttachCapacity_Command_Received) {
-    // Use heap-allocated TestShell to match refcount lifecycle used by WebSocketOutput::Initialize/Deinitialize
     TestShell* shell = new TestShell();
     Publishers::WebSocketOutput ws;
-
     ws.Initialize(shell, 1);
-    EXPECT_TRUE(ws.Attach(42));
-    EXPECT_FALSE(ws.Attach(43));
-
+    EXPECT_TRUE(ws.Attach(42)) << "Attach should succeed for id 42";
+    EXPECT_FALSE(ws.Attach(43)) << "Attach should fail for id 43";
     Core::ProxyType<Core::JSON::IElement> cmd = ws.Command();
-    EXPECT_TRUE(cmd.IsValid());
-
+    EXPECT_TRUE(cmd.IsValid()) << "Command should be valid";
     Core::ProxyType<Core::JSON::IElement> ret = ws.Received(42, cmd);
-    EXPECT_TRUE(ret.IsValid());
-
-    EXPECT_TRUE(ws.Detach(42));
+    EXPECT_TRUE(ret.IsValid()) << "Received should be valid for id 42";
+    EXPECT_TRUE(ws.Detach(42)) << "Detach should succeed for id 42";
     ws.Deinitialize();
-
-    // Release shell (Deinitialize released once); free heap-allocated shell explicitly.
     delete shell;
 }
 
 TEST_F(MessageControlL1Test, WebSocketOutput_Message_NoCrash_SubmitCalled) {
     TestShell* shell = new TestShell();
     Publishers::WebSocketOutput ws;
-
     ws.Initialize(shell, 2);
-    EXPECT_TRUE(ws.Attach(1001));
-
+    EXPECT_TRUE(ws.Attach(1001)) << "Attach should succeed for id 1001";
     Core::Messaging::MessageInfo defaultMeta;
     ws.Message(defaultMeta, "websocket-export-test");
-
-    EXPECT_TRUE(ws.Detach(1001));
+    EXPECT_TRUE(ws.Detach(1001)) << "Detach should succeed for id 1001";
     ws.Deinitialize();
-
-    // Explicitly free heap-allocated TestShell
     delete shell;
 }
 
-// Ensure plugin Initialize creates a FileOutput when 'filepath' is present in config and file is writable.
 TEST_F(MessageControlL1Test, MessageControl_InitializeCreatesFileOutput) {
-    // Reuse TestShell with file-config via constructor
     TestShell* shell = new TestShell(R"({"filepath":"test_messagecontrol_init.log","abbreviated":true})");
-    ASSERT_NE(nullptr, shell);
-
+    ASSERT_NE(nullptr, shell) << "Shell should not be null";
     string initResult = plugin->Initialize(shell);
-    EXPECT_TRUE(initResult.empty());
-
+    EXPECT_TRUE(initResult.empty()) << "Plugin should initialize with empty result";
     const string expectedFile = "/tmp/test_messagecontrol_init.log";
     std::ifstream in(expectedFile);
     if (in.good()) {
         in.close();
-        EXPECT_TRUE(std::ifstream(expectedFile).good());
+        EXPECT_TRUE(std::ifstream(expectedFile).good()) << "File should exist after initialization";
         std::remove(expectedFile.c_str());
     } else {
         GTEST_SKIP() << "Cannot create/read temp file in this environment; skipping file existence check.";
     }
-
     plugin->Deinitialize(shell);
-    // Deinitialize performed one Release; explicitly delete the heap-allocated test shell.
     delete shell;
 }
 
-// Validate JSON option setters/getters and that Convert sets Message even with default metadata.
 TEST_F(MessageControlL1Test, JSON_OutputOptions_TogglesAndConvert) {
     Publishers::JSON json;
-    // Toggle various options on/off and verify getters
-    json.FileName(true); EXPECT_TRUE(json.FileName());
-    json.LineNumber(true); EXPECT_TRUE(json.LineNumber());
-    json.ClassName(true); EXPECT_TRUE(json.ClassName());
-    json.Category(true); EXPECT_TRUE(json.Category());
-    json.Module(true); EXPECT_TRUE(json.Module());
-    json.Callsign(true); EXPECT_TRUE(json.Callsign());
-    json.Date(true); EXPECT_TRUE(json.Date());
-    json.Paused(false); EXPECT_FALSE(json.Paused());
-
-    // Toggle some off again
-    json.FileName(false); EXPECT_FALSE(json.FileName());
-    json.Date(false); EXPECT_FALSE(json.Date());
-
-    // Convert with default/INVALID metadata should still set Message
+    json.FileName(true); EXPECT_TRUE(json.FileName()) << "FileName option should be enabled";
+    json.LineNumber(true); EXPECT_TRUE(json.LineNumber()) << "LineNumber option should be enabled";
+    json.ClassName(true); EXPECT_TRUE(json.ClassName()) << "ClassName option should be enabled";
+    json.Category(true); EXPECT_TRUE(json.Category()) << "Category option should be enabled";
+    json.Module(true); EXPECT_TRUE(json.Module()) << "Module option should be enabled";
+    json.Callsign(true); EXPECT_TRUE(json.Callsign()) << "Callsign option should be enabled";
+    json.Date(true); EXPECT_TRUE(json.Date()) << "Date option should be enabled";
+    json.Paused(false); EXPECT_FALSE(json.Paused()) << "Paused option should be disabled";
+    json.FileName(false); EXPECT_FALSE(json.FileName()) << "FileName option should be disabled";
+    json.Date(false); EXPECT_FALSE(json.Date()) << "Date option should be disabled";
     Core::Messaging::MessageInfo defaultMeta;
     Publishers::JSON::Data data;
     json.Convert(defaultMeta, "json-payload", data);
-    EXPECT_EQ(std::string("json-payload"), std::string(data.Message));
+    EXPECT_EQ(std::string("json-payload"), std::string(data.Message)) << "Converted message should match payload";
 }
 
 TEST_F(MessageControlL1Test, MessageOutput_SimpleText_JSON) {
-    // Use default MessageInfo (invalid) to ensure functions don't ASSERT and do return sensible values.
-
-    Core::Messaging::MessageInfo defaultMeta; // default/invalid metadata
-
-    // Text::Convert: should return string containing the payload even with invalid metadata
+    Core::Messaging::MessageInfo defaultMeta;
     Publishers::Text textConv(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
     const string payload = "hello-text";
     const string result = textConv.Convert(defaultMeta, payload);
-    EXPECT_NE(string::npos, result.find(payload));
-
-    // JSON::Convert: should set Data.Message at minimum
+    EXPECT_NE(string::npos, result.find(payload)) << "Converted text should contain payload";
     Publishers::JSON::Data data;
     Publishers::JSON jsonConv;
     jsonConv.Convert(defaultMeta, "json-msg", data);
-    EXPECT_EQ(std::string("json-msg"), std::string(data.Message));
-
-  // UDPOutput::Message: ensure it executes without crash using default metadata
+    EXPECT_EQ(std::string("json-msg"), std::string(data.Message)) << "Converted message should match payload";
     Core::NodeId anyNode("127.0.0.1", 0);
     Publishers::UDPOutput udp(anyNode);
-    
     udp.Message(defaultMeta, "udp-msg");
-    SUCCEED(); // if we reach here, the call did not ASSERT/crash
+    SUCCEED() << "UDPOutput::Message should not crash";
 }
 
 TEST_F(MessageControlL1Test, MessageOutput_FileWrite) {
-	// Create a small temp file and verify FileOutput writes the payload when file can be created.
 	const string tmpName = "/tmp/test_messageoutput_filewrite.log";
-	// Ensure no leftover
 	std::remove(tmpName.c_str());
-
-	// Create FileOutput using same constructor used elsewhere in repo
 	Publishers::FileOutput fileOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED, tmpName);
-
-	Core::Messaging::MessageInfo defaultMeta; // invalid metadata tolerated by Convert()
+	Core::Messaging::MessageInfo defaultMeta;
 	const string payload = "file-write-test-payload";
-
-	// Try to write; FileOutput::Message checks file internals itself.
 	fileOutput.Message(defaultMeta, payload);
-
-	// If file exists, read and verify payload; otherwise skip gracefully.
 	std::ifstream in(tmpName);
 	if (in.good()) {
 		std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 		in.close();
-		EXPECT_NE(string::npos, content.find(payload));
-		// cleanup
+		EXPECT_NE(string::npos, content.find(payload)) << "File should contain payload";
 		std::remove(tmpName.c_str());
 	} else {
-		// Environment prevented file creation; skip the test as not applicable in this environment
 		GTEST_SKIP() << "Cannot create/read temp file; skipping FileOutput write verification.";
 	}
 }
 
-// New: enable using empty category/module should be accepted (exercise input handling)
 TEST_F(MessageControlL1Test, EnableWithEmptyFields) {
     Core::hresult hr = plugin->Enable(
         Exchange::IMessageControl::LOGGING,
-        "", // empty category
-        "", // empty module
+        "",
+        "",
         true);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Enable with empty category/module should succeed";
 }
 
-// New: WebSocketOutput::Detach for unknown id should return false (exercise detach branch)
 TEST_F(MessageControlL1Test, WebSocketOutput_UnknownDetach) {
     TestShell* shell = new TestShell();
     Publishers::WebSocketOutput ws;
-
     ws.Initialize(shell, 1);
-    // Detach an id that was never attached; expect false
-    EXPECT_FALSE(ws.Detach(9999));
+    EXPECT_FALSE(ws.Detach(9999)) << "Detach should fail for unknown id";
     ws.Deinitialize();
-    // Explicit delete instead of relying on Release() to free memory
     delete shell;
 }
 
 TEST_F(MessageControlL1Test, TestShell_SubstituteAndMetadata) {
-    TestShell shell; // stack instance
+    TestShell shell;
     const string input = "replace-me";
-    EXPECT_EQ(input, shell.Substitute(input));
-
+    EXPECT_EQ(input, shell.Substitute(input)) << "Substitute should return input";
     string meta;
     Core::hresult hr = shell.Metadata(meta);
-    EXPECT_EQ(Core::ERROR_NONE, hr);
-    // Metadata result is not strictly specified; ensure call succeeds and returns a string (possibly empty)
-    EXPECT_TRUE(meta.size() >= 0);
+    EXPECT_EQ(Core::ERROR_NONE, hr) << "Metadata should succeed";
+    EXPECT_TRUE(meta.size() >= 0) << "Metadata string should be non-negative length";
 }
 
-// New: JSON::Convert should do nothing when Paused bit is set
 TEST_F(MessageControlL1Test, JSON_Paused_PreventsConvert) {
     Publishers::JSON json;
     Publishers::JSON::Data data;
-    // Ensure paused prevents any conversion (data.Message should remain empty)
     json.Paused(true);
-
     Core::Messaging::MessageInfo defaultMeta;
     json.Convert(defaultMeta, "payload-should-be-ignored", data);
-
-    EXPECT_TRUE(std::string(data.Message).empty());
+    EXPECT_TRUE(std::string(data.Message).empty()) << "Message should be empty when paused";
 }
 
 TEST_F(MessageControlL1Test, Observer_Activated_Deactivated_Terminated_Simple) {
-    // Mock connection
     class MockConnection : public RPC::IRemoteConnection {
     public:
         MockConnection(uint32_t id) : _id(id) {}
@@ -699,31 +495,19 @@ TEST_F(MessageControlL1Test, Observer_Activated_Deactivated_Terminated_Simple) {
         void Terminate() override {}
         uint32_t Launch() override { return 0; }
         void PostMortem() override {}
-
     private:
         uint32_t _id;
     };
-
-    MockConnection connection(42); // Stack allocation for simplicity
-
-    // Initialize the plugin
+    MockConnection connection(42);
     _shell = new TestShell();
     _shellOwned = true;
     plugin->Initialize(_shell);
-
-    // Simulate activation
-    plugin->Attach(connection.Id()); // This indirectly triggers Activated
-    SUCCEED(); // Ensure no crashes or assertions during activation
-
-    // Simulate deactivation
-    plugin->Detach(connection.Id()); // This indirectly triggers Deactivated
-    SUCCEED(); // Ensure no crashes or assertions during deactivation
-
-    // Simulate termination indirectly
-    plugin->Detach(connection.Id()); // Detach again to simulate termination
-    SUCCEED(); // Ensure no crashes or assertions during termination
-
-    // Cleanup
+    plugin->Attach(connection.Id());
+    SUCCEED() << "Activated should not crash";
+    plugin->Detach(connection.Id());
+    SUCCEED() << "Deactivated should not crash";
+    plugin->Detach(connection.Id());
+    SUCCEED() << "Terminated should not crash";
     plugin->Deinitialize(_shell);
     delete _shell;
     _shell = nullptr;
@@ -732,23 +516,18 @@ TEST_F(MessageControlL1Test, Observer_Activated_Deactivated_Terminated_Simple) {
 
 TEST_F(MessageControlL1Test, ConsoleOutput_Message) {
     Publishers::ConsoleOutput consoleOutput(Core::Messaging::MessageInfo::abbreviate::ABBREVIATED);
-
     Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::TRACING, "TestCategory", "TestModule");
-    ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::TRACING); // Ensure metadata is valid
-
+    ASSERT_TRUE(metadata.Type() == Core::Messaging::Metadata::type::TRACING) << "Metadata type should be TRACING";
     Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
-	
-    testing::internal::CaptureStdout(); // Capture console output
+    testing::internal::CaptureStdout();
     consoleOutput.Message(messageInfo, "Test message for ConsoleOutput");
     std::string output = testing::internal::GetCapturedStdout();
-
-    EXPECT_NE(output.find("Test message for ConsoleOutput"), std::string::npos);
-    EXPECT_NE(output.find("TestCategory"), std::string::npos);
-    EXPECT_NE(output.find("TestModule"), std::string::npos);
+    EXPECT_NE(output.find("Test message for ConsoleOutput"), std::string::npos) << "Output should contain message";
+    EXPECT_NE(output.find("TestCategory"), std::string::npos) << "Output should contain category";
+    EXPECT_NE(output.find("TestModule"), std::string::npos) << "Output should contain module";
 }
 
 TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
-    // Test JSON output with various options enabled
     Publishers::JSON json;
     json.FileName(true);
     json.LineNumber(true);
@@ -756,26 +535,22 @@ TEST_F(MessageControlL1Test, JSONOutput_ConvertWithOptions) {
     json.Module(true);
     json.Callsign(true);
     json.Date(true);
-
     Core::Messaging::Metadata metadata(Core::Messaging::Metadata::type::TRACING, "JSONCategory", "JSONModule");
     Core::Messaging::MessageInfo messageInfo(metadata, Core::Time::Now().Ticks());
     Publishers::JSON::Data data;
-
     json.Convert(messageInfo, "Test JSON message", data);
-
-    EXPECT_EQ(data.Category.Value(), "JSONCategory");
-    EXPECT_EQ(data.Module.Value(), "JSONModule");
-    EXPECT_EQ(data.Message.Value(), "Test JSON message");
-    EXPECT_FALSE(data.Time.Value().empty());
+    EXPECT_EQ(data.Category.Value(), "JSONCategory") << "Category should match";
+    EXPECT_EQ(data.Module.Value(), "JSONModule") << "Module should match";
+    EXPECT_EQ(data.Message.Value(), "Test JSON message") << "Message should match";
+    EXPECT_FALSE(data.Time.Value().empty()) << "Time should not be empty";
 }
 
 TEST_F(MessageControlL1Test, NetworkNode_Configuration) {
     _shell = new TestShell(R"({"remote":{"port":1234,"binding":"192.168.1.1"}})");
     _shellOwned = true;
     string result = plugin->Initialize(_shell);
-    EXPECT_TRUE(result.empty());
+    EXPECT_TRUE(result.empty()) << "Plugin should initialize with empty result";
     plugin->Enable(Exchange::IMessageControl::LOGGING, "NetworkTest", "Module1", true);
-    // Do not use plugin or shell after deinitialize
     plugin->Deinitialize(_shell);
     _shellOwned = false;
     delete _shell;
@@ -786,7 +561,7 @@ TEST_F(MessageControlL1Test, UDP_Communication) {
     _shell = new TestShell(R"({"remote":{"port":9999,"binding":"127.0.0.1"}})");
     _shellOwned = true;
     string result = plugin->Initialize(_shell);
-    EXPECT_TRUE(result.empty());
+    EXPECT_TRUE(result.empty()) << "Plugin should initialize with empty result";
     plugin->Enable(Exchange::IMessageControl::LOGGING, "UDPTest", "Module1", true);
     SleepMs(100);
     plugin->Enable(Exchange::IMessageControl::LOGGING, "UDPTest", "Module1", false);
@@ -800,15 +575,13 @@ TEST_F(MessageControlL1Test, WebSocketOutput_ConnectionManagement) {
     _shell = new TestShell();
     _shellOwned = true;
     string result = plugin->Initialize(_shell);
-    EXPECT_TRUE(result.empty());
-
+    EXPECT_TRUE(result.empty()) << "Plugin should initialize with empty result";
     class TestChannel : public PluginHost::Channel {
     public:
         TestChannel() 
             : PluginHost::Channel(0, Core::NodeId("127.0.0.1", 8899)) {
             State(static_cast<ChannelState>(2), true);
         }
-        
         void LinkBody(Core::ProxyType<PluginHost::Request>& request) override {}
         void Received(Core::ProxyType<PluginHost::Request>& request) override {}
         void Send(const Core::ProxyType<Web::Response>& response) override {}
@@ -822,11 +595,10 @@ TEST_F(MessageControlL1Test, WebSocketOutput_ConnectionManagement) {
         void Received(Core::ProxyType<Core::JSON::IElement>& element) override {}
         void Received(const string& text) override {}
     };
-
     TestChannel channel1, channel2, channel3;
-    EXPECT_TRUE(plugin->Attach(channel1));
-    EXPECT_TRUE(plugin->Attach(channel2));
-    EXPECT_TRUE(plugin->Attach(channel3));
+    EXPECT_TRUE(plugin->Attach(channel1)) << "Attach channel1 should succeed";
+    EXPECT_TRUE(plugin->Attach(channel2)) << "Attach channel2 should succeed";
+    EXPECT_TRUE(plugin->Attach(channel3)) << "Attach channel3 should succeed";
     plugin->Detach(channel1);
     plugin->Detach(channel2);
     plugin->Detach(channel3);
