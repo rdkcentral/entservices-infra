@@ -40,6 +40,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 add_library(${MODULE_NAME} SHARED
         AppGateway.cpp
         AppGatewayImplementation.cpp
+        AppGatewayResponderImplementation.cpp
         Resolver.cpp
 	Module.cpp)
 
