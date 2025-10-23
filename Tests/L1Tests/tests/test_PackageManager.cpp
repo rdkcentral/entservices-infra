@@ -586,6 +586,9 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -593,7 +596,19 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
                 return true;
             }));
 
+    // Initialize the required parameters for download notification
+    StatusParams statusParams;
+    statusParams.downloadId = "1001";
+    statusParams.fileLocator = "/opt/CDL/package1001";
+    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -601,6 +616,9 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     // TC-11: Pause download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 
@@ -713,6 +731,9 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -720,7 +741,19 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
                 return true;
             }));
 
+    // Initialize the required parameters for download notification
+    StatusParams statusParams;
+    statusParams.downloadId = "1001";
+    statusParams.fileLocator = "/opt/CDL/package1001";
+    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
+
    	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -730,6 +763,9 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     // TC-17: Resume download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
     deinitforComRpc();
 
@@ -842,6 +878,9 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -849,7 +888,19 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
                 return true;
             }));
 
+    // Initialize the required parameters for download notification
+    StatusParams statusParams;
+    statusParams.downloadId = "1001";
+    statusParams.fileLocator = "/opt/CDL/package1001";
+    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -859,6 +910,9 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     // TC-23: Cancel download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -1094,6 +1148,9 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1101,9 +1158,21 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
                 return true;
             }));
 
+    // Initialize the required parameters for download notification
+    StatusParams statusParams;
+    statusParams.downloadId = "1001";
+    statusParams.fileLocator = "/opt/CDL/package1001";
+    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
+
     progress = {};
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1115,6 +1184,9 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
 
     EXPECT_NE(progress.progress, 0);
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
     
 	deinitforComRpc();
 	
@@ -1277,6 +1349,9 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1284,9 +1359,21 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
                 return true;
             }));
 
+    // Initialize the required parameters for download notification
+    StatusParams statusParams;
+    statusParams.downloadId = "1001";
+    statusParams.fileLocator = "/opt/CDL/package1001";
+    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
+
     uint64_t limit = 1024;
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1296,6 +1383,9 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     // TC-39: Set rate limit via downloadID using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId, limit));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
     
 	deinitforComRpc();
 	
