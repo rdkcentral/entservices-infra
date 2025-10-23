@@ -390,12 +390,12 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
             }));
     
     // TC-2: Add download request to priority queue using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
     // TC-3: Add download request to regular queue using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": false, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": false, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
     
     EXPECT_NE(mJsonRpcResponse.find("1002"), std::string::npos);
 
@@ -426,7 +426,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
             }));
     
     // TC-4: Download request error when internet is unavailable using JsonRpc
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
 
     deinitforJsonRpc();
 
@@ -586,9 +586,6 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-    Core::Sink<NotificationTest> notification;
-    uint32_t signal = PackageManager_invalidStatus;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -596,17 +593,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    // Initialize the required parameters for download notification
-    StatusParams statusParams;
-    statusParams.downloadId = "1001";
-    statusParams.fileLocator = "/opt/CDL/package1001";
-    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
-
-    notification.SetStatusParams(statusParams);
-
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
-
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -726,9 +713,6 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-    Core::Sink<NotificationTest> notification;
-    uint32_t signal = PackageManager_invalidStatus;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -736,17 +720,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    // Initialize the required parameters for download notification
-    StatusParams statusParams;
-    statusParams.downloadId = "1001";
-    statusParams.fileLocator = "/opt/CDL/package1001";
-    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
-
-    notification.SetStatusParams(statusParams);
-
    	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
-
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -868,9 +842,6 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-    Core::Sink<NotificationTest> notification;
-    uint32_t signal = PackageManager_invalidStatus;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -878,17 +849,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    // Initialize the required parameters for download notification
-    StatusParams statusParams;
-    statusParams.downloadId = "1001";
-    statusParams.fileLocator = "/opt/CDL/package1001";
-    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
-
-    notification.SetStatusParams(statusParams);
-
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
-
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1133,9 +1094,6 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     getDownloadParams();
 
-    Core::Sink<NotificationTest> notification;
-    uint32_t signal = PackageManager_invalidStatus;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1143,19 +1101,9 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
                 return true;
             }));
 
-    // Initialize the required parameters for download notification
-    StatusParams statusParams;
-    statusParams.downloadId = "1001";
-    statusParams.fileLocator = "/opt/CDL/package1001";
-    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
-
-    notification.SetStatusParams(statusParams);
-
     progress = {};
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
-
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1171,7 +1119,6 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 	deinitforComRpc();
 	
     releaseResources();
-
 }
 
 /* Test Case for download progress failure using ComRpc
@@ -1329,9 +1276,6 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     getDownloadParams();
 
-    Core::Sink<NotificationTest> notification;
-    uint32_t signal = PackageManager_invalidStatus;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1339,19 +1283,9 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
                 return true;
             }));
 
-    // Initialize the required parameters for download notification
-    StatusParams statusParams;
-    statusParams.downloadId = "1001";
-    statusParams.fileLocator = "/opt/CDL/package1001";
-    statusParams.reason = Exchange::IPackageDownloader::Reason::NONE;
-
-    notification.SetStatusParams(statusParams);
-
     uint64_t limit = 1024;
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
-
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
