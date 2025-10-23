@@ -19,8 +19,6 @@
 
 #include "AppNotifications.h"
 #include <interfaces/IConfiguration.h>
-#include <interfaces/json/JsonData_AppNotifications.h>
-#include <interfaces/json/JAppNotifications.h>
 
 
 #define API_VERSION_NUMBER_MAJOR    APPNOTIFICATIONS_MAJOR_VERSION
@@ -72,9 +70,6 @@ namespace Plugin {
                 configConnection->Configure(service);
                 configConnection->Release();
             }
-
-            //Invoking Plugin API register to wpeframework
-            Exchange::JAppNotifications::Register(*this, mAppNotifications);
         }
         else
         {
@@ -92,7 +87,6 @@ namespace Plugin {
         ASSERT(service == mService);
 
         if (mAppNotifications != nullptr) {
-            Exchange::JAppNotifications::Unregister(*this);
             RPC::IRemoteConnection *connection(service->RemoteConnection(mConnectionId));
             VARIABLE_IS_NOT_USED uint32_t result = mAppNotifications->Release();
             mAppNotifications = nullptr;
