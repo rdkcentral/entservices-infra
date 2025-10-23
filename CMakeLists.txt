@@ -171,6 +171,10 @@ if(PLUGIN_APPNOTIFICATIONS)
     add_subdirectory(AppNotifications)
 endif()
 
+if(PLUGIN_FBSETTINGS)
+	add_subdirectory(FbSettings)
+endif()
+
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
