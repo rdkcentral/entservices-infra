@@ -292,15 +292,16 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
         void OnAppInstallationStatus(const string& jsonresponse) override
         {
             fprintf(stderr, "jsonresponse: %s\n", jsonresponse.c_str());
-            
+
             m_status_signal = PackageManager_AppInstallStatus;
             JsonValue packageId;
             JsonValue version;
             
-            JsonObject obj;
-            if(obj.IElement::FromString(jsonresponse)) {
-                 packageId = obj["packageId"];
-                 version = obj["version"]; 
+            JsonArray arr;
+            if(arr.IElement::FromString(jsonresponse) && arr.Length() > 0) {
+                JsonObject obj = arr[0].Object();
+                packageId = obj["packageId"];
+                version = obj["version"]; 
             }
 
             std::unique_lock<std::mutex> lock(m_mutex);
