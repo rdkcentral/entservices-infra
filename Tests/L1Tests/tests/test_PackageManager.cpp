@@ -176,7 +176,7 @@ protected:
     void getDownloadParams()
     {
         // Initialize the parameters required for COM-RPC with default values
-        uri = "https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg";
+        uri = "https://httpbin.org/bytes/1024";
 
         options = { 
             true,2,1024
@@ -390,12 +390,12 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
             }));
     
     // TC-2: Add download request to priority queue using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
     // TC-3: Add download request to regular queue using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": false, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": false, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
     
     EXPECT_NE(mJsonRpcResponse.find("1002"), std::string::npos);
 
@@ -426,7 +426,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
             }));
     
     // TC-4: Download request error when internet is unavailable using JsonRpc
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     deinitforJsonRpc();
 
@@ -533,7 +533,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
                 return true;
             }));
     
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
     
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -669,7 +669,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -811,7 +811,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -951,7 +951,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1074,7 +1074,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
                 return true;
             }));
             
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1272,7 +1272,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://file-examples.com/storage/fe1fd8c39968f959f9b0c9c/2017/10/file_example_JPG_100kB.jpg\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1409,7 +1409,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
     initforJsonRpc();
     
     // TC-42: Error on install due to invalid signature using JsonRpc
-    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"\", \"reason\": 1}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -1439,7 +1439,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
             }));
     
     // TC-43: Failure on install using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/package1001\", \"reason\": 1}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -1590,10 +1590,10 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/package1001\", \"reason\": 1}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-46: Failure on uninstall using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\", \"errorReason\": \"no error\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
