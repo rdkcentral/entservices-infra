@@ -721,8 +721,7 @@ namespace WPEFramework
 
                     Exchange::IAppManager::LoadedAppInfo loadedAppInfo = {};
 		    loadedAppInfo.appId = appId;
-        //TODO - populate type field and rename currentLifecycleState to lifecycleState             
-        //loadedAppJson["type"] = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);              
+                    loadedAppInfo.type = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);
 		    loadedAppInfo.appInstanceId = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
 		    loadedAppInfo.activeSessionId = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
 
@@ -733,7 +732,7 @@ namespace WPEFramework
                     appInfo.appNewState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "currentLifecycleState")));
-                    loadedAppInfo.currentLifecycleState = appInfo.appNewState;
+                    loadedAppInfo.lifecycleState = appInfo.appNewState;
 
                     //Add loaded info
 		    loadedAppInfoList.push_back(loadedAppInfo);
