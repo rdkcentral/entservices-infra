@@ -18,31 +18,33 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/IFbSettings.h>
 #include <interfaces/IConfiguration.h>
+#include <interfaces/IAppGateway.h>
 #include <mutex>
 #include <map>
 #include "UtilsLogging.h"
 #include "ThunderUtils.h"
 #include "delegate/SettingsDelegate.h"
-#include "delegate/SystemDelegate.h"
 
-namespace WPEFramework {
-namespace Plugin {
-    class FbSettingsImplementation : public Exchange::IFbSettings, public Exchange::IConfiguration, public Exchange::IAppNotificationHandlerInternal {
-    private:
-
-        FbSettingsImplementation(const FbSettingsImplementation&) = delete;
-        FbSettingsImplementation& operator=(const FbSettingsImplementation&) = delete;
-
-        class EXTERNAL EventRegistrationJob : public Core::IDispatch
+namespace WPEFramework
+{
+    namespace Plugin
+    {
+        class FbSettingsImplementation : public Exchange::IConfiguration, public Exchange::IAppNotificationHandlerInternal, public Exchange::IAppGatewayRequestHandler
         {
+        private:
+            FbSettingsImplementation(const FbSettingsImplementation &) = delete;
+            FbSettingsImplementation &operator=(const FbSettingsImplementation &) = delete;
+
+            class EXTERNAL EventRegistrationJob : public Core::IDispatch
+            {
             protected:
                 EventRegistrationJob(FbSettingsImplementation *parent,
-                const string &event,
-                const bool listen): mParent(*parent),mEvent(event),mListen(listen){
-
+                                     const string &event,
+                                     const bool listen) : mParent(*parent), mEvent(event), mListen(listen)
+                {
                 }
+
             public:
                 EventRegistrationJob() = delete;
                 EventRegistrationJob(const EventRegistrationJob &) = delete;
@@ -52,7 +54,7 @@ namespace Plugin {
                 }
 
                 static Core::ProxyType<Core::IDispatch> Create(FbSettingsImplementation *parent,
-                const string& event, const bool listen)
+                                                               const string &event, const bool listen)
                 {
                     return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<EventRegistrationJob>::Create(parent, event, listen)));
                 }
@@ -62,62 +64,74 @@ namespace Plugin {
                 }
 
             private:
-            FbSettingsImplementation &mParent;
-            const string mEvent;
-            const bool mListen;
+                FbSettingsImplementation &mParent;
+                const string mEvent;
+                const bool mListen;
+            };
 
+        public:
+            FbSettingsImplementation();
+            ~FbSettingsImplementation();
+
+            BEGIN_INTERFACE_MAP(FbSettingsImplementation)
+            INTERFACE_ENTRY(Exchange::IConfiguration)
+            INTERFACE_ENTRY(Exchange::IAppNotificationHandlerInternal)
+            INTERFACE_ENTRY(Exchange::IAppGatewayRequestHandler)
+            END_INTERFACE_MAP
+
+            Core::hresult HandleAppEventNotifier(const string &event, const bool &listen, bool &status /* @out */) override;
+
+            // IAppGatewayRequestHandler interface
+            Core::hresult HandleAppGatewayRequest(const Exchange::Context &context /* @in */,
+                                                  const string &method /* @in */,
+                                                  const string &payload /* @in */,
+                                                  string &result /* @out */) override;
+
+            // IConfiguration interface
+            uint32_t Configure(PluginHost::IShell *shell);
+
+        private:
+            // Helper methods for System/Device - called by HandleAppGatewayRequest
+            Core::hresult GetDeviceMake(string &make /* @out */);
+            Core::hresult GetDeviceName(string &name /* @out */);
+            Core::hresult SetDeviceName(const string name /* @in */);
+            Core::hresult GetDeviceSku(string &sku /* @out */);
+            Core::hresult GetCountryCode(string &countryCode /* @out */);
+            Core::hresult SetCountryCode(const string countryCode /* @in */);
+            Core::hresult GetTimeZone(string &timeZone /* @out */);
+            Core::hresult SetTimeZone(const string timeZone /* @in */);
+            Core::hresult GetSecondScreenFriendlyName(string &name /* @out */);
+            Core::hresult SetName(const string &value /* @in */, string &result /* @out */);
+            Core::hresult AddAdditionalInfo(const string &value /* @in */, string &result /* @out */);
+
+            // Helper methods for network status - called by HandleAppGatewayRequest
+            Core::hresult GetInternetConnectionStatus(string &result /* @out */);
+
+            // Helper methods for UserSettings - called by HandleAppGatewayRequest
+            Core::hresult GetVoiceGuidance(string &result /* @out */);
+            Core::hresult GetAudioDescription(string &result /* @out */);
+            Core::hresult GetAudioDescriptionsEnabled(string &result /* @out */);
+            Core::hresult GetHighContrast(string &result /* @out */);
+            Core::hresult GetCaptions(string &result /* @out */);
+            Core::hresult SetVoiceGuidance(const bool enabled /* @in */);
+            Core::hresult SetAudioDescriptionsEnabled(const bool enabled /* @in */);
+            Core::hresult SetCaptions(const bool enabled /* @in */);
+            Core::hresult GetPresentationLanguage(string &result /* @out */);
+            Core::hresult GetLocale(string &result /* @out */);
+            Core::hresult SetLocale(const string &locale /* @in */);
+            Core::hresult GetPreferredAudioLanguages(string &result /* @out */);
+            Core::hresult GetPreferredCaptionsLanguages(string &result /* @out */);
+            Core::hresult SetPreferredAudioLanguages(const string &languages /* @in */);
+            Core::hresult SetPreferredCaptionsLanguages(const string &preferredLanguages /* @in */);
+            Core::hresult SetSpeed(const double speed /* @in */);
+            Core::hresult GetSpeed(double &speed /* @out */);
+            Core::hresult GetVoiceGuidanceHints(string &result /* @out */);
+            Core::hresult SetVoiceGuidanceHints(const bool enabled /* @in */);
+            Core::hresult GetVoiceGuidanceSettings(string &result /* @out */);
+
+            PluginHost::IShell *mShell;
+            std::shared_ptr<SettingsDelegate> mDelegate;
         };
-
-    public:
-        FbSettingsImplementation();
-        ~FbSettingsImplementation();
-
-        BEGIN_INTERFACE_MAP(FbSettingsImplementation)
-        INTERFACE_ENTRY(Exchange::IFbSettings)
-        INTERFACE_ENTRY(Exchange::IConfiguration)
-        INTERFACE_ENTRY(Exchange::IAppNotificationHandlerInternal)
-        END_INTERFACE_MAP
-
-        Core::hresult HandleAppEventNotifier(const string& event, const bool& listen, bool& status /* @out */) override;
-        Core::hresult SetName(const string& value  /* @in */, string& result) override;
-        Core::hresult AddAdditionalInfo(const string& value  /* @in @opaque */, string& result) override;
-
-        // IConfiguration interface
-        uint32_t Configure(PluginHost::IShell* shell);
-
-        // The following public interfaces provide the 13 org.rdk.System alias implementations via SystemDelegate.
-
-        // PUBLIC_INTERFACE
-        Core::hresult GetDeviceMake(string& make /* @out */);
-
-        // PUBLIC_INTERFACE
-        Core::hresult GetDeviceName(string& name /* @out */);
-
-        // PUBLIC_INTERFACE
-        Core::hresult SetDeviceName(const string name /* @in */);
-
-        // PUBLIC_INTERFACE
-        Core::hresult GetDeviceSku(string& sku /* @out */);
-
-        // PUBLIC_INTERFACE
-        Core::hresult GetCountryCode(string& countryCode /* @out */);
-
-        // PUBLIC_INTERFACE
-        Core::hresult SetCountryCode(const string countryCode /* @in */);
-
-        // PUBLIC_INTERFACE
-        Core::hresult GetTimeZone(string& timeZone /* @out */);
-
-        // PUBLIC_INTERFACE
-        Core::hresult SetTimeZone(const string timeZone /* @in */);
-
-        // PUBLIC_INTERFACE
-        Core::hresult GetSecondScreenFriendlyName(string& name /* @out */);
-
-    private:
-        PluginHost::IShell* mShell;
-        std::shared_ptr<SettingsDelegate> mDelegate;
-        std::shared_ptr<SystemDelegate> mSystemDelegate;
-    };
+    }
 }
-}
+
