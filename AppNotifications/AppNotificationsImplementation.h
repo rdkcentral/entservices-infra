@@ -56,11 +56,11 @@ namespace Plugin {
                 }
             }
 
-            void Add(const string& key, const Exchange::IAppNotifications::Context& context);
+            void Add(const string& key, const Exchange::IAppNotifications::AppNotificationContext& context);
 
-            void Remove(const string& key, const Exchange::IAppNotifications::Context& context);
+            void Remove(const string& key, const Exchange::IAppNotifications::AppNotificationContext& context);
 
-            std::vector<Exchange::IAppNotifications::Context> Get(const string& key) const;
+            std::vector<Exchange::IAppNotifications::AppNotificationContext> Get(const string& key) const;
 
             bool Exists(const string& key) const;
 
@@ -70,18 +70,18 @@ namespace Plugin {
             void EventUpdate(const string& key, const string& payloadStr, const string& appId );
 
             // Create a method to check if the SubscriberMap
-            void Dispatch(const Exchange::IAppNotifications::Context& context, const string& payload);
+            void Dispatch(const Exchange::IAppNotifications::AppNotificationContext& context, const string& payload);
 
-            void DispatchToGateway(const Exchange::IAppNotifications::Context& context, const string& payload);
+            void DispatchToGateway(const Exchange::IAppNotifications::AppNotificationContext& context, const string& payload);
 
-            void DispatchToLaunchDelegate(const Exchange::IAppNotifications::Context& context, const string& payload);
-
+            void DispatchToLaunchDelegate(const Exchange::IAppNotifications::AppNotificationContext& context, const string& payload);
+            void CleanupNotifications(const uint32_t &connectionId, const string& origin);
         private:
             AppNotificationsImplementation& mParent;
             mutable std::mutex mSubscriberMutex;
-            std::map<string, std::vector<Exchange::IAppNotifications::Context>> mSubscribers;
-            Exchange::IAppGatewayResponderInternal *mAppGateway;
-            Exchange::IAppGatewayResponderInternal *mInternalGatewayNotifier;
+            std::map<string, std::vector<Exchange::IAppNotifications::AppNotificationContext>> mSubscribers;
+            Exchange::IAppGatewayResponder *mAppGateway;
+            Exchange::IAppGatewayResponder *mInternalGatewayNotifier;
         };
 
         // Class to accept the module and event and subscribe to Thunder and use a handler
@@ -135,7 +135,7 @@ namespace Plugin {
         END_INTERFACE_MAP
 
         // IAppNotifications interface
-        Core::hresult Subscribe(const Exchange::IAppNotifications::Context &context /* @in */,
+        Core::hresult Subscribe(const Exchange::IAppNotifications::AppNotificationContext &context /* @in */,
                                             bool listen /* @in */,
                                             const string &module /* @in */,
                                             const string &event /* @in */) override;

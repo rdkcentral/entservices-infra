@@ -43,7 +43,7 @@ namespace WPEFramework
             }
         }
 
-        Core::hresult AppNotificationsImplementation::Subscribe(const Exchange::IAppNotifications::Context &context /* @in */,
+        Core::hresult AppNotificationsImplementation::Subscribe(const Exchange::IAppNotifications::AppNotificationContext &context /* @in */,
                                             bool listen /* @in */,
                                             const string &module /* @in */,
                                             const string &event /* @in */) {
@@ -55,12 +55,12 @@ namespace WPEFramework
                     // Thunder subscription
                     Core::IWorkerPool::Instance().Submit(SubscriberJob::Create(this, module, event, listen));
                 }
-                mSubMap.Add(module, context);
+                mSubMap.Add(event, context);
             } else {
-                mSubMap.Remove(module, context);
+                mSubMap.Remove(event, context);
                 // If all elements are removed the entry is erased automatically
                 // This can be used to measure unsubscribe
-                if (!mSubMap.Exists(module)) {
+                if (!mSubMap.Exists(event)) {
                     // Thunder unsubscription
                     Core::IWorkerPool::Instance().Submit(SubscriberJob::Create(this, module, event, listen));
                 }
@@ -79,7 +79,24 @@ namespace WPEFramework
 
         Core::hresult AppNotificationsImplementation::Cleanup(const uint32_t connectionId /* @in */, const string &origin /* @in */) {
             LOGINFO("Cleanup [connectionId=%d origin=%s]", connectionId, origin.c_str());
+            mSubMap.CleanupNotifications(connectionId, origin);
             return Core::ERROR_NONE;
+        }
+
+        void AppNotificationsImplementation::SubscriberMap::CleanupNotifications(const uint32_t &connectionId, const string& origin) {
+            std::lock_guard<std::mutex> lock(mSubscriberMutex);
+            for (auto it = mSubscribers.begin(); it != mSubscribers.end(); ) {
+                auto& vec = it->second;
+                vec.erase(std::remove_if(vec.begin(), vec.end(),
+                    [&](const Exchange::IAppNotifications::AppNotificationContext& context) {
+                        return (context.connectionId == connectionId) && (context.origin == origin);
+                    }), vec.end());
+                if (vec.empty()) {
+                    it = mSubscribers.erase(it);
+                } else {
+                    ++it;
+                }
+            }
         }
 
         uint32_t AppNotificationsImplementation::Configure(PluginHost::IShell *shell)
@@ -92,13 +109,13 @@ namespace WPEFramework
             return result;
         }
 
-        void AppNotificationsImplementation::SubscriberMap::Add(const string& key, const Exchange::IAppNotifications::Context& context) {
+        void AppNotificationsImplementation::SubscriberMap::Add(const string& key, const Exchange::IAppNotifications::AppNotificationContext& context) {
             string lowerKey = StringUtils::toLower(key);
             std::lock_guard<std::mutex> lock(mSubscriberMutex);
             mSubscribers[lowerKey].push_back(context);
         }
         
-        void AppNotificationsImplementation::SubscriberMap::Remove(const string& key, const Exchange::IAppNotifications::Context& context) {
+        void AppNotificationsImplementation::SubscriberMap::Remove(const string& key, const Exchange::IAppNotifications::AppNotificationContext& context) {
             std::lock_guard<std::mutex> lock(mSubscriberMutex);
             string lowerKey = StringUtils::toLower(key);
             auto it = mSubscribers.find(lowerKey);
@@ -111,7 +128,7 @@ namespace WPEFramework
             }
         }
 
-        std::vector<Exchange::IAppNotifications::Context> AppNotificationsImplementation::SubscriberMap::Get(const string& key) const {
+        std::vector<Exchange::IAppNotifications::AppNotificationContext> AppNotificationsImplementation::SubscriberMap::Get(const string& key) const {
             std::lock_guard<std::mutex> lock(mSubscriberMutex);
             string lowerKey = StringUtils::toLower(key);
             auto it = mSubscribers.find(lowerKey);
@@ -154,7 +171,7 @@ namespace WPEFramework
             }
         }
 
-        void AppNotificationsImplementation::SubscriberMap::Dispatch(const Exchange::IAppNotifications::Context& context, const string& payload) {
+        void AppNotificationsImplementation::SubscriberMap::Dispatch(const Exchange::IAppNotifications::AppNotificationContext& context, const string& payload) {
             if (ContextUtils::IsOriginGateway(context.origin)) {
                 DispatchToGateway(context, payload);
             } else {
@@ -162,27 +179,27 @@ namespace WPEFramework
             }
         }
 
-        void AppNotificationsImplementation::SubscriberMap::DispatchToGateway(const Exchange::IAppNotifications::Context& context, const string& payload) {
+        void AppNotificationsImplementation::SubscriberMap::DispatchToGateway(const Exchange::IAppNotifications::AppNotificationContext& context, const string& payload) {
             if (nullptr == mAppGateway) {
-                mAppGateway = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppGatewayResponderInternal>(APP_GATEWAY_CALLSIGN);
+                mAppGateway = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppGatewayResponder>(APP_GATEWAY_CALLSIGN);
                 if (mAppGateway == nullptr) {
                     LOGERR("Failed to get IAppGateway interface");
                     return;
                 }
             }
-            Exchange::Context gatewayContext = ContextUtils::ConvertNotificationToAppGatewayContext(context);
+            Exchange::GatewayContext gatewayContext = ContextUtils::ConvertNotificationToAppGatewayContext(context);
             mAppGateway->Respond(gatewayContext, payload);
         }
 
-        void AppNotificationsImplementation::SubscriberMap::DispatchToLaunchDelegate(const Exchange::IAppNotifications::Context& context, const string& payload) {
+        void AppNotificationsImplementation::SubscriberMap::DispatchToLaunchDelegate(const Exchange::IAppNotifications::AppNotificationContext& context, const string& payload) {
             if (nullptr == mInternalGatewayNotifier) {
-                mInternalGatewayNotifier = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppGatewayResponderInternal>(INTERNAL_GATEWAY_CALLSIGN);
+                mInternalGatewayNotifier = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppGatewayResponder>(INTERNAL_GATEWAY_CALLSIGN);
                 if (mInternalGatewayNotifier == nullptr) {
                     LOGERR("Failed to get ILaunchDelegate interface");
                     return;
                 }
             }
-            Exchange::Context gatewayContext = ContextUtils::ConvertNotificationToAppGatewayContext(context);
+            Exchange::GatewayContext gatewayContext = ContextUtils::ConvertNotificationToAppGatewayContext(context);
             mInternalGatewayNotifier->Respond(gatewayContext, payload);
         }
 
@@ -216,7 +233,7 @@ namespace WPEFramework
             // Check if Plugins is activated before making a request
             bool status = false;
             LOGDBG("Inside Notifier: ");
-            Exchange::IAppNotificationHandlerInternal *internalNotifier = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppNotificationHandlerInternal>(module);
+            Exchange::IAppNotificationHandler *internalNotifier = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppNotificationHandler>(module);
             if (internalNotifier != nullptr) {
                 if (Core::ERROR_NONE == internalNotifier->HandleAppEventNotifier(event, listen, status)) {
                     LOGINFO("Notifier status for %s:%s is %s", module.c_str(), event.c_str(), status ? "true" : "false");
