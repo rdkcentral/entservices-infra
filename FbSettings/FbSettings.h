@@ -19,31 +19,58 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/IFbSettings.h>
-
+#include <interfaces/IAppGateway.h>
+#include <interfaces/IAppNotifications.h>
+#include <mutex>
+#include <map>
+#include "UtilsLogging.h"
+#include "ThunderUtils.h"
+#include "delegate/SettingsDelegate.h"
 
 namespace WPEFramework {
 
     namespace Plugin {
 
 
-		// This is a server for a JSONRPC communication channel.
-		// For a plugin to be capable to handle JSONRPC, inherit from PluginHost::JSONRPC.
-		// By inheriting from this class, the plugin realizes the interface PluginHost::IDispatcher.
-		// This realization of this interface implements, by default, the following methods on this plugin
-		// - exists
-		// - register
-		// - unregister
-		// Any other method to be handled by this plugin  can be added can be added by using the
-		// templated methods Register on the PluginHost::JSONRPC class.
-		// As the registration/unregistration of notifications is realized by the class PluginHost::JSONRPC,
-		// this class exposes a public method called, Notify(), using this methods, all subscribed clients
-		// will receive a JSONRPC message as a notification, in case this method is called.
-        class FbSettings : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+		class FbSettings : public PluginHost::IPlugin, Exchange::IAppGatewayRequestHandler, Exchange::IAppNotificationHandler{
         private:
             // We do not allow this plugin to be copied !!
             FbSettings(const FbSettings&) = delete;
             FbSettings& operator=(const FbSettings&) = delete;
+
+            class EXTERNAL EventRegistrationJob : public Core::IDispatch
+        {
+            protected:
+                EventRegistrationJob(FbSettings *parent,
+                const string &event,
+                const bool listen): mParent(*parent),mEvent(event),mListen(listen){
+
+                }
+            public:
+                EventRegistrationJob() = delete;
+                EventRegistrationJob(const EventRegistrationJob &) = delete;
+                EventRegistrationJob &operator=(const EventRegistrationJob &) = delete;
+                ~EventRegistrationJob()
+                {
+                }
+
+                static Core::ProxyType<Core::IDispatch> Create(FbSettings *parent,
+                const string& event, const bool listen)
+                {
+                    return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<EventRegistrationJob>::Create(parent, event, listen)));
+                }
+                virtual void Dispatch()
+                {
+                    mParent.mDelegate->HandleAppEventNotifier(mEvent, mListen);
+                }
+
+            private:
+            FbSettings &mParent;
+            const string mEvent;
+            const bool mListen;
+
+        };
+
 
         public:
             FbSettings();
@@ -54,17 +81,64 @@ namespace WPEFramework {
 
             BEGIN_INTERFACE_MAP(FbSettings)
             INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_AGGREGATE(Exchange::IFbSettings, mFbSettings)
+            INTERFACE_ENTRY(Exchange::IAppGatewayRequestHandler)
+            INTERFACE_ENTRY(Exchange::IAppNotificationHandler)
             END_INTERFACE_MAP
+        
+        public:
+            virtual Core::hresult HandleAppEventNotifier(const string& event /* @in */, 
+                const bool& listen /* @in */, 
+                bool& status /* @out */) override;
+            
+            virtual Core::hresult HandleAppGatewayRequest(const Exchange::GatewayContext &context /* @in */,
+                                          const string& method /* @in */,
+                                          const string &payload /* @in @opaque */,
+                                          string& result /*@out @opaque */) override;
 
         private:
             void Deactivated(RPC::IRemoteConnection* connection);
+            // Helper methods for System/Device - called by HandleAppGatewayRequest
+            Core::hresult GetDeviceMake(string &make /* @out */);
+            Core::hresult GetDeviceName(string &name /* @out */);
+            Core::hresult SetDeviceName(const string name /* @in */);
+            Core::hresult GetDeviceSku(string &sku /* @out */);
+            Core::hresult GetCountryCode(string &countryCode /* @out */);
+            Core::hresult SetCountryCode(const string countryCode /* @in */);
+            Core::hresult GetTimeZone(string &timeZone /* @out */);
+            Core::hresult SetTimeZone(const string timeZone /* @in */);
+            Core::hresult GetSecondScreenFriendlyName(string &name /* @out */);
+            Core::hresult SetName(const string &value /* @in */, string &result /* @out */);
+            Core::hresult AddAdditionalInfo(const string &value /* @in */, string &result /* @out */);
+
+            // Helper methods for network status - called by HandleAppGatewayRequest
+            Core::hresult GetInternetConnectionStatus(string &result /* @out */);
+
+            // Helper methods for UserSettings - called by HandleAppGatewayRequest
+            Core::hresult GetVoiceGuidance(string &result /* @out */);
+            Core::hresult GetAudioDescription(string &result /* @out */);
+            Core::hresult GetAudioDescriptionsEnabled(string &result /* @out */);
+            Core::hresult GetHighContrast(string &result /* @out */);
+            Core::hresult GetCaptions(string &result /* @out */);
+            Core::hresult SetVoiceGuidance(const bool enabled /* @in */);
+            Core::hresult SetAudioDescriptionsEnabled(const bool enabled /* @in */);
+            Core::hresult SetCaptions(const bool enabled /* @in */);
+            Core::hresult GetPresentationLanguage(string &result /* @out */);
+            Core::hresult GetLocale(string &result /* @out */);
+            Core::hresult SetLocale(const string &locale /* @in */);
+            Core::hresult GetPreferredAudioLanguages(string &result /* @out */);
+            Core::hresult GetPreferredCaptionsLanguages(string &result /* @out */);
+            Core::hresult SetPreferredAudioLanguages(const string &languages /* @in */);
+            Core::hresult SetPreferredCaptionsLanguages(const string &preferredLanguages /* @in */);
+            Core::hresult SetSpeed(const double speed /* @in */);
+            Core::hresult GetSpeed(double &speed /* @out */);
+            Core::hresult GetVoiceGuidanceHints(string &result /* @out */);
+            Core::hresult SetVoiceGuidanceHints(const bool enabled /* @in */);
+            Core::hresult GetVoiceGuidanceSettings(string &result /* @out */);
 
         private:
-            PluginHost::IShell* mService;
-            Exchange::IFbSettings* mFbSettings;
+            PluginHost::IShell* mShell;
             uint32_t mConnectionId;
+            std::shared_ptr<SettingsDelegate> mDelegate;
         };
 	} // namespace Plugin
 } // namespace WPEFramework
