@@ -25,9 +25,6 @@
 /* Until we don't get it from Package configuration, use size as 1MB */
 #define STORAGE_MAX_SIZE 1024
 
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-
 namespace WPEFramework {
 namespace Plugin {
 
@@ -55,35 +52,35 @@ namespace Plugin {
 
     PackageManagerImplementation::~PackageManagerImplementation()
     {
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         LOGINFO("dtor PackageManagerImplementation: %p", this);
 
         std::list<Exchange::IPackageInstaller::INotification*>::iterator index(mInstallNotifications.begin());
         {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             while (index != mInstallNotifications.end()) {
-                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+                
                 (*index)->Release();
                 index++;
             }
         }
         mInstallNotifications.clear();
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         releaseStorageManagerObject();
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         std::list<Exchange::IPackageDownloader::INotification*>::iterator itDownloader(mDownloaderNotifications.begin());
         {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             while (itDownloader != mDownloaderNotifications.end()) {
-                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+                
                 (*itDownloader)->Release();
                 itDownloader++;
             }
         }
         mDownloaderNotifications.clear();
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
     }
 
     Core::hresult PackageManagerImplementation::Register(Exchange::IPackageDownloader::INotification* notification)
@@ -179,7 +176,7 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
  
 		done = true;
         cv.notify_one();
@@ -194,12 +191,12 @@ namespace Plugin {
         }
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         mCurrentservice->Release();
         mCurrentservice = nullptr;
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         return result;
     }
@@ -221,14 +218,14 @@ namespace Plugin {
 
     void PackageManagerImplementation::releaseStorageManagerObject()
     {
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         ASSERT(nullptr != mStorageManagerObject);
         if(mStorageManagerObject) {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             mStorageManagerObject->Release();
             mStorageManagerObject = nullptr;
         }
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
     }
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -327,7 +324,7 @@ namespace Plugin {
             return Core::ERROR_UNAVAILABLE;
         }
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         std::lock_guard<std::mutex> lock(mMutex);
 
@@ -343,7 +340,7 @@ namespace Plugin {
 
         downloadId.downloadId = di->GetId();
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         return result;
     }
@@ -668,18 +665,18 @@ namespace Plugin {
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             auto &state = it->second;
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             getRuntimeConfig(state.runtimeConfig, runtimeConfig);
         } else {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_GENERAL;
         }
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         return result;
     }
 
@@ -714,12 +711,12 @@ namespace Plugin {
         ASSERT(std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end());
         if (std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification) == mInstallNotifications.end()) {
             mInstallNotifications.push_back(notification);
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             notification->AddRef();
         }
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         mAdminLock.Unlock();
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         return result;
     }
 
@@ -727,24 +724,24 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGINFO();
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         mAdminLock.Lock();
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         auto item = std::find(mInstallNotifications.begin(), mInstallNotifications.end(), notification);
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         if (item != mInstallNotifications.end()) {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             notification->Release();
             mInstallNotifications.erase(item);
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
         }
         else {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             result = Core::ERROR_GENERAL;
         }
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         mAdminLock.Unlock();
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         return result;
     }
@@ -827,7 +824,7 @@ namespace Plugin {
     // XXX: right way to do this is via copy ctor, when we move to Thunder 5.2 and have commone struct RuntimeConfig
     void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig)
     {
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         runtimeConfig.dial = config.dial;
         runtimeConfig.wanLanAccess = config.wanLanAccess;
         runtimeConfig.thunder = config.thunder;
@@ -844,7 +841,7 @@ namespace Plugin {
         runtimeConfig.appPath = config.appPath;
         runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
     }
 
     #ifdef USE_LIBPACKAGE
@@ -1086,7 +1083,7 @@ namespace Plugin {
 
     void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const State &state)
     {
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         JsonArray list = JsonArray();
         JsonObject obj;
         obj["packageId"] = id;
@@ -1094,7 +1091,7 @@ namespace Plugin {
         obj["state"] = getInstallState(state.installState);
         if (!((state.installState == InstallState::INSTALLED) || (state.installState == InstallState::UNINSTALLED) ||
             (state.installState == InstallState::INSTALLING) || (state.installState == InstallState::UNINSTALLING))) {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             obj["failReason"] = getFailReason(state.failReason);
         }
         list.Add(obj);
@@ -1102,14 +1099,14 @@ namespace Plugin {
         if (!list.ToString(jsonstr)) {
             LOGERR("Failed to  stringify JsonArray");
         }
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         mAdminLock.Lock();
         for (auto notification: mInstallNotifications) {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             notification->OnAppInstallationStatus(jsonstr);
             LOGTRACE();
         }
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         mAdminLock.Unlock();
     }
 

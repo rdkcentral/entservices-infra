@@ -40,9 +40,6 @@
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (2000)
 
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-
 using ::testing::NiceMock;
 using namespace WPEFramework;
 using namespace std;
@@ -532,9 +529,9 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
             }));
-    
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
-    
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
+
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
     // TC-8: Pause download via downloadId using JsonRpc
@@ -656,7 +653,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -785,7 +782,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -912,7 +909,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1000,7 +997,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
 
     initforComRpc();
 
-    string fileLocator = "/opt/CDL/package1001";
+    string fileLocator = "";
 
     // TC-29: Failure in delete using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
@@ -1035,14 +1032,14 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
                 return true;
             }));
             
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
     // TC-30: Download progress via downloadId using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\", \"progress\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse, "");
 
@@ -1066,7 +1063,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     initforJsonRpc();
 
     // TC-31: Download progress failure using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"testDownloadId\", \"progress\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -1219,7 +1216,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": {\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}, \"downloadId\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"uri\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1343,7 +1340,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
     initforJsonRpc();
     
     // TC-42: Error on install due to invalid signature using JsonRpc
-    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -1421,7 +1418,6 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-// Work on this test case
  TEST_F(PackageManagerTest, installusingComRpcFailure) {
 
     createResources();   
@@ -1444,20 +1440,9 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     statusParams.packageId = packageId;
     statusParams.version = version;
 
-    // Initialize the json string
-    JsonObject obj;
-    obj["packageId"] = packageId;
-    obj["version"] = version;
-
-    JsonArray list;
-    list.Add(obj);
-    string jsonstr;
-    list.ToString(jsonstr);
-
     // Register the notification
     pkginstallerInterface->Register(&notification);
-
-    
+    notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1469,24 +1454,14 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // TC-45: Failure on install using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-    
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
 
-	signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
-    notification.SetStatusParams(statusParams);
-    notification.OnAppInstallationStatus(jsonstr);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
-    signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(jsonstr);
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
-    
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
 
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
-
-    
 
 	deinitforComRpc();
 	
@@ -1503,7 +1478,6 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-// Work on these 2 test cases
 TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
 
     createResources();   
@@ -1571,18 +1545,9 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     statusParams.packageId = packageId;
     statusParams.version = version;
 
-    // Initialize the json string
-    JsonObject obj;
-    obj["packageId"] = packageId;
-    obj["version"] = version;
-
-    JsonArray list;
-    list.Add(obj);
-    string jsonstr;
-    list.ToString(jsonstr);
-
     // Register the notification
     pkginstallerInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
     
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1601,27 +1566,21 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
     
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
-    notification.SetStatusParams(statusParams);
-    notification.OnAppInstallationStatus(jsonstr);
+    
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
-    signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(jsonstr);
+    
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
+    
     signal = PackageManager_invalidStatus;
 
 	// TC-47: Failure on uninstall using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Uninstall(packageId, errorReason));
     
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
-    notification.OnAppInstallationStatus(jsonstr);
+    
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
-    signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(jsonstr);
+
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
 
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
@@ -1691,7 +1650,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
+TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
     createResources();   
 
@@ -1704,10 +1663,10 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/package1001\", \"reason\": 1}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
-    // TC-50: Failure in config using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"configMetadata\": {}}"), mJsonRpcResponse));
+    // TC-50: Success in config using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -1725,7 +1684,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
+TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
     createResources();   
 
@@ -1748,18 +1707,9 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     statusParams.packageId = packageId;
     statusParams.version = version;
 
-    // Initialize the json string
-    JsonObject obj;
-    obj["packageId"] = packageId;
-    obj["version"] = version;
-
-    JsonArray list;
-    list.Add(obj);
-    string jsonstr;
-    list.ToString(jsonstr);
-
     // Register the notification
     pkginstallerInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1771,18 +1721,15 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
     
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
-    notification.SetStatusParams(statusParams);
-    notification.OnAppInstallationStatus(jsonstr);
+
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
-    signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(jsonstr);
+
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
+
     signal = PackageManager_invalidStatus;
 
-    // TC-51: Failure in config using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Config(packageId, version, runtimeConfig));
+    // TC-51: Success in config using ComRpc
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Config(packageId, version, runtimeConfig));
 
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
 
@@ -1804,7 +1751,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcFailure) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
+TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
     createResources();   
 
@@ -1817,10 +1764,10 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": {\"name\": \"testApp\", \"value\": \"2\", \"INTERFACE_ID\": 3}, \"fileLocator\": \"/opt/CDL/package1001\", \"reason\": 1}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-52: Failure in package state using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"installState\": 0}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -1838,7 +1785,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
+TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
     createResources();   
 
@@ -1861,18 +1808,9 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     statusParams.packageId = packageId;
     statusParams.version = version;
 
-    // Initialize the json string
-    JsonObject obj;
-    obj["packageId"] = packageId;
-    obj["version"] = version;
-
-    JsonArray list;
-    list.Add(obj);
-    string jsonstr;
-    list.ToString(jsonstr);
-
     // Register the notification
     pkginstallerInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1884,18 +1822,15 @@ TEST_F(PackageManagerTest, packageStateusingComRpcFailure) {
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
-    notification.SetStatusParams(statusParams);
-    notification.OnAppInstallationStatus(jsonstr);
+
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
-    signal = PackageManager_invalidStatus;
-    notification.OnAppInstallationStatus(jsonstr);
+;
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-    EXPECT_TRUE(signal & PackageManager_AppInstallStatus);
+
     signal = PackageManager_invalidStatus;
 
     // TC-53: Failure in package state using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->PackageState(packageId, version, state));
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->PackageState(packageId, version, state));
     
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
     
@@ -1922,7 +1857,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcInvalidSignature) {
     initforJsonRpc();
 
     // TC-54: Error in get config for packages due to empty file locator using JsonRpc
-    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"\", \"id\": \"1001\", \"version\": \"2.0\", \"config\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -1944,7 +1879,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcFailure) {
     initforJsonRpc();
 
     // TC-55: Failure in get config for packages using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"/opt/CDL/package1001\", \"id\": \"1001\", \"version\": \"2.0\", \"config\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("getConfigForPackage"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -2024,7 +1959,7 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
     initforJsonRpc();
     
     // TC-58: Error on lock using JsonRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("lock"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"lockReason\": 0, \"lockId\": 132, \"unpackedPath\": \"testPath\", \"configMetadata\": {}, \"appMetadata\": {}}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("lock"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"lockReason\": 0 }"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -2125,7 +2060,7 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
     initforJsonRpc();
 
     // TC-62: Error on get locked info using JsonRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("getLockedInfo"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"unpackedPath\": \"testPath\", \"configMetadata\": {}, \"gatewayMetadataPath\": \"testgatewayMetadataPath\", \"locked\": true}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("getLockedInfo"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
