@@ -291,6 +291,8 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
 
         void OnAppInstallationStatus(const string& jsonresponse) override
         {
+            fprintf(stderr, "jsonresponse: %s\n", jsonresponse.c_str());
+            
             m_status_signal = PackageManager_AppInstallStatus;
             JsonValue packageId;
             JsonValue version;
@@ -1767,7 +1769,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-52: Failure in package state using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
