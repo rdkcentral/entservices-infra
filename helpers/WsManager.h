@@ -1,3 +1,21 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 Metrological
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #pragma once
 
@@ -6,6 +24,11 @@
 #include <plugins/plugins.h>
 #include "UtilsLogging.h"
 #include "WebSocketLink.h"
+
+
+// TODO: Remove once IsNullValue() in core/JSON.h is fixed
+// and replace StreamJSONOneShotType with StreamJSONType
+#include "StreamJSONOneShot.h"
 
 #define DEFAULT_SOCKET_ADDRESS "127.0.0.1"
 using namespace WPEFramework;
@@ -18,8 +41,6 @@ public:
             delete mChannel;
             mChannel = nullptr;
         }
-        std::lock_guard<std::mutex> lock(_contextMutex);
-        _contexts.clear();
     }
     class Config : public Core::JSON::Container
     {
@@ -70,12 +91,12 @@ public:
     // WebSocket Server implementation
     public:
     class WebSocketServer
-        : public Core::StreamJSONType<Web::WebSocket::HWebSocketServerType<Core::SocketStream>, JSONObjectFactory &, Core::JSON::IElement>
+        : public Core::StreamJSONOneShotType<Web::WebSocket::HWebSocketServerType<Core::SocketStream>, JSONObjectFactory &, Core::JSON::IElement>
     {
     public:
         WebSocketServer() = delete;
         WebSocketServer &operator=(const WebSocketServer &) = delete;
-        typedef Core::StreamJSONType<Web::WebSocket::HWebSocketServerType<Core::SocketStream>, JSONObjectFactory &, Core::JSON::IElement> BaseClass;                
+        typedef Core::StreamJSONOneShotType<Web::WebSocket::HWebSocketServerType<Core::SocketStream>, JSONObjectFactory &, Core::JSON::IElement> BaseClass;                
 
     public:
         WebSocketServer(const SOCKET &connector, const Core::NodeId &remoteNode, Core::SocketServerType<WebSocketServer> *parent) :
@@ -97,10 +118,7 @@ public:
             _queue.Clear();
             _qLock.Unlock();
             LOGINFO("WebSocketServer destructed for connectionId: %d", _id);
-            if (_id != 0) {
-                LOGINFO("Clearing context for connectionId: %d", _id);
-                _parent.Interface().ClearContext(_id);
-            }
+
         }
 
     public:
@@ -145,17 +163,12 @@ public:
                 } else {
                     LOGWARN("No authentication handler set, proceeding without authentication");
                 }
-
-                WebSocketConnectionManager::Context ctx;
-                ctx.connectionId = _id;
-                _parent.Interface().StoreContext(ctx);
             }
-            else
+            else if(this->IsSuspended())
             {
                 LOGINFO("Closed - %s", this->IsSuspended() ? _T("SUSPENDED") : _T("OK"));
-                LOGDBG("Connection cleared");
                 if (_parent.Interface()._disconnectHandler != nullptr) {
-                    _parent.Interface()._disconnectHandler(_id);
+                    _parent.Interface()._disconnectHandler(Id());
                 }
             }
         }
@@ -239,11 +252,6 @@ public:
                     {
                         auto& manager = _parent.Interface();
                         if (manager._messageHandler) {
-                            // Step 1: Get Context from parent Interface
-                            WebSocketConnectionManager::Context ctx;
-                            _parent.Interface().GetContext(Id(),ctx);
-
-                            // Step 2: Extract parameters from the JSON-RPC message
                             std::string params = "{}"; // Default empty params
                             if (message->Parameters.IsSet() && !message->Parameters.Value().empty())
                             {
@@ -322,40 +330,6 @@ public:
         WebSocketConnectionManager &_parent;
     };
 
-protected:
-    // Context struct for JSON-RPC requests
-    struct Context
-    {
-        uint32_t connectionId;  // Integer for the execution/session context.
-    };
-
-    // Stores a new Context
-    void StoreContext(const Context &ctx)
-    {
-        std::lock_guard<std::mutex> lock(_contextMutex);
-        _contexts[ctx.connectionId] = ctx;
-    }
-
-    // Retrieves a Context by connectionId
-    bool GetContext(uint32_t connectionId, Context &ctx)
-    {
-        std::lock_guard<std::mutex> lock(_contextMutex);
-        auto it = _contexts.find(connectionId);
-        if (it != _contexts.end())
-        {
-            ctx = it->second;
-            return true;
-        }
-        return false;
-    }
-
-    // Clear context for connectionId
-    void ClearContext(uint32_t connectionId)
-    {
-        std::lock_guard<std::mutex> lock(_contextMutex);
-        _contexts.erase(connectionId);
-    }
-
 public:
         // Message handler callback type
     using MessageHandler = std::function<void(const std::string& method, const std::string& params, const uint32_t requestId, const uint32_t connectionId)>;
@@ -393,6 +367,30 @@ public:
         return true;
     }
 
+    bool DispatchNotificationToConnection(const uint32_t connectionId, const std::string &designator, const std::string &payload)
+    {
+        Core::ProxyType<Core::JSONRPC::Message> event = Core::ProxyType<Core::JSONRPC::Message>::Create();
+        event->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+        event->Designator = designator;
+        event->Parameters = payload;
+        LOGINFO("Emit Event for method=%s, connectionId=%d params=%s", designator.c_str(), connectionId, payload.c_str());
+        mChannel->Submit(connectionId, Core::ProxyType<Core::JSON::IElement>(event));
+        return true;
+    }
+
+    bool SendRequestToConnection(const uint32_t connectionId, const std::string &designator, const uint32_t requestId, const std::string &params)
+    {
+        Core::ProxyType<Core::JSONRPC::Message> request = Core::ProxyType<Core::JSONRPC::Message>::Create();
+        request->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+        request->Id = requestId;
+        request->Designator = designator;
+        request->Parameters = params;
+
+        LOGINFO("Send Request for method=%s, connectionId=%d params=%s", designator.c_str(), connectionId, params.c_str());
+        mChannel->Submit(connectionId, Core::ProxyType<Core::JSON::IElement>(request));
+        return true;
+    }
+
     // New Method to start websocket channel using NodeId
     bool Start(const Core::NodeId &remoteNode)
     {
@@ -427,8 +425,7 @@ public:
     }
 
 private:
-    std::unordered_map<uint32_t, Context> _contexts;
-    std::mutex _contextMutex;
+    
     MessageHandler _messageHandler;
     AuthHandler _authHandler;
     DisconnectHandler _disconnectHandler;

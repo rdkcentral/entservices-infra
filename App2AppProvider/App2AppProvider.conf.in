@@ -1,5 +1,0 @@
-autostart = "@PLUGIN_APP2APPPROVIDER_AUTOSTART@"
-precondition = ["Platform"]
-callsign = "org.rdk.App2AppProvider"
-startuporder = "@PLUGIN_APP2APPPROVIDER_STARTUPORDER@"
-

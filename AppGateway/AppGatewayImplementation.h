@@ -21,11 +21,9 @@
 
 #include "Module.h"
 #include "Resolver.h"
-#include "WsManager.h"
 #include <interfaces/IAppGateway.h>
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IAppNotifications.h>
-#include <interfaces/IApp2AppProvider.h>
 #include "ContextUtils.h"
 #include <com/com.h>
 #include <core/core.h>
@@ -34,8 +32,8 @@
 
 namespace WPEFramework {
 namespace Plugin {
-    using Context = Exchange::Context;
-    class AppGatewayImplementation : public Exchange::IAppGateway, public Exchange::IConfiguration, public Exchange::IAppGatewayResponderInternal
+    using Context = Exchange::GatewayContext;
+    class AppGatewayImplementation : public Exchange::IAppGatewayResolver, public Exchange::IConfiguration
     {
 
     public:
@@ -47,15 +45,13 @@ namespace Plugin {
         AppGatewayImplementation& operator=(const AppGatewayImplementation&) = delete;
 
         BEGIN_INTERFACE_MAP(AppGatewayImplementation)
-        INTERFACE_ENTRY(Exchange::IAppGateway)
         INTERFACE_ENTRY(Exchange::IConfiguration)
-        INTERFACE_ENTRY(Exchange::IAppGatewayResponderInternal)
+        INTERFACE_ENTRY(Exchange::IAppGatewayResolver)
         END_INTERFACE_MAP
 
     public:
-        Core::hresult Configure(Exchange::IAppGateway::IStringIterator *const &paths) override;
-        Core::hresult Respond(const Context &context, const string &payload) override;
-        Core::hresult Resolve(const Context &context, const string &method, const string &params) override;
+        Core::hresult Configure(Exchange::IAppGatewayResolver::IStringIterator *const &paths) override;
+        Core::hresult Resolve(const Context &context, const string &origin ,const string &method, const string &params, string& result) override;
 
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -105,12 +101,11 @@ namespace Plugin {
         {
         protected:
             RespondJob(AppGatewayImplementation *parent, 
-            const uint32_t connectionId,
-            const int requestId,
+            const Context& context,
             const std::string& payload,
             const std::string& destination
             )
-                : mParent(*parent), mPayload(payload), mRequestId(requestId), mConnectionId(connectionId), mDestination(destination)
+                : mParent(*parent), mPayload(payload), mContext(context), mDestination(destination)
             {
             }
 
@@ -124,21 +119,16 @@ namespace Plugin {
 
         public:
             static Core::ProxyType<Core::IDispatch> Create(AppGatewayImplementation *parent,
-                const uint32_t connectionId, const int requestId, const std::string& payload, const std::string& origin)
+                const Context& context, const std::string& payload, const std::string& origin)
             {
-                return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<RespondJob>::Create(parent, connectionId, requestId, payload, origin)));
+                return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<RespondJob>::Create(parent, context, payload, origin)));
             }
             virtual void Dispatch()
             {
                 if(ContextUtils::IsOriginGateway(mDestination)) {
-                    mParent.ReturnMessageInSocket(mConnectionId, mRequestId, mPayload);
+                    mParent.ReturnMessageInSocket(mContext, std::move(mPayload));
                 } else {
-                    Context gatewayContext = {
-                        mRequestId,
-                        mConnectionId,
-                        ""
-                     };
-                    mParent.SendToLaunchDelegate(gatewayContext, mPayload);
+                    mParent.SendToLaunchDelegate(mContext, std::move(mPayload));
                 }
                 
             }
@@ -146,8 +136,7 @@ namespace Plugin {
         private:
             AppGatewayImplementation &mParent;
             const std::string mPayload;
-            const int mRequestId;
-            const uint32_t mConnectionId;
+            const Context mContext;
             const std::string mDestination;
         };
 
@@ -187,18 +176,25 @@ namespace Plugin {
         Core::hresult HandleEvent(const Context &context, const string &alias, const string &event, const string &origin,  const bool listen);
         Core::hresult handleProvider(const Context &context, const string &providerCapability, const ProviderMethodType &type, const string &origin);
         
-        void ReturnMessageInSocket(const uint32_t connectionId, const int requestId, const string payload ) {
-            // Send response back to client
-            mWsManager.SendMessageToConnection(connectionId, payload, requestId);
+        void ReturnMessageInSocket(const Context& context, const string payload ) {
+            if (mAppGatewayResponder==nullptr) {
+                mAppGatewayResponder = mService->QueryInterface<Exchange::IAppGatewayResponder>();
+            }
+
+            if (mAppGatewayResponder == nullptr) {
+                LOGERR("AppGateway Responder not available");
+                return;
+            }
+            if (Core::ERROR_NONE != mAppGatewayResponder->Respond(context, payload)) {
+                LOGERR("Failed to Respond in Gateway");
+            }
         }
 
         PluginHost::IShell* mService;
         ResolverPtr mResolverPtr;
-        WebSocketConnectionManager mWsManager;
         Exchange::IAppNotifications *mAppNotifications; // Shared pointer to AppNotifications
-        Exchange::IAppGatewayAuthenticatorInternal *mAuthenticator; // Shared pointer to Authenticator
-        Exchange::IAppGatewayResponderInternal *mInternalGatewayResponder; // Shared pointer to InternalGatewayResponder
-        Exchange::IApp2AppProvider *mApp2AppProvider;
+        Exchange::IAppGatewayResponder *mAppGatewayResponder;
+        Exchange::IAppGatewayResponder *mInternalGatewayResponder; // Shared pointer to InternalGatewayResponder
         AppIdRegistry mAppIdRegistry;
         uint32_t InitializeResolver();
         uint32_t InitializeWebsocket();
@@ -206,7 +202,7 @@ namespace Plugin {
         uint32_t PreProcessEvent(const Context &context, const string& alias, const string &method, const string& origin, const string& params, string &resolution);
         uint32_t PreProcessProvider(const Context &context, const string& method, const string& params, const string& providerCapability, const ProviderMethodType &type, const string& origin, string &resolution);
         string UpdateContext(const Context &context, const string& method, const string& params);
-        Core::hresult InternalResolve(const Context &context, const string &method, const string &params, const string &origin);
+        Core::hresult InternalResolve(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult FetchResolvedData(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult InternalResolutionConfigure(std::vector<std::string> configPaths);
         void SendToLaunchDelegate(const Context& context, const string& payload);
