@@ -167,9 +167,9 @@ if(PLUGIN_APPGATEWAY)
     add_subdirectory(AppGateway)
 endif()
 
-#if(PLUGIN_APPNOTIFICATIONS)
-    #add_subdirectory(AppNotifications)
-#endif()
+if(PLUGIN_APPNOTIFICATIONS)
+    add_subdirectory(AppNotifications)
+endif()
 
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
