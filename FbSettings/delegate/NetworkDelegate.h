@@ -225,10 +225,10 @@ private:
             LOGDBG("onIPAddressChange: interface=%s, ip=%s, status=%d", interface.c_str(), ipaddress.c_str(), status);
         }
 
-        void onInternetStatusChange(const Exchange::INetworkManager::InternetStatus prevState, const Exchange::INetworkManager::InternetStatus currState)
+        void onInternetStatusChange(const Exchange::INetworkManager::InternetStatus prevState, const Exchange::INetworkManager::InternetStatus currState, const string interface)
         {
-            LOGINFO("onInternetStatusChange: prevState=%d, currState=%d", prevState, currState);
-            
+            LOGINFO("onInternetStatusChange: prevState=%d, currState=%d, interface=%s", prevState, currState, interface.c_str());
+
             // Map internet status to readable strings
             auto statusToString = [](Exchange::INetworkManager::InternetStatus status) -> string {
                 switch (status) {

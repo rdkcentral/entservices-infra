@@ -36,9 +36,9 @@ message("Setup ${MODULE_NAME} v${MODULE_VERSION}")
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_library(NMPROXY_LIB NAMES ${NAMESPACE}NetworkManagerProxy PATHS ${CMAKE_SYSROOT}/usr/lib/wpeframework/proxystubs)
 
 add_library(${MODULE_NAME} SHARED
-        FbSettingsImplementation.cpp
         FbSettings.cpp
         Module.cpp)
 
