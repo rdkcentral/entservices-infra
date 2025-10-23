@@ -53,6 +53,7 @@ namespace WPEFramework
             REGISTER,
             INVOKE,
             RESULT,
+            NOTIFY,            
             ERROR
         };
 
@@ -61,6 +62,7 @@ namespace WPEFramework
             {"org.rdk.app2appprovider.registerprovider", ProviderMethodType::REGISTER},
             {"org.rdk.app2appprovider.invokeprovider", ProviderMethodType::INVOKE},
             {"org.rdk.app2appprovider.invokeproviderresponse", ProviderMethodType::RESULT},
+            {"org.rdk.app2appprovider.notify", ProviderMethodType::NOTIFY},
             {"org.rdk.app2appprovider.invokeprovidererror", ProviderMethodType::ERROR}
         };
 
