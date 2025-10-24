@@ -206,7 +206,7 @@ namespace WPEFramework
             
         }
 
-        Core::hresult AppGatewayImplementation::InternalResolutionConfigure(std::vector<std::string> configPaths){
+        Core::hresult AppGatewayImplementation::InternalResolutionConfigure(std::vector<std::string>&& configPaths){
             // Process all paths in order - later paths override earlier ones
             bool anyConfigLoaded = false;
             for (size_t i = 0; i < configPaths.size(); i++)
@@ -237,13 +237,13 @@ namespace WPEFramework
 
         }
 
-        Core::hresult AppGatewayImplementation::Resolve(const Context &context, const string &origin, const string &method, const string &params, string& resolution)
+        Core::hresult AppGatewayImplementation::Resolve(const Context& context, const string& origin, const string& method, const string& params, string& resolution)
         {
             LOGINFO("method=%s params=%s", method.c_str(), params.c_str());
             return InternalResolve(context, method, params, origin, resolution);
         }
 
-        Core::hresult AppGatewayImplementation::InternalResolve(const Context &context, const string &method, const string &params, const string &origin, string& resolution)
+        Core::hresult AppGatewayImplementation::InternalResolve(const Context& context, const string& method, const string& params, const string& origin, string& resolution)
         {
             Core::hresult result = FetchResolvedData(context, method, params, origin, resolution);
             if (!resolution.empty()) {
