@@ -372,12 +372,10 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
     releaseResources();
 }
 
-/* Test Case for adding download request to a queue(priority/regular) using JsonRpc
+/* Test Case for adding download request to a regular queue using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, notifications/events, mocks and expectations
- * Invoke the download method using the JSON RPC handler, passing the required parameters and setting priority as true
- * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
- * Invoke the download method using the JSON RPC handler, passing the required parameters and setting priority as false
+ * Invoke the download method using the JSON RPC handler, passing the required parameters 
  * Verify that the download method is invoked successfully by asserting that it returns Core::ERROR_NONE and checking the downloadId
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
@@ -395,15 +393,10 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
                 return true;
             }));
     
-    // TC-2: Add download request to priority queue using JsonRpc
+    // TC-2: Add download request to regular queue using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
-
-    // TC-3: Add download request to regular queue using JsonRpc
-   // EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": false, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
-    
-    //EXPECT_NE(mJsonRpcResponse.find("1002"), std::string::npos);
 
     deinitforJsonRpc();
 
@@ -432,7 +425,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
             }));
     
     // TC-4: Download request error when internet is unavailable using JsonRpc
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     deinitforJsonRpc();
 
@@ -539,7 +532,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -680,7 +673,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -827,7 +820,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -970,7 +963,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1093,7 +1086,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
                 return true;
             }));
             
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1295,7 +1288,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"options\": [{\"priority\": true, \"retries\": 2, \"rateLimit\": 1024}]}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
