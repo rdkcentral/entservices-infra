@@ -559,7 +559,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
     EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
@@ -568,6 +568,8 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     // TC-8: Pause download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -715,7 +717,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
     EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
@@ -726,6 +728,8 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     // TC-14: Resume download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
@@ -877,7 +881,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 
     EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
     EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
@@ -1089,6 +1093,9 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1096,7 +1103,17 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
                 return true;
             }));
 
+    // Initialize the status params
+    StatusParams statusParams;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1104,6 +1121,9 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     // TC-28: Delete download failure when download in progress using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -1178,10 +1198,10 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
-
     // TC-30: Download progress via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse, "");
 
@@ -1260,8 +1280,6 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     EXPECT_EQ(downloadId.downloadId, "1001");
 
     string downloadId = "1001";
-
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
     // TC-32: Download progress via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
@@ -1388,7 +1406,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
     EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
     EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
@@ -1399,6 +1417,8 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
     // TC-36: Set rate limit via downloadID using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"1001\", \"limit\": 1024}"), mJsonRpcResponse));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 	
