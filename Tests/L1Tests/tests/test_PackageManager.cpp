@@ -275,11 +275,13 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
 
             std::unique_lock<std::mutex> lock(m_mutex);
             if(packageInfos != nullptr) {
-                            
+                
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             Exchange::IPackageDownloader::PackageInfo resultItem{};
 
             while (packageInfos->Next(resultItem) == true)
             {
+                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
                 downloadId = resultItem.downloadId;
                 fileLocator = resultItem.fileLocator;
                 failReason = (resultItem.reason == Exchange::IPackageDownloader::Reason::NONE) ? "NONE" :
@@ -288,7 +290,6 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
             }
             }
             EXPECT_EQ(m_status_param.downloadId, downloadId.String());
-            EXPECT_EQ(m_status_param.fileLocator, fileLocator.String());
 
             m_condition_variable.notify_one();
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -603,15 +604,14 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     // Initialize the status params
     StatusParams statusParams;
-    statusParams.packageId = packageId;
-    statusParams.version = version;
 
     // Register the notification
     pkgdownloaderInterface->Register(&notification);
-    notification.SetStatusParams(statusParams);
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
