@@ -303,10 +303,11 @@ namespace WPEFramework
             return result;
         }
         
-        string AppGatewayImplementation::UpdateContext(const Context &context, const string& method, const string& params){
+        string AppGatewayImplementation::UpdateContext(const Context &context, const string& method, const string& params, const bool& onlyAdditionalContext) {
             // Check if includeContext is enabled for this method
             std::string finalParams = params;
-            if (mResolverPtr->HasIncludeContext(method)) {
+            JsonValue additionalContext;
+            if (mResolverPtr->HasIncludeContext(method, additionalContext)) {
                 LOGDBG("Method '%s' requires context inclusion", method.c_str());
 
                 // Construct params with context
@@ -321,6 +322,10 @@ namespace WPEFramework
                 }
                 paramsObj["context"] = contextObj;
 
+                if (additionalContext.IsSet()) {
+                    paramsObj["additionalContext"] = additionalContext;
+                }
+
                 paramsObj.ToString(finalParams);
 
                 LOGDBG("Modified params with context: %s", finalParams.c_str());
@@ -332,7 +337,8 @@ namespace WPEFramework
             uint32_t result = Core::ERROR_GENERAL;
             Exchange::IAppGatewayRequestHandler *requestHandler = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayRequestHandler>(alias);
             if (requestHandler != nullptr) {
-                if (Core::ERROR_NONE != requestHandler->HandleAppGatewayRequest(context, method, params, resolution)) {
+                std::string finalParams = UpdateContext(context, method, params, true);
+                if (Core::ERROR_NONE != requestHandler->HandleAppGatewayRequest(context, method, finalParams, resolution)) {
                     LOGERR("HandleAppGatewayRequest failed for callsign: %s", alias.c_str());
                     ErrorUtils::CustomInternal("HandleAppGatewayRequest failed", resolution);
                 } else {
