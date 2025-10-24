@@ -174,8 +174,7 @@ namespace Plugin {
             const uint32_t connectionId);
 
         Core::hresult HandleEvent(const Context &context, const string &alias, const string &event, const string &origin,  const bool listen);
-        Core::hresult handleProvider(const Context &context, const string &providerCapability, const ProviderMethodType &type, const string &origin);
-        
+                
         void ReturnMessageInSocket(const Context& context, const string payload ) {
             if (mAppGatewayResponder==nullptr) {
                 mAppGatewayResponder = mService->QueryInterface<Exchange::IAppGatewayResponder>();
@@ -200,8 +199,7 @@ namespace Plugin {
         uint32_t InitializeWebsocket();
         uint32_t ProcessComRpcRequest(const Context &context, const string& alias, const string& method, const string& params, string &resolution);
         uint32_t PreProcessEvent(const Context &context, const string& alias, const string &method, const string& origin, const string& params, string &resolution);
-        uint32_t PreProcessProvider(const Context &context, const string& method, const string& params, const string& providerCapability, const ProviderMethodType &type, const string& origin, string &resolution);
-        string UpdateContext(const Context &context, const string& method, const string& params);
+        string UpdateContext(const Context &context, const string& method, const string& params, const bool& onlyAdditionalContext = false);
         Core::hresult InternalResolve(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult FetchResolvedData(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult InternalResolutionConfigure(std::vector<std::string> configPaths);

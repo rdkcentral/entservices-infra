@@ -107,11 +107,12 @@ namespace WPEFramework
                     r.alias = ExtractStringField(resolutionObj, "alias");
                     r.event = ExtractStringField(resolutionObj, "event");
                     r.permissionGroup = ExtractStringField(resolutionObj, "permissionGroup");
-                    r.providerCapability = ExtractStringField(resolutionObj, "providerCapability");
-                    r.includeContext = ExtractBooleanField(resolutionObj, "includeContext", false);
                     r.useComRpc = ExtractBooleanField(resolutionObj, "useComRpc", false);
-                    LOGDBG("[Resolver] Loaded resolution for key: %s -> alias: %s, event: %s, permissionGroup: %s, providerCapability: %s, includeContext: %s, useComRpc: %s",
-                           key.c_str(), r.alias.c_str(), r.event.c_str(), r.permissionGroup.c_str(), r.providerCapability.c_str(),
+                    r.additionalContext = ExtractAdditionalContext(resolutionObj, "additionalContext");
+                    r.includeContext = ExtractBooleanField(resolutionObj, "includeContext", r.additionalContext.IsSet());
+
+                    LOGDBG("[Resolver] Loaded resolution for key: %s -> alias: %s, event: %s, permissionGroup: %s, includeContext: %s, useComRpc: %s",
+                           key.c_str(), r.alias.c_str(), r.event.c_str(), r.permissionGroup.c_str(),
                            r.includeContext ? "true" : "false", r.useComRpc ? "true" : "false");
 
                     // Check if this resolution already exists (will be overridden)
@@ -197,6 +198,11 @@ namespace WPEFramework
             return defaultValue;
         }
 
+        JsonValue Resolver::ExtractAdditionalContext(JsonObject &obj, const char *fieldName) 
+        {
+            return obj.Get(fieldName);
+        }
+
         Core::hresult Resolver::CallThunderPlugin(const std::string &alias, const std::string &params, std::string &response)
         {
             if (mService == nullptr)
@@ -257,35 +263,20 @@ namespace WPEFramework
                 return false;
             }
 
-        bool Resolver::HasIncludeContext(const std::string &key)
+        bool Resolver::HasIncludeContext(const std::string &key, JsonValue& additionalContext)
             {
                 std::lock_guard<std::mutex> lock(mMutex);
                 std::string lowerKey = StringUtils::toLower(key);
                 auto it = mResolutions.find(lowerKey);
                 if (it != mResolutions.end())
                 {
+                    if (it->second.additionalContext.IsSet()) {
+                        additionalContext = it->second.additionalContext;
+                    }
                     return it->second.includeContext;
                 }
                 return false;
             }
-
-        bool Resolver::HasProviderCapability(const std::string &key, string& capability, ProviderMethodType& methodType)
-        {
-            std::lock_guard<std::mutex> lock(mMutex);
-            std::string lowerKey = StringUtils::toLower(key);
-            auto it = mResolutions.find(lowerKey);
-            if (it != mResolutions.end())
-            {
-                if (!it->second.providerCapability.empty()) {
-                    capability = it->second.providerCapability;
-                    methodType = getType(it->second.alias);
-                    return true;
-                } else {
-                    LOGDBG("Provider capability is empty");
-                }
-            }
-            return false;
-        }
 
         bool Resolver::HasComRpcRequestSupport(const std::string &key) {
             std::string lowerKey = StringUtils::toLower(key);
@@ -296,15 +287,6 @@ namespace WPEFramework
                 return it->second.useComRpc;
             }
             return false;
-        }
-
-        ProviderMethodType Resolver::getType(const std::string& typeStr) {
-            std::string lowerTypeAlias = StringUtils::toLower(typeStr);
-            auto it = ProviderMethodTypeMap.find(lowerTypeAlias);
-            if (it != ProviderMethodTypeMap.end()) {
-                return it->second;
-            }
-            return ProviderMethodType::NONE; // Default or error case
         }
 
     }
