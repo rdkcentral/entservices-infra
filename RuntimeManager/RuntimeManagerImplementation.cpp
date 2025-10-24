@@ -1010,7 +1010,7 @@ err_ret:
             mRialtoConnector->deactivateSession(mRuntimeAppInfo[appInstanceId].appId);
             if (!mRialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::NOT_RUNNING, RIALTO_TIMEOUT_MILLIS))
             {
-               LOGERR("Rialto app session not ready  when changing to not running. ");
+               LOGERR("Rialto session state change failed when changing to not running.");
                status = Core::ERROR_GENERAL;
             }
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
@@ -1077,7 +1077,7 @@ err_ret:
             mRialtoConnector->deactivateSession(mRuntimeAppInfo[appInstanceId].appId);
             if (!mRialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::NOT_RUNNING, RIALTO_TIMEOUT_MILLIS))
             {
-               LOGERR("Rialto app session not ready when changing to not running ");
+               LOGERR("Rialto session state change failed when changing to not running ");
                status = Core::ERROR_GENERAL;
             }
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
