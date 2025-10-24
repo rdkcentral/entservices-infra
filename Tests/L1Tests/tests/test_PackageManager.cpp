@@ -737,6 +737,9 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -744,7 +747,17 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
                 return true;
             }));
 
+    // Initialize the status params
+    StatusParams statusParams;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+
    	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -754,6 +767,11 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     // TC-17: Resume download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId));
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
     deinitforComRpc();
 
@@ -865,6 +883,9 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
     initforComRpc();
 
     getDownloadParams();
+    
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -873,7 +894,17 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
                 return true;
             }));
 
+    // Initialize the status params
+    StatusParams statusParams;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -883,6 +914,9 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     // TC-23: Cancel download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -1117,6 +1151,9 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     initforComRpc();
 
     getDownloadParams();
+    
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1127,7 +1164,17 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     progress = {};
 
+    // Initialize the status params
+    StatusParams statusParams;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1139,6 +1186,11 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
 
     EXPECT_NE(progress.progress, 0);
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
     
 	deinitforComRpc();
 	
@@ -1299,6 +1351,9 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     initforComRpc();
 
     getDownloadParams();
+    
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1309,7 +1364,17 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     uint64_t limit = 1024;
 
+    // Initialize the status params
+    StatusParams statusParams;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1319,6 +1384,11 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     // TC-39: Set rate limit via downloadID using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId, limit));
+
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
     
 	deinitforComRpc();
 	
