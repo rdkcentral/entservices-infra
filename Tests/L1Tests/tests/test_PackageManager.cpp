@@ -621,6 +621,8 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
     // TC-11: Pause download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+
     // Unregister the notification
     pkgdownloaderInterface->Unregister(&notification);
 
