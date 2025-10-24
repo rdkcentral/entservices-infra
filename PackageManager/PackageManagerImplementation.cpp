@@ -25,6 +25,9 @@
 /* Until we don't get it from Package configuration, use size as 1MB */
 #define STORAGE_MAX_SIZE 1024
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -1063,7 +1066,7 @@ namespace Plugin {
 
     void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason)
     {
-
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         std::list<Exchange::IPackageDownloader::PackageInfo> packageInfoList;
         Exchange::IPackageDownloader::PackageInfo packageInfo;
         packageInfo.downloadId = id;
@@ -1074,11 +1077,15 @@ namespace Plugin {
         Exchange::IPackageDownloader::IPackageInfoIterator* packageInfoIterator = Core::Service<RPC::IteratorType<Exchange::IPackageDownloader::IPackageInfoIterator>>::Create<Exchange::IPackageDownloader::IPackageInfoIterator>(packageInfoList);
 
         mAdminLock.Lock();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         for (auto notification: mDownloaderNotifications) {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             notification->OnAppDownloadStatus(packageInfoIterator);
             LOGTRACE();
         }
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         mAdminLock.Unlock();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     void PackageManagerImplementation::NotifyInstallStatus(const string& id, const string& version, const State &state)
