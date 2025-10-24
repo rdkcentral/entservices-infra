@@ -122,8 +122,8 @@ namespace WPEFramework
                     string appId;
                     if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
                         LOGINFO("APP ID %s", appId.c_str());
+                        mAppIdRegistry.Add(connectionId, appId);
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
-                        mAppIdRegistry.Add(connectionId, std::move(appId));
 
                         return true;
                     }
@@ -277,10 +277,9 @@ namespace WPEFramework
             return status;
         }
 
-        void AppGatewayResponderImplementation::onConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected)
+        void AppGatewayResponderImplementation::OnConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected)
         {
             Core::SafeSyncType<Core::CriticalSection> lock(mConnectionStatusImplLock);
-
             for (auto& notification : mConnectionStatusNotification)
             {
                 notification->OnAppConnectionChanged(appId, connectionId, connected);

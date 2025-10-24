@@ -61,7 +61,7 @@ namespace Plugin {
         virtual Core::hresult Register(Exchange::IAppGatewayResponder::INotification *notification) override;
         virtual Core::hresult Unregister(Exchange::IAppGatewayResponder::INotification *notification) override;
 
-        virtual void onConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected);
+        virtual void OnConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected);
         
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -251,7 +251,7 @@ namespace Plugin {
             }
             virtual void Dispatch()
             {
-                mParent.onConnectionStatusChanged(mAppId, mConnectionId, mConnected);
+                mParent.OnConnectionStatusChanged(mAppId, mConnectionId, mConnected);
             }
 
         private:
@@ -264,9 +264,9 @@ namespace Plugin {
 
         class AppIdRegistry{
         public:
-            void Add(const uint32_t connectionId, string&& appId) {
+            void Add(const uint32_t connectionId, const std::string& appId) {
                 std::lock_guard<std::mutex> lock(mAppIdMutex);
-                mAppIdMap[connectionId] = std::move(appId);
+                mAppIdMap[connectionId] = appId;
             }
 
             void Remove(const uint32_t connectionId) {
