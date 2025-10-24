@@ -37,6 +37,9 @@
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
 
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (2000)
 
@@ -264,6 +267,7 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
 
         void OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos)
         {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             m_status_signal = PackageManager_AppDownloadStatus;
             JsonValue downloadId;
             JsonValue fileLocator;
@@ -287,6 +291,7 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
             EXPECT_EQ(m_status_param.fileLocator, fileLocator.String());
 
             m_condition_variable.notify_one();
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
         void OnAppInstallationStatus(const string& jsonresponse) override
@@ -586,6 +591,9 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -593,7 +601,18 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
                 return true;
             }));
 
+    // Initialize the status params
+    StatusParams statusParams;
+    statusParams.packageId = packageId;
+    statusParams.version = version;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
+    notification.SetStatusParams(statusParams);
+
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -601,6 +620,9 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     // TC-11: Pause download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 
