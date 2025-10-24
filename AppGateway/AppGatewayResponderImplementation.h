@@ -49,14 +49,20 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     public:
-        Core::hresult Respond(const Context &context, const string &payload) override;
-         Core::hresult Emit(const Context &context /* @in */, 
-                const string &method /* @in */, const string payload /* @in @opaque */) override;
+        Core::hresult Respond(const Context& context, const string& payload) override;
+         Core::hresult Emit(const Context& context /* @in */, 
+                const string& method /* @in */, const string& payload /* @in @opaque */) override;
         Core::hresult Request(const uint32_t connectionId /* @in */, 
-                const uint32_t id /* @in */, const string method /* @in */, const string params /* @in @opaque */) override;
+                const uint32_t id /* @in */, const string& method /* @in */, const string& params /* @in @opaque */) override;
         Core::hresult GetGatewayConnectionContext(const uint32_t connectionId /* @in */,
                 const string& contextKey /* @in */, 
-                 string &contextValue /* @out */) override;
+                 string& contextValue /* @out */) override;
+        
+        virtual Core::hresult Register(Exchange::IAppGatewayResponder::INotification *notification) override;
+        virtual Core::hresult Unregister(Exchange::IAppGatewayResponder::INotification *notification) override;
+
+        virtual void onConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected);
+        
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
 
@@ -217,9 +223,48 @@ namespace Plugin {
             const uint32_t mRequestId;
         };
 
+        class EXTERNAL ConnectionStatusNotificationJob : public Core::IDispatch
+        {
+        protected:
+            ConnectionStatusNotificationJob(AppGatewayResponderImplementation *parent,
+            const uint32_t connectionId,
+            const std::string& appId,
+            const bool connected
+            )
+                : mParent(*parent), mConnectionId(connectionId), mAppId(appId), mConnected(connected)
+            {
+            }
+
+        public:
+            ConnectionStatusNotificationJob() = delete;
+            ConnectionStatusNotificationJob(const ConnectionStatusNotificationJob &) = delete;
+            ConnectionStatusNotificationJob &operator=(const ConnectionStatusNotificationJob &) = delete;
+            ~ConnectionStatusNotificationJob()
+            {
+            }
+
+        public:
+            static Core::ProxyType<Core::IDispatch> Create(AppGatewayResponderImplementation *parent,
+                const uint32_t connectionId, const std::string& appId, const bool connected)
+            {
+                return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<ConnectionStatusNotificationJob>::Create(parent, connectionId, appId, connected)));
+            }
+            virtual void Dispatch()
+            {
+                mParent.onConnectionStatusChanged(mAppId, mConnectionId, mConnected);
+            }
+
+        private:
+            AppGatewayResponderImplementation &mParent;
+            const uint32_t mConnectionId;
+            const std::string mAppId;
+            const bool mConnected;
+        };
+
+
         class AppIdRegistry{
         public:
-            void Add(const uint32_t connectionId, string appId) {
+            void Add(const uint32_t connectionId, string&& appId) {
                 std::lock_guard<std::mutex> lock(mAppIdMutex);
                 mAppIdMap[connectionId] = std::move(appId);
             }
@@ -262,6 +307,8 @@ namespace Plugin {
         Exchange::IAppGatewayResolver *mResolver; // Shared pointer to InternalGatewayResolver
         AppIdRegistry mAppIdRegistry;
         uint32_t InitializeWebsocket();
+        mutable Core::CriticalSection mConnectionStatusImplLock;
+        std::list<Exchange::IAppGatewayResponder::INotification*> mConnectionStatusNotification;
     };
 } // namespace Plugin
 } // namespace WPEFramework

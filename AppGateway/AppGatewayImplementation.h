@@ -51,7 +51,7 @@ namespace Plugin {
 
     public:
         Core::hresult Configure(Exchange::IAppGatewayResolver::IStringIterator *const &paths) override;
-        Core::hresult Resolve(const Context &context, const string &origin ,const string &method, const string &params, string& result) override;
+        Core::hresult Resolve(const Context& context, const string& origin ,const string& method, const string& params, string& result) override;
 
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -202,7 +202,7 @@ namespace Plugin {
         string UpdateContext(const Context &context, const string& method, const string& params, const bool& onlyAdditionalContext = false);
         Core::hresult InternalResolve(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult FetchResolvedData(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
-        Core::hresult InternalResolutionConfigure(std::vector<std::string> configPaths);
+        Core::hresult InternalResolutionConfigure(std::vector<std::string>&& configPaths);
         void SendToLaunchDelegate(const Context& context, const string& payload);
     };
 } // namespace Plugin

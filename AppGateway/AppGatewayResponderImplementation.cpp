@@ -39,7 +39,8 @@ namespace WPEFramework
             : mService(nullptr),
             mWsManager(),
             mAuthenticator(nullptr),
-            mResolver(nullptr)
+            mResolver(nullptr),
+            mConnectionStatusImplLock()
         {
             LOGINFO("AppGatewayResponderImplementation constructor");
         }
@@ -121,7 +122,9 @@ namespace WPEFramework
                     string appId;
                     if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
                         LOGINFO("APP ID %s", appId.c_str());
+                        Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
                         mAppIdRegistry.Add(connectionId, std::move(appId));
+
                         return true;
                     }
 
@@ -132,6 +135,13 @@ namespace WPEFramework
                 [this](const uint32_t connectionId)
                 {
                     LOGINFO("Connection disconnected: %d", connectionId);
+                    string appId;
+                    if (!mAppIdRegistry.Get(connectionId, appId)) {
+                        LOGERR("No App ID found for connection %d during disconnect", connectionId);
+                    } else {
+                        LOGINFO("App ID %s found for connection %d during disconnect", appId.c_str(), connectionId);
+                        Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, false));
+                    }    
                     mAppIdRegistry.Remove(connectionId);
                     Exchange::IAppNotifications* appNotifications = mService->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
                     if (appNotifications != nullptr) {
@@ -147,27 +157,28 @@ namespace WPEFramework
             return Core::ERROR_NONE;
         }
 
-        Core::hresult AppGatewayResponderImplementation::Respond(const Context &context, const string &payload)
+        Core::hresult AppGatewayResponderImplementation::Respond(const Context& context, const string& payload)
         {
             Core::IWorkerPool::Instance().Submit(RespondJob::Create(this, context.connectionId, context.requestId, payload));
             return Core::ERROR_NONE;
         }
 
-        Core::hresult AppGatewayResponderImplementation::Emit(const Context &context /* @in */, 
-                const string &method /* @in */, const string payload /* @in @opaque */) {
+        Core::hresult AppGatewayResponderImplementation::Emit(const Context& context /* @in */, 
+                const string& method /* @in */, const string& payload /* @in @opaque */) {
             Core::IWorkerPool::Instance().Submit(EmitJob::Create(this, context.connectionId, method, payload));
             return Core::ERROR_NONE;
         }
 
         Core::hresult AppGatewayResponderImplementation::Request(const uint32_t connectionId /* @in */, 
-                const uint32_t id /* @in */, const string method /* @in */, const string params /* @in @opaque */) {
+                const uint32_t id /* @in */, const string& method /* @in */, const string& params /* @in @opaque */) {
             Core::IWorkerPool::Instance().Submit(RequestJob::Create(this, connectionId, id, method, params));
             return Core::ERROR_NONE;
         }
 
         Core::hresult AppGatewayResponderImplementation::GetGatewayConnectionContext(const uint32_t connectionId /* @in */,
                 const string& contextKey /* @in */, 
-                 string &contextValue /* @out */) {
+                 string& contextValue /* @out */) {
+            // TODO add support for jsonrpc compliance in later versions
             return Core::ERROR_NONE;
         }
 
@@ -223,6 +234,58 @@ namespace WPEFramework
             }
         }
 
+
+        Core::hresult AppGatewayResponderImplementation::Register(Exchange::IAppGatewayResponder::INotification *notification)
+        {
+            ASSERT (nullptr != notification);
+
+            Core::SafeSyncType<Core::CriticalSection> lock(mConnectionStatusImplLock);
+
+            /* Make sure we can't register the same notification callback multiple times */
+            if (std::find(mConnectionStatusNotification.begin(), mConnectionStatusNotification.end(), notification) == mConnectionStatusNotification.end())
+            {
+                LOGINFO("Register notification");
+                mConnectionStatusNotification.push_back(notification);
+                notification->AddRef();
+            }
+
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult AppGatewayResponderImplementation::Unregister(Exchange::IAppGatewayResponder::INotification *notification )
+        {
+            Core::hresult status = Core::ERROR_GENERAL;
+
+            ASSERT (nullptr != notification);
+
+            Core::SafeSyncType<Core::CriticalSection> lock(mConnectionStatusImplLock);
+
+            /* Make sure we can't unregister the same notification callback multiple times */
+            auto itr = std::find(mConnectionStatusNotification.begin(), mConnectionStatusNotification.end(), notification);
+            if (itr != mConnectionStatusNotification.end())
+            {
+                (*itr)->Release();
+                LOGINFO("Unregister notification");
+                mConnectionStatusNotification.erase(itr);
+                status = Core::ERROR_NONE;
+            }
+            else
+            {
+                LOGERR("notification not found");
+            }
+
+            return status;
+        }
+
+        void AppGatewayResponderImplementation::onConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected)
+        {
+            Core::SafeSyncType<Core::CriticalSection> lock(mConnectionStatusImplLock);
+
+            for (auto& notification : mConnectionStatusNotification)
+            {
+                notification->OnAppConnectionChanged(appId, connectionId, connected);
+            }
+        }
 
     } // namespace Plugin
 } // namespace WPEFramework
