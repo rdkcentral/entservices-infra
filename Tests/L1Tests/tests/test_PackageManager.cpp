@@ -559,7 +559,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
