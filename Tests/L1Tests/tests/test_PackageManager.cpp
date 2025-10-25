@@ -547,7 +547,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -690,7 +690,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -839,7 +839,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1134,7 +1134,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
                 return true;
             }));
             
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1210,6 +1210,8 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     // Register the notification
     pkgdownloaderInterface->Register(&notification);
+
+    uri = "https://www.examplefile.com/file-download/328";
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
@@ -1410,6 +1412,8 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     // Register the notification
     pkgdownloaderInterface->Register(&notification);
+
+    uri = "https://www.examplefile.com/file-download/328";
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
