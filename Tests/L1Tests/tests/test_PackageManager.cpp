@@ -571,6 +571,9 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
+
 	deinitforJsonRpc();
 	
     releaseResources();
