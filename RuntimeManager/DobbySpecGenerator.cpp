@@ -20,6 +20,7 @@
 #include "DobbySpecGenerator.h"
 #include "ApplicationConfiguration.h"
 #include "UtilsLogging.h"
+#include "WebInspector.h"
 #include <sys/mount.h>
 #include <iostream>
 #include <fstream>
@@ -30,11 +31,16 @@
 //TODO SUPPORT THIS
 //#include <IPackage.h>
 #include <curl/curl.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <cstdio>
+#include "ContainerUtils.h"
 
 namespace WPEFramework
 {
 namespace Plugin
 {
+static uint16_t mDebugPort = 2000;
 
 namespace 
 {
@@ -90,6 +96,21 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
 {
     LOGINFO("DobbySpecGenerator::generate()");
     resultSpec = "";
+
+    // need the app's container IP address to find the iptables rules
+    const in_addr_t addr = ContainerUtils::getContainerIpAddress(config.mAppId);
+    if (addr != 0)
+    {
+	struct in_addr ip_addr;
+        ip_addr.s_addr = addr;
+
+        LOGINFO("IP address %s for app %s", inet_ntoa(ip_addr), config.mAppId.c_str());
+	WebInspector::attach(config.mAppInstanceId, addr, mDebugPort++);
+    }
+    else
+    {
+	LOGERR("Failed to get IP address for app '%s'", config.mAppId.c_str());
+    }
 
     std::ifstream inFile("/tmp/specchange");
     if (inFile.good())

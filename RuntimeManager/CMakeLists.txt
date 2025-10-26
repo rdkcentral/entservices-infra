@@ -59,6 +59,7 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
+include_directories(Gateway)
 set (RUNTIMEMANAGER_SOURCES)
 list(APPEND RUNTIMEMANAGER_SOURCES  RuntimeManagerImplementation.cpp)
 list(APPEND RUNTIMEMANAGER_SOURCES  DobbySpecGenerator.cpp)
@@ -67,6 +68,10 @@ list(APPEND RUNTIMEMANAGER_SOURCES  DobbyEventListener.cpp)
 list(APPEND RUNTIMEMANAGER_SOURCES  UserIdManager.cpp)
 list(APPEND RUNTIMEMANAGER_SOURCES  AIConfiguration.cpp)
 list(APPEND RUNTIMEMANAGER_SOURCES  Module.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  Gateway/WebInspector.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  Gateway/NetFilter.cpp)
+list(APPEND RUNTIMEMANAGER_SOURCES  Gateway/NetFilterUtils.c)
+list(APPEND RUNTIMEMANAGER_SOURCES  Gateway/ContainerUtils.cpp)
 
 if (RIALTO_IN_DAC_FEATURE)
   add_definitions("-DRIALTO_IN_DAC_FEATURE_ENABLED")
