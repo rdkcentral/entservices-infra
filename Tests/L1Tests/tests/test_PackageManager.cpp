@@ -700,6 +700,8 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+    Core::Event onAppDownloadStatus(false, true);
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -707,7 +709,19 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
+
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+
+     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -717,6 +731,9 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
 	deinitforJsonRpc();
 	
@@ -849,6 +866,8 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+    Core::Event onAppDownloadStatus(false, true);
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -856,14 +875,29 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
+
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
     // TC-20: Cancel download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
+	
+    deinitforJsonRpc();
 	
     releaseResources();
 }
@@ -1067,6 +1101,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
+    uint32_t timeout_ms = 2000;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1085,7 +1120,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     statusParams.downloadId = downloadId.downloadId;
     notification.SetStatusParams(statusParams);
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    signal = notification.WaitForStatusSignal(timeout_ms, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1144,23 +1179,40 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+    Core::Event onAppDownloadStatus(false, true);
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type) {
                 return true;
             }));
+
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
             
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
     // TC-30: Download progress via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
+    EXPECT_NE(mJsonRpcResponse, "");
+
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
 
-    EXPECT_NE(mJsonRpcResponse, "");
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
 	deinitforJsonRpc();
 	
@@ -1346,6 +1398,8 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+    Core::Event onAppDownloadStatus(false, true);
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1353,7 +1407,19 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
                 return true;
             }));
 
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
+
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://curl.se/download/curl-8.16.0.tar.xz\"}"), mJsonRpcResponse));
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1363,6 +1429,9 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"1001\", \"limit\": 1024}"), mJsonRpcResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"1001\"}"), mJsonRpcResponse));
+
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.PackageManagerRDKEMS"), message);
 
 	deinitforJsonRpc();
 	
