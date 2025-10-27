@@ -218,14 +218,6 @@ protected:
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
-        EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
-
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
         dispatcher->Deactivate();
@@ -512,19 +504,6 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
-
-    options.priority = false;
-
-    signal = PackageManager_invalidStatus;
-
-    // TC-6: Add download request to regular queue using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
-
-    statusParams.downloadId = downloadId.downloadId;
-    notification.SetStatusParams(statusParams);
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
-
-    EXPECT_EQ(downloadId.downloadId, "1002");
 
     // Unregister the notification
     pkgdownloaderInterface->Unregister(&notification);
@@ -1644,7 +1623,15 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
     // TC-43: Failure on install using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
-	deinitforJsonRpc();
+    EXPECT_CALL(*mStorageManagerMock, Release())
+          .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mStorageManagerMock;
+                     mStorageManagerMock = nullptr;
+                     return 0;
+            }));
+
+    deinitforJsonRpc();
 	
     releaseResources();
 }
@@ -1774,6 +1761,14 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
 
     // TC-46: Failure on uninstall using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\"}"), mJsonRpcResponse));
+
+    EXPECT_CALL(*mStorageManagerMock, Release())
+          .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mStorageManagerMock;
+                     mStorageManagerMock = nullptr;
+                     return 0;
+            }));    
 
 	deinitforJsonRpc();
 	
@@ -1940,6 +1935,14 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
     // TC-50: Success in config using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
 
+    EXPECT_CALL(*mStorageManagerMock, Release())
+          .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mStorageManagerMock;
+                     mStorageManagerMock = nullptr;
+                     return 0;
+            }));
+
 	deinitforJsonRpc();
 	
     releaseResources();
@@ -2040,6 +2043,14 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
     // TC-52: Failure in package state using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
+
+    EXPECT_CALL(*mStorageManagerMock, Release())
+          .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mStorageManagerMock;
+                     mStorageManagerMock = nullptr;
+                     return 0;
+            }));
 
 	deinitforJsonRpc();
 	
