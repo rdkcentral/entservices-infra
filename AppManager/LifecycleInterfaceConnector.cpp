@@ -76,6 +76,9 @@ namespace WPEFramework
                mCurrentservice = nullptr;
             }
             LifecycleInterfaceConnector::_instance = nullptr;
+
+	    //clear action list
+	    mAppCurrentActionList.clear();
         }
 
         Core::hresult LifecycleInterfaceConnector::createLifecycleManagerRemoteObject()
@@ -379,7 +382,7 @@ namespace WPEFramework
                         {
                             appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_CLOSE);
 
-			    mAppList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
+			    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
 
                             status = mLifecycleManagerRemoteObject->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::PAUSED, appIntent);
 
@@ -528,7 +531,7 @@ namespace WPEFramework
                         if (nullptr != mLifecycleManagerRemoteObject)
                         {
                             appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_TERMINATE);
-			    mAppList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
+			    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                             status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
                             if (status != Core::ERROR_NONE)
                             {
@@ -602,7 +605,7 @@ namespace WPEFramework
                     bool success{};
 
                     appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_KILL);
-		    mAppList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
+		    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                     result = mLifecycleManagerRemoteObject->KillApp(appInstanceId, errorReason, success);
 
                     if (!(result == Core::ERROR_NONE && success))
@@ -872,7 +875,7 @@ End:
                 {
                     if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
 		    {
-                        if (mAppList[appId] == Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING)
+                        if (mAppCurrentActionList[appId] == Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING)
 			{
 			    //Normal close: Unlode event from App manager
 			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
@@ -882,7 +885,7 @@ End:
 			    //Upnormal close: No unload event from app manager
 			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_ABORT);
 			}
-			mAppList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+			mAppCurrentActionList.erase(appId);
 		    }
 		    else
 		    {
