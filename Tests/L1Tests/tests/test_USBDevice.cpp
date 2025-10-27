@@ -2549,12 +2549,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorLessT
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
             data[1] = LIBUSB_DT_STRING;
-            if (desc_index == 0) {
-                data[0] = 4;
-                data[2] = 0x09;
-                data[3] = 0x04;
-                return 3;
-            }
+            data[0] = 3;
             return 3;
         });
 
@@ -2640,12 +2635,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorZeroL
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
             data[1] = LIBUSB_DT_STRING;
-            if (desc_index == 0) {
-                data[0] = 4;
-                data[2] = 0x09;
-                data[3] = 0x04;
-                return 4;
-            }
+            data[0] = 0;
             return 0;
         });
 
@@ -2743,6 +2733,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_MultipleLanguages)
                 data[9] = 0x04;
                 data[10] = 0x19;
                 data[11] = 0x04;
+                return 12;
             } else {
                 const char *buf = "TestString";
                 int buffer_len = strlen(buf) * 2, j = 0, index = 2;
@@ -2751,8 +2742,8 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_MultipleLanguages)
                     index += 2;
                 }
                 data[0] = buffer_len + 2;
+                return (int)data[0];
             }
-            return (int)data[0];
         });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
@@ -2839,6 +2830,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_MaxLanguageIds)
                 data[7] = 0x04;
                 data[8] = 0x11;
                 data[9] = 0x04;
+                return 10;
             } else {
                 const char *buf = "Test";
                 int buffer_len = strlen(buf) * 2, j = 0, index = 2;
@@ -2847,8 +2839,8 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_MaxLanguageIds)
                     index += 2;
                 }
                 data[0] = buffer_len + 2;
+                return (int)data[0];
             }
-            return (int)data[0];
         });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
@@ -2930,6 +2922,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_OddLanguageDescriptorLen
                 data[2] = 0x09;
                 data[3] = 0x04;
                 data[4] = 0x0C;
+                return 5;
             } else {
                 const char *buf = "Test";
                 int buffer_len = strlen(buf) * 2, j = 0, index = 2;
@@ -2938,8 +2931,8 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_OddLanguageDescriptorLen
                     index += 2;
                 }
                 data[0] = buffer_len + 2;
+                return (int)data[0];
             }
-            return (int)data[0];
         });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
