@@ -1634,9 +1634,6 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
     deinitforJsonRpc();
 	
     releaseResources();
-
-    delete mStorageManagerMock;
-    mStorageManagerMock = nullptr
 }
 
  /* Test Case for error on install due to invalid signature using ComRpc
@@ -1764,14 +1761,6 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
 
     // TC-46: Failure on uninstall using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\"}"), mJsonRpcResponse));
-
-    EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));    
 
 	deinitforJsonRpc();
 	
@@ -1938,14 +1927,6 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
     // TC-50: Success in config using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
 
-    EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
-
 	deinitforJsonRpc();
 	
     releaseResources();
@@ -2046,14 +2027,6 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
     // TC-52: Failure in package state using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
-
-    EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
 
 	deinitforJsonRpc();
 	
@@ -2381,3 +2354,4 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 	
     releaseResources();
 }
+
