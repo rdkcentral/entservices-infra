@@ -172,7 +172,7 @@ protected:
     void initforComRpc() 
     {
         createResources();
-        
+
         // Initialize the plugin for COM-RPC
         pkgdownloaderInterface->Initialize(mServiceMock);
     }
@@ -222,8 +222,6 @@ protected:
         plugin->Deinitialize(mServiceMock);
         delete mServiceMock;
         mServiceMock = nullptr;
-
-        releaseResources();
     }
 
     void deinitforComRpc()
@@ -232,7 +230,14 @@ protected:
         pkgdownloaderInterface->Deinitialize(mServiceMock);
         delete mServiceMock;
         mServiceMock = nullptr;
+    }
+    
+    // SetUp and TearDown methods
+    void SetUp() override {
+        createResources();
+    }
 
+    void TearDown() override {
         releaseResources();
     }
 };
