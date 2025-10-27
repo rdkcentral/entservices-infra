@@ -201,14 +201,6 @@ protected:
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
-        if(mStorageManagerMock != nullptr)
-        {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-			delete mStorageManagerMock;
-			mStorageManagerMock = nullptr;
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-        }
-
         if(mSubSystemMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -1620,18 +1612,18 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
     createResources();   
 
     initforJsonRpc();
-
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-    
+    #endif
     // TC-43: Failure on install using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
 	
     releaseResources();
 }
@@ -1742,7 +1734,7 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
     createResources();   
 
     initforJsonRpc();
-
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1756,7 +1748,7 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
             [&](const string& appId, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-
+    #endif
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-46: Failure on uninstall using JsonRpc
@@ -1914,14 +1906,14 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
     createResources();   
 
     initforJsonRpc();
-
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-
+    #endif
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-50: Success in config using JsonRpc
@@ -2015,14 +2007,14 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
     createResources();   
 
     initforJsonRpc();
-
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-
+    #endif
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-52: Failure in package state using JsonRpc
@@ -2354,4 +2346,3 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 	
     releaseResources();
 }
-
