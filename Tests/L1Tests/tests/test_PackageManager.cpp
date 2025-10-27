@@ -1653,6 +1653,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // TC-44: Error on install due to invalid signature using ComRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
+    additionalMetadata->Release();
+
 	deinitforComRpc();
 	
     releaseResources();
@@ -1713,6 +1715,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
+
+    additionalMetadata->Release();
 
 	deinitforComRpc();
 	
@@ -1835,6 +1839,8 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
+
+    additionalMetadata->Release();
 
 	deinitforComRpc();
 	
@@ -1987,6 +1993,8 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
 
+    additionalMetadata->Release();
+
 	deinitforComRpc();
 	
     releaseResources();
@@ -2087,6 +2095,8 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
     
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
+
+    additionalMetadata->Release();
 
 	deinitforComRpc();
 	
@@ -2243,6 +2253,8 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
 
 	// TC-59: Error on lock using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
+
+    appMetadata->Release();
 
 	deinitforComRpc();
 	
