@@ -1071,7 +1071,7 @@ TEST_F(USBDeviceTest, GetDeviceList_GetDescriptorFailure)
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
     EXPECT_EQ(response, string(""));
 }
 
