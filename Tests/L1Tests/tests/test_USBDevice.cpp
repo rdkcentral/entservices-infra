@@ -2141,6 +2141,25 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorLessT
             return LIBUSB_SUCCESS;
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers)) {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+
     ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
         .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
             *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
@@ -2152,7 +2171,20 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorLessT
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(3));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) {
+            if (desc_index == 1) {
+                strcpy((char*)data, MOCK_USB_DEVICE_MANUFACTURER);
+            } else if (desc_index == 2) {
+                strcpy((char*)data, MOCK_USB_DEVICE_PRODUCT);
+            } else if (desc_index == 3) {
+                strcpy((char*)data, MOCK_USB_DEVICE_SERIAL_NO);
+            }
+            return strlen((char*)data);
+        });
+
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(MOCK_USB_DEVICE_MANUFACTURER) != string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorZeroLength)
@@ -2190,6 +2222,25 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorZeroL
             return LIBUSB_SUCCESS;
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers)) {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+
     ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
         .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
             *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
@@ -2201,7 +2252,20 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorZeroL
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(0));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) {
+            if (desc_index == 1) {
+                strcpy((char*)data, MOCK_USB_DEVICE_MANUFACTURER);
+            } else if (desc_index == 2) {
+                strcpy((char*)data, MOCK_USB_DEVICE_PRODUCT);
+            } else if (desc_index == 3) {
+                strcpy((char*)data, MOCK_USB_DEVICE_SERIAL_NO);
+            }
+            return strlen((char*)data);
+        });
+
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(MOCK_USB_DEVICE_MANUFACTURER) != string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorNegativeReturn)
@@ -2301,6 +2365,25 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorAscii
             return LIBUSB_SUCCESS;
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers)) {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+
     ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
         .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
             *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
@@ -2315,7 +2398,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorAscii
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find("\"manufacturer\":\"\"") != string::npos);
+    EXPECT_TRUE(response.find("\"product\":\"\"") != string::npos);
+    EXPECT_TRUE(response.find("\"serialNumber\":\"\"") != string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_WrongDescriptorType)
@@ -2459,6 +2545,25 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_MultipleLanguages)
             return LIBUSB_SUCCESS;
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers)) {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+
     ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
         .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
             *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
@@ -2496,6 +2601,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_MultipleLanguages)
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find("\"numLanguageIds\":5") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1033") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1036") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1031") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1041") != string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_EmptyStringDescriptor)
@@ -2595,6 +2704,25 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_MaxLanguageIds)
             return LIBUSB_SUCCESS;
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers)) {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+
     ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
         .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
             *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
@@ -2630,6 +2758,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_MaxLanguageIds)
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find("\"numLanguageIds\":4") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1033") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1036") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1031") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1041") != string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_OddLanguageDescriptorLength)
@@ -2667,6 +2799,25 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_OddLanguageDescriptorLen
             return LIBUSB_SUCCESS;
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers)) {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+
     ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
         .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
             *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
@@ -2695,7 +2846,9 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_OddLanguageDescriptorLen
             return (int)data[0];
         });
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find("\"numLanguageIds\":1") != string::npos);
+    EXPECT_TRUE(response.find("\"languageId\":1033") != string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_AsciiDescriptorZeroLength)
@@ -2733,6 +2886,25 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_AsciiDescriptorZeroLengt
             return LIBUSB_SUCCESS;
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers)) {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+
     ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
         .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
             *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
@@ -2747,5 +2919,8 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_AsciiDescriptorZeroLengt
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(0));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find("\"manufacturer\":\"\"") != string::npos);
+    EXPECT_TRUE(response.find("\"product\":\"\"") != string::npos);
+    EXPECT_TRUE(response.find("\"serialNumber\":\"\"") != string::npos);
 }
