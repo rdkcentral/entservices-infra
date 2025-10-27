@@ -60,29 +60,33 @@ namespace Plugin {
 
         std::list<Exchange::IPackageInstaller::INotification*>::iterator index(mInstallNotifications.begin());
         {
-            
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             while (index != mInstallNotifications.end()) {
-                
+                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
                 (*index)->Release();
                 index++;
+                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             }
         }
         mInstallNotifications.clear();
         
-
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         releaseStorageManagerObject();
         
 
         std::list<Exchange::IPackageDownloader::INotification*>::iterator itDownloader(mDownloaderNotifications.begin());
         {
-            
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             while (itDownloader != mDownloaderNotifications.end()) {
-                
+                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
                 (*itDownloader)->Release();
                 itDownloader++;
+                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             }
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
         mDownloaderNotifications.clear();
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         
     }
 
@@ -221,14 +225,14 @@ namespace Plugin {
 
     void PackageManagerImplementation::releaseStorageManagerObject()
     {
-        
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         ASSERT(nullptr != mStorageManagerObject);
         if(mStorageManagerObject) {
-            
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             mStorageManagerObject->Release();
             mStorageManagerObject = nullptr;
         }
-        
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
