@@ -2375,7 +2375,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorAscii
             return dev->bus_number;
         });
 
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
             if((nullptr != dev) && (nullptr != port_numbers)) {
                 port_numbers[0] = dev->port_number;
