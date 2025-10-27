@@ -1072,6 +1072,7 @@ TEST_F(USBDeviceTest, GetDeviceList_GetDescriptorFailure)
         .WillOnce(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
+    EXPECT_EQ(response, string("[]"));
 }
 
 TEST_F(USBDeviceTest, GetDeviceList_NonMassStorageDevice_Success)
@@ -1252,7 +1253,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_InvalidDeviceName)
             free(list);
         });
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"999\\/999\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"999\\/999\"}"), response));
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_NoDevicesAvailable)
@@ -1260,7 +1261,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_NoDevicesAvailable)
     ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_GetDescriptorFailure)
@@ -1285,9 +1286,19 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetDescriptorFailure)
         });
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
+        .WillRepeatedly(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 // TEST_F(USBDeviceTest, GetDeviceInfo_OpenDeviceFailure)
@@ -1452,7 +1463,7 @@ TEST_F(USBDeviceTest, BindDriver_InvalidDeviceName)
             free(list);
         });
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"999\\/999\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"999\\/999\"}"), response));
 }
 
 TEST_F(USBDeviceTest, BindDriver_OpenDeviceFailure)
@@ -1476,10 +1487,20 @@ TEST_F(USBDeviceTest, BindDriver_OpenDeviceFailure)
             free(list);
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
     EXPECT_CALL(*p_libUSBImplMock, libusb_open(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 TEST_F(USBDeviceTest, BindDriver_KernelDriverActiveFailure)
@@ -1503,10 +1524,20 @@ TEST_F(USBDeviceTest, BindDriver_KernelDriverActiveFailure)
             free(list);
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
     EXPECT_CALL(*p_libUSBImplMock, libusb_kernel_driver_active(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 TEST_F(USBDeviceTest, BindDriver_AttachDriverFailure)
@@ -1530,13 +1561,23 @@ TEST_F(USBDeviceTest, BindDriver_AttachDriverFailure)
             free(list);
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
     EXPECT_CALL(*p_libUSBImplMock, libusb_kernel_driver_active(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(0));
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_attach_kernel_driver(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(LIBUSB_ERROR_NOT_FOUND));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 TEST_F(USBDeviceTest, BindDriver_NoDevicesAvailable)
@@ -1544,7 +1585,7 @@ TEST_F(USBDeviceTest, BindDriver_NoDevicesAvailable)
     ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("bindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 TEST_F(USBDeviceTest, UnbindDriver_Success)
@@ -1629,7 +1670,7 @@ TEST_F(USBDeviceTest, UnbindDriver_InvalidDeviceName)
             free(list);
         });
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"999\\/999\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"999\\/999\"}"), response));
 }
 
 TEST_F(USBDeviceTest, UnbindDriver_OpenDeviceFailure)
@@ -1653,10 +1694,20 @@ TEST_F(USBDeviceTest, UnbindDriver_OpenDeviceFailure)
             free(list);
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
     EXPECT_CALL(*p_libUSBImplMock, libusb_open(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(LIBUSB_ERROR_ACCESS));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 TEST_F(USBDeviceTest, UnbindDriver_KernelDriverActiveFailure)
@@ -1680,10 +1731,20 @@ TEST_F(USBDeviceTest, UnbindDriver_KernelDriverActiveFailure)
             free(list);
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
     EXPECT_CALL(*p_libUSBImplMock, libusb_kernel_driver_active(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 TEST_F(USBDeviceTest, UnbindDriver_DetachDriverFailure)
@@ -1707,13 +1768,23 @@ TEST_F(USBDeviceTest, UnbindDriver_DetachDriverFailure)
             free(list);
         });
 
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->device_address;
+        });
+
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) {
+            return dev->bus_number;
+        });
+
     EXPECT_CALL(*p_libUSBImplMock, libusb_kernel_driver_active(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(1));
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_detach_kernel_driver(::testing::_, ::testing::_))
         .WillOnce(::testing::Return(LIBUSB_ERROR_NOT_FOUND));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
 TEST_F(USBDeviceTest, UnbindDriver_NoDevicesAvailable)
@@ -1721,6 +1792,5 @@ TEST_F(USBDeviceTest, UnbindDriver_NoDevicesAvailable)
     ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(0));
 
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
-
