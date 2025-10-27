@@ -472,7 +472,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
  * Unregister the notification using the COM RPC interface
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     createResources();
@@ -481,24 +481,46 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillRepeatedly(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type){
                 return true;
             }));
+
+    // Initialize the status params
+    StatusParams statusParams;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
     
     // TC-5: Add download request to priority queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
     
     EXPECT_EQ(downloadId.downloadId, "1001");
 
     options.priority = false;
 
+    signal = PackageManager_invalidStatus;
+
     // TC-6: Add download request to regular queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+
     EXPECT_EQ(downloadId.downloadId, "1002");
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 	
@@ -536,7 +558,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for pausing download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
