@@ -201,14 +201,6 @@ protected:
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
-        if (mStorageManagerMock != nullptr)
-        {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-            delete mStorageManagerMock;
-            mStorageManagerMock = nullptr;
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-        }
-
         if(mSubSystemMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -243,7 +235,12 @@ protected:
           .Times(::testing::AnyNumber());
 
         EXPECT_CALL(*mStorageManagerMock, Release())
-          .Times(::testing::AnyNumber());
+          .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mStorageManagerMock;
+                     mStorageManagerMock = nullptr;
+                     return 0;
+            }));
 
         // Deinitialize the plugin for COM-RPC
         pkgdownloaderInterface->Deinitialize(mServiceMock);
