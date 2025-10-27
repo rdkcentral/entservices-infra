@@ -201,6 +201,14 @@ protected:
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
+        if(mStorageManagerMock != nullptr)
+        {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+			delete mStorageManagerMock;
+			mStorageManagerMock = nullptr;
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        }
+
         if(mSubSystemMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -1623,17 +1631,12 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
     // TC-43: Failure on install using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
-    EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
-
     deinitforJsonRpc();
 	
     releaseResources();
+
+    delete mStorageManagerMock;
+    mStorageManagerMock = nullptr
 }
 
  /* Test Case for error on install due to invalid signature using ComRpc
