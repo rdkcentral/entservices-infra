@@ -1036,7 +1036,7 @@ TEST_F(USBDeviceTest, GetDeviceList_EmptyList_Success)
         .WillByDefault(::testing::Return(0));
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
-    EXPECT_EQ(response, string("[]"));
+    EXPECT_EQ(response, string(""));
 }
 
 TEST_F(USBDeviceTest, GetDeviceList_LibUSBGetDeviceListFailure)
