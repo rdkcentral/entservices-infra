@@ -201,19 +201,6 @@ protected:
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
-        if (mStorageManagerMock != nullptr)
-        {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-            EXPECT_CALL(*mStorageManagerMock, Release())
-                .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------"); 
-        }
-
         if(mSubSystemMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -244,6 +231,14 @@ protected:
     {
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
+
+        EXPECT_CALL(*mStorageManagerMock, Release())
+          .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mStorageManagerMock;
+                     mStorageManagerMock = nullptr;
+                     return 0;
+            }));
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Deinitialize the plugin for COM-RPC
