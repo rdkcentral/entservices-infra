@@ -201,6 +201,14 @@ protected:
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
+        if (mStorageManagerMock != nullptr)
+        {
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            delete mStorageManagerMock;
+            mStorageManagerMock = nullptr;
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        }
+
         if(mSubSystemMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -229,18 +237,14 @@ protected:
 
     void deinitforComRpc()
     {
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
         EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
+          .Times(::testing::AnyNumber());
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Deinitialize the plugin for COM-RPC
         pkgdownloaderInterface->Deinitialize(mServiceMock);
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -479,24 +483,46 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     getDownloadParams();
 
+    Core::Sink<NotificationTest> notification;
+    uint32_t signal = PackageManager_invalidStatus;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillRepeatedly(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type){
                 return true;
             }));
+
+    // Initialize the status params
+    StatusParams statusParams;
+
+    // Register the notification
+    pkgdownloaderInterface->Register(&notification);
     
     // TC-5: Add download request to priority queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
     
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+
     EXPECT_EQ(downloadId.downloadId, "1001");
 
     options.priority = false;
 
+    signal = PackageManager_invalidStatus;
+
     // TC-6: Add download request to regular queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
+    statusParams.downloadId = downloadId.downloadId;
+    notification.SetStatusParams(statusParams);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+
     EXPECT_EQ(downloadId.downloadId, "1002");
+
+    // Unregister the notification
+    pkgdownloaderInterface->Unregister(&notification);
 
 	deinitforComRpc();
 	
