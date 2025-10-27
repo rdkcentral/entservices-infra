@@ -160,6 +160,8 @@ protected:
 
     void initforJsonRpc() 
     {    
+        createResources();
+
         // Activate the dispatcher and initialize the plugin for JSON-RPC
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
@@ -169,6 +171,8 @@ protected:
 
     void initforComRpc() 
     {
+        createResources();
+        
         // Initialize the plugin for COM-RPC
         pkgdownloaderInterface->Initialize(mServiceMock);
     }
@@ -188,19 +192,8 @@ protected:
     void releaseResources()
     {
 	    // Clean up mocks
-		if (mServiceMock != nullptr)
-        {
-            EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
-              .Times(::testing::AnyNumber());
-
-			EXPECT_CALL(*mServiceMock, Release())
-              .WillOnce(::testing::Invoke(
-              [&]() {
-						delete mServiceMock;
-						mServiceMock = nullptr;
-						return 0;
-					}));    
-        }
+        EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
+            .Times(::testing::AnyNumber());
 
         if (mStorageManagerMock != nullptr)
         {
@@ -227,19 +220,19 @@ protected:
         dispatcher->Release();
 
         plugin->Deinitialize(mServiceMock);
+        delete mServiceMock;
+        mServiceMock = nullptr;
+
+        releaseResources();
     }
 
     void deinitforComRpc()
     {
         // Deinitialize the plugin for COM-RPC
         pkgdownloaderInterface->Deinitialize(mServiceMock);
-    }
+        delete mServiceMock;
+        mServiceMock = nullptr;
 
-    void SetUp() override {
-        createResources();
-    }
-
-    void TearDown() override {
         releaseResources();
     }
 };
