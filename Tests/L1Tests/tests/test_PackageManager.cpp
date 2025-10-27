@@ -160,8 +160,6 @@ protected:
 
     void initforJsonRpc() 
     {    
-        createResources();
-
         // Activate the dispatcher and initialize the plugin for JSON-RPC
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
@@ -171,8 +169,6 @@ protected:
 
     void initforComRpc() 
     {
-        createResources();
-
         // Initialize the plugin for COM-RPC
         pkgdownloaderInterface->Initialize(mServiceMock);
     }
@@ -231,7 +227,7 @@ protected:
         delete mServiceMock;
         mServiceMock = nullptr;
     }
-    
+
     // SetUp and TearDown methods
     void SetUp() override {
         createResources();
