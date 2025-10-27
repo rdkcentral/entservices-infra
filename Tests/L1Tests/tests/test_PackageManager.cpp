@@ -145,9 +145,6 @@ protected:
             return nullptr;
         }));
 
-        EXPECT_CALL(*mServiceMock, Register(::testing::_))
-          .Times(::testing::AnyNumber());
-
         EXPECT_CALL(*mServiceMock, ConfigLine())
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/CDL/\"}"));
@@ -156,14 +153,19 @@ protected:
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Return(mSubSystemMock));
 
-		EXPECT_CALL(*mServiceMock, AddRef())
-          .Times(::testing::AnyNumber());
-          DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
     }
 
     void initforJsonRpc() 
     {    
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
+        EXPECT_CALL(*mServiceMock, Register(::testing::_))
+          .Times(::testing::AnyNumber());
+
+        EXPECT_CALL(*mServiceMock, AddRef())
+          .Times(::testing::AnyNumber());
+
         // Activate the dispatcher and initialize the plugin for JSON-RPC
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
@@ -175,6 +177,9 @@ protected:
     void initforComRpc() 
     {
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        EXPECT_CALL(*mServiceMock, AddRef())
+          .Times(::testing::AnyNumber());
+          
         // Initialize the plugin for COM-RPC
         pkgdownloaderInterface->Initialize(mServiceMock);
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -195,36 +200,24 @@ protected:
     void releaseResources()
     {
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-	    // Clean up mocks
+
+        EXPECT_CALL(*mStorageManagerMock, Release())
+          .Times(::testing::AnyNumber());
+        
+        // Clean up mocks
 		if (mServiceMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-            EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
-              .Times(::testing::AnyNumber());
-
-			EXPECT_CALL(*mServiceMock, Release())
-              .WillOnce(::testing::Invoke(
-              [&]() {
-                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-						delete mServiceMock;
-						mServiceMock = nullptr;
-						return 0;
-					}));    
-                    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+			delete mServiceMock;
+			mServiceMock = nullptr;
         }
 
         if (mStorageManagerMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-			EXPECT_CALL(*mStorageManagerMock, Release())
-              .WillOnce(::testing::Invoke(
-              [&]() {
-                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-						delete mStorageManagerMock;
-						mStorageManagerMock = nullptr;
-						return 0;
-					}));
-                    DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+			delete mStorageManagerMock;
+			mStorageManagerMock = nullptr;
+            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
         if(mSubSystemMock != nullptr)
@@ -238,6 +231,12 @@ protected:
 
     void deinitforJsonRpc() 
     {
+        EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
+          .Times(::testing::AnyNumber());
+
+        EXPECT_CALL(*mServiceMock, Release())
+          .Times(::testing::AnyNumber());
+
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
         dispatcher->Deactivate();
@@ -249,6 +248,9 @@ protected:
 
     void deinitforComRpc()
     {
+        EXPECT_CALL(*mServiceMock, Release())
+          .Times(::testing::AnyNumber());
+
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Deinitialize the plugin for COM-RPC
         pkgdownloaderInterface->Deinitialize(mServiceMock);
