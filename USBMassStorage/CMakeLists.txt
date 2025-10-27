@@ -33,7 +33,7 @@ if (NOT RDK_SERVICE_L2_TEST AND NOT RDK_SERVICES_L1_TEST)
     pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 endif()
 
-add_library(${MODULE_NAME} SHARED
+add_executable(${MODULE_NAME}
     USBMassStorage.cpp
     Module.cpp)
 
