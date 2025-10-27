@@ -609,7 +609,35 @@ namespace WPEFramework
                 else
                 {
                     LOGINFO("Received state change event for app Onterminated event ");
-                    addStateTransitionRequest(context, "onAppTerminating");
+                    //check if unexpected termination
+                    if (context->getCurrentLifecycleState() != Exchange::ILifecycleManager::LifecycleState::TERMINATING)
+                    {
+                        LOGWARN("Container has terminated unexpectedly for app[%s] ", appInstanceId.c_str());
+                        LOGWARN("Unloading app [%s] - [%s]", context->getAppId().c_str(), appInstanceId.c_str());
+                        std::string terminateError="";
+                        std::string updateError="";
+                        bool terminated = false;
+                        bool stateUpdated = false;
+                        context->setRequestType(REQUEST_TYPE_TERMINATE);
+                        context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
+                        context->setApplicationKillParams(false);
+
+                        terminated = RequestHandler::getInstance()->terminate(context, false, terminateError);
+                        stateUpdated = RequestHandler::getInstance()->updateState(context, context->getTargetLifecycleState(), updateError);
+                        if(terminated && stateUpdated)
+                        {
+                            LOGINFO("Successfully handled unexpected container termination for app[%s] ", appInstanceId.c_str());
+                            LOGINFO("Successfully triggered unload for app[%s]", appInstanceId.c_str());
+                        }
+                        else
+                        {
+                            LOGERR("Failed to handle unexpected termination for app[%s] terminateSuccess[%d] updateStateSuccess[%d] terminateError[%s] updateError[%s]", appInstanceId.c_str(), terminated, stateUpdated, terminateError.c_str(), updateError.c_str());
+                        }
+                    }
+                    else
+                    {
+                       addStateTransitionRequest(context, "onAppTerminating");
+                    }
                 }
             }
             else if (eventName.compare("onStateChanged") == 0)
@@ -629,12 +657,13 @@ namespace WPEFramework
                         addStateTransitionRequest(context, "onAppRunning");
                     }
                 }
+                // state change to TERMINATING is ignored as it is handled in onTerminated
             }
             else if (eventName.compare("onFailure") == 0)
             {
                 string appInstanceId = data["appInstanceId"];
                 string errorCode = data["errorCode"];
-                LOGINFO("Received container failure event from runtime manager for app[%s] error[%s]", appInstanceId.c_str(), errorCode.c_str());
+                LOGERR("Received container failure event from runtime manager for app[%s] error[%s]", appInstanceId.c_str(), errorCode.c_str());
                 notifyOnFailure(appInstanceId, errorCode);
             }
             else if (eventName.compare("onStarted") == 0)
@@ -730,6 +759,9 @@ namespace WPEFramework
         else
         {
             printf("received wrong state transition request\n");
+            // enable for debugging wrong state transition requests
+            // printf("expected [%s] but got [%s]\n", context->mPendingEventName.c_str(), event.c_str());
+            // printf("pending state transition [%d]\n", context->mPendingStateTransition);
             fflush(stdout);
         }
     }
