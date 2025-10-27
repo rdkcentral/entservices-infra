@@ -2338,3 +2338,4 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 	
     releaseResources();
 }
+
