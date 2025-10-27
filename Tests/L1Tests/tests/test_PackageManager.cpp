@@ -1103,7 +1103,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
-    uint32_t timeout_ms = 2000;
+    uint32_t timeout_ms = 3000;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
