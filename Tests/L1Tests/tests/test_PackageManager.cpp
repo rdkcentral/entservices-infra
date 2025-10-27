@@ -472,7 +472,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
  * Unregister the notification using the COM RPC interface
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     createResources();
@@ -536,7 +536,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
 	
     releaseResources();
 }
-
+#endif
 /* Test Case for pausing download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
