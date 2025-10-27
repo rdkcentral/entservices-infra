@@ -108,8 +108,8 @@ namespace WPEFramework
                     r.event = ExtractStringField(resolutionObj, "event");
                     r.permissionGroup = ExtractStringField(resolutionObj, "permissionGroup");
                     r.additionalContext = ExtractAdditionalContext(resolutionObj, "additionalContext");
-                    r.includeContext = ExtractBooleanField(resolutionObj, "includeContext", r.additionalContext.IsSet());
-                    r.useComRpc = ExtractBooleanField(resolutionObj, "useComRpc", r.additionalContext.IsSet());
+                    r.includeContext = ExtractBooleanField(resolutionObj, "includeContext", r.additionalContext.IsSet() && !r.additionalContext.IsNull());
+                    r.useComRpc = ExtractBooleanField(resolutionObj, "useComRpc", r.additionalContext.IsSet() && !r.additionalContext.IsNull());
                     
                     LOGDBG("[Resolver] Loaded resolution for key: %s -> alias: %s, event: %s, permissionGroup: %s, includeContext: %s, useComRpc: %s",
                            key.c_str(), r.alias.c_str(), r.event.c_str(), r.permissionGroup.c_str(),
