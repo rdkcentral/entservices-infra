@@ -122,7 +122,7 @@ protected:
 		workerPool.Release();
     }
 	
-	void createResources() 
+	void Setup() override 
 	{		
 		// Set up mocks and expect calls
         mServiceMock = new NiceMock<ServiceMock>;
@@ -184,25 +184,25 @@ protected:
         downloadId = {};
     }
 
-    void releaseResources()
+    void TearDown() override
     {
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         // Clean up mocks
 		if (mServiceMock != nullptr)
         {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
 			delete mServiceMock;
 			mServiceMock = nullptr;
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
         }
 
         if(mSubSystemMock != nullptr)
         {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+            
         }
     }
 
@@ -214,13 +214,13 @@ protected:
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
         // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
         dispatcher->Deactivate();
         dispatcher->Release();
 
         plugin->Deinitialize(mServiceMock);
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         if(mStorageManagerMock != nullptr)
         {
@@ -231,7 +231,7 @@ protected:
 
     void deinitforComRpc()
     {
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
 
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
@@ -246,7 +246,7 @@ protected:
 
         // Deinitialize the plugin for COM-RPC
         pkgdownloaderInterface->Deinitialize(mServiceMock);
-        DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+        
     }
 };
 
@@ -281,38 +281,33 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
 
         void OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos)
         {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
             m_status_signal = PackageManager_AppDownloadStatus;
             JsonValue downloadId;
             JsonValue fileLocator;
             JsonValue failReason;
 
             std::unique_lock<std::mutex> lock(m_mutex);
-            if(packageInfos != nullptr) {
-                
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-            Exchange::IPackageDownloader::PackageInfo resultItem{};
-
-            while (packageInfos->Next(resultItem) == true)
+            if(packageInfos != nullptr) 
             {
-                DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-                downloadId = resultItem.downloadId;
-                fileLocator = resultItem.fileLocator;
-                failReason = (resultItem.reason == Exchange::IPackageDownloader::Reason::NONE) ? "NONE" :
-                             (resultItem.reason == Exchange::IPackageDownloader::Reason::DOWNLOAD_FAILURE) ? "DOWNLOAD_FAILURE" :
-                             (resultItem.reason == Exchange::IPackageDownloader::Reason::DISK_PERSISTENCE_FAILURE) ? "DISK_PERSISTENCE_FAILURE" : "UNKNOWN";
+                Exchange::IPackageDownloader::PackageInfo resultItem{};
+
+                while (packageInfos->Next(resultItem) == true)
+                {
+                    downloadId = resultItem.downloadId;
+                    fileLocator = resultItem.fileLocator;
+                    failReason = (resultItem.reason == Exchange::IPackageDownloader::Reason::NONE) ? "NONE" :
+                                (resultItem.reason == Exchange::IPackageDownloader::Reason::DOWNLOAD_FAILURE) ? "DOWNLOAD_FAILURE" :
+                                (resultItem.reason == Exchange::IPackageDownloader::Reason::DISK_PERSISTENCE_FAILURE) ? "DISK_PERSISTENCE_FAILURE" : "UNKNOWN";
+                }
             }
-            }
+
             EXPECT_EQ(m_status_param.downloadId, downloadId.String());
 
             m_condition_variable.notify_one();
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
         void OnAppInstallationStatus(const string& jsonresponse) override
         {
-            fprintf(stderr, "jsonresponse: %s\n", jsonresponse.c_str());
-
             m_status_signal = PackageManager_AppInstallStatus;
             JsonValue packageId;
             JsonValue version;
@@ -358,8 +353,6 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
 
 TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 
-    createResources();
-
     initforJsonRpc();
 
     // TC-1: Check if the listed methods exist using JsonRpc
@@ -382,8 +375,6 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getLockedInfo")));
 
 	deinitforJsonRpc();
-	
-    releaseResources();
 }
 
 /* Test Case for adding download request to a regular queue using JsonRpc
@@ -396,8 +387,6 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 
 TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
     
-    createResources();
-
     initforJsonRpc();
 
     Core::Event onAppDownloadStatus(false, true);
@@ -428,8 +417,6 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
     deinitforJsonRpc();
-
-    releaseResources();
 }
 
 /* Test Case for checking download request error when internet is unavailable using JsonRpc
@@ -442,7 +429,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
     
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -458,7 +445,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
 
     deinitforJsonRpc();
 
-    releaseResources();
+    
 }
 
 /* Test Case for adding download request to a queue(priority/regular) using ComRpc
@@ -476,7 +463,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
 
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -512,7 +499,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for checking download request error when internet is unavailable using ComRpc
@@ -526,7 +513,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -544,7 +531,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for pausing download via ID using JsonRpc
@@ -559,7 +546,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
 
 TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -598,7 +585,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for pausing failed using JsonRpc
@@ -611,7 +598,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -620,7 +607,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
 
     deinitforJsonRpc();
 
-    releaseResources();
+    
 }
 
 /* Test Case for pausing download via ID using ComRpc
@@ -636,7 +623,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
 
 TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -678,7 +665,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 
-    releaseResources();
+    
 }
 
 /* Test Case for pausing failed using ComRpc
@@ -691,7 +678,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -702,7 +689,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for resuming download via ID using JsonRpc
@@ -719,7 +706,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
 
 TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -760,7 +747,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
  /* Test Case for resuming failed using JsonRpc
@@ -773,7 +760,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
  TEST_F(PackageManagerTest, resumeMethodusingJsonRpcFailure) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -782,7 +769,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
  /* Test Case for resuming download via ID using ComRpc
@@ -800,7 +787,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -846,7 +833,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     deinitforComRpc();
 
-    releaseResources();
+    
 }
 
  /* Test Case for resuming failed using ComRpc
@@ -859,7 +846,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
   TEST_F(PackageManagerTest, resumeMethodusingComRpcFailure) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -870,7 +857,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for cancelling download via ID using JsonRpc
@@ -887,7 +874,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -924,7 +911,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 	
     deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for cancelling failed using JsonRpc
@@ -937,7 +924,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 
  TEST_F(PackageManagerTest, cancelMethodusingJsonRpcFailure) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -946,7 +933,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for cancelling download via ID using ComRpc
@@ -964,7 +951,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1006,7 +993,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for cancelling failed using ComRpc
@@ -1019,7 +1006,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1030,7 +1017,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for delete download using JsonRpc
@@ -1045,7 +1032,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
 
 TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -1080,7 +1067,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for delete failed using JsonRpc
@@ -1093,7 +1080,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -1102,7 +1089,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for delete download using ComRpc
@@ -1118,7 +1105,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
 
 TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1159,7 +1146,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for delete download failure using ComRpc
@@ -1172,7 +1159,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1183,7 +1170,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for download progress via ID using JsonRpc
@@ -1200,7 +1187,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
 
 TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -1241,7 +1228,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for download progress failure using JsonRpc
@@ -1254,7 +1241,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -1263,7 +1250,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for download progress via ID using ComRpc
@@ -1281,7 +1268,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
  TEST_F(PackageManagerTest, progressMethodusingComRpcSuccess) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1329,7 +1316,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for download progress failure using ComRpc
@@ -1342,7 +1329,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
 TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1355,7 +1342,7 @@ TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for getting storage details using JsonRpc
@@ -1368,7 +1355,7 @@ TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
 
 TEST_F(PackageManagerTest, getStorageDetailsusingJsonRpc) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -1377,7 +1364,7 @@ TEST_F(PackageManagerTest, getStorageDetailsusingJsonRpc) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for getting storage details using ComRpc
@@ -1390,7 +1377,7 @@ TEST_F(PackageManagerTest, getStorageDetailsusingJsonRpc) {
 
 TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1402,7 +1389,7 @@ TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for setting rate limit via ID using JsonRpc
@@ -1419,7 +1406,7 @@ TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
 
 TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -1460,7 +1447,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
  /* Test Case for setting rate limit failure using JsonRpc
@@ -1473,7 +1460,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, rateLimitusingJsonRpcFailure) {
 
-    createResources();
+    
 
     initforJsonRpc();
 
@@ -1482,7 +1469,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for setting rate limit via ID using ComRpc
@@ -1500,7 +1487,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcFailure) {
 
 TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1548,7 +1535,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for failure in setting rateLimit using ComRpc
@@ -1561,7 +1548,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
  TEST_F(PackageManagerTest, rateLimitusingComRpcFailure) {
 
-    createResources();
+    
 
     initforComRpc();
 
@@ -1573,7 +1560,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 // IPackageInstaller methods
@@ -1588,7 +1575,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
 
-    createResources();   
+       
 
     initforJsonRpc();
     
@@ -1597,7 +1584,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for install failure using JsonRpc
@@ -1611,7 +1598,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
 // Need to work on this test case
 TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
 
-    createResources();   
+       
 
     initforJsonRpc();
     #if 0
@@ -1627,7 +1614,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
  /* Test Case for error on install due to invalid signature using ComRpc
@@ -1640,7 +1627,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
 
 TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -1657,7 +1644,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for install failure using ComRpc
@@ -1673,7 +1660,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
  TEST_F(PackageManagerTest, installusingComRpcFailure) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -1718,7 +1705,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for uninstall failure using JsonRpc
@@ -1733,7 +1720,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
 TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
 
-    createResources();   
+       
 
     initforJsonRpc();
     #if 0
@@ -1758,7 +1745,7 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for uninstall failure using ComRpc
@@ -1777,7 +1764,7 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
 
 TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -1840,7 +1827,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for list packages method success using JsonRpc
@@ -1853,7 +1840,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
 TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
 
-    createResources();   
+       
 
     initforJsonRpc();
 
@@ -1862,7 +1849,7 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for list packages method success using ComRpc
@@ -1875,7 +1862,7 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -1890,7 +1877,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for config method failure using JsonRpc
@@ -1905,7 +1892,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
-    createResources();   
+       
 
     initforJsonRpc();
     #if 0
@@ -1923,7 +1910,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for config method failure using ComRpc
@@ -1939,7 +1926,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -1991,7 +1978,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for package state failure using JsonRpc
@@ -2006,7 +1993,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
-    createResources();   
+       
 
     initforJsonRpc();
     #if 0
@@ -2024,7 +2011,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for package state failure using ComRpc
@@ -2040,7 +2027,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -2092,7 +2079,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
  /* Test Case for get config for package error due to invalid signature using JsonRpc
@@ -2105,7 +2092,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
 TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcInvalidSignature) {
 
-    createResources();   
+       
 
     initforJsonRpc();
 
@@ -2114,7 +2101,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcInvalidSignature) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for get config for package failure using JsonRpc
@@ -2127,7 +2114,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcInvalidSignature) {
 
 TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcFailure) {
 
-    createResources();   
+       
 
     initforJsonRpc();
 
@@ -2136,7 +2123,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for get config for packages error due to invalid signature using ComRpc
@@ -2149,7 +2136,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcFailure) {
 
 TEST_F(PackageManagerTest, getConfigforPackageusingComRpcInvalidSignature) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -2164,7 +2151,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcInvalidSignature) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for get config for package failure using ComRpc
@@ -2177,7 +2164,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcInvalidSignature) {
 
 TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -2192,7 +2179,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 // IPackageHandler methods
@@ -2207,7 +2194,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 
 TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 
-    createResources();   
+       
 
     initforJsonRpc();
     
@@ -2216,7 +2203,7 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for lock error using ComRpc
@@ -2229,7 +2216,7 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 
 TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -2248,7 +2235,7 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for unlock error using JsonRpc
@@ -2261,7 +2248,7 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
 
 TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 
-    createResources();   
+       
 
     initforJsonRpc();
 
@@ -2270,7 +2257,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for unlock error using ComRpc
@@ -2283,7 +2270,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 
 TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -2295,7 +2282,7 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for get locked info error using JsonRpc
@@ -2308,7 +2295,7 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
 
 TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 
-    createResources();   
+       
 
     initforJsonRpc();
 
@@ -2317,7 +2304,7 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 
 	deinitforJsonRpc();
 	
-    releaseResources();
+    
 }
 
 /* Test Case for get locked info error using ComRpc
@@ -2330,7 +2317,7 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 
 TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 
-    createResources();   
+       
 
     initforComRpc();
 
@@ -2346,7 +2333,7 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 
 	deinitforComRpc();
 	
-    releaseResources();
+    
 
 }
 
