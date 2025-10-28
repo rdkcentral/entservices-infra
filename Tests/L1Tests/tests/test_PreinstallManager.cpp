@@ -1018,7 +1018,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithMixedPackageStates)
     Exchange::IPackageInstaller::Package failedPackage;
     failedPackage.packageId = "com.test.failed.app";
     failedPackage.version = "3.0.0";
-    failedPackage.state = Exchange::IPackageInstaller::InstallState::INSTALL_FAILED;
+    failedPackage.state = Exchange::IPackageInstaller::InstallState::INSTALL_FAILURE;
     packageList.emplace_back(failedPackage);
     
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
@@ -1121,7 +1121,7 @@ TEST_F(PreinstallManagerTest, RapidSuccessiveNotifications)
         futures.push_back(promises[i].get_future());
     }
     
-    int callCount = 0;
+    size_t callCount = 0;
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
         .Times(numNotifications)
         .WillRepeatedly(::testing::InvokeWithoutArgs([&promises, &callCount]() {
