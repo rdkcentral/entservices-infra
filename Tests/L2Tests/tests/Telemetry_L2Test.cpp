@@ -1057,6 +1057,7 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_LIGHTSLEEP)
     Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEngine_PowerManager;
     Core::ProxyType<RPC::CommunicatorClient> mClient_PowerManager;
     PluginHost::IShell* mController_PowerManager;
+    uint32_t signalled = Telemetry_StateInvalid;
 
     TEST_LOG("Creating mEngine_PowerManager");
     mEngine_PowerManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
@@ -1089,6 +1090,9 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_LIGHTSLEEP)
 
                 // some delay to destroy AckController after IModeChanged notification
                 std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+                signalled = notify.WaitForRequestStatus(JSON_TIMEOUT,Telemetry_OnReportUpload);
+                EXPECT_TRUE(signalled & Telemetry_OnReportUpload);
 
                 PowerManagerPlugin->Release();
             } else {
