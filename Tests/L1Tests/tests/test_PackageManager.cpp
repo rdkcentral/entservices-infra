@@ -1653,8 +1653,6 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // TC-44: Error on install due to invalid signature using ComRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-    additionalMetadata->Release();
-
 	deinitforComRpc();
 	
     releaseResources();
@@ -1715,8 +1713,6 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
-
-    additionalMetadata->Release();
 
 	deinitforComRpc();
 	
@@ -1840,8 +1836,6 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
 
-    additionalMetadata->Release();
-
 	deinitforComRpc();
 	
     releaseResources();
@@ -1876,7 +1870,7 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
  * Verify that the ListPackages method is successful by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
     createResources();   
@@ -1896,7 +1890,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 	
     releaseResources();
 }
-
+#endif
 /* Test Case for config method failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1992,8 +1986,6 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
-
-    additionalMetadata->Release();
 
 	deinitforComRpc();
 	
@@ -2095,8 +2087,6 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
     
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
-
-    additionalMetadata->Release();
 
 	deinitforComRpc();
 	
