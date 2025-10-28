@@ -616,7 +616,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = downloadId.downloadId;
+    string downloadId = "1001";
 
     // TC-8: Pause download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
@@ -755,7 +755,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = downloadId.downloadId;
+    string downloadId = "1001";
     
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
@@ -890,7 +890,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = downloadId.downloadId;
+    string downloadId = "1001";
     
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
@@ -1174,7 +1174,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = downloadId.downloadId;
+    string downloadId = "1001";
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
@@ -1360,7 +1360,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = downloadId.downloadId;
+    string downloadId = "1001";
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
 
