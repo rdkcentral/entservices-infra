@@ -489,12 +489,12 @@ jobs:
           -DPLUGIN_TELEMETRY=ON
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
-          -DPLUGIN_OCICONTAINER=ON
+          -DPLUGIN_OCICONTAINER=OFF
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_APPMANAGER=OFF
-          -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_RUNTIME_MANAGER=ON
+          -DPLUGIN_STORAGE_MANAGER=OFF
+          -DPLUGIN_RUNTIME_MANAGER=OFF
           -DPLUGIN_LIFECYCLE_MANAGER=OFF
           -DPLUGIN_PACKAGE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
@@ -673,60 +673,56 @@ jobs:
           &&
           ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
 
-      #- name: Run unit tests without valgrind
-       # run: >
-       #   PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
-        #  LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
-       #   GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
-       #   RdkServicesL1Test &&
-        #  cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithoutValgrind.json &&
-        #  rm -rf $(pwd)/rdkL1TestResults.json
-
-      - name: Run unit tests with valgrind
-        if: ${{ !env.ACT }}
-        run: |
-          set +e
+      - name: Run unit tests without valgrind
+        run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
-          valgrind \
-          --tool=memcheck \
-          --log-file=valgrind_log \
-          --leak-check=yes \
-          --show-reachable=yes \
-          --track-fds=yes \
-          --fair-sched=try \
-          RdkServicesL1Test 
-          cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithValgrind.json || true
-          cp -rf valgrind_log $GITHUB_WORKSPACE/valgrind_log || true
-          rm -rf $(pwd)/rdkL1TestResults.json || true
-          set -e
+          RdkServicesL1Test &&
+          cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithoutValgrind.json &&
+          rm -rf $(pwd)/rdkL1TestResults.json
 
-     # - name: Generate coverage
-     #   if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
-     #   run: >
-     #     cp $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/.lcovrc_l1 ~/.lcovrc
-     #     &&
-     #     lcov -c
-     #     -o coverage.info
-     #     -d build/entservices-infra
-     #     &&
-     #     lcov
-     #     -r coverage.info
-     #     '/usr/include/*'
-     #     '*/build/entservices-infra/_deps/*'
-     #     '*/install/usr/include/*'
-     #     '*/Tests/headers/*'
-     #     '*/Tests/mocks/*'
-     #     '*/Tests/L1Tests/tests/*'
-     #     '*/Thunder/*'
-   
-     #     -o filtered_coverage.info
-     #     &&
-     #     genhtml
-     #     -o coverage
-     #     -t "entservices-infra coverage"
-     #     filtered_coverage.info
+      - name: Run unit tests with valgrind
+        if: ${{ !env.ACT }}
+        run: >
+          PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
+          LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
+          GTEST_OUTPUT="json:$(pwd)/rdkL1TestResults.json"
+          valgrind
+          --tool=memcheck
+          --log-file=valgrind_log
+          --leak-check=yes
+          --show-reachable=yes
+          --track-fds=yes
+          --fair-sched=try
+          RdkServicesL1Test &&
+          cp -rf $(pwd)/rdkL1TestResults.json $GITHUB_WORKSPACE/rdkL1TestResultsWithValgrind.json &&
+          rm -rf $(pwd)/rdkL1TestResults.json
+
+      - name: Generate coverage
+        if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
+        run: >
+          cp $GITHUB_WORKSPACE/entservices-testframework/Tests/L1Tests/.lcovrc_l1 ~/.lcovrc
+          &&
+          lcov -c
+          -o coverage.info
+          -d build/entservices-infra
+          &&
+          lcov
+          -r coverage.info
+          '/usr/include/*'
+          '*/build/entservices-infra/_deps/*'
+          '*/install/usr/include/*'
+          '*/Tests/headers/*'
+          '*/Tests/mocks/*'
+          '*/Tests/L1Tests/tests/*'
+          '*/Thunder/*'
+          -o filtered_coverage.info
+          &&
+          genhtml
+          -o coverage
+          -t "entservices-infra coverage"
+          filtered_coverage.info
 
       - name: Upload artifacts
         if: ${{ !env.ACT }}
