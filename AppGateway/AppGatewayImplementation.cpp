@@ -71,7 +71,8 @@ namespace WPEFramework
             mResolverPtr(nullptr), 
             mAppNotifications(nullptr),
             mAppGatewayResponder(nullptr),
-            mInternalGatewayResponder(nullptr)
+            mInternalGatewayResponder(nullptr),
+            mAuthenticator(nullptr)
         {
             LOGINFO("AppGatewayImplementation constructor");
         }
@@ -101,6 +102,12 @@ namespace WPEFramework
             {
                 mAppGatewayResponder->Release();
                 mAppGatewayResponder = nullptr;
+            }
+
+            if (nullptr != mAuthenticator)
+            {
+                mAuthenticator->Release();
+                mAuthenticator = nullptr;
             }
             
 
@@ -247,7 +254,7 @@ namespace WPEFramework
         {
             Core::hresult result = FetchResolvedData(context, method, params, origin, resolution);
             if (!resolution.empty()) {
-            LOGINFO("Final resolution: %s", resolution.c_str());
+                LOGINFO("Final resolution: %s", resolution.c_str());
                 Core::IWorkerPool::Instance().Submit(RespondJob::Create(this, context, resolution, origin));
             }
             return result;
@@ -278,6 +285,24 @@ namespace WPEFramework
                 LOGERR("No alias found for method: %s", method.c_str());
                 ErrorUtils::NotSupported(resolution);
                 return Core::ERROR_GENERAL;
+            }
+
+            std::string permissionGroup;
+            if (mResolverPtr->HasPermissionGroup(method, permissionGroup)) {
+                LOGDBG("Method '%s' requires permission group '%s'", method.c_str(), permissionGroup.c_str());
+                if (SetupAppGatewayAuthenticator()) {
+                    bool allowed = false;
+                    if (Core::ERROR_NONE != mAuthenticator->CheckPermissionGroup(context.appId, permissionGroup, allowed)) {
+                        LOGERR("Failed to check permission group '%s' for appId '%s'", permissionGroup.c_str(), context.appId.c_str());
+                        ErrorUtils::NotPermitted(resolution);
+                        return Core::ERROR_GENERAL;
+                    }
+                    if (!allowed) {
+                        LOGERR("AppId '%s' not allowed in permission group '%s'", context.appId.c_str(), permissionGroup.c_str());
+                        ErrorUtils::NotPermitted(resolution);
+                        return Core::ERROR_GENERAL;
+                    }
+                }
             }
             LOGDBG("Resolved method '%s' to alias '%s'", method.c_str(), alias.c_str());            
             // Check if the given method is an event
@@ -404,6 +429,17 @@ namespace WPEFramework
 
             mInternalGatewayResponder->Respond(context, payload);
 
+        }
+
+        bool AppGatewayImplementation::SetupAppGatewayAuthenticator() {
+            if ( mAuthenticator==nullptr ) {
+                mAuthenticator = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayAuthenticator>(INTERNAL_GATEWAY_CALLSIGN);
+                if (mAuthenticator == nullptr) {
+                    LOGERR("AppGateway Authenticator not available");
+                    return false;
+                }
+            }
+            return true;
         }
 
     } // namespace Plugin

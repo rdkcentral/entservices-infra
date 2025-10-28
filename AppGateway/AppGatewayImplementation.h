@@ -57,45 +57,6 @@ namespace Plugin {
         uint32_t Configure(PluginHost::IShell* service) override;
 
     private:
-        class EXTERNAL WsMsgJob : public Core::IDispatch
-        {
-        protected:
-            WsMsgJob(AppGatewayImplementation *parent, 
-            const std::string& method,
-            const std::string& params,
-            const uint32_t requestId,
-            const uint32_t connectionId)
-                : mParent(*parent), mMethod(method), mParams(params), mRequestId(requestId), mConnectionId(connectionId)
-            {
-            }
-
-        public:
-            WsMsgJob() = delete;
-            WsMsgJob(const WsMsgJob &) = delete;
-            WsMsgJob &operator=(const WsMsgJob &) = delete;
-            ~WsMsgJob()
-            {
-            }
-
-        public:
-            static Core::ProxyType<Core::IDispatch> Create(AppGatewayImplementation *parent,
-                const std::string& method, const std::string& params, const uint32_t requestId,
-                const uint32_t connectionId)
-            {
-                return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<WsMsgJob>::Create(parent, method, params, requestId, connectionId)));
-            }
-            virtual void Dispatch()
-            {
-                mParent.DispatchWsMsg(mMethod, mParams, mRequestId, mConnectionId);
-            }
-
-        private:
-            AppGatewayImplementation &mParent;
-            const std::string mMethod;
-            const std::string mParams;
-            const uint32_t mRequestId;
-            const uint32_t mConnectionId;
-        };
 
         class EXTERNAL RespondJob : public Core::IDispatch
         {
@@ -168,11 +129,6 @@ namespace Plugin {
             std::mutex mAppIdMutex;
         };
 
-        void DispatchWsMsg(const std::string& method,
-            const std::string& params,
-            const int requestId,
-            const uint32_t connectionId);
-
         Core::hresult HandleEvent(const Context &context, const string &alias, const string &event, const string &origin,  const bool listen);
                 
         void ReturnMessageInSocket(const Context& context, const string payload ) {
@@ -194,6 +150,7 @@ namespace Plugin {
         Exchange::IAppNotifications *mAppNotifications; // Shared pointer to AppNotifications
         Exchange::IAppGatewayResponder *mAppGatewayResponder;
         Exchange::IAppGatewayResponder *mInternalGatewayResponder; // Shared pointer to InternalGatewayResponder
+        Exchange::IAppGatewayAuthenticator *mAuthenticator; // Shared pointer to Authenticator
         AppIdRegistry mAppIdRegistry;
         uint32_t InitializeResolver();
         uint32_t InitializeWebsocket();
@@ -203,6 +160,7 @@ namespace Plugin {
         Core::hresult InternalResolve(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult FetchResolvedData(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult InternalResolutionConfigure(std::vector<std::string>&& configPaths);
+        bool SetupAppGatewayAuthenticator();
         void SendToLaunchDelegate(const Context& context, const string& payload);
     };
 } // namespace Plugin

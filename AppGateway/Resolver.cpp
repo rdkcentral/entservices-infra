@@ -289,5 +289,18 @@ namespace WPEFramework
             return false;
         }
 
+        bool Resolver::HasPermissionGroup(const std::string& key, std::string& permissionGroup )
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            std::string lowerKey = StringUtils::toLower(key);
+            auto it = mResolutions.find(lowerKey);
+            if (it != mResolutions.end())
+            {
+                permissionGroup = it->second.permissionGroup;
+                return !permissionGroup.empty();
+            }
+            return false;
+        }
+
     }
 }

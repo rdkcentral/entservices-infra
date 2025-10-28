@@ -88,6 +88,9 @@ namespace WPEFramework
             // New method to check if includeContext is enabled for a given key
             bool HasIncludeContext(const std::string &key, JsonValue& additionalContext);
 
+            // New method to check permission group is enabled
+            bool HasPermissionGroup(const std::string& key, std::string& permissionGroup );
+
         private:
             void ParseAlias(const std::string &alias, std::string &callsign, std::string &pluginMethod);
 
