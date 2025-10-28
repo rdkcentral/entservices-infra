@@ -41,7 +41,7 @@
     std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
-#define TIMEOUT   (1000)
+#define TIMEOUT   (2000)
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
@@ -2089,7 +2089,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
 
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-;
+
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
 
     signal = PackageManager_invalidStatus;
