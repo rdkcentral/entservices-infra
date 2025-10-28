@@ -985,7 +985,7 @@ err_ret:
                     }
                     else if ((success == false) || (status != Core::ERROR_NONE))
                     {
-                        LOGERR("Failed to StopContainer to terminate %s",errorReason.c_str());
+                        LOGERR("StopContainer failed to terminate %s",errorReason.c_str());
                     }
                     else
                     {
@@ -1006,10 +1006,11 @@ err_ret:
                 LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
             }
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
-            mRialtoConnector->suspendSession(mRuntimeAppInfo[appInstanceId].appId);
-            if (!mRialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::INACTIVE, RIALTO_TIMEOUT_MILLIS))
+            LOGINFO("Rialto session deactivate on terminate.");
+            mRialtoConnector->deactivateSession(mRuntimeAppInfo[appInstanceId].appId);
+            if (!mRialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::NOT_RUNNING, RIALTO_TIMEOUT_MILLIS))
             {
-               LOGERR("Rialto app session not ready. ");
+               LOGERR("Rialto session state change failed when changing to not running.");
                status = Core::ERROR_GENERAL;
             }
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
@@ -1071,6 +1072,15 @@ err_ret:
             {
                 LOGERR("OCI Plugin object is not valid. Aborting Kill.");
             }
+#ifdef RIALTO_IN_DAC_FEATURE_ENABLED
+            LOGINFO("Rialto Session deactivate on kill..");
+            mRialtoConnector->deactivateSession(mRuntimeAppInfo[appInstanceId].appId);
+            if (!mRialtoConnector->waitForStateChange(mRuntimeAppInfo[appInstanceId].appId,RialtoServerStates::NOT_RUNNING, RIALTO_TIMEOUT_MILLIS))
+            {
+               LOGERR("Rialto session state change failed when changing to not running ");
+               status = Core::ERROR_GENERAL;
+            }
+#endif // RIALTO_IN_DAC_FEATURE_ENABLED
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
