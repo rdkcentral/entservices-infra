@@ -25,6 +25,7 @@
 #include <memory>
 #include <mutex>
 #include <condition_variable>
+#include <fstream>
 
 #ifdef USE_LIBPACKAGE
 #include <IPackageImpl.h>
