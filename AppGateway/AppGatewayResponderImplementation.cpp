@@ -220,14 +220,6 @@ namespace WPEFramework
                 } else {
                     LOGDBG("mResolver was successful");
                 }
-
-                if (!resolution.empty()) {
-                    LOGINFO("Final resolution to send: %s", resolution.c_str());
-                    // Send response back to client
-                    mWsManager.SendMessageToConnection(connectionId, resolution, requestId);
-                } else {
-                    LOGERR("Empty resolution received from resolver");
-                }
             } else {
                 LOGERR("No App ID found for connection %d. Terminate connection", connectionId);
                 mWsManager.Close(connectionId);
