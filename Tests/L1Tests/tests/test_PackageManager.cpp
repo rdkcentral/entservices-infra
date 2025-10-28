@@ -122,7 +122,7 @@ protected:
 		workerPool.Release();
     }
 	
-	void Setup() override 
+	void SetUp() override 
 	{		
 		// Set up mocks and expect calls
         mServiceMock = new NiceMock<ServiceMock>;
@@ -186,23 +186,17 @@ protected:
 
     void TearDown() override
     {
-        
-
         // Clean up mocks
 		if (mServiceMock != nullptr)
         {
-            
 			delete mServiceMock;
 			mServiceMock = nullptr;
-            
         }
 
         if(mSubSystemMock != nullptr)
         {
-            
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
-            
         }
     }
 
@@ -214,7 +208,6 @@ protected:
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
-        
         // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
         dispatcher->Deactivate();
         dispatcher->Release();
@@ -231,8 +224,6 @@ protected:
 
     void deinitforComRpc()
     {
-        
-
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
@@ -246,7 +237,6 @@ protected:
 
         // Deinitialize the plugin for COM-RPC
         pkgdownloaderInterface->Deinitialize(mServiceMock);
-        
     }
 };
 
