@@ -1114,6 +1114,7 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_DEEPSLEEP)
     Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEngine_PowerManager;
     Core::ProxyType<RPC::CommunicatorClient> mClient_PowerManager;
     PluginHost::IShell* mController_PowerManager;
+    struct _rbusObject rbObject;
 
     TEST_LOG("Creating mEngine_PowerManager");
     mEngine_PowerManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
@@ -1143,6 +1144,17 @@ TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_DEEPSLEEP)
                             EXPECT_TRUE(powerState == PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP || 
                                        powerState == PWRMGR_POWERSTATE_STANDBY_LIGHT_SLEEP);
                             return PWRMGR_SUCCESS;
+                        }));
+
+                //Expect calls for rbus_open and rbusMethod_InvokeAsync for AbortReport
+                EXPECT_CALL(*p_rBusApiImplMock, rbus_open(::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Return(RBUS_ERROR_SUCCESS));
+
+                EXPECT_CALL(*p_rBusApiImplMock, rbusMethod_InvokeAsync(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Invoke(
+                        [&](rbusHandle_t handle, char const* methodName, rbusObject_t inParams, rbusMethodAsyncRespHandler_t callback,  int timeout) {
+                            callback(handle, methodName, RBUS_ERROR_SUCCESS, &rbObject);
+                            return RBUS_ERROR_SUCCESS;
                         }));
 
                 status = PowerManagerPlugin->SetPowerState(keyCode, PowerState::POWER_STATE_STANDBY_DEEP_SLEEP, "l2-test");
