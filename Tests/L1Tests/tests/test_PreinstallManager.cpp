@@ -1586,25 +1586,29 @@ TEST_F(PreinstallManagerTest, PackageIteratorWithMixedStates)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    auto createMockIteratorWithMixedStates = []() {
-        std::list<Exchange::IPackageInstaller::Package> packageList;
-        
-        // Add package in INSTALLED state
-        Exchange::IPackageInstaller::Package installedPackage;
-        installedPackage.packageId = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-        installedPackage.version = "0.9.0"; // Older version
-        installedPackage.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
-        packageList.emplace_back(installedPackage);
-        
-        // Add package in INSTALLING state (should be ignored)
-        Exchange::IPackageInstaller::Package installingPackage;
-        installingPackage.packageId = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-        installingPackage.version = "2.0.0"; // Newer version but wrong state
-        installingPackage.state = Exchange::IPackageInstaller::InstallState::INSTALLING;
-        packageList.emplace_back(installingPackage);
-        
-        return Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
-    };
+    // Mock ListPackages to return packages in mixed states
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            std::list<Exchange::IPackageInstaller::Package> packageList;
+            
+            // Add package in INSTALLED state
+            Exchange::IPackageInstaller::Package installedPackage;
+            installedPackage.packageId = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
+            installedPackage.version = "0.9.0"; // Older version
+            installedPackage.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(installedPackage);
+            
+            // Add package in INSTALLING state (should be ignored for version comparison)
+            Exchange::IPackageInstaller::Package installingPackage;
+            installingPackage.packageId = "com.test.installing";
+            installingPackage.version = "2.0.0"; // Newer version but wrong state
+            installingPackage.state = Exchange::IPackageInstaller::InstallState::INSTALLING;
+            packageList.emplace_back(installingPackage);
+            
+            auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
     
     // Test mixed package states when directory doesn't exist
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
@@ -1837,8 +1841,6 @@ TEST_F(PreinstallManagerTest, ComprehensiveVersionComparisonTesting)
         {"1.2.0", "1.1.0", "testapp2", false},     // Minor version downgrade  
         {"1.0.0-beta", "1.0.0", "testapp3", true}, // Version with suffix
     };
-    
-    size_t testCaseIndex = 0;
     
     // Mock GetConfigForPackage to return different versions for different apps
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2159,7 +2161,7 @@ TEST_F(PreinstallManagerTest, PackageInstallationWithEmptyFields)
  *
  * @details Test verifies that:
  * - Only packages in INSTALLED state are considered for upgrade comparison
- * - Packages in other states (DOWNLOADING, INVALID, etc.) are ignored for comparison
+ * - Packages in other states (INSTALLING, UNINSTALLED, etc.) are ignored for comparison
  * - Version comparison only happens for appropriate package states
  * - New packages (not in any list) are always installed
  */
@@ -2194,14 +2196,14 @@ TEST_F(PreinstallManagerTest, PackageFilteringByInstallState)
             return Core::ERROR_NONE;
         });
     
-    // Mock ListPackages to return package in DOWNLOADING state (should not be compared for version)
-    auto createMockIteratorWithDownloadingState = []() {
+    // Mock ListPackages to return package in INSTALLING state (should not be compared for version)
+    auto createMockIteratorWithInstallingState = []() {
         std::list<Exchange::IPackageInstaller::Package> packageList;
         Exchange::IPackageInstaller::Package package;
         package.packageId = "com.test.filter";
         package.version = "1.0.0"; // Older version
         package.digest = "";
-        package.state = Exchange::IPackageInstaller::InstallState::DOWNLOADING; // Not INSTALLED
+        package.state = Exchange::IPackageInstaller::InstallState::INSTALLING; // Not INSTALLED
         package.sizeKb = 1024;
         packageList.emplace_back(package);
         return Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
@@ -2209,7 +2211,7 @@ TEST_F(PreinstallManagerTest, PackageFilteringByInstallState)
     
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
         .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-            auto mockIterator = createMockIteratorWithDownloadingState();
+            auto mockIterator = createMockIteratorWithInstallingState();
             packages = mockIterator;
             return Core::ERROR_NONE;
         });
