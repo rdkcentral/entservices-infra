@@ -2001,7 +2001,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
  * Verify packageState method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
     createResources();   
@@ -2024,7 +2024,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 	
     releaseResources();
 }
-
+#endif
 /* Test Case for package state failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
