@@ -1923,7 +1923,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for config method failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -1991,7 +1991,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 	
     releaseResources();
 }
-
+#endif
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
