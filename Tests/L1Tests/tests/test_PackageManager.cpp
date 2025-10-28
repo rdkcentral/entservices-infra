@@ -1870,7 +1870,7 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
  * Verify that the ListPackages method is successful by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
     createResources();   
@@ -1890,7 +1890,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for config method failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1906,14 +1906,14 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
     createResources();   
 
     initforJsonRpc();
-    #if 0
+    
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-    #endif
+    
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-50: Success in config using JsonRpc
