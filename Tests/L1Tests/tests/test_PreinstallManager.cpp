@@ -1989,27 +1989,35 @@ TEST_F(PreinstallManagerTest, NotificationDispatchWithMultipleEventTypes)
     
     EXPECT_EQ(Core::ERROR_NONE, mPreinstallManagerImpl->Register(mockNotification.operator->()));
     
-    // Test notification with SUCCESS status
-    EXPECT_CALL(*mockNotification, onPreinstallCompleted(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce([&](const string& packageId, const string& version, Core::hresult status) {
-            EXPECT_EQ("com.test.success", packageId);
-            EXPECT_EQ("1.0.0", version);
-            EXPECT_EQ(Core::ERROR_NONE, status);
+    // Test notification with success event
+    EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
+        .WillOnce([&](const string& jsonresponse) {
+            EXPECT_TRUE(jsonresponse.find("SUCCESS") != string::npos);
         });
+    
+    // Create JsonObject for success notification
+    JsonObject successParams;
+    successParams["packageId"] = "com.test.success";
+    successParams["version"] = "1.0.0";
+    successParams["status"] = "SUCCESS";
     
     // Simulate notification call
-    mPreinstallManagerImpl->Dispatch(string("SUCCESS"), string("com.test.success"), string("1.0.0"));
+    mPreinstallManagerImpl->Dispatch(WPEFramework::Plugin::PreinstallManagerImplementation::PREINSTALL_MANAGER_APP_INSTALLATION_STATUS, successParams);
     
-    // Test notification with FAILURE status  
-    EXPECT_CALL(*mockNotification, onPreinstallCompleted(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce([&](const string& packageId, const string& version, Core::hresult status) {
-            EXPECT_EQ("com.test.fail", packageId);
-            EXPECT_EQ("2.0.0", version);
-            EXPECT_EQ(Core::ERROR_GENERAL, status);
+    // Test notification with failure event
+    EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
+        .WillOnce([&](const string& jsonresponse) {
+            EXPECT_TRUE(jsonresponse.find("FAILURE") != string::npos);
         });
     
+    // Create JsonObject for failure notification
+    JsonObject failureParams;
+    failureParams["packageId"] = "com.test.fail";
+    failureParams["version"] = "2.0.0";
+    failureParams["status"] = "FAILURE";
+    
     // Simulate notification call for failure
-    mPreinstallManagerImpl->Dispatch(string("FAILURE"), string("com.test.fail"), string("2.0.0"));
+    mPreinstallManagerImpl->Dispatch(WPEFramework::Plugin::PreinstallManagerImplementation::PREINSTALL_MANAGER_APP_INSTALLATION_STATUS, failureParams);
     
     EXPECT_EQ(Core::ERROR_NONE, mPreinstallManagerImpl->Unregister(mockNotification.operator->()));
     
@@ -2029,7 +2037,7 @@ TEST_F(PreinstallManagerTest, ConfigureMethodParameterHandling)
     auto mServiceMockForConfigure = new NiceMock<ServiceMock>;
     
     // Create implementation without full resources
-    mPreinstallManagerImpl = PreinstallManagerImplementation::CreateInstance(*mServiceMockForConfigure);
+    mPreinstallManagerImpl = WPEFramework::Plugin::PreinstallManagerImplementation::CreateInstance(*mServiceMockForConfigure);
     EXPECT_TRUE(mPreinstallManagerImpl != nullptr);
     
     // Test Configure with valid service
@@ -2108,7 +2116,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallErrorHandlingScenarios)
     EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(nullptr));
     
-    mPreinstallManagerImpl = PreinstallManagerImplementation::CreateInstance(*mServiceMock);
+    mPreinstallManagerImpl = WPEFramework::Plugin::PreinstallManagerImplementation::CreateInstance(*mServiceMock);
     EXPECT_TRUE(mPreinstallManagerImpl != nullptr);
     
     Core::hresult configResult = mPreinstallManagerImpl->Configure(mServiceMock);
@@ -2146,7 +2154,7 @@ TEST_F(PreinstallManagerTest, ReferenceCountingBehavior)
     auto mServiceMockForRef = new NiceMock<ServiceMock>;
     
     // Create implementation
-    auto impl = PreinstallManagerImplementation::CreateInstance(*mServiceMockForRef);
+    auto impl = WPEFramework::Plugin::PreinstallManagerImplementation::CreateInstance(*mServiceMockForRef);
     EXPECT_TRUE(impl != nullptr);
     
     // Test AddRef
@@ -2155,14 +2163,14 @@ TEST_F(PreinstallManagerTest, ReferenceCountingBehavior)
     
     // Test Release (should not destroy object yet due to extra AddRefs)
     uint32_t refCount1 = impl->Release();
-    EXPECT_GT(refCount1, 0);
+    EXPECT_GT(refCount1, 0u);
     
     uint32_t refCount2 = impl->Release();
-    EXPECT_GT(refCount2, 0);
+    EXPECT_GT(refCount2, 0u);
     
     // Final Release should destroy object
     uint32_t refCount3 = impl->Release();
-    EXPECT_EQ(0, refCount3);
+    EXPECT_EQ(0u, refCount3);
     
     // Cleanup
     if (mServiceMockForRef) {
