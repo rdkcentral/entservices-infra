@@ -1989,11 +1989,16 @@ TEST_F(PreinstallManagerTest, NotificationDispatchWithMultipleEventTypes)
     
     EXPECT_EQ(Core::ERROR_NONE, mPreinstallManagerImpl->Register(mockNotification.operator->()));
     
+    // Use promise/future for asynchronous notifications
+    std::promise<void> successPromise;
+    std::future<void> successFuture = successPromise.get_future();
+    
     // Test notification with success event
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
         .WillOnce([&](const string& jsonresponse) {
             EXPECT_TRUE(jsonresponse.find("SUCCESS") != string::npos);
             EXPECT_TRUE(jsonresponse.find("com.test.success") != string::npos);
+            successPromise.set_value();
         });
     
     // Create JSON string for success notification
@@ -2002,11 +2007,19 @@ TEST_F(PreinstallManagerTest, NotificationDispatchWithMultipleEventTypes)
     // Simulate notification call using public method
     mPreinstallManagerImpl->handleOnAppInstallationStatus(successJson);
     
-    // Test notification with failure event
+    // Wait for the asynchronous notification (with timeout)
+    auto successStatus = successFuture.wait_for(std::chrono::seconds(2));
+    EXPECT_EQ(std::future_status::ready, successStatus) << "Success notification was not received within timeout";
+    
+    // Second test with failure event
+    std::promise<void> failurePromise;
+    std::future<void> failureFuture = failurePromise.get_future();
+    
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
         .WillOnce([&](const string& jsonresponse) {
             EXPECT_TRUE(jsonresponse.find("FAILURE") != string::npos);
             EXPECT_TRUE(jsonresponse.find("com.test.fail") != string::npos);
+            failurePromise.set_value();
         });
     
     // Create JSON string for failure notification
@@ -2014,6 +2027,10 @@ TEST_F(PreinstallManagerTest, NotificationDispatchWithMultipleEventTypes)
     
     // Simulate notification call for failure using public method
     mPreinstallManagerImpl->handleOnAppInstallationStatus(failureJson);
+    
+    // Wait for the asynchronous notification (with timeout)
+    auto failureStatus = failureFuture.wait_for(std::chrono::seconds(2));
+    EXPECT_EQ(std::future_status::ready, failureStatus) << "Failure notification was not received within timeout";
     
     EXPECT_EQ(Core::ERROR_NONE, mPreinstallManagerImpl->Unregister(mockNotification.operator->()));
     
@@ -2030,11 +2047,10 @@ TEST_F(PreinstallManagerTest, NotificationDispatchWithMultipleEventTypes)
  */
 TEST_F(PreinstallManagerTest, ConfigureMethodParameterHandling)
 {
-    auto mServiceMockForConfigure = new NiceMock<ServiceMock>;
+    // First initialize the plugin to create singleton instance
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Create implementation using getInstance
-    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
-    EXPECT_TRUE(mPreinstallManagerImpl != nullptr);
+    auto mServiceMockForConfigure = new NiceMock<ServiceMock>;
     
     // Test Configure with valid service
     Core::hresult result1 = mPreinstallManagerImpl->Configure(mServiceMockForConfigure);
@@ -2049,14 +2065,11 @@ TEST_F(PreinstallManagerTest, ConfigureMethodParameterHandling)
     EXPECT_EQ(Core::ERROR_GENERAL, result3);
     
     // Cleanup
-    if (mPreinstallManagerImpl) {
-        mPreinstallManagerImpl->Release();
-        mPreinstallManagerImpl = nullptr;
-    }
-    
     if (mServiceMockForConfigure) {
         delete mServiceMockForConfigure;
     }
+    
+    releaseResources();
 }
 
 /**
@@ -2105,13 +2118,15 @@ TEST_F(PreinstallManagerTest, NotificationRegistrationEdgeCases)
  */
 TEST_F(PreinstallManagerTest, StartPreinstallErrorHandlingScenarios)
 {
-    // Test without creating resources to simulate PackageManager unavailable
+    // Initialize plugin first but without PackageInstaller mock to simulate unavailable PackageManager
     mServiceMock = new NiceMock<ServiceMock>;
     
-    // Don't set up PackageInstaller mock in QueryInterfaceByCallsign
+    // Set up failing QueryInterfaceByCallsign to simulate PackageManager unavailable
     EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(nullptr));
     
+    // Initialize plugin to create singleton instance
+    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
     mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
     EXPECT_TRUE(mPreinstallManagerImpl != nullptr);
     
@@ -2126,15 +2141,12 @@ TEST_F(PreinstallManagerTest, StartPreinstallErrorHandlingScenarios)
     EXPECT_EQ(Core::ERROR_GENERAL, result2);
     
     // Cleanup
-    if (mPreinstallManagerImpl) {
-        mPreinstallManagerImpl->Release();
-        mPreinstallManagerImpl = nullptr;
-    }
-    
+    plugin->Deinitialize(mServiceMock);
     if (mServiceMock) {
         delete mServiceMock;
         mServiceMock = nullptr;
     }
+    mPreinstallManagerImpl = nullptr;
 }
 
 /**
@@ -2147,29 +2159,22 @@ TEST_F(PreinstallManagerTest, StartPreinstallErrorHandlingScenarios)
  */
 TEST_F(PreinstallManagerTest, ReferenceCountingBehavior)
 {
-    auto mServiceMockForRef = new NiceMock<ServiceMock>;
-    
-    // Create implementation using getInstance
-    auto impl = Plugin::PreinstallManagerImplementation::getInstance();
-    EXPECT_TRUE(impl != nullptr);
+    // Initialize plugin first to create singleton instance
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Test AddRef
-    impl->AddRef();
-    impl->AddRef();
+    mPreinstallManagerImpl->AddRef();
+    mPreinstallManagerImpl->AddRef();
     
     // Test Release (should not destroy object yet due to extra AddRefs)
-    uint32_t refCount1 = impl->Release();
+    uint32_t refCount1 = mPreinstallManagerImpl->Release();
     EXPECT_GT(refCount1, 0u);
     
-    uint32_t refCount2 = impl->Release();
+    uint32_t refCount2 = mPreinstallManagerImpl->Release();
     EXPECT_GT(refCount2, 0u);
     
-    // Final Release should destroy object
-    uint32_t refCount3 = impl->Release();
-    EXPECT_EQ(0u, refCount3);
+    // Note: Cannot test final Release to 0 on singleton as it would destroy the instance
+    // and cause issues for other tests. Just verify proper ref counting behavior.
     
-    // Cleanup
-    if (mServiceMockForRef) {
-        delete mServiceMockForRef;
-    }
+    releaseResources();
 }
