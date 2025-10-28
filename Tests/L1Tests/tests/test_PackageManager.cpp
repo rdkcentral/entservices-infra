@@ -2024,7 +2024,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for package state failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -2092,7 +2092,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 	
     releaseResources();
 }
-
+#endif
  /* Test Case for get config for package error due to invalid signature using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
