@@ -41,7 +41,7 @@
     std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
-#define TIMEOUT   (2000)
+#define TIMEOUT   (1000)
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
@@ -218,7 +218,7 @@ protected:
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
-		EXPECT_CALL(*mStorageManagerMock, Release())
+        EXPECT_CALL(*mStorageManagerMock, Release())
           .WillOnce(::testing::Invoke(
                 [&]() {
                      delete mStorageManagerMock;
@@ -1722,8 +1722,6 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
 
-	additionalMetadata->Release();
-	 
 	deinitforComRpc();
 	
     releaseResources();
@@ -1846,8 +1844,6 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
 
-	additionalMetadata->Release();
-
 	deinitforComRpc();
 	
     releaseResources();
@@ -1912,20 +1908,20 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
  * Verify config method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
     createResources();   
 
     initforJsonRpc();
-    
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-    
+    #endif
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-50: Success in config using JsonRpc
@@ -1999,13 +1995,11 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
 
-    additionalMetadata->Release();
-
 	deinitforComRpc();
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -2089,7 +2083,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_invalidStatus);
 
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
-
+;
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppInstallStatus);
 
     signal = PackageManager_invalidStatus;
@@ -2101,8 +2095,6 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
     
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
-
-	additionalMetadata->Release();
 
 	deinitforComRpc();
 	
@@ -2116,7 +2108,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
  * Verify getConfigforPackages method error by asserting that it returns Core::ERROR_INVALID_SIGNATURE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcInvalidSignature) {
 
     createResources();   
@@ -2232,7 +2224,7 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for lock error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -2260,8 +2252,6 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
 	// TC-59: Error on lock using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Lock(packageId, version, lockReason, lockId, unpackedPath, configMetadata, appMetadata));
 
-    appMetadata->Release();
-
 	deinitforComRpc();
 	
     releaseResources();
@@ -2274,7 +2264,7 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
  * Verify unlock method error by asserting that it returns Core::ERROR_BAD_REQUEST
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 
     createResources();   
@@ -2288,7 +2278,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for unlock error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -2321,7 +2311,7 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
  * Verify getLockedInfo method error by asserting that it returns Core::ERROR_BAD_REQUEST
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 
     createResources();   
@@ -2335,7 +2325,7 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for get locked info error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
