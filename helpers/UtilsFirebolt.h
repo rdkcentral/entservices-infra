@@ -162,6 +162,10 @@ class ErrorUtils {
         resolution = ErrorUtils::GetFireboltError(FireboltError::NOT_AVAILABLE);
     }
 
+    static void NotPermitted(string& resolution) {
+        resolution = ErrorUtils::GetFireboltError(FireboltError::NOT_PERMITTED);
+    }
+
     static void CustomInitialize(const string& message, string& resolution) {
         resolution = ErrorUtils::GetErrorMessageForFrameworkErrors(Core::ERROR_GENERAL, message);
     }
