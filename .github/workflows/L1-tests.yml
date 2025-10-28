@@ -717,7 +717,6 @@ jobs:
           '*/Tests/mocks/*'
           '*/Tests/L1Tests/tests/*'
           '*/Thunder/*'
-   
           -o filtered_coverage.info
           &&
           genhtml
