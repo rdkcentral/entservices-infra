@@ -63,6 +63,11 @@ namespace Plugin {
 
         mShell = service;
         mShell->AddRef();
+
+        // Initialize the settings delegate
+        mDelegate = std::make_shared<SettingsDelegate>();
+        mDelegate->setShell(mShell);
+
         return EMPTY_STRING;
     }
 
@@ -71,6 +76,10 @@ namespace Plugin {
         SYSLOG(Logging::Shutdown, (string(_T("FbSettings::Deinitialize"))));
         ASSERT(service == mShell);
         mConnectionId = 0;
+
+        // Clean up the delegate
+        mDelegate.reset();
+
         mShell->Release();
         mShell = nullptr;
         SYSLOG(Logging::Shutdown, (string(_T("FbSettings de-initialised"))));
