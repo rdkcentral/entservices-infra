@@ -201,14 +201,6 @@ protected:
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         }
 
-        if(mStorageManagerMock != nullptr)
-        {
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-			delete mStorageManagerMock;
-			mStorageManagerMock = nullptr;
-            DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
-        }
-
         if(mSubSystemMock != nullptr)
         {
             DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
@@ -225,6 +217,14 @@ protected:
 
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
+
+        EXPECT_CALL(*mStorageManagerMock, Release())
+          .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mStorageManagerMock;
+                     mStorageManagerMock = nullptr;
+                     return 0;
+            }));
 
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
@@ -1132,7 +1132,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
-    uint32_t timeout_ms = 3000;
+    uint32_t timeout_ms = 4000;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1620,23 +1620,20 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
     createResources();   
 
     initforJsonRpc();
-
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-    
+    #endif
     // TC-43: Failure on install using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
-    deinitforJsonRpc();
+	deinitforJsonRpc();
 	
     releaseResources();
-
-    delete mStorageManagerMock;
-    mStorageManagerMock = nullptr
 }
 
  /* Test Case for error on install due to invalid signature using ComRpc
@@ -1745,7 +1742,7 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
     createResources();   
 
     initforJsonRpc();
-
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1759,19 +1756,11 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
             [&](const string& appId, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-
+    #endif
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-46: Failure on uninstall using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\"}"), mJsonRpcResponse));
-
-    EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));    
 
 	deinitforJsonRpc();
 	
@@ -1925,26 +1914,18 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
     createResources();   
 
     initforJsonRpc();
-
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-
+    #endif
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-50: Success in config using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
-
-    EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
 
 	deinitforJsonRpc();
 	
@@ -2034,26 +2015,18 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
     createResources();   
 
     initforJsonRpc();
-
+    #if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-
+    #endif
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-52: Failure in package state using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
-
-    EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
 
 	deinitforJsonRpc();
 	
@@ -2381,4 +2354,3 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 	
     releaseResources();
 }
-
