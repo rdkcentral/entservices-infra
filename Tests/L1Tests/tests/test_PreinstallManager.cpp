@@ -1993,31 +1993,27 @@ TEST_F(PreinstallManagerTest, NotificationDispatchWithMultipleEventTypes)
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
         .WillOnce([&](const string& jsonresponse) {
             EXPECT_TRUE(jsonresponse.find("SUCCESS") != string::npos);
+            EXPECT_TRUE(jsonresponse.find("com.test.success") != string::npos);
         });
     
-    // Create JsonObject for success notification
-    JsonObject successParams;
-    successParams["packageId"] = "com.test.success";
-    successParams["version"] = "1.0.0";
-    successParams["status"] = "SUCCESS";
+    // Create JSON string for success notification
+    string successJson = R"({"packageId":"com.test.success","version":"1.0.0","status":"SUCCESS"})";
     
-    // Simulate notification call
-    mPreinstallManagerImpl->Dispatch(WPEFramework::Plugin::PreinstallManagerImplementation::PREINSTALL_MANAGER_APP_INSTALLATION_STATUS, successParams);
+    // Simulate notification call using public method
+    mPreinstallManagerImpl->handleOnAppInstallationStatus(successJson);
     
     // Test notification with failure event
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
         .WillOnce([&](const string& jsonresponse) {
             EXPECT_TRUE(jsonresponse.find("FAILURE") != string::npos);
+            EXPECT_TRUE(jsonresponse.find("com.test.fail") != string::npos);
         });
     
-    // Create JsonObject for failure notification
-    JsonObject failureParams;
-    failureParams["packageId"] = "com.test.fail";
-    failureParams["version"] = "2.0.0";
-    failureParams["status"] = "FAILURE";
+    // Create JSON string for failure notification
+    string failureJson = R"({"packageId":"com.test.fail","version":"2.0.0","status":"FAILURE"})";
     
-    // Simulate notification call for failure
-    mPreinstallManagerImpl->Dispatch(WPEFramework::Plugin::PreinstallManagerImplementation::PREINSTALL_MANAGER_APP_INSTALLATION_STATUS, failureParams);
+    // Simulate notification call for failure using public method
+    mPreinstallManagerImpl->handleOnAppInstallationStatus(failureJson);
     
     EXPECT_EQ(Core::ERROR_NONE, mPreinstallManagerImpl->Unregister(mockNotification.operator->()));
     
@@ -2036,8 +2032,8 @@ TEST_F(PreinstallManagerTest, ConfigureMethodParameterHandling)
 {
     auto mServiceMockForConfigure = new NiceMock<ServiceMock>;
     
-    // Create implementation without full resources
-    mPreinstallManagerImpl = WPEFramework::Plugin::PreinstallManagerImplementation::CreateInstance(*mServiceMockForConfigure);
+    // Create implementation using getInstance
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
     EXPECT_TRUE(mPreinstallManagerImpl != nullptr);
     
     // Test Configure with valid service
@@ -2116,7 +2112,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallErrorHandlingScenarios)
     EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(nullptr));
     
-    mPreinstallManagerImpl = WPEFramework::Plugin::PreinstallManagerImplementation::CreateInstance(*mServiceMock);
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
     EXPECT_TRUE(mPreinstallManagerImpl != nullptr);
     
     Core::hresult configResult = mPreinstallManagerImpl->Configure(mServiceMock);
@@ -2153,8 +2149,8 @@ TEST_F(PreinstallManagerTest, ReferenceCountingBehavior)
 {
     auto mServiceMockForRef = new NiceMock<ServiceMock>;
     
-    // Create implementation
-    auto impl = WPEFramework::Plugin::PreinstallManagerImplementation::CreateInstance(*mServiceMockForRef);
+    // Create implementation using getInstance
+    auto impl = Plugin::PreinstallManagerImplementation::getInstance();
     EXPECT_TRUE(impl != nullptr);
     
     // Test AddRef
