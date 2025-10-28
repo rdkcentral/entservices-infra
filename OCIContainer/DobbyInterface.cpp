@@ -360,6 +360,7 @@ bool DobbyInterface::stopContainer(const string& containerId, bool force, string
     int cd = GetContainerDescriptorFromId(id);
     if (cd < 0)
     {
+        errorReason = "Container not found";
         return false;
     }
 
