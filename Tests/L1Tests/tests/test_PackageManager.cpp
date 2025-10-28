@@ -61,10 +61,6 @@ struct StatusParams {
     Exchange::IPackageDownloader::Reason reason;
 };
 
-namespace {
-    const string callsign = _T("PackageManager");
-}
-
 class PackageManagerTest : public ::testing::Test {
 protected:
     // Declare the protected members
@@ -218,14 +214,6 @@ protected:
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
-        EXPECT_CALL(*mStorageManagerMock, Release())
-          .WillOnce(::testing::Invoke(
-                [&]() {
-                     delete mStorageManagerMock;
-                     mStorageManagerMock = nullptr;
-                     return 0;
-            }));
-
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
         // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
         dispatcher->Deactivate();
@@ -233,6 +221,12 @@ protected:
 
         plugin->Deinitialize(mServiceMock);
         DEBUG_PRINTF("-----------------------DEBUG-2803------------------------");
+
+        if(mStorageManagerMock != nullptr)
+        {
+            delete mStorageManagerMock;
+            mStorageManagerMock = nullptr;
+        }
     }
 
     void deinitforComRpc()
