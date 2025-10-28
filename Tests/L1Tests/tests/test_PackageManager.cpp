@@ -2136,7 +2136,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcFailure) {
 	
     releaseResources();
 }
-#endif
+
 /* Test Case for get config for packages error due to invalid signature using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -2192,7 +2192,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 	
     releaseResources();
 }
-
+#endif
 // IPackageHandler methods
 
 /* Test Case for lock error using JsonRpc
