@@ -950,6 +950,15 @@ namespace Plugin {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
         cacheInitialized = true;
+        const std::string markerFile = "/tmp/package_manager_ready";
+            std::ofstream file(markerFile);
+            if (file.is_open()) {
+               file << "PackageManager initialized successfully\n";
+               file.close();
+               LOGINFO("Marker file created: %s", markerFile.c_str());
+            } else {
+               LOGERR("Failed to create marker file: %s", markerFile.c_str());
+            }
         LOGDBG("exit");
     }
 
