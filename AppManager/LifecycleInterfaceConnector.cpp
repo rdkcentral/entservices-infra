@@ -878,11 +878,13 @@ End:
                         if (mAppCurrentActionList[appId] == Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING)
 			{
 			    //Normal close: Unlode event from App manager
+			    LOGINFO("Terminate event from plugin");
 			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
 			}
 			else
 			{
 			    //Upnormal close: No unload event from app manager
+			    LOGINFO("Terminate event due to app crash");
 			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_ABORT);
 			}
 			mAppCurrentActionList.erase(appId);
