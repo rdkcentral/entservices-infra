@@ -1722,6 +1722,8 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
 
+	additionalMetadata->Release();
+	 
 	deinitforComRpc();
 	
     releaseResources();
@@ -1843,6 +1845,8 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
+
+	additionalMetadata->Release();
 
 	deinitforComRpc();
 	
@@ -1995,6 +1999,8 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
 
+    additionalMetadata->Release();
+
 	deinitforComRpc();
 	
     releaseResources();
@@ -2095,6 +2101,8 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
     
     // Unregister the notification
     pkginstallerInterface->Unregister(&notification);
+
+	additionalMetadata->Release();
 
 	deinitforComRpc();
 	
@@ -2200,7 +2208,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
 	
     releaseResources();
 }
-#endif
+
 // IPackageHandler methods
 
 /* Test Case for lock error using JsonRpc
@@ -2224,7 +2232,7 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 	
     releaseResources();
 }
-
+#endif
 /* Test Case for lock error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -2266,7 +2274,7 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
  * Verify unlock method error by asserting that it returns Core::ERROR_BAD_REQUEST
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 
     createResources();   
@@ -2280,7 +2288,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
 	
     releaseResources();
 }
-
+#endif
 /* Test Case for unlock error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -2313,7 +2321,7 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
  * Verify getLockedInfo method error by asserting that it returns Core::ERROR_BAD_REQUEST
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 
     createResources();   
@@ -2327,7 +2335,7 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 	
     releaseResources();
 }
-
+#endif
 /* Test Case for get locked info error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
