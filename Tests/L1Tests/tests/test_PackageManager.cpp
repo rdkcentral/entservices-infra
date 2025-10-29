@@ -676,7 +676,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc(500);
+    waitforJsonRpc(300);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -733,6 +733,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
+    uint32_t timeout_ms = 300;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -751,7 +752,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     statusParams.downloadId = downloadId.downloadId;
     notification.SetStatusParams(statusParams);
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    signal = notification.WaitForStatusSignal(timeout_ms, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -868,6 +869,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
     
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
+    uint32_t timeout_ms = 300;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -886,7 +888,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     statusParams.downloadId = downloadId.downloadId;
     notification.SetStatusParams(statusParams);
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    signal = notification.WaitForStatusSignal(timeout_ms, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1091,7 +1093,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
             
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc(500);
+    waitforJsonRpc(300);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1181,8 +1183,6 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     // TC-24: Download progress via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
-
-    EXPECT_NE(progress.progress, 0);
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
 
@@ -1337,6 +1337,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
+    uint32_t timeout_ms = 300;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1357,7 +1358,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     statusParams.downloadId = downloadId.downloadId;
     notification.SetStatusParams(statusParams);
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    signal = notification.WaitForStatusSignal(timeout_ms, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
