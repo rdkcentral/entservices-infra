@@ -497,14 +497,14 @@ jobs:
           -DPLUGIN_TELEMETRY=ON
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
-          -DPLUGIN_OCICONTAINER=OFF
+          -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=OFF
-          -DPLUGIN_STORAGE_MANAGER=OFF
-          -DPLUGIN_RUNTIME_MANAGER=OFF
-          -DPLUGIN_LIFECYCLE_MANAGER=OFF
+          -DPLUGIN_APPMANAGER=ON
+          -DPLUGIN_STORAGE_MANAGER=ON
+          -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_PACKAGE_MANAGER=ON
+          -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
@@ -587,8 +587,8 @@ jobs:
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
-          -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_PACKAGE_MANAGER=ON
+          -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
