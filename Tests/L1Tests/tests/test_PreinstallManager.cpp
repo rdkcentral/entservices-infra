@@ -2047,17 +2047,18 @@ TEST_F(PreinstallManagerTest, NotificationDispatchWithMultipleEventTypes)
  */
 TEST_F(PreinstallManagerTest, ConfigureMethodParameterHandling)
 {
-    // First initialize the plugin to create singleton instance
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    // Create service mock and initialize plugin (but don't use createResources which auto-configures)
+    mServiceMock = new NiceMock<ServiceMock>;
     
-    auto mServiceMockForConfigure = new NiceMock<ServiceMock>;
+    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
     
-    // Test Configure with valid service
-    Core::hresult result1 = mPreinstallManagerImpl->Configure(mServiceMockForConfigure);
+    // Test Configure with valid service (same as initialization service)
+    Core::hresult result1 = mPreinstallManagerImpl->Configure(mServiceMock);
     EXPECT_EQ(Core::ERROR_NONE, result1);
     
     // Test Configure with same service again
-    Core::hresult result2 = mPreinstallManagerImpl->Configure(mServiceMockForConfigure);
+    Core::hresult result2 = mPreinstallManagerImpl->Configure(mServiceMock);
     EXPECT_EQ(Core::ERROR_NONE, result2);
     
     // Test Configure with null service
@@ -2065,11 +2066,9 @@ TEST_F(PreinstallManagerTest, ConfigureMethodParameterHandling)
     EXPECT_EQ(Core::ERROR_GENERAL, result3);
     
     // Cleanup
-    if (mServiceMockForConfigure) {
-        delete mServiceMockForConfigure;
-    }
-    
-    releaseResources();
+    plugin->Deinitialize(mServiceMock);
+    delete mServiceMock;
+    mPreinstallManagerImpl = nullptr;
 }
 
 /**
