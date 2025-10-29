@@ -1987,28 +1987,23 @@ TEST_F(PreinstallManagerTest, VersionComparisonIndirectTest)
     // This test exercises version comparison indirectly through the StartPreinstall flow
     // Since isNewerVersion is private, we test its behavior through observable results
     
-    // Set up directory mocks with custom package entry
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0));
-            
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    // Use the proven working directory mocking setup
+    SetUpPreinstallDirectoryMocks();
     
+    // Override the readdir mock to return our specific test package
     static struct dirent testPackage;
     strcpy(testPackage.d_name, "versiontest");
     
     static int readCallCount = 0;
     readCallCount = 0;
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .Times(::testing::AtLeast(0))
         .WillRepeatedly(::testing::Invoke([&](DIR*) -> struct dirent* {
             if (readCallCount++ == 0) {
                 return &testPackage;
             }
             return nullptr;
         }));
-    
-    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillRepeatedly(::testing::Return(0));
     
     // Test scenario: existing version 1.0.0, new version 1.0.1 (should install)
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
@@ -2087,14 +2082,10 @@ TEST_F(PreinstallManagerTest, DirectoryReadingWithPackageEntries)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Mock successful directory operations - need to ensure directory path exists
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0)); // Directory exists
-        
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Return valid DIR pointer
+    // Use the proven working directory mocking setup
+    SetUpPreinstallDirectoryMocks();
     
-    // Create mock directory entries that represent packages
+    // Override readdir to return our specific test entries
     static struct dirent packageEntry1, packageEntry2, dotEntry, dotdotEntry;
     strcpy(packageEntry1.d_name, "testpackage1");
     strcpy(packageEntry2.d_name, "testpackage2");
@@ -2104,6 +2095,7 @@ TEST_F(PreinstallManagerTest, DirectoryReadingWithPackageEntries)
     static int readCallCount = 0;
     readCallCount = 0;
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .Times(::testing::AtLeast(0))
         .WillRepeatedly(::testing::Invoke([&](DIR*) -> struct dirent* {
             switch (readCallCount++) {
                 case 0: return &dotEntry;      // Should be skipped
@@ -2113,9 +2105,6 @@ TEST_F(PreinstallManagerTest, DirectoryReadingWithPackageEntries)
                 default: return nullptr;       // End of directory
             }
         }));
-    
-    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillRepeatedly(::testing::Return(0));
     
     // Mock GetConfigForPackage calls - one success, one failure
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2147,28 +2136,23 @@ TEST_F(PreinstallManagerTest, PackageInstallationFlow)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Mock successful directory operations with one package
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0)); // Directory exists
-        
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    // Use the proven working directory mocking setup
+    SetUpPreinstallDirectoryMocks();
     
+    // Override readdir to return our specific test package
     static struct dirent validPackage;
     strcpy(validPackage.d_name, "validpackage");
     
     static int readCallCount = 0;
     readCallCount = 0;
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .Times(::testing::AtLeast(0))
         .WillRepeatedly(::testing::Invoke([&](DIR*) -> struct dirent* {
             if (readCallCount++ == 0) {
                 return &validPackage;
             }
             return nullptr;
         }));
-    
-    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillRepeatedly(::testing::Return(0));
     
     // Mock successful GetConfigForPackage
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2208,28 +2192,23 @@ TEST_F(PreinstallManagerTest, PackageInstallationFailure)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0)); // Directory exists
-        
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    // Use the proven working directory mocking setup
+    SetUpPreinstallDirectoryMocks();
     
+    // Override readdir to return our specific test package
     static struct dirent failingPackage;
     strcpy(failingPackage.d_name, "failingpackage");
     
     static int readCallCount = 0;
     readCallCount = 0;
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .Times(::testing::AtLeast(0))
         .WillRepeatedly(::testing::Invoke([&](DIR*) -> struct dirent* {
             if (readCallCount++ == 0) {
                 return &failingPackage;
             }
             return nullptr;
         }));
-    
-    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillRepeatedly(::testing::Return(0));
     
     // Mock successful GetConfigForPackage
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2268,28 +2247,23 @@ TEST_F(PreinstallManagerTest, PackageWithEmptyFields)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0)); // Directory exists
-        
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    // Use the proven working directory mocking setup
+    SetUpPreinstallDirectoryMocks();
     
+    // Override readdir to return our specific test package
     static struct dirent invalidPackage;
     strcpy(invalidPackage.d_name, "invalidpackage");
     
     static int readCallCount = 0;
     readCallCount = 0;
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .Times(::testing::AtLeast(0))
         .WillRepeatedly(::testing::Invoke([&](DIR*) -> struct dirent* {
             if (readCallCount++ == 0) {
                 return &invalidPackage;
             }
             return nullptr;
         }));
-    
-    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillRepeatedly(::testing::Return(0));
     
     // Mock GetConfigForPackage to return success but with empty fields
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2346,28 +2320,23 @@ TEST_F(PreinstallManagerTest, VersionComparisonWithExistingPackages)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0)); // Directory exists
-        
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    // Use the proven working directory mocking setup
+    SetUpPreinstallDirectoryMocks();
     
+    // Override readdir to return our specific test package
     static struct dirent testPackage;
     strcpy(testPackage.d_name, "testpackage");
     
     static int readCallCount = 0;
     readCallCount = 0;
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .Times(::testing::AtLeast(0))
         .WillRepeatedly(::testing::Invoke([&](DIR*) -> struct dirent* {
             if (readCallCount++ == 0) {
                 return &testPackage;
             }
             return nullptr;
         }));
-    
-    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillRepeatedly(::testing::Return(0));
     
     // Mock ListPackages to return existing packages for version comparison
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
@@ -2425,19 +2394,17 @@ TEST_F(PreinstallManagerTest, SkipOlderVersionPackages)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0)); // Directory exists
-        
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    // Use the proven working directory mocking setup
+    SetUpPreinstallDirectoryMocks();
     
+    // Override readdir to return our specific test package
     static struct dirent testPackage;
     strcpy(testPackage.d_name, "testpackage");
     
     static int readCallCount = 0;
     readCallCount = 0;
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .Times(::testing::AtLeast(0))
         .WillRepeatedly(::testing::Invoke([&](DIR*) -> struct dirent* {
             if (readCallCount++ == 0) {
                 return &testPackage;
