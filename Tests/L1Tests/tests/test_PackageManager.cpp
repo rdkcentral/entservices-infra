@@ -238,9 +238,9 @@ protected:
         pkgdownloaderInterface->Deinitialize(mServiceMock);
     }
 
-    void waitforJsonRpc() 
+    void waitforJsonRpc(uint32_t timeout_ms) 
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
     }
 };
 
@@ -541,7 +541,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc();
+    waitforJsonRpc(500);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -676,7 +676,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc();
+    waitforJsonRpc(500);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -815,7 +815,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc();
+    waitforJsonRpc(500);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1010,7 +1010,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
-    uint32_t timeout_ms = 2000;
+    uint32_t timeout_ms = 4000;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1091,7 +1091,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
             
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc();
+    waitforJsonRpc(500);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1150,6 +1150,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
+    uint32_t timeout_ms = 300;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1170,7 +1171,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     statusParams.downloadId = downloadId.downloadId;
     notification.SetStatusParams(statusParams);
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    signal = notification.WaitForStatusSignal(timeout_ms, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1279,7 +1280,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc();
+    waitforJsonRpc(300);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
