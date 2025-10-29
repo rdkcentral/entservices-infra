@@ -120,13 +120,13 @@ enum FireboltError {
 
 class ResponseUtils {
     public:
-    static Core::hResult SetNullResponseForSuccess(const Core::hresult hResult, std::string& result) {
+    static Core::hresult SetNullResponseForSuccess(const Core::hresult hResult, std::string& result) {
         if (Core::ERROR_NONE == hResult && result.empty()) {
             result = "null";
         }
         return hResult;
     }
-}
+};
 
 class ErrorUtils {
     public:
