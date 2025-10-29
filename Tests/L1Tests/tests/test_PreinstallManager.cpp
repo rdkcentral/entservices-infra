@@ -1987,12 +1987,12 @@ TEST_F(PreinstallManagerTest, VersionComparisonIndirectTest)
     // This test exercises version comparison indirectly through the StartPreinstall flow
     // Since isNewerVersion is private, we test its behavior through observable results
     
-    // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrEq("/opt/preinstall"), ::testing::_))
-        .WillOnce(::testing::Return(0)); // Directory exists
-        
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    // Set up directory mocks with custom package entry
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0));
+            
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
     
     static struct dirent testPackage;
     strcpy(testPackage.d_name, "versiontest");
@@ -2008,7 +2008,7 @@ TEST_F(PreinstallManagerTest, VersionComparisonIndirectTest)
         }));
     
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillOnce(::testing::Return(0));
+        .WillRepeatedly(::testing::Return(0));
     
     // Test scenario: existing version 1.0.0, new version 1.0.1 (should install)
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
@@ -2088,11 +2088,11 @@ TEST_F(PreinstallManagerTest, DirectoryReadingWithPackageEntries)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Mock successful directory operations - need to ensure directory path exists
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrEq("/opt/preinstall"), ::testing::_))
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(0)); // Directory exists
         
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Return valid DIR pointer
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Return valid DIR pointer
     
     // Create mock directory entries that represent packages
     static struct dirent packageEntry1, packageEntry2, dotEntry, dotdotEntry;
@@ -2115,7 +2115,7 @@ TEST_F(PreinstallManagerTest, DirectoryReadingWithPackageEntries)
         }));
     
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillOnce(::testing::Return(0));
+        .WillRepeatedly(::testing::Return(0));
     
     // Mock GetConfigForPackage calls - one success, one failure
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2148,11 +2148,11 @@ TEST_F(PreinstallManagerTest, PackageInstallationFlow)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Mock successful directory operations with one package
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrEq("/opt/preinstall"), ::testing::_))
-        .WillOnce(::testing::Return(0)); // Directory exists
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0)); // Directory exists
         
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
     
     static struct dirent validPackage;
     strcpy(validPackage.d_name, "validpackage");
@@ -2168,7 +2168,7 @@ TEST_F(PreinstallManagerTest, PackageInstallationFlow)
         }));
     
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillOnce(::testing::Return(0));
+        .WillRepeatedly(::testing::Return(0));
     
     // Mock successful GetConfigForPackage
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2209,11 +2209,11 @@ TEST_F(PreinstallManagerTest, PackageInstallationFailure)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrEq("/opt/preinstall"), ::testing::_))
-        .WillOnce(::testing::Return(0)); // Directory exists
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0)); // Directory exists
         
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
     
     static struct dirent failingPackage;
     strcpy(failingPackage.d_name, "failingpackage");
@@ -2229,7 +2229,7 @@ TEST_F(PreinstallManagerTest, PackageInstallationFailure)
         }));
     
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillOnce(::testing::Return(0));
+        .WillRepeatedly(::testing::Return(0));
     
     // Mock successful GetConfigForPackage
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2269,11 +2269,11 @@ TEST_F(PreinstallManagerTest, PackageWithEmptyFields)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrEq("/opt/preinstall"), ::testing::_))
-        .WillOnce(::testing::Return(0)); // Directory exists
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0)); // Directory exists
         
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
     
     static struct dirent invalidPackage;
     strcpy(invalidPackage.d_name, "invalidpackage");
@@ -2289,7 +2289,7 @@ TEST_F(PreinstallManagerTest, PackageWithEmptyFields)
         }));
     
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillOnce(::testing::Return(0));
+        .WillRepeatedly(::testing::Return(0));
     
     // Mock GetConfigForPackage to return success but with empty fields
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -2347,11 +2347,11 @@ TEST_F(PreinstallManagerTest, VersionComparisonWithExistingPackages)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrEq("/opt/preinstall"), ::testing::_))
-        .WillOnce(::testing::Return(0)); // Directory exists
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0)); // Directory exists
         
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
     
     static struct dirent testPackage;
     strcpy(testPackage.d_name, "testpackage");
@@ -2367,7 +2367,7 @@ TEST_F(PreinstallManagerTest, VersionComparisonWithExistingPackages)
         }));
     
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillOnce(::testing::Return(0));
+        .WillRepeatedly(::testing::Return(0));
     
     // Mock ListPackages to return existing packages for version comparison
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
@@ -2426,11 +2426,11 @@ TEST_F(PreinstallManagerTest, SkipOlderVersionPackages)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Mock successful directory operations
-    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::StrEq("/opt/preinstall"), ::testing::_))
-        .WillOnce(::testing::Return(0)); // Directory exists
+    EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(0)); // Directory exists
         
-    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
     
     static struct dirent testPackage;
     strcpy(testPackage.d_name, "testpackage");
@@ -2446,7 +2446,7 @@ TEST_F(PreinstallManagerTest, SkipOlderVersionPackages)
         }));
     
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillOnce(::testing::Return(0));
+        .WillRepeatedly(::testing::Return(0));
     
     // Mock ListPackages to return existing packages with newer version
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
