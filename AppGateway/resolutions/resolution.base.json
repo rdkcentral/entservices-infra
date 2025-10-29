@@ -1,76 +1,8 @@
 {
     "resolutions": {
-        "AcknowledgeChallenge.onRequestChallenge": {
-            "alias": "org.rdk.App2AppProvider.registerProvider",
-            "providerCapability": "AcknowledgeChallenge.challenge"
-        },
-        "Discovery.onNavigateTo": {
-            "alias": "org.rdk.LaunchDelegate",
-            "event": "Discovery.onNavigateTo"
-        },
         "Localization.addAdditionalInfo": {
             "alias": "org.rdk.FbSettings",
             "useComRpc": true
-        },
-        "PinChallenge.onRequestChallenge": {
-            "alias": "org.rdk.App2AppProvider.registerProvider",
-            "providerCapability": "PinChallenge.challenge"
-        },
-        "Keyboard.onRequestPassword": {
-            "alias": "org.rdk.App2AppProvider.registerProvider",
-            "providerCapability": "Keyboard.password"
-        },
-        "Keyboard.onRequestEmail": {
-            "alias": "org.rdk.App2AppProvider.registerProvider",
-            "providerCapability": "Keyboard.email"
-        },
-        "Keyboard.onRequestStandard": {
-            "alias": "org.rdk.App2AppProvider.registerProvider",
-            "providerCapability": "Keyboard.standard"
-        },
-        "Advertising.advertisingId": {
-            "alias": "org.rdk.FbAdvertising.advertisingId",
-            "includeContext": true
-        },
-        "Lifecycle.ready": {
-            "alias": "org.rdk.LaunchDelegate.ready",
-            "includeContext": true
-        },
-        "Lifecycle.close": {
-            "alias": "org.rdk.LaunchDelegate.close",
-            "includeContext": true
-        },
-        "Lifecycle.finished": {
-            "alias": "org.rdk.LaunchDelegate.finished",
-            "includeContext": true
-        },
-        "Lifecycle.state": {
-            "alias": "org.rdk.LaunchDelegate.state",
-            "includeContext": true
-        },
-        "Parameters.initialization": {
-            "alias": "org.rdk.LaunchDelegate.Initialization",
-            "includeContext": true
-        },
-        "Lifecycle.onForeground": {
-            "alias": "org.rdk.LaunchDelegate",
-            "event": "Lifecycle.onForeground"
-        },
-        "Lifecycle.onBackground": {
-            "alias": "org.rdk.LaunchDelegate",
-            "event": "Lifecycle.onBackground"
-        },
-        "Lifecycle.onInactive": {
-            "alias": "org.rdk.LaunchDelegate",
-            "event": "Lifecycle.onInactive"
-        },
-        "Lifecycle.onSuspended": {
-            "alias": "org.rdk.LaunchDelegate",
-            "event": "Lifecycle.onSuspended"
-        },
-        "Lifecycle.onUnloading": {
-            "alias": "org.rdk.LaunchDelegate",
-            "event": "Lifecycle.onUnloading"
         },
         "device.make": {
             "alias": "org.rdk.FbSettings",
