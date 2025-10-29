@@ -3044,8 +3044,8 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
     EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
     ).WillOnce([&](const bool verbose, std::string &apps) {
         apps = R"([
-            {"appId":"NexTennis","type":"","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6},
-            {"appId":"uktv","type":"","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6}
+            {"appId":"NexTennis","type":"","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
+            {"appId":"uktv","type":"","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6}
         ])";
         return Core::ERROR_NONE;
     });        
