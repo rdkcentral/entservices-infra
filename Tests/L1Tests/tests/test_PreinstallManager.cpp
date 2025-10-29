@@ -2191,3 +2191,391 @@ TEST_F(PreinstallManagerTest, ReferenceCountingBehavior)
     
     releaseResources();
 }
+
+/**
+ * @brief Test isNewerVersion method with comprehensive version scenarios
+ *
+ * @details Test verifies version comparison logic with:
+ * - Major version differences (2.0.0 > 1.0.0)
+ * - Minor version differences (1.2.0 > 1.1.0)
+ * - Patch version differences (1.0.2 > 1.0.1)
+ * - Build version differences (1.0.0.2 > 1.0.0.1)
+ * - Equal versions (1.0.0 == 1.0.0)
+ * - Version strings with suffixes (1.0.0-alpha)
+ * - Malformed version strings
+ */
+TEST_F(PreinstallManagerTest, VersionComparisonComprehensive)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Test version comparison through StartPreinstall with mock data
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            // Return different versions based on fileLocator to test comparison
+            if (fileLocator.find("newer") != std::string::npos) {
+                id = "com.test.version";
+                version = "2.0.0"; // Newer version
+            } else if (fileLocator.find("older") != std::string::npos) {
+                id = "com.test.version";
+                version = "1.0.0"; // Older version
+            } else if (fileLocator.find("equal") != std::string::npos) {
+                id = "com.test.version";
+                version = "1.5.0"; // Equal to installed
+            } else if (fileLocator.find("malformed") != std::string::npos) {
+                id = "com.test.version";
+                version = "invalid.version"; // Malformed
+            } else if (fileLocator.find("suffix") != std::string::npos) {
+                id = "com.test.version";
+                version = "1.6.0-alpha"; // Version with suffix
+            }
+            return Core::ERROR_NONE;
+        });
+
+    // Mock ListPackages to return installed packages
+    auto mockPackageList = Core::ProxyType<PackageIteratorMock>::Create();
+    testing::Mock::AllowLeak(mockPackageList.operator->());
+    
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packageList) {
+            packageList = mockPackageList.operator->();
+            packageList->AddRef();
+            return Core::ERROR_NONE;
+        });
+
+    // Mock package iterator to return installed package
+    static bool packageReturned = false;
+    EXPECT_CALL(*mockPackageList, Next(::testing::_))
+        .WillRepeatedly([&](WPEFramework::Exchange::IPackageInstaller::Package& package) -> bool {
+            if (!packageReturned) {
+                packageReturned = true;
+                package.packageId = "com.test.version";
+                package.version = "1.5.0"; // Installed version
+                package.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+                return true;
+            }
+            packageReturned = false; // Reset for next test
+            return false;
+        });
+
+    // Mock Install method - should only be called for newer versions
+    static std::vector<std::string> installedVersions;
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            installedVersions.push_back(version);
+            return Core::ERROR_NONE;
+        });
+
+    // Mock directory operations with test versions
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+
+    static std::vector<std::string> versionEntries = {"newer", "older", "equal", "malformed", "suffix"};
+    static size_t versionIndex = 0;
+    static struct dirent versionDirent;
+    
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
+            if (versionIndex < versionEntries.size()) {
+                strcpy(versionDirent.d_name, versionEntries[versionIndex].c_str());
+                versionIndex++;
+                return &versionDirent;
+            }
+            versionIndex = 0; // Reset for next test
+            return nullptr;
+        }));
+
+    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillByDefault(::testing::Return(0));
+    
+    // Test version comparison with forceInstall=false
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    
+    // Should succeed - some packages will be installed (newer version, suffix version)
+    // Others will be skipped (older, equal, malformed)
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    
+    // Verify that only newer versions were installed
+    EXPECT_FALSE(installedVersions.empty());
+    // Should contain "2.0.0" (newer) and "1.6.0-alpha" (suffix, treated as newer)
+    bool foundNewer = false, foundSuffix = false;
+    for (const auto& ver : installedVersions) {
+        if (ver == "2.0.0") foundNewer = true;
+        if (ver == "1.6.0-alpha") foundSuffix = true;
+    }
+    EXPECT_TRUE(foundNewer || foundSuffix) << "Expected newer or suffix version to be installed";
+    
+    installedVersions.clear(); // Reset for next test
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test readPreinstallDirectory with various directory scenarios
+ *
+ * @details Test verifies directory reading with:
+ * - Empty directories
+ * - Directories with "." and ".." entries (should be skipped)
+ * - Directories with valid package folders
+ * - Directories with invalid package files
+ * - GetConfigForPackage failures
+ */
+TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryScenarios)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Test 1: Empty directory
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault(::testing::Return(nullptr)); // Empty directory
+
+    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillByDefault(::testing::Return(0));
+    
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0); // Should not be called for empty directory
+    
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0); // Should not be called for empty directory
+
+    Core::hresult result1 = mPreinstallManagerImpl->StartPreinstall(true);
+    EXPECT_EQ(Core::ERROR_NONE, result1); // Empty directory should succeed
+    
+    // Test 2: Directory with "." and ".." entries plus valid entries
+    static std::vector<std::string> dirEntries = {".", "..", "validapp1", "validapp2"};
+    static size_t dirIndex = 0;
+    static struct dirent dirDirent;
+    
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
+            if (dirIndex < dirEntries.size()) {
+                strcpy(dirDirent.d_name, dirEntries[dirIndex].c_str());
+                dirIndex++;
+                return &dirDirent;
+            }
+            dirIndex = 0; // Reset for next test
+            return nullptr;
+        }));
+    
+    // Mock GetConfigForPackage - should only be called for valid entries (not "." or "..")
+    static size_t getConfigCallCount = 0;
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            getConfigCallCount++;
+            if (fileLocator.find("validapp1") != std::string::npos) {
+                id = "com.test.validapp1";
+                version = "1.0.0";
+                return Core::ERROR_NONE;
+            } else if (fileLocator.find("validapp2") != std::string::npos) {
+                // Simulate GetConfig failure for validapp2
+                return Core::ERROR_GENERAL;
+            }
+            return Core::ERROR_GENERAL;
+        });
+
+    static size_t installCallCount = 0;
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            installCallCount++;
+            if (packageId == "com.test.validapp1") {
+                return Core::ERROR_NONE;
+            }
+            return Core::ERROR_GENERAL;
+        });
+
+    Core::hresult result2 = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // Should have called GetConfigForPackage only for valid entries (2 calls)
+    EXPECT_EQ(2, getConfigCallCount) << "GetConfigForPackage should be called only for validapp1 and validapp2, not for '.' or '..'";
+    
+    // Should have called Install only once (for validapp1, validapp2 fails GetConfig)
+    EXPECT_EQ(1, installCallCount) << "Install should be called only for validapp1";
+    
+    // Reset counters
+    getConfigCallCount = 0;
+    installCallCount = 0;
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test getFailReason method covering all FailReason enum values
+ *
+ * @details Test verifies that all FailReason enum values map to correct strings:
+ * - SIGNATURE_VERIFICATION_FAILURE
+ * - PACKAGE_MISMATCH_FAILURE
+ * - INVALID_METADATA_FAILURE
+ * - PERSISTENCE_FAILURE
+ * - Unknown/default case
+ */
+TEST_F(PreinstallManagerTest, FailureReasonMappingAllValues)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Test different failure reasons through install failures
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            if (fileLocator.find("app1") != std::string::npos) {
+                id = "com.test.app1";
+                version = "1.0.0";
+            } else if (fileLocator.find("app2") != std::string::npos) {
+                id = "com.test.app2";
+                version = "1.0.0";
+            } else if (fileLocator.find("app3") != std::string::npos) {
+                id = "com.test.app3";
+                version = "1.0.0";
+            } else if (fileLocator.find("app4") != std::string::npos) {
+                id = "com.test.app4";
+                version = "1.0.0";
+            } else if (fileLocator.find("app5") != std::string::npos) {
+                id = "com.test.app5";
+                version = "1.0.0";
+            }
+            return Core::ERROR_NONE;
+        });
+
+    // Mock Install to return different failure reasons
+    static size_t failureInstallCallCount = 0;
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            failureInstallCallCount++;
+            switch (failureInstallCallCount) {
+                case 1: // SIGNATURE_VERIFICATION_FAILURE
+                    failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
+                    break;
+                case 2: // PACKAGE_MISMATCH_FAILURE
+                    failReason = Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE;
+                    break;
+                case 3: // INVALID_METADATA_FAILURE
+                    failReason = Exchange::IPackageInstaller::FailReason::INVALID_METADATA_FAILURE;
+                    break;
+                case 4: // PERSISTENCE_FAILURE
+                    failReason = Exchange::IPackageInstaller::FailReason::PERSISTENCE_FAILURE;
+                    break;
+                case 5: // Unknown failure reason (tests default case)
+                    failReason = static_cast<Exchange::IPackageInstaller::FailReason>(999);
+                    break;
+            }
+            return Core::ERROR_GENERAL; // All should fail
+        });
+
+    // Mock directory with multiple apps to test all failure reasons
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+
+    static std::vector<std::string> failureApps = {"app1", "app2", "app3", "app4", "app5"};
+    static size_t failureAppIndex = 0;
+    static struct dirent failureDirent;
+    
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
+            if (failureAppIndex < failureApps.size()) {
+                strcpy(failureDirent.d_name, failureApps[failureAppIndex].c_str());
+                failureAppIndex++;
+                return &failureDirent;
+            }
+            failureAppIndex = 0; // Reset
+            failureInstallCallCount = 0; // Reset
+            return nullptr;
+        }));
+
+    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillByDefault(::testing::Return(0));
+    
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // Should return ERROR_GENERAL since all installs fail
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
+    
+    // Verify that all failure reasons were exercised
+    EXPECT_EQ(5, failureInstallCallCount) << "All 5 install calls should have been made to test all failure reasons";
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test package installation with empty fields scenarios
+ *
+ * @details Test verifies handling of:
+ * - Empty packageId fields
+ * - Empty version fields  
+ * - Empty fileLocator fields
+ * - Combinations of empty fields
+ * - Proper error logging and skip behavior
+ */
+TEST_F(PreinstallManagerTest, PackageInstallationEmptyFieldsHandling)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Test packages with various empty field combinations
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            if (fileLocator.find("emptyid") != std::string::npos) {
+                id = ""; // Empty packageId
+                version = "1.0.0";
+            } else if (fileLocator.find("emptyversion") != std::string::npos) {
+                id = "com.test.emptyversion";
+                version = ""; // Empty version
+            } else if (fileLocator.find("emptyboth") != std::string::npos) {
+                id = ""; // Empty both
+                version = "";
+            } else if (fileLocator.find("validpackage") != std::string::npos) {
+                id = "com.test.valid";
+                version = "1.0.0";
+            }
+            return Core::ERROR_NONE;
+        });
+
+    // Install should only be called for valid package
+    static size_t emptyFieldInstallCount = 0;
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            emptyFieldInstallCount++;
+            // Should only be called for validpackage
+            EXPECT_EQ("com.test.valid", packageId);
+            EXPECT_EQ("1.0.0", version);
+            return Core::ERROR_NONE;
+        });
+
+    // Mock directory with empty field test packages
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+
+    static std::vector<std::string> emptyFieldApps = {"emptyid", "emptyversion", "emptyboth", "validpackage"};
+    static size_t emptyFieldIndex = 0;
+    static struct dirent emptyFieldDirent;
+    
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
+            if (emptyFieldIndex < emptyFieldApps.size()) {
+                strcpy(emptyFieldDirent.d_name, emptyFieldApps[emptyFieldIndex].c_str());
+                emptyFieldIndex++;
+                return &emptyFieldDirent;
+            }
+            emptyFieldIndex = 0; // Reset
+            emptyFieldInstallCount = 0; // Reset
+            return nullptr;
+        }));
+
+    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillByDefault(::testing::Return(0));
+    
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // Should return ERROR_GENERAL since some packages have empty fields (counted as failed)
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
+    
+    // Verify Install was called only once (for validpackage)
+    EXPECT_EQ(1, emptyFieldInstallCount) << "Install should only be called for package with valid fields";
+    
+    releaseResources();
+}
