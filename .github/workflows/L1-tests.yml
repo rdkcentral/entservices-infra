@@ -1,7 +1,8 @@
 name: L1-tests
 
-push:
-  branches: ['topic/RDKEMW-8857']
+on:
+  push:
+    branches: ['topic/RDKEMW-2803_new']
 
 env:
   BUILD_TYPE: Debug
