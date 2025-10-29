@@ -81,6 +81,14 @@ jobs:
         with:
           cmake-version: '3.16.x'
 
+      - name: Set Thunder version flags
+        run: |
+          if [ "${{ env.THUNDER_REF }}" = "R4.4.3" ]; then
+          echo "THUNDER_R443=ON" >> $GITHUB_ENV
+          else
+          echo "THUNDER_R443=OFF" >> $GITHUB_ENV
+          fi
+
       - name: Install packages
         run: >
           sudo apt update
@@ -123,7 +131,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: topic/RDKEMW-2803_2
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
@@ -496,6 +504,7 @@ jobs:
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DPLUGIN_PACKAGE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
@@ -579,6 +588,7 @@ jobs:
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DPLUGIN_PACKAGE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
