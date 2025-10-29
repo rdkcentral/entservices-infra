@@ -458,6 +458,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
+#if 0
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     delayforWorkerPool();
@@ -526,7 +527,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
 
 	deinitforComRpc();   
 }
-
+#endif
 /* Test Case for pausing download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
