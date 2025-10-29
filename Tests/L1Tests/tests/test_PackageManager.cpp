@@ -1008,8 +1008,6 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-    uri = "https://httpbin.org/bytes/1024";
-
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
     uint32_t timeout_ms = 4000;
