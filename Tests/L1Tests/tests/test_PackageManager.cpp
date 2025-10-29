@@ -239,6 +239,12 @@ protected:
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
     }
+
+    void delayforWorkerPool()
+    {
+        // Delay for worker pool to process tasks
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
 };
 
 class NotificationTest : public Exchange::IPackageDownloader::INotification, 
@@ -344,6 +350,8 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
 
 TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 
+    delayforWorkerPool();
+
     initforJsonRpc();
 
     // TC-1: Check if the listed methods exist using JsonRpc
@@ -378,6 +386,8 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 
 TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
     
+    delayforWorkerPool();
+
     initforJsonRpc();
 
     Core::Event onAppDownloadStatus(false, true);
@@ -420,6 +430,8 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcSuccess) {
 
 TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
     
+    delayforWorkerPool();
+
     initforJsonRpc();
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
@@ -448,6 +460,8 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
 
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
+    delayforWorkerPool();
+    
     initforComRpc();
 
     getDownloadParams();
@@ -1196,7 +1210,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
  */
 
 TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
-
+    
     initforComRpc();
 
     progress = {};
