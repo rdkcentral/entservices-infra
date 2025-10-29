@@ -1087,17 +1087,14 @@ TEST_F(PreinstallManagerTest, DestructorCleanup)
  */
 TEST_F(PreinstallManagerTest, ConfigureWithValidService)
 {
-    createPreinstallManagerImpl();
+    // Use createResources to set up the service mock properly
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Create a mock service
-    ServiceMock* validService = new NiceMock<ServiceMock>();
-    
-    uint32_t result = mPreinstallManagerImpl->Configure(validService);
+    uint32_t result = mPreinstallManagerImpl->Configure(mServiceMock);
     
     EXPECT_EQ(Core::ERROR_NONE, result);
     
-    delete validService;
-    releasePreinstallManagerImpl();
+    releaseResources();
 }
 
 /**
