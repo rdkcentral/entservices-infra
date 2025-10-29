@@ -118,6 +118,15 @@ enum FireboltError {
     NOT_PERMITTED
 };
 
+class ResponseUtils {
+    public:
+    static hResult SetNullResponseForSuccess(const Core::hresult hResult, std::string& result) {
+        if (Core::ERROR_NONE == hResult && result.empty()) {
+            result = "null";
+        }
+        return hResult;
+    }
+}
 
 class ErrorUtils {
     public:

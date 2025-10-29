@@ -128,7 +128,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string name = params.Get("value").String();
-                    return SetDeviceName(name);
+                    return ResponseUtils::SetNullResponseForSuccess(SetDeviceName(name), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -147,7 +147,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string countryCode = params.Get("value").String();
-                    return SetCountryCode(countryCode);
+                    return ResponseUtils::SetNullResponseForSuccess(SetCountryCode(countryCode),result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -162,7 +162,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string timeZone = params.Get("value").String();
-                    return SetTimeZone(timeZone);
+                    return ResponseUtils::SetNullResponseForSuccess(SetTimeZone(timeZone),result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -173,7 +173,7 @@ namespace Plugin {
             }
             else if (lowerMethod == "localization.addadditionalinfo")
             {
-                return AddAdditionalInfo(payload, result);
+                return ResponseUtils::SetNullResponseForSuccess(AddAdditionalInfo(payload, result), result);
             }
 
             // Route network-related methods
@@ -194,7 +194,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     bool enabled = params.Get("value").Boolean();
-                    return SetVoiceGuidance(enabled);
+                    return ResponseUtils::SetNullResponseForSuccess(SetVoiceGuidance(enabled), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -217,7 +217,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     double speed = params.Get("value").Number();
-                    return SetSpeed(speed);
+                    return ResponseUtils::SetNullResponseForSuccess(SetSpeed(speed), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -232,7 +232,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     bool enabled = params.Get("value").Boolean();
-                    return SetVoiceGuidanceHints(enabled);
+                    return ResponseUtils::SetNullResponseForSuccess(SetVoiceGuidanceHints(enabled), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -257,7 +257,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     bool enabled = params.Get("value").Boolean();
-                    return SetAudioDescriptionsEnabled(enabled);
+                    return ResponseUtils::SetNullResponseForSuccess(SetAudioDescriptionsEnabled(enabled), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -280,7 +280,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     bool enabled = params.Get("value").Boolean();
-                    return SetCaptions(enabled);
+                    return ResponseUtils::SetNullResponseForSuccess(SetCaptions(enabled), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -295,7 +295,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string languages = params.Get("value").String();
-                    return SetPreferredCaptionsLanguages(languages);
+                    return ResponseUtils::SetNullResponseForSuccess(SetPreferredCaptionsLanguages(languages), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -316,7 +316,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string locale = params.Get("value").String();
-                    return SetLocale(locale);
+                    return ResponseUtils::SetNullResponseForSuccess(SetLocale(locale), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -331,7 +331,7 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string languages = params.Get("value").String();
-                    return SetPreferredAudioLanguages(languages);
+                    return ResponseUtils::SetNullResponseForSuccess(SetPreferredAudioLanguages(languages), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
