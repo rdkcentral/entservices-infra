@@ -1091,7 +1091,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
             
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc(300);
+    waitforJsonRpc(200);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1150,7 +1150,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
-    uint32_t timeout_ms = 300;
+    uint32_t timeout_ms = 200;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1278,7 +1278,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforJsonRpc(300);
+    waitforJsonRpc(200);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1335,7 +1335,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     
     Core::Sink<NotificationTest> notification;
     uint32_t signal = PackageManager_invalidStatus;
-    uint32_t timeout_ms = 300;
+    uint32_t timeout_ms = 200;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
