@@ -80,9 +80,19 @@ protected:
     Core::JSONRPC::Handler& mJsonRpcHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
+    
+    // Member variable to track directory reading state for each test
+    mutable bool mDirectoryFirstCall = true;
 
     void createPreinstallManagerImpl()
     {
+        // Ensure clean state first
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
+        
         // Initialize mocks before making any system calls
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
@@ -125,33 +135,31 @@ protected:
     {
         Core::hresult status = Core::ERROR_GENERAL;
         
+        // Ensure complete clean state before initialization
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);  // Clear implementation first
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
+        
         // Create the preinstall directory structure that's needed for StartPreinstall method
         system("mkdir -p /opt/preinstall");
         system("mkdir -p /opt/preinstall/testapp");
         system("touch /opt/preinstall/testapp/package.wgt");
         
-        // Ensure clean state before initialization
-        if (p_wrapsImplMock != nullptr) {
-            delete p_wrapsImplMock;
-            p_wrapsImplMock = nullptr;
-        }
-        Wraps::setImpl(nullptr);
-        
-        // Initialize mocks before setting them
+        // Initialize mocks in correct order
         mServiceMock = new NiceMock<ServiceMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
         
+        // Create and validate Wraps mock
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
-        // Ensure the mock is valid before setting it
         if (p_wrapsImplMock == nullptr) {
             TEST_LOG("Failed to create WrapsImplMock!");
             return Core::ERROR_GENERAL;
         }
         
-        // Clear any existing implementation first
-        Wraps::setImpl(nullptr);
-        // Now set our mock implementation
+        // Set the mock implementation (should be nullptr at this point)
         Wraps::setImpl(p_wrapsImplMock);
         
         // Set up default mock behaviors before plugin initialization
@@ -214,9 +222,10 @@ protected:
                     }));
         }
 
+        // Ensure proper cleanup order for Wraps mock
         if (p_wrapsImplMock != nullptr)
         {
-            Wraps::setImpl(nullptr);
+            Wraps::setImpl(nullptr);  // Clear implementation first
             delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
         }
@@ -249,6 +258,49 @@ protected:
         workerPool.Release();
     }
 
+    virtual void SetUp() override 
+    {
+        TEST_LOG("SetUp - Ensuring clean test environment");
+        // Ensure clean state before each test
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
+        
+        mServiceMock = nullptr;
+        mPackageInstallerMock = nullptr;
+        mPreinstallManagerImpl = nullptr;
+        mPackageInstallerNotification_cb = nullptr;
+        mPreinstallManagerNotification = nullptr;
+        dispatcher = nullptr;
+        
+        // Clean up any existing preinstall directory
+        system("rm -rf /opt/preinstall");
+    }
+
+    virtual void TearDown() override 
+    {
+        TEST_LOG("TearDown - Cleaning up test environment");
+        // Ensure proper cleanup after each test
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
+        
+        // Clean up any remaining preinstall directory
+        system("rm -rf /opt/preinstall");
+        
+        // Reset all pointers to ensure clean state for next test
+        mServiceMock = nullptr;
+        mPackageInstallerMock = nullptr;
+        mPreinstallManagerImpl = nullptr;
+        mPackageInstallerNotification_cb = nullptr;
+        mPreinstallManagerNotification = nullptr;
+        dispatcher = nullptr;
+    }
+
     auto FillPackageIterator()
     {
         std::list<Exchange::IPackageInstaller::Package> packageList;
@@ -266,6 +318,9 @@ protected:
 
     void SetUpPreinstallDirectoryMocks()
     {
+        // Reset directory reading state for this test
+        mDirectoryFirstCall = true;
+        
         // Mock directory operations for preinstall directory
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
             .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Non-null pointer
@@ -274,12 +329,11 @@ protected:
         static struct dirent testDirent;
         strcpy(testDirent.d_name, "testapp");
         static struct dirent* direntPtr = &testDirent;
-        static bool firstCall = true;
 
         ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
-                if (firstCall) {
-                    firstCall = false;
+            .WillByDefault(::testing::Invoke([this](DIR*) -> struct dirent* {
+                if (mDirectoryFirstCall) {
+                    mDirectoryFirstCall = false;
                     return direntPtr; // Return test directory entry first time
                 }
                 return nullptr; // End of directory
