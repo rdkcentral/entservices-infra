@@ -31,13 +31,10 @@ namespace WPEFramework
     namespace Plugin
     {
 
-        Resolver::Resolver(PluginHost::IShell *shell, const std::string &configPath)
+        Resolver::Resolver(PluginHost::IShell *shell)
             : mService(shell), mResolutions(), mMutex()
         {
-            if (!LoadConfig(configPath))
-            {
-                LOGERR("[Resolver] Failed to load config from %s", configPath.c_str());
-            }
+            LOGINFO("[Resolver] Constructor - configurations will be loaded via LoadConfig");
         }
 
         Resolver::~Resolver()
@@ -304,3 +301,4 @@ namespace WPEFramework
 
     }
 }
+

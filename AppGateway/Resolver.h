@@ -64,7 +64,7 @@ namespace WPEFramework
         class Resolver
         {
         public:
-            Resolver(PluginHost::IShell *shell, const std::string &configPath);
+            Resolver(PluginHost::IShell *shell);
             ~Resolver();
 
             // Load resolutions from a JSON config file
@@ -111,3 +111,4 @@ namespace WPEFramework
 
     } // namespace Plugin
 } // namespace WPEFramework
+
