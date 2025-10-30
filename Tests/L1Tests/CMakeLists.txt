@@ -151,6 +151,11 @@ set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleMana
 set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
 add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
 
+# PLUGIN_MESSAGECONTROL
+set (MESSAGECONTROL_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/MessageControl ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (MESSAGECONTROL_LIBS ${NAMESPACE}MessageControl)
+add_plugin_test_ex(PLUGIN_MESSAGECONTROL tests/test_MessageControl.cpp "${MESSAGECONTROL_INC}" "${MESSAGECONTROL_LIBS}")
+
 #PLUGIN_PACKAGE_MANAGER
 set (PACKAGEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PackageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (PACKAGEMANAGER_LIBS ${NAMESPACE}PackageManagerRDKEMS)
