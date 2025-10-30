@@ -81,6 +81,9 @@ protected:
     Core::JSONRPC::Handler& mJsonRpcHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
+    
+    // Track the actual directory path being used for tests
+    std::string mActualPreinstallDir;
 
     void createPreinstallManagerImpl()
     {
@@ -241,11 +244,16 @@ protected:
 
     void SetUpPreinstallDirectoryWithRealFiles()
     {
-        // Create actual /opt/preinstall directory structure for comprehensive testing
+        // Try /opt/preinstall first, fallback to temp directory if not accessible
         std::string preinstallDir = "/opt/preinstall";
-        std::string testApp1Dir = preinstallDir + "/testapp1";
-        std::string testApp2Dir = preinstallDir + "/testapp2";
-        std::string testApp3Dir = preinstallDir + "/testapp3";
+        std::string fallbackDir = "/tmp/test_preinstall_" + std::to_string(getpid());
+        TEST_LOG("Fallback directory will be: %s (PID: %d)", fallbackDir.c_str(), getpid());
+        std::string actualDir = preinstallDir;
+        bool usingFallback = false;
+        
+        std::string testApp1Dir = actualDir + "/testapp1";
+        std::string testApp2Dir = actualDir + "/testapp2";
+        std::string testApp3Dir = actualDir + "/testapp3";
 
         TEST_LOG("SetUpPreinstallDirectoryWithRealFiles: Starting directory setup");
         
@@ -256,6 +264,12 @@ protected:
         system("pwd");
         TEST_LOG("User ID and Group ID:");
         system("id");
+        TEST_LOG("Available disk space:");
+        system("df -h /opt /tmp");
+        TEST_LOG("System limits:");
+        system("ulimit -a | head -10");
+        TEST_LOG("Mount information:");
+        system("mount | grep -E '(opt|tmp)'");
         
         // Check if /opt exists first
         TEST_LOG("Checking if /opt directory exists:");
@@ -284,50 +298,80 @@ protected:
         
         // Check if any mkdir commands failed
         if (result1 != 0 || result2 != 0 || result3 != 0) {
-            TEST_LOG("WARNING: One or more mkdir commands failed. Creating with sudo...");
-            int sudoResult = system("sudo mkdir -p /opt/preinstall/testapp1 /opt/preinstall/testapp2 /opt/preinstall/testapp3");
+            TEST_LOG("WARNING: One or more mkdir commands failed. Trying with sudo...");
+            int sudoResult = system(("sudo mkdir -p " + actualDir + "/testapp1 " + actualDir + "/testapp2 " + actualDir + "/testapp3").c_str());
             if (sudoResult == 0) {
-                system("sudo chown -R $USER:$USER /opt/preinstall");
+                system(("sudo chown -R $USER:$USER " + actualDir).c_str());
             } else {
-                TEST_LOG("ERROR: Even sudo mkdir failed. This test environment may not support /opt access.");
-                // Could add fallback to temp directory here if needed
-                return;
+                TEST_LOG("ERROR: Even sudo mkdir failed. Switching to fallback directory: %s", fallbackDir.c_str());
+                actualDir = fallbackDir;
+                testApp1Dir = actualDir + "/testapp1";
+                testApp2Dir = actualDir + "/testapp2";
+                testApp3Dir = actualDir + "/testapp3";
+                usingFallback = true;
+                
+                // Try creating fallback directory
+                int fallbackResult1 = system(("mkdir -p " + testApp1Dir).c_str());
+                int fallbackResult2 = system(("mkdir -p " + testApp2Dir).c_str());
+                int fallbackResult3 = system(("mkdir -p " + testApp3Dir).c_str());
+                
+                if (fallbackResult1 != 0 || fallbackResult2 != 0 || fallbackResult3 != 0) {
+                    TEST_LOG("CRITICAL ERROR: Even fallback directory creation failed!");
+                    return;
+                }
+                TEST_LOG("SUCCESS: Fallback directory %s created successfully", actualDir.c_str());
             }
         }
 
         // Set directory permissions immediately after creation to ensure accessibility
-        TEST_LOG("Setting directory permissions:");
-        int chmodResult = system("chmod -R 755 /opt/preinstall");
-        if (chmodResult != 0) {
+        TEST_LOG("Setting directory permissions for: %s", actualDir.c_str());
+        int chmodResult = system(("chmod -R 755 " + actualDir).c_str());
+        if (chmodResult != 0 && !usingFallback) {
             TEST_LOG("WARNING: chmod failed, attempting with sudo...");
-            system("sudo chmod -R 755 /opt/preinstall");
+            system(("sudo chmod -R 755 " + actualDir).c_str());
         }
 
         // Verify directory creation
-        TEST_LOG("Verifying /opt/preinstall directory creation:");
-        system("ls -la /opt/preinstall");
+        TEST_LOG("Verifying directory creation: %s", actualDir.c_str());
+        system(("ls -la " + actualDir).c_str());
         
         TEST_LOG("Checking directory permissions:");
-        system("ls -ld /opt/preinstall");
+        system(("ls -ld " + actualDir).c_str());
         
         // Check if we can access the directory
-        DIR* testDir = opendir("/opt/preinstall");
+        DIR* testDir = opendir(actualDir.c_str());
         if (testDir != nullptr) {
-            TEST_LOG("SUCCESS: /opt/preinstall directory is accessible");
+            TEST_LOG("SUCCESS: %s directory is accessible", actualDir.c_str());
             closedir(testDir);
         } else {
-            TEST_LOG("ERROR: /opt/preinstall directory is NOT accessible, errno: %d (%s)", errno, strerror(errno));
-            // Try one more time with different approach
-            TEST_LOG("Attempting to fix permissions and retry...");
-            system("sudo chmod -R 755 /opt/preinstall 2>/dev/null");
-            system("sudo chown -R $USER:$USER /opt/preinstall 2>/dev/null");
+            TEST_LOG("ERROR: %s directory is NOT accessible, errno: %d (%s)", actualDir.c_str(), errno, strerror(errno));
             
-            DIR* retryDir = opendir("/opt/preinstall");
-            if (retryDir != nullptr) {
-                TEST_LOG("SUCCESS: /opt/preinstall directory is now accessible after permission fix");
-                closedir(retryDir);
+            if (!usingFallback) {
+                // Try fallback directory as last resort
+                TEST_LOG("Attempting fallback to temp directory: %s", fallbackDir.c_str());
+                actualDir = fallbackDir;
+                testApp1Dir = actualDir + "/testapp1";
+                testApp2Dir = actualDir + "/testapp2";
+                testApp3Dir = actualDir + "/testapp3";
+                usingFallback = true;
+                
+                // Create fallback directories
+                system(("mkdir -p " + testApp1Dir).c_str());
+                system(("mkdir -p " + testApp2Dir).c_str());
+                system(("mkdir -p " + testApp3Dir).c_str());
+                system(("chmod -R 755 " + actualDir).c_str());
+                
+                DIR* fallbackDir_ptr = opendir(actualDir.c_str());
+                if (fallbackDir_ptr != nullptr) {
+                    TEST_LOG("SUCCESS: Fallback directory %s is accessible", actualDir.c_str());
+                    closedir(fallbackDir_ptr);
+                } else {
+                    TEST_LOG("CRITICAL ERROR: Even fallback directory is NOT accessible, errno: %d (%s)", errno, strerror(errno));
+                    return;
+                }
             } else {
-                TEST_LOG("CRITICAL ERROR: /opt/preinstall directory is still NOT accessible after permission fix, errno: %d (%s)", errno, strerror(errno));
+                TEST_LOG("CRITICAL ERROR: Fallback directory is also NOT accessible, errno: %d (%s)", errno, strerror(errno));
+                return;
             }
         }
 
@@ -354,14 +398,30 @@ protected:
 
         // Final verification
         TEST_LOG("Final directory structure:");
-        system("find /opt/preinstall -type f -name '*.wgt' -exec ls -la {} \\;");
+        system(("find " + actualDir + " -type f -name '*.wgt' -exec ls -la {} \\;").c_str());
         
         TEST_LOG("Final permission check:");
-        system("ls -la /opt/preinstall/*/");
+        system(("ls -la " + actualDir + "/*/").c_str());
+        
+        // Store the actual directory path for cleanup and other operations
+        mActualPreinstallDir = actualDir;
+        
+        // Log which directory was actually used
+        if (usingFallback) {
+            TEST_LOG("NOTE: Using fallback directory %s instead of /opt/preinstall", actualDir.c_str());
+        } else {
+            TEST_LOG("NOTE: Successfully using standard directory %s", actualDir.c_str());
+        }
 
         // Use real directory operations instead of mocks
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* path) -> DIR* {
+            .WillByDefault(::testing::Invoke([actualDir](const char* path) -> DIR* {
+                // If the test is asking for /opt/preinstall but we're using fallback, redirect
+                std::string pathStr(path);
+                if (pathStr == "/opt/preinstall" && actualDir != "/opt/preinstall") {
+                    TEST_LOG("Redirecting opendir from /opt/preinstall to %s", actualDir.c_str());
+                    return opendir(actualDir.c_str());
+                }
                 return opendir(path);
             }));
 
@@ -376,7 +436,14 @@ protected:
             }));
 
         ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* path, struct stat* buf) -> int {
+            .WillByDefault(::testing::Invoke([actualDir](const char* path, struct stat* buf) -> int {
+                // If the test is asking for /opt/preinstall path but we're using fallback, redirect
+                std::string pathStr(path);
+                if (pathStr.find("/opt/preinstall") == 0 && actualDir != "/opt/preinstall") {
+                    std::string redirectPath = actualDir + pathStr.substr(13); // Remove "/opt/preinstall"
+                    TEST_LOG("Redirecting stat from %s to %s", path, redirectPath.c_str());
+                    return stat(redirectPath.c_str(), buf);
+                }
                 return stat(path, buf);
             }));
     }
@@ -385,26 +452,52 @@ protected:
     {
         TEST_LOG("CleanUpPreinstallDirectory: Cleaning up test directories");
         
+        // Clean up both the actual directory used and any potential fallback directories
+        std::string fallbackPattern = "/tmp/test_preinstall_*";
+        
         // Show what we're about to remove
         TEST_LOG("Contents before cleanup:");
-        system("ls -la /opt/preinstall 2>/dev/null || echo 'Directory does not exist'");
+        if (!mActualPreinstallDir.empty()) {
+            system(("ls -la " + mActualPreinstallDir + " 2>/dev/null || echo '" + mActualPreinstallDir + " does not exist'").c_str());
+        }
+        system("ls -la /opt/preinstall 2>/dev/null || echo '/opt/preinstall does not exist'");
+        system("ls -la /tmp/test_preinstall_* 2>/dev/null || echo 'No fallback directories exist'");
         
-        // Try to change permissions before removal to ensure we can delete
-        system("chmod -R 755 /opt/preinstall 2>/dev/null");
+        int cleanupResult1 = 0;
+        int cleanupResult2 = 0;
         
-        // Clean up test directories
-        int cleanupResult = system("rm -rf /opt/preinstall");
-        TEST_LOG("Cleanup result: %d", cleanupResult);
-        
-        // If cleanup failed, try with sudo
-        if (cleanupResult != 0) {
-            TEST_LOG("Standard cleanup failed, trying with sudo...");
-            system("sudo rm -rf /opt/preinstall");
+        // Clean up the actual directory that was used
+        if (!mActualPreinstallDir.empty()) {
+            system(("chmod -R 755 " + mActualPreinstallDir + " 2>/dev/null").c_str());
+            cleanupResult1 = system(("rm -rf " + mActualPreinstallDir + " 2>/dev/null").c_str());
+            if (cleanupResult1 != 0 && mActualPreinstallDir == "/opt/preinstall") {
+                system("sudo rm -rf /opt/preinstall 2>/dev/null");
+            }
         }
         
+        // Also clean up /opt/preinstall if it exists (in case we didn't use it)
+        if (mActualPreinstallDir != "/opt/preinstall") {
+            system("chmod -R 755 /opt/preinstall 2>/dev/null");
+            system("rm -rf /opt/preinstall 2>/dev/null");
+        }
+        
+        // Clean up any fallback directories that might exist
+        std::string cleanupCmd = "rm -rf " + fallbackPattern + " 2>/dev/null";
+        cleanupResult2 = system(cleanupCmd.c_str());
+        
+        TEST_LOG("Cleanup result - actual dir (%s): %d, fallback pattern: %d", 
+                 mActualPreinstallDir.c_str(), cleanupResult1, cleanupResult2);
+        
         // Verify cleanup
-        TEST_LOG("Verifying cleanup - /opt/preinstall should not exist:");
-        system("ls -la /opt/preinstall 2>/dev/null || echo 'Directory successfully removed'");
+        TEST_LOG("Verifying cleanup:");
+        if (!mActualPreinstallDir.empty()) {
+            system(("ls -la " + mActualPreinstallDir + " 2>/dev/null || echo '" + mActualPreinstallDir + " successfully removed'").c_str());
+        }
+        system("ls -la /opt/preinstall 2>/dev/null || echo '/opt/preinstall successfully removed'");
+        system("ls -la /tmp/test_preinstall_* 2>/dev/null || echo 'Fallback directories successfully removed'");
+        
+        // Reset the directory path
+        mActualPreinstallDir = "";
     }
 
     void VerifyPreinstallDirectoryAccess()
