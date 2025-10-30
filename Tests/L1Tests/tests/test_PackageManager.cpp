@@ -172,8 +172,11 @@ protected:
         EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
 
-        // Initialize the plugin for COM-RPC
-        plugin->Initialize(mServiceMock);
+        // Activate the dispatcher and initialize the plugin for JSON-RPC
+        PluginHost::IFactories::Assign(&factoriesImplementation);
+        dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
+        dispatcher->Activate(mServiceMock);
+        plugin->Initialize(mServiceMock); 
     }
 
     void getDownloadParams()
@@ -244,6 +247,10 @@ protected:
                      mStorageManagerMock = nullptr;
                      return 0;
             }));
+
+        // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
+        dispatcher->Deactivate();
+        dispatcher->Release();
 
         // Deinitialize the plugin for COM-RPC
         plugin->Deinitialize(mServiceMock);
