@@ -482,7 +482,7 @@ TEST_F(PackageManagerTest, downloadMethodusingComRpcSuccess) {
             }));
 
     // Initialize the status params
-    //StatusParams statusParams;
+    StatusParams statusParams;
 
     // Register the notification
     pkgdownloaderInterface->Register(&notification);
