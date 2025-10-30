@@ -179,7 +179,7 @@ protected:
     string client;
     double minutes;
 
-    Core::ProxyType<Plugin::LifecycleManagerImplementationTest> mLifecycleManagerImpl;
+    Core::ProxyType<Plugin::LifecycleManagerImplementation> mLifecycleManagerImpl;
     EventHandlerTest eventHdlTest;
     Exchange::ILifecycleManager* interface = nullptr;
     Exchange::ILifecycleManagerState* stateInterface = nullptr;
