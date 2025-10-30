@@ -749,6 +749,10 @@ TEST_F(RuntimeManagerTest, RunMethods)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Run(appInstanceId, appInstanceId, 10, 10, portsIterator, pathsListIterator, debugSettingsIterator, runtimeConfig));
 
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
+
     releaseResources();
 }
 
@@ -794,6 +798,11 @@ TEST_F(RuntimeManagerTest, RunWithoutCreateDisplay)
             .WillByDefault(::testing::Return(Core::ERROR_GENERAL));
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Run(appInstanceId, appInstanceId, 10, 10, portsIterator, pathsListIterator, debugSettingsIterator, runtimeConfig));
+
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
+
     releaseResources();
 }
 
@@ -853,6 +862,10 @@ TEST_F(RuntimeManagerTest, RunCreateFkpsMounts)
             .WillByDefault(::testing::Return(Core::ERROR_NONE));
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Run(appInstanceId, appInstanceId, 10, 10, portsIterator, pathsListIterator, debugSettingsIterator, runtimeConfig));
+
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
 
     releaseResources();
 }
@@ -935,6 +948,11 @@ TEST_F(RuntimeManagerTest, RunReadfromAIConfigFile)
 
     // Optional: Clean up the config file after test
     remove(configFilePath.c_str());
+
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
+
     releaseResources();
 }
 
@@ -974,6 +992,11 @@ TEST_F(RuntimeManagerTest, StartContainerFailure) {
                 return Core::ERROR_GENERAL;
             }));
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Run(appInstanceId, appInstanceId, 10, 10, portsIterator, pathsListIterator, debugSettingsIterator, runtimeConfig)); // Pass valid args
+    
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
+
     releaseResources();
 }
 
@@ -1124,6 +1147,10 @@ TEST_F(RuntimeManagerTest, WakeMethods)
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Wake(appInstanceId, WPEFramework::Exchange::IRuntimeManager::RUNTIME_STATE_RUNNING));
 
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
+
     releaseResources();
 }
 
@@ -1169,6 +1196,10 @@ TEST_F(RuntimeManagerTest, WakeOnRunningNonHibernateContainer)
 
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Wake(appInstanceId, WPEFramework::Exchange::IRuntimeManager::RUNTIME_STATE_RUNNING));
+
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
 
     releaseResources();
 }
@@ -1234,6 +1265,10 @@ TEST_F(RuntimeManagerTest, WakeWithGeneralError)
           }));
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Wake(appInstanceId, WPEFramework::Exchange::IRuntimeManager::RUNTIME_STATE_RUNNING));
+
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
 
     releaseResources();
 }
@@ -1333,6 +1368,11 @@ TEST_F(RuntimeManagerTest, SuspendResumeMethods)
         });
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Resume(appInstanceId));
+    
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
+
     releaseResources();
 }
 
@@ -1423,6 +1463,10 @@ TEST_F(RuntimeManagerTest, SuspendFailsWithPauseContainerError)
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Suspend(appInstanceId));
 
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
+
     releaseResources();
 }
 
@@ -1486,6 +1530,10 @@ TEST_F(RuntimeManagerTest, ResumeFailsResumePauseContainerError)
         });
 
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Resume(appInstanceId));
+
+    portsIterator->Release();
+    pathsListIterator->Release();
+    debugSettingsIterator->Release();
 
     releaseResources();
 }
