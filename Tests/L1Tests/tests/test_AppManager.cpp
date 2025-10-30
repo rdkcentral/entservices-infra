@@ -40,8 +40,6 @@
 
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define TIMEOUT   (50000)
 #define APPMANAGER_APP_ID           "com.test.app"
@@ -127,7 +125,6 @@ protected:
 
     void releaseAppManagerImpl()
     {
-        DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
         TEST_LOG("In releaseAppManagerImpl!");
         plugin->Deinitialize(mServiceMock);
         delete mServiceMock;
@@ -211,7 +208,6 @@ protected:
         {
             ON_CALL(*mLifecycleManagerStateMock, Unregister(::testing::_))
                 .WillByDefault(::testing::Invoke([&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                     return 0;
                 }));
             mLifecycleManagerStateNotification_cb = nullptr;
@@ -220,7 +216,6 @@ protected:
         {
             ON_CALL(*mPackageInstallerMock, Unregister(::testing::_))
                 .WillByDefault(::testing::Invoke([&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                     return 0;
                 }));
             mPackageManagerNotification_cb = nullptr;
@@ -231,7 +226,6 @@ protected:
             EXPECT_CALL(*mLifecycleManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mLifecycleManagerMock;
                      return 0;
                     }));
@@ -241,13 +235,11 @@ protected:
             EXPECT_CALL(*mLifecycleManagerStateMock, Unregister(::testing::_))
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      return 0;
                     }));
             EXPECT_CALL(*mLifecycleManagerStateMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mLifecycleManagerStateMock;
                      return 0;
                     }));
@@ -257,7 +249,6 @@ protected:
             EXPECT_CALL(*mPackageManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mPackageManagerMock;
                      return 0;
                     }));
@@ -267,7 +258,6 @@ protected:
             EXPECT_CALL(*mPackageInstallerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mPackageInstallerMock;
                      return 0;
                     }));
@@ -277,7 +267,6 @@ protected:
             EXPECT_CALL(*mStore2Mock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mStore2Mock;
                      return 0;
                     }));
@@ -286,7 +275,6 @@ protected:
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr)
         {
-            DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
             delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
         }
@@ -296,7 +284,6 @@ protected:
             EXPECT_CALL(*mStorageManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mStorageManagerMock;
                      return 0;
             })); 
@@ -305,7 +292,6 @@ protected:
         dispatcher->Release();
 
         plugin->Deinitialize(mServiceMock);
-        DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
         delete mServiceMock;
         mAppManagerImpl = nullptr;
     }
@@ -321,7 +307,6 @@ protected:
 
     virtual ~AppManagerTest() override
     {
-        DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
         TEST_LOG("Delete ~AppManagerTest Instance!");
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
