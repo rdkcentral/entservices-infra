@@ -3108,7 +3108,7 @@ TEST_F(PreinstallManagerTest, MaximumCodeCoverage)
             return Core::ERROR_NONE;
         });
 
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AtMost(1))
         .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
             id = PREINSTALL_MANAGER_TEST_PACKAGE_ID; // Same as existing
