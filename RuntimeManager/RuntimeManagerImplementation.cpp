@@ -22,9 +22,6 @@
 #include <errno.h>
 #include <fstream>
 
-//TODO - Remove the hardcoding to enable compatibility with a common middleware. The app portal name should be configurable in some way
-#define RUNTIME_APP_PORTAL "com.sky.as.apps"
-
 namespace WPEFramework
 {
     namespace Plugin
@@ -40,6 +37,7 @@ namespace WPEFramework
         , mWindowManagerConnector(nullptr)
         , mDobbyEventListener(nullptr)
         , mUserIdManager(nullptr)
+        , mRuntimeAppPortal("com.sky.as.apps") // Default value
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         , mTelemetryMetricsObject(nullptr)
 #endif
@@ -151,9 +149,9 @@ namespace WPEFramework
 
             JsonObject obj = params.Object();
             string appIdFromContainer = obj["containerId"].String();
-            if (appIdFromContainer.find(RUNTIME_APP_PORTAL) == 0) // TODO improve logic of fetching appInstanceId
+            if (appIdFromContainer.find(mRuntimeAppPortal) == 0) // TODO improve logic of fetching appInstanceId
             {
-                appIdFromContainer.erase(0, std::string(RUNTIME_APP_PORTAL).length());
+                appIdFromContainer.erase(0, mRuntimeAppPortal.length());
             }
             string appInstanceId = std::move(appIdFromContainer);
             string eventName = obj["eventName"].String();
@@ -242,6 +240,7 @@ namespace WPEFramework
         uint32_t RuntimeManagerImplementation::Configure(PluginHost::IShell* service)
         {
             uint32_t result = Core::ERROR_GENERAL;
+            string configStr;
 
             if (service != nullptr)
             {
@@ -284,6 +283,16 @@ namespace WPEFramework
                     LOGINFO("created OCIContainerPluginObject");
                     result = Core::ERROR_NONE;
                 }
+                configStr = service->ConfigLine().c_str();
+                LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
+                RuntimeManagerImplementation::Configuration config;
+                config.FromString(service->ConfigLine());
+                mRuntimeAppPortal = config.runtimeAppPortal.Value();
+                if (mRuntimeAppPortal.empty())
+                {
+                    mRuntimeAppPortal = "com.sky.as.apps"; // Default value
+                }
+                LOGINFO("runtimeAppPortal=%s", mRuntimeAppPortal.c_str());
             }
             else
             {
@@ -493,7 +502,7 @@ err_ret:
 
             if (!appInstanceId.empty())
             {
-                containerId = std::string(RUNTIME_APP_PORTAL) + (appInstanceId);
+                containerId = mRuntimeAppPortal + appInstanceId;
             }
             return containerId;
         }
