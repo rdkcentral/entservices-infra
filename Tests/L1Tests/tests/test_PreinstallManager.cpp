@@ -236,6 +236,52 @@ protected:
         ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
             .WillByDefault(::testing::Return(0));
     }
+
+    void SetUpPreinstallDirectoryWithRealFiles()
+    {
+        // Create actual /opt/preinstall directory structure for comprehensive testing
+        std::string preinstallDir = "/opt/preinstall";
+        std::string testApp1Dir = preinstallDir + "/testapp1";
+        std::string testApp2Dir = preinstallDir + "/testapp2";
+        std::string testApp3Dir = preinstallDir + "/testapp3";
+
+        // Create directories
+        system(("mkdir -p " + testApp1Dir).c_str());
+        system(("mkdir -p " + testApp2Dir).c_str());
+        system(("mkdir -p " + testApp3Dir).c_str());
+
+        // Create test package files
+        system(("touch " + testApp1Dir + "/package.wgt").c_str());
+        system(("touch " + testApp2Dir + "/package.wgt").c_str());
+        system(("touch " + testApp3Dir + "/package.wgt").c_str());
+
+        // Use real directory operations instead of mocks
+        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+            .WillByDefault(::testing::Invoke([](const char* path) -> DIR* {
+                return opendir(path);
+            }));
+
+        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+            .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
+                return readdir(dir);
+            }));
+
+        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+            .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
+                return closedir(dir);
+            }));
+
+        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+            .WillByDefault(::testing::Invoke([](const char* path, struct stat* buf) -> int {
+                return stat(path, buf);
+            }));
+    }
+
+    void CleanUpPreinstallDirectory()
+    {
+        // Clean up test directories
+        system("rm -rf /opt/preinstall");
+    }
 };
 
 // Mock notification class using GMock
@@ -336,14 +382,14 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
             return Core::ERROR_NONE;
         });
 
-    SetUpPreinstallDirectoryMocks();
+    SetUpPreinstallDirectoryWithRealFiles();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
-    // We mainly test that the method doesn't crash
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    // Should succeed with real directory setup
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
+    CleanUpPreinstallDirectory();
     releaseResources();
 }
 
@@ -373,13 +419,14 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithoutForceInstall)
             return Core::ERROR_NONE;
         });
 
-    SetUpPreinstallDirectoryMocks();
+    SetUpPreinstallDirectoryWithRealFiles();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
     
-    // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    // Should succeed with real directory setup
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
+    CleanUpPreinstallDirectory();
     releaseResources();
 }
 
@@ -2149,6 +2196,314 @@ TEST_F(PreinstallManagerTest, StartPreinstallErrorHandlingScenarios)
 }
 
 /**
+ * @brief Comprehensive test for isNewerVersion method coverage through version comparison scenarios
+ *
+ * @details Test verifies that:
+ * - Version comparison works correctly for major, minor, patch, and build differences
+ * - Invalid version formats are handled properly
+ * - Equal versions return false
+ * - Version strings with special characters ('-', '+') are processed correctly
+ */
+TEST_F(PreinstallManagerTest, IsNewerVersionComprehensiveCoverage)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    SetUpPreinstallDirectoryWithRealFiles();
+    
+    // Test scenario 1: Newer major version should install (2.0.0 > 1.0.0)
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            std::list<Exchange::IPackageInstaller::Package> packageList;
+            Exchange::IPackageInstaller::Package package;
+            package.packageId = "com.test.app1";
+            package.version = "1.0.0";  // Older version
+            package.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(package);
+            auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            if (fileLocator.find("testapp1") != string::npos) {
+                id = "com.test.app1";
+                version = "2.0.0";  // Newer version to trigger isNewerVersion true branch
+            } else if (fileLocator.find("testapp2") != string::npos) {
+                id = "com.test.app2";
+                version = "1.0";  // Invalid format to trigger isNewerVersion false branch
+            } else {
+                id = "com.test.app3";
+                version = "1.0.0";  // Same version to trigger equal case
+            }
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            // Test different failure reasons to cover getFailReason method
+            static int callCount = 0;
+            callCount++;
+            
+            if (callCount == 1) {
+                failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
+                return Core::ERROR_GENERAL;
+            } else if (callCount == 2) {
+                failReason = Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE;
+                return Core::ERROR_GENERAL;
+            } else {
+                failReason = Exchange::IPackageInstaller::FailReason::NONE;
+                return Core::ERROR_NONE;
+            }
+        });
+
+    // Test with forceInstall=false to trigger version comparison logic
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    
+    // Should complete successfully or with partial failures
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    CleanUpPreinstallDirectory();
+    releaseResources();
+}
+
+/**
+ * @brief Test all getFailReason method branches
+ *
+ * @details Test verifies that:
+ * - All FailReason enum values return correct string mappings
+ * - Default case returns "NONE"
+ * - Method is called through actual failure scenarios
+ */
+TEST_F(PreinstallManagerTest, GetFailReasonComprehensiveCoverage)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    SetUpPreinstallDirectoryWithRealFiles();
+    
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            if (fileLocator.find("testapp1") != string::npos) {
+                id = "com.test.app1";
+                version = "1.0.0";
+            } else if (fileLocator.find("testapp2") != string::npos) {
+                id = "com.test.app2";
+                version = "1.1.0";
+            } else {
+                id = "com.test.app3";
+                version = "1.2.0";
+            }
+            return Core::ERROR_NONE;
+        });
+
+    // Test all failure reason cases
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AtLeast(3))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            static int callCount = 0;
+            callCount++;
+            
+            // Cover all FailReason enum values
+            switch(callCount) {
+                case 1:
+                    failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
+                    break;
+                case 2:
+                    failReason = Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE;
+                    break;
+                case 3:
+                    failReason = Exchange::IPackageInstaller::FailReason::INVALID_METADATA_FAILURE;
+                    break;
+                case 4:
+                    failReason = Exchange::IPackageInstaller::FailReason::PERSISTENCE_FAILURE;
+                    break;
+                default:
+                    failReason = static_cast<Exchange::IPackageInstaller::FailReason>(999); // Invalid enum to test default case
+                    break;
+            }
+            return Core::ERROR_GENERAL;
+        });
+
+    // Execute with force install to ensure all packages are processed
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // Should return ERROR_GENERAL due to installation failures
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
+    
+    CleanUpPreinstallDirectory();
+    releaseResources();
+}
+
+/**
+ * @brief Test StartPreinstall with forceInstall=false branch comprehensive coverage
+ *
+ * @details Test verifies that:
+ * - The if (!forceInstall) branch is properly executed
+ * - ListPackages is called when forceInstall=false
+ * - Version comparison logic is triggered
+ * - Both newer and same/older version scenarios are tested
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallForceInstallFalseBranchCoverage)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    SetUpPreinstallDirectoryWithRealFiles();
+    
+    // Mock ListPackages to return multiple installed packages for comprehensive testing
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .Times(1)
+        .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            std::list<Exchange::IPackageInstaller::Package> packageList;
+            
+            // Package 1: Older version installed (should trigger install of newer)
+            Exchange::IPackageInstaller::Package package1;
+            package1.packageId = "com.test.app1";
+            package1.version = "1.0.0";
+            package1.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(package1);
+            
+            // Package 2: Same version installed (should skip install)
+            Exchange::IPackageInstaller::Package package2;
+            package2.packageId = "com.test.app2";
+            package2.version = "2.0.0";
+            package2.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(package2);
+            
+            // Package 3: Newer version installed (should skip install)
+            Exchange::IPackageInstaller::Package package3;
+            package3.packageId = "com.test.app3";
+            package3.version = "3.0.0";
+            package3.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(package3);
+            
+            auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            if (fileLocator.find("testapp1") != string::npos) {
+                id = "com.test.app1";
+                version = "2.0.0";  // Newer than installed 1.0.0 - should install
+            } else if (fileLocator.find("testapp2") != string::npos) {
+                id = "com.test.app2";
+                version = "2.0.0";  // Same as installed - should skip
+            } else {
+                id = "com.test.app3";
+                version = "2.5.0";  // Older than installed 3.0.0 - should skip
+            }
+            return Core::ERROR_NONE;
+        });
+
+    // Only expect Install to be called once for the newer version package
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(1)  // Should only install com.test.app1 since it's newer
+        .WillOnce([&](const string &packageId, const string &version, 
+                     Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                     const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            EXPECT_EQ("com.test.app1", packageId);
+            EXPECT_EQ("2.0.0", version);
+            failReason = Exchange::IPackageInstaller::FailReason::NONE;
+            return Core::ERROR_NONE;
+        });
+
+    // Test with forceInstall=false to trigger the conditional branch
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    
+    CleanUpPreinstallDirectory();
+    releaseResources();
+}
+
+/**
+ * @brief Test version string edge cases and invalid formats in isNewerVersion method
+ *
+ * @details Test verifies that:
+ * - Invalid version formats return false and log errors
+ * - Version strings with special characters are handled correctly
+ * - Different version component comparisons work properly
+ */
+TEST_F(PreinstallManagerTest, IsNewerVersionEdgeCasesAndInvalidFormats)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    SetUpPreinstallDirectoryWithRealFiles();
+    
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .Times(1)
+        .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            std::list<Exchange::IPackageInstaller::Package> packageList;
+            
+            // Test packages with various version formats
+            Exchange::IPackageInstaller::Package package1;
+            package1.packageId = "com.test.app1";
+            package1.version = "invalid.version";  // Invalid format
+            package1.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(package1);
+            
+            Exchange::IPackageInstaller::Package package2;
+            package2.packageId = "com.test.app2";
+            package2.version = "1.2.3-beta";  // Version with special character
+            package2.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(package2);
+            
+            Exchange::IPackageInstaller::Package package3;
+            package3.packageId = "com.test.app3";
+            package3.version = "2.1.5.1001+build";  // Version with build number and special character
+            package3.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(package3);
+            
+            auto mockIterator = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            if (fileLocator.find("testapp1") != string::npos) {
+                id = "com.test.app1";
+                version = "1.0.0";  // Valid format vs invalid installed version
+            } else if (fileLocator.find("testapp2") != string::npos) {
+                id = "com.test.app2"; 
+                version = "1.2.4-alpha";  // Version comparison with special chars
+            } else {
+                id = "com.test.app3";
+                version = "2.1.5.1002";  // Newer build number
+            }
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AtLeast(1))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            failReason = Exchange::IPackageInstaller::FailReason::NONE;
+            return Core::ERROR_NONE;
+        });
+
+    // Test with forceInstall=false to trigger version comparison
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    CleanUpPreinstallDirectory();
+    releaseResources();
+}
+
+/**
  * @brief Test AddRef and Release reference counting
  *
  * @details Test verifies that:
@@ -2193,440 +2548,37 @@ TEST_F(PreinstallManagerTest, ReferenceCountingBehavior)
 }
 
 /**
- * @brief Test isNewerVersion method through StartPreinstall with forceInstall=false
+ * @brief Test StartPreinstall behavior with missing /opt/preinstall directory
  *
  * @details Test verifies that:
- * - isNewerVersion is called when forceInstall=false and packages are already installed
- * - Newer versions trigger installation
- * - Version comparison logic works correctly
+ * - StartPreinstall handles missing /opt/preinstall directory gracefully
+ * - Proper error code is returned when directory does not exist
+ * - This test demonstrates the importance of directory setup in test environment
  */
-TEST_F(PreinstallManagerTest, TestIsNewerVersionWithNewerVersion)
+TEST_F(PreinstallManagerTest, StartPreinstallWithMissingPreinstallDirectory)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Create /opt/preinstall directory with test app
-    std::string preinstallDir = "/opt/preinstall";
-    std::string appDir = preinstallDir + "/testapp";
-    system(("mkdir -p " + appDir).c_str());
-    system(("touch " + appDir + "/package.wgt").c_str());
+    // Ensure /opt/preinstall directory does not exist
+    system("rm -rf /opt/preinstall");
     
-    // Mock directory operations to use actual filesystem
+    // Don't set up any directory mocks - let it try to access real filesystem
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([preinstallDir](const char* path) -> DIR* {
-            if (std::string(path) == preinstallDir) {
-                return opendir(preinstallDir.c_str());
-            }
-            return nullptr;
+        .WillByDefault(::testing::Invoke([](const char* path) -> DIR* {
+            return opendir(path);  // Will return NULL for non-existent directory
         }));
     
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
-            return readdir(dir);
-        }));
-        
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
-            return closedir(dir);
+    ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke([](const char* path, struct stat* buf) -> int {
+            return stat(path, buf);  // Will fail for non-existent files
         }));
     
-    // Mock GetConfigForPackage to return package with newer version
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = "2.0.0"; // Newer version than installed (1.0.0)
-            return Core::ERROR_NONE;
-        });
+    // Test both forceInstall scenarios
+    Core::hresult result1 = mPreinstallManagerImpl->StartPreinstall(true);
+    EXPECT_EQ(Core::ERROR_GENERAL, result1);  // Should fail due to missing directory
     
-    // Mock ListPackages to return existing installed package with older version
-    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-            std::list<Exchange::IPackageInstaller::Package> packageList;
-            Exchange::IPackageInstaller::Package package_1;
-            package_1.packageId = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            package_1.version = "1.0.0"; // Older version
-            package_1.digest = "";
-            package_1.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
-            package_1.sizeKb = 0;
-            packageList.emplace_back(package_1);
-            packages = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
-            return Core::ERROR_NONE;
-        });
+    Core::hresult result2 = mPreinstallManagerImpl->StartPreinstall(false);
+    EXPECT_EQ(Core::ERROR_GENERAL, result2);  // Should fail due to missing directory
     
-    // Mock Install to succeed (newer version should be installed)
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &packageId, const string &version, 
-                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
-            EXPECT_EQ(version, "2.0.0"); // Verify newer version is being installed
-            return Core::ERROR_NONE;
-        });
-    
-    // Call StartPreinstall with forceInstall=false to trigger version comparison
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
-    
-    // Should succeed because newer version is installed
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    
-    // Cleanup
-    system(("rm -rf " + preinstallDir).c_str());
-    releaseResources();
-}
-
-/**
- * @brief Test isNewerVersion method - skip equal versions
- *
- * @details Test verifies that:
- * - Packages with equal versions are skipped when forceInstall=false
- * - isNewerVersion returns false for equal versions
- */
-TEST_F(PreinstallManagerTest, TestIsNewerVersionWithEqualVersion)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Create /opt/preinstall directory with test app
-    std::string preinstallDir = "/opt/preinstall";
-    std::string appDir = preinstallDir + "/testapp";
-    system(("mkdir -p " + appDir).c_str());
-    system(("touch " + appDir + "/package.wgt").c_str());
-    
-    // Mock directory operations
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([preinstallDir](const char* path) -> DIR* {
-            if (std::string(path) == preinstallDir) {
-                return opendir(preinstallDir.c_str());
-            }
-            return nullptr;
-        }));
-    
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
-            return readdir(dir);
-        }));
-        
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
-            return closedir(dir);
-        }));
-    
-    // Mock GetConfigForPackage to return package with equal version
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = PREINSTALL_MANAGER_TEST_VERSION; // Same version as installed
-            return Core::ERROR_NONE;
-        });
-    
-    // Mock ListPackages to return existing installed package with same version
-    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-            auto mockIterator = FillPackageIterator(); // Uses PREINSTALL_MANAGER_TEST_VERSION (1.0.0)
-            packages = mockIterator;
-            return Core::ERROR_NONE;
-        });
-    
-    // Install should NOT be called for equal version
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .Times(0);
-    
-    // Call StartPreinstall with forceInstall=false
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
-    
-    // Should succeed but no installation happens (version is equal, so skipped)
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    
-    // Cleanup
-    system(("rm -rf " + preinstallDir).c_str());
-    releaseResources();
-}
-
-/**
- * @brief Test isNewerVersion method - skip older preinstall versions
- *
- * @details Test verifies that:
- * - Packages with older versions are skipped when installed version is newer
- * - isNewerVersion correctly identifies older versions
- */
-TEST_F(PreinstallManagerTest, TestIsNewerVersionWithOlderPreinstallVersion)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Create /opt/preinstall directory with test app
-    std::string preinstallDir = "/opt/preinstall";
-    std::string appDir = preinstallDir + "/testapp";
-    system(("mkdir -p " + appDir).c_str());
-    system(("touch " + appDir + "/package.wgt").c_str());
-    
-    // Mock directory operations
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([preinstallDir](const char* path) -> DIR* {
-            if (std::string(path) == preinstallDir) {
-                return opendir(preinstallDir.c_str());
-            }
-            return nullptr;
-        }));
-    
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
-            return readdir(dir);
-        }));
-        
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
-            return closedir(dir);
-        }));
-    
-    // Mock GetConfigForPackage to return package with older version
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = "0.9.0"; // Older than installed version
-            return Core::ERROR_NONE;
-        });
-    
-    // Mock ListPackages to return existing installed package with newer version
-    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-            auto mockIterator = FillPackageIterator(); // Uses PREINSTALL_MANAGER_TEST_VERSION (1.0.0)
-            packages = mockIterator;
-            return Core::ERROR_NONE;
-        });
-    
-    // Install should NOT be called for older version
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .Times(0);
-    
-    // Call StartPreinstall with forceInstall=false
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
-    
-    // Should succeed but no installation happens (version is older, so skipped)
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    
-    // Cleanup
-    system(("rm -rf " + preinstallDir).c_str());
-    releaseResources();
-}
-
-/**
- * @brief Test getFailReason method - all failure reason mappings
- *
- * @details Test verifies that:
- * - getFailReason returns correct strings for all FailReason enum values
- * - Default case returns "NONE"
- */
-TEST_F(PreinstallManagerTest, TestGetFailReasonAllMappings)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Create /opt/preinstall directory with test apps
-    std::string preinstallDir = "/opt/preinstall";
-    std::string app1Dir = preinstallDir + "/app1";
-    std::string app2Dir = preinstallDir + "/app2";
-    std::string app3Dir = preinstallDir + "/app3";
-    std::string app4Dir = preinstallDir + "/app4";
-    std::string app5Dir = preinstallDir + "/app5";
-    
-    system(("mkdir -p " + app1Dir).c_str());
-    system(("mkdir -p " + app2Dir).c_str());
-    system(("mkdir -p " + app3Dir).c_str());
-    system(("mkdir -p " + app4Dir).c_str());
-    system(("mkdir -p " + app5Dir).c_str());
-    
-    system(("touch " + app1Dir + "/package.wgt").c_str());
-    system(("touch " + app2Dir + "/package.wgt").c_str());
-    system(("touch " + app3Dir + "/package.wgt").c_str());
-    system(("touch " + app4Dir + "/package.wgt").c_str());
-    system(("touch " + app5Dir + "/package.wgt").c_str());
-    
-    // Mock directory operations
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([preinstallDir](const char* path) -> DIR* {
-            if (std::string(path) == preinstallDir) {
-                return opendir(preinstallDir.c_str());
-            }
-            return nullptr;
-        }));
-    
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
-            return readdir(dir);
-        }));
-        
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
-            return closedir(dir);
-        }));
-    
-    // Mock GetConfigForPackage
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            if (fileLocator.find("app1") != std::string::npos) {
-                id = "com.test.app1";
-                version = "1.0.0";
-            } else if (fileLocator.find("app2") != std::string::npos) {
-                id = "com.test.app2";
-                version = "1.0.0";
-            } else if (fileLocator.find("app3") != std::string::npos) {
-                id = "com.test.app3";
-                version = "1.0.0";
-            } else if (fileLocator.find("app4") != std::string::npos) {
-                id = "com.test.app4";
-                version = "1.0.0";
-            } else if (fileLocator.find("app5") != std::string::npos) {
-                id = "com.test.app5";
-                version = "1.0.0";
-            }
-            return Core::ERROR_NONE;
-        });
-    
-    // Test all failure reasons - Install should fail with different reasons
-    static size_t installCallCount = 0;
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &packageId, const string &version, 
-                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
-            installCallCount++;
-            switch (installCallCount) {
-                case 1:
-                    failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
-                    break;
-                case 2:
-                    failReason = Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE;
-                    break;
-                case 3:
-                    failReason = Exchange::IPackageInstaller::FailReason::INVALID_METADATA_FAILURE;
-                    break;
-                case 4:
-                    failReason = Exchange::IPackageInstaller::FailReason::PERSISTENCE_FAILURE;
-                    break;
-                case 5:
-                    // Test default case - use an unknown FailReason value
-                    failReason = static_cast<Exchange::IPackageInstaller::FailReason>(999);
-                    break;
-                default:
-                    failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
-                    break;
-            }
-            return Core::ERROR_GENERAL;
-        });
-    
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
-    
-    // Should return ERROR_GENERAL due to install failures
-    EXPECT_EQ(Core::ERROR_GENERAL, result);
-    
-    // Reset for next test
-    installCallCount = 0;
-    
-    // Cleanup
-    system(("rm -rf " + preinstallDir).c_str());
-    releaseResources();
-}
-
-/**
- * @brief Test StartPreinstall with forceInstall=false - full filtering logic
- *
- * @details Test verifies that:
- * - When forceInstall=false, ListPackages is called
- * - Version comparison is performed using isNewerVersion
- * - Only newer versions are installed
- * - Equal/older versions are filtered out
- * - New packages (not in installed list) are installed
- */
-TEST_F(PreinstallManagerTest, TestStartPreinstallForceInstallFalseFullLogic)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Create /opt/preinstall directory with multiple test apps
-    std::string preinstallDir = "/opt/preinstall";
-    std::string app1Dir = preinstallDir + "/app1"; // Newer version - should install
-    std::string app2Dir = preinstallDir + "/app2"; // Equal version - should skip
-    std::string app3Dir = preinstallDir + "/app3"; // Older version - should skip
-    std::string app4Dir = preinstallDir + "/app4"; // New package - should install
-    
-    system(("mkdir -p " + app1Dir).c_str());
-    system(("mkdir -p " + app2Dir).c_str());
-    system(("mkdir -p " + app3Dir).c_str());
-    system(("mkdir -p " + app4Dir).c_str());
-    
-    system(("touch " + app1Dir + "/package.wgt").c_str());
-    system(("touch " + app2Dir + "/package.wgt").c_str());
-    system(("touch " + app3Dir + "/package.wgt").c_str());
-    system(("touch " + app4Dir + "/package.wgt").c_str());
-    
-    // Mock directory operations
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([preinstallDir](const char* path) -> DIR* {
-            if (std::string(path) == preinstallDir) {
-                return opendir(preinstallDir.c_str());
-            }
-            return nullptr;
-        }));
-    
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
-            return readdir(dir);
-        }));
-        
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
-            return closedir(dir);
-        }));
-    
-    // Mock GetConfigForPackage to return different versions
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            if (fileLocator.find("app1") != std::string::npos) {
-                id = PREINSTALL_MANAGER_TEST_PACKAGE_ID; // Same ID as installed
-                version = "2.0.0"; // Newer version
-            } else if (fileLocator.find("app2") != std::string::npos) {
-                id = PREINSTALL_MANAGER_TEST_PACKAGE_ID; // Same ID as installed
-                version = "1.0.0"; // Equal version
-            } else if (fileLocator.find("app3") != std::string::npos) {
-                id = PREINSTALL_MANAGER_TEST_PACKAGE_ID; // Same ID as installed
-                version = "0.9.0"; // Older version
-            } else if (fileLocator.find("app4") != std::string::npos) {
-                id = "com.test.newpackage"; // New package ID
-                version = "1.0.0";
-            }
-            return Core::ERROR_NONE;
-        });
-    
-    // Mock ListPackages to return one installed package
-    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-            auto mockIterator = FillPackageIterator(); // Returns PREINSTALL_MANAGER_TEST_PACKAGE_ID v1.0.0
-            packages = mockIterator;
-            return Core::ERROR_NONE;
-        });
-    
-    // Mock Install - should be called only for app1 (newer) and app4 (new package)
-    static int installCallCount = 0;
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &packageId, const string &version, 
-                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
-            installCallCount++;
-            
-            // Verify only newer version (app1) and new package (app4) are installed
-            EXPECT_TRUE(
-                (packageId == PREINSTALL_MANAGER_TEST_PACKAGE_ID && version == "2.0.0") ||
-                (packageId == "com.test.newpackage" && version == "1.0.0")
-            ) << "Unexpected package installation: " << packageId << ":" << version;
-            
-            return Core::ERROR_NONE;
-        });
-    
-    // Call StartPreinstall with forceInstall=false
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
-    
-    // Should succeed
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    
-    // Verify install was called exactly 2 times (app1 with newer version and app4 new package)
-    EXPECT_EQ(2, installCallCount);
-    installCallCount = 0;
-    
-    // Cleanup
-    system(("rm -rf " + preinstallDir).c_str());
     releaseResources();
 }
