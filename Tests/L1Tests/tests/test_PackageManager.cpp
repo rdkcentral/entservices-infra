@@ -481,7 +481,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
     // TC-4: Add download request to priority queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
     
-    statusParams.downloadId = downloadId.downloadId;
+    statusParams.downloadId = "1001";
     notification.SetStatusParams(statusParams);
     signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
