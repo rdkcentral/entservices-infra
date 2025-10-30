@@ -492,7 +492,7 @@ TEST_F(PackageManagerTest, downloadMethodusingComRpcSuccess) {
     
     statusParams.downloadId = "1001";
     notification.SetStatusParams(statusParams);
-    //signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
