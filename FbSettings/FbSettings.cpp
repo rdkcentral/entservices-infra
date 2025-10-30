@@ -300,6 +300,14 @@ namespace Plugin {
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
             }
+            else if (lowerMethod == "accessibility.closedcaptions")
+            {
+                return GetClosedCaptionsSettings(result);
+            }
+            else if (lowerMethod == "accessibility.closedcaptionssettings")
+            {
+                return GetClosedCaptionsSettings(result);
+            }
 
             // Route localization methods
             else if (lowerMethod == "localization.language")
@@ -884,6 +892,52 @@ namespace Plugin {
 
             result = jsonStream.str();
             LOGINFO("GetVoiceGuidanceSettings: %s", result.c_str());
+
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult FbSettings::GetClosedCaptionsSettings(string &result)
+        {
+            if (!mDelegate)
+            {
+                result = "{\"error\":\"couldn't get closed captions settings\"}";
+                return Core::ERROR_UNAVAILABLE;
+            }
+
+            auto userSettingsDelegate = mDelegate->getUserSettings();
+            if (!userSettingsDelegate)
+            {
+                result = "{\"error\":\"couldn't get closed captions settings\"}";
+                return Core::ERROR_UNAVAILABLE;
+            }
+
+            // Get closed captions enabled state
+            string enabledResult;
+            Core::hresult enabledStatus = userSettingsDelegate->GetCaptions(enabledResult);
+            if (enabledStatus != Core::ERROR_NONE)
+            {
+                result = "{\"error\":\"couldn't get closed captions enabled state\"}";
+                return enabledStatus;
+            }
+
+            // Get preferred captions languages
+            string languagesResult;
+            Core::hresult languagesStatus = userSettingsDelegate->GetPreferredCaptionsLanguages(languagesResult);
+            if (languagesStatus != Core::ERROR_NONE)
+            {
+                result = "{\"error\":\"couldn't get preferred captions languages\"}";
+                return languagesStatus;
+            }
+
+            // Construct the combined JSON response
+            // Format: {"enabled": <bool>, "preferredLanguages": <array>, "styles": {}}
+            std::ostringstream jsonStream;
+            jsonStream << "{\"enabled\": " << enabledResult
+                       << ", \"preferredLanguages\": " << languagesResult
+                       << ", \"styles\": {}}";
+
+            result = jsonStream.str();
+            LOGINFO("GetClosedCaptionsSettings: %s", result.c_str());
 
             return Core::ERROR_NONE;
         }

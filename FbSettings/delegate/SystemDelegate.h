@@ -71,6 +71,8 @@ public:
             // Per transform: return_or_else(.result.make, "unknown")
             make = "unknown";
         }
+        // Wrap in quotes to make it a valid JSON string
+        make = "\"" + make + "\"";
         return Core::ERROR_NONE;
     }
 
@@ -99,6 +101,8 @@ public:
         {
             name = "Living Room";
         }
+        // Wrap in quotes to make it a valid JSON string
+        name = "\"" + name + "\"";
         return Core::ERROR_NONE;
     }
 
@@ -158,6 +162,8 @@ public:
             LOGERR("SystemDelegate: Failed to get SKU");
             return Core::ERROR_UNAVAILABLE;
         }
+        // Wrap in quotes to make it a valid JSON string
+        skuOut = "\"" + skuOut + "\"";
         return Core::ERROR_NONE;
     }
 
@@ -185,6 +191,8 @@ public:
         {
             code = "US";
         }
+        // Wrap in quotes to make it a valid JSON string
+        code = "\"" + code + "\"";
         return Core::ERROR_NONE;
     }
 
@@ -231,6 +239,8 @@ public:
             if (response.HasLabel(_T("timeZone")))
             {
                 tz = response[_T("timeZone")].String();
+                // Wrap in quotes to make it a valid JSON string
+                tz = "\"" + tz + "\"";
                 return Core::ERROR_NONE;
             }
         }
