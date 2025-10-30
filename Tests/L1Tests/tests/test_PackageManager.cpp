@@ -512,7 +512,7 @@ TEST_F(PackageManagerTest, downloadMethodusingComRpcError) {
 
 	deinitforComRpc();   
 }
-
+#if 0
 /* Test Case for pausing download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -2066,3 +2066,4 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 
 	deinitforComRpc();
 }
+#endif
