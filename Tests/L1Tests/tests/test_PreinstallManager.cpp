@@ -104,8 +104,7 @@ protected:
         mServiceMock = new NiceMock<ServiceMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
-        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
-        Wraps::setImpl(p_wrapsImplMock);
+        // p_wrapsImplMock is already created in SetUp(), so don't recreate it
 
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
@@ -166,12 +165,7 @@ protected:
                     }));
         }
 
-        Wraps::setImpl(nullptr);
-        if (p_wrapsImplMock != nullptr)
-        {
-            delete p_wrapsImplMock;
-            p_wrapsImplMock = nullptr;
-        }
+        // Don't delete p_wrapsImplMock here - it will be cleaned up in TearDown()
 
         dispatcher->Deactivate();
         dispatcher->Release();
@@ -206,14 +200,38 @@ protected:
         // Create a mock package file for testing
         system("touch /opt/preinstall/testapp/package.wgt");
         
-        TEST_LOG("Created /opt/preinstall directory structure for test setup");
+        // Initialize the Wraps mock to prevent null pointer issues
+        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+        Wraps::setImpl(p_wrapsImplMock);
+        
+        // Set up default mock expectations for system calls that can be overridden by individual tests
+        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+            .WillByDefault(::testing::Return(0));
+            
+        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+            .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+
+        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+            .WillByDefault(::testing::Return(0));
+            
+        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+            .WillByDefault(::testing::Return(nullptr));
+        
+        TEST_LOG("Created /opt/preinstall directory structure and initialized mocks for test setup");
     }
 
     void TearDown() override
     {
+        // Clean up mocks
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
+        
         // Clean up the directory after tests
         system("rm -rf /opt/preinstall");
-        TEST_LOG("Cleaned up /opt/preinstall directory after test");
+        TEST_LOG("Cleaned up /opt/preinstall directory and mocks after test");
     }
 
     auto FillPackageIterator()
