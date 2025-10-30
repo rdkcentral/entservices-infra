@@ -64,6 +64,7 @@ protected:
     }
     virtual ~RuntimeManagerTest()
     {
+        DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
 
@@ -114,6 +115,7 @@ protected:
             EXPECT_CALL(*mociContainerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
+                     DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mociContainerMock;
                      return 0;
                     }));
@@ -124,6 +126,7 @@ protected:
             EXPECT_CALL(*mServiceMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
+                     DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mServiceMock;
                      return 0;
                     }));
@@ -134,6 +137,7 @@ protected:
             EXPECT_CALL(*mStoreageManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
+                     DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mStoreageManagerMock;
                      return 0;
                     }));
@@ -144,6 +148,7 @@ protected:
             EXPECT_CALL(*mWindowManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
+                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                     delete mWindowManagerMock;
                     return 0;
                     }));
