@@ -30,6 +30,7 @@
 #include "UtilsFirebolt.h"
 #define APPGATEWAY_SOCKET_ADDRESS "0.0.0.0:3473"
 #define DEFAULT_CONFIG_PATH "/etc/app-gateway/resolution.base.json"
+#define RESOLUTIONS_PATH_CFG "/etc/app-gateway/resolutions.json"
 
 //#define APPGATEWAY_SOCKET_ADDRESS "0.0.0.0:3473"
 
@@ -132,7 +133,7 @@ namespace WPEFramework
         
         uint32_t AppGatewayImplementation::InitializeResolver() {
             // Initialize resolver after setting mService
-            mResolverPtr = std::make_shared<Resolver>(mService, DEFAULT_CONFIG_PATH);
+            mResolverPtr = std::make_shared<Resolver>(mService);
             if (mResolverPtr == nullptr)
             {
                 LOGERR("Failed to create Resolver instance");
@@ -141,28 +142,38 @@ namespace WPEFramework
 
             ResolutionPaths paths;
             Core::OptionalType<Core::JSON::Error> error;
-            std::ifstream resolutionPathsFile(PLUGIN_PRODUCT_CFG);
+            std::ifstream resolutionPathsFile(RESOLUTIONS_PATH_CFG);
 
             if(!resolutionPathsFile.is_open())
             {
-                LOGERR("Failed to open AppGateway config file: %s", PLUGIN_PRODUCT_CFG);
-                return Core::ERROR_GENERAL;
+                LOGWARN("Failed to open resolutions config file: %s, falling back to default config", RESOLUTIONS_PATH_CFG);
+
+                // Fallback: Load only the base resolution file
+                std::vector<std::string> fallbackPaths = {DEFAULT_CONFIG_PATH};
+                LOGINFO("Using fallback: loading default config path: %s", DEFAULT_CONFIG_PATH);
+
+                Core::hresult configResult = InternalResolutionConfigure(std::move(fallbackPaths));
+                if (configResult != Core::ERROR_NONE) {
+                    LOGERR("Failed to configure resolutions from fallback path");
+                    return configResult;
+                }
             }
             else
             {
                 std::string resolutionPathsContent((std::istreambuf_iterator<char>(resolutionPathsFile)), std::istreambuf_iterator<char>());
                 if (paths.FromString(resolutionPathsContent, error) == false)
                 {
-                    LOGERR("Failed to parse AppGateway config file, error: '%s', content: '%s'.",
+                    LOGERR("Failed to parse resolutions config file, error: '%s', content: '%s'.",
                            (error.IsSet() ? error.Value().Message().c_str() : "Unknown"),
                            resolutionPathsContent.c_str());
+                    return Core::ERROR_GENERAL;
                 } else {
                     auto configPaths = paths.GetConfigPaths();
                     if (configPaths.empty()) {
-                        LOGERR("No configuration paths found in AppGateway config file");
+                        LOGERR("No configuration paths found in resolutions config file");
                         return Core::ERROR_BAD_REQUEST;
                     }
-                    LOGINFO("Found %zu configuration paths in AppGateway config file", configPaths.size());
+                    LOGINFO("Found %zu configuration paths in resolutions config file", configPaths.size());
                     Core::hresult configResult = InternalResolutionConfigure(std::move(configPaths));
                     if (configResult != Core::ERROR_NONE) {
                         LOGERR("Failed to configure resolutions from provided paths");
@@ -444,3 +455,4 @@ namespace WPEFramework
 
     } // namespace Plugin
 } // namespace WPEFramework
+

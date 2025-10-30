@@ -59,25 +59,16 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-
 # To error any missing links
 target_link_options(${MODULE_NAME} PRIVATE -Wl,-z,defs)
 
 install(TARGETS ${MODULE_NAME}
         DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-# define PLUGIN_PRODUCT_CFG
-target_compile_definitions(${MODULE_NAME} PRIVATE
-	PLUGIN_PRODUCT_CFG="${PRODUCT_CONFIG_DIR}/appGatewayConfig.json")
-
-# TODO: temporary install gateway.config.json - should be added by Platform
-install(FILES appGatewayConfig.json
-        DESTINATION "${PRODUCT_CONFIG_DIR}")
-
-
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resolutions/
         DESTINATION "/etc/app-gateway/"
         FILES_MATCHING PATTERN "resolution*.json")
 
 write_config(${PLUGIN_NAME})
+
 
