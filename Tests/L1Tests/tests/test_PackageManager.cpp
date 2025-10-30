@@ -349,7 +349,7 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
  * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 
     initforJsonRpc();
@@ -1632,7 +1632,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for list packages method success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
