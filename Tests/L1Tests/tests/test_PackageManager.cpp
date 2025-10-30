@@ -255,7 +255,7 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
                          public Exchange::IPackageInstaller::INotification
 {
     private:
-        BEGIN_INTERFACE_MAP(NotificationTest)
+        BEGIN_INTERFACE_MAP(Notification)
         INTERFACE_ENTRY(Exchange::IPackageDownloader::INotification)
         INTERFACE_ENTRY(Exchange::IPackageInstaller::INotification)
         END_INTERFACE_MAP
@@ -490,8 +490,8 @@ TEST_F(PackageManagerTest, downloadMethodusingComRpcSuccess) {
     // TC-4: Add download request to priority queue using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
     
-    //statusParams.downloadId = "1001";
-    //notification.SetStatusParams(statusParams);
+    statusParams.downloadId = "1001";
+    notification.SetStatusParams(statusParams);
     //signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
