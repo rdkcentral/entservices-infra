@@ -83,6 +83,14 @@ protected:
 
     void createPreinstallManagerImpl()
     {
+        // Initialize mocks before making any system calls
+        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+        Wraps::setImpl(p_wrapsImplMock);
+        
+        // Set up default mock behaviors for system calls
+        ON_CALL(*p_wrapsImplMock, system(::testing::_))
+            .WillByDefault(::testing::Return(0)); // Success return for directory creation
+        
         // Create the preinstall directory structure that's needed for StartPreinstall method
         system("mkdir -p /opt/preinstall");
         system("mkdir -p /opt/preinstall/testapp");
@@ -104,6 +112,13 @@ protected:
         
         // Cleanup the preinstall directory
         system("rm -rf /opt/preinstall");
+        
+        // Clean up wraps mock
+        Wraps::setImpl(nullptr);
+        if (p_wrapsImplMock != nullptr) {
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
     }
 
     Core::hresult createResources()
