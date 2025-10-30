@@ -351,46 +351,98 @@ protected:
         // Sleep for a moment to allow filesystem operations to complete
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         
-        // Check if we can access the directory
+        // Check if we can access the directory using stat first
+        struct stat dirStat;
+        int statResult = stat("/opt/preinstall", &dirStat);
+        if (statResult == 0) {
+            TEST_LOG("stat() success: /opt/preinstall exists, mode: %o, is_dir: %s", 
+                     dirStat.st_mode & 0777, S_ISDIR(dirStat.st_mode) ? "yes" : "no");
+        } else {
+            TEST_LOG("stat() failed for /opt/preinstall, errno: %d (%s)", errno, strerror(errno));
+        }
+        
+        // Reset errno before opendir call
+        errno = 0;
         DIR* testDir = opendir("/opt/preinstall");
+        int opendir_errno = errno; // Save errno immediately
+        
         if (testDir != nullptr) {
             TEST_LOG("SUCCESS: /opt/preinstall directory is accessible");
             closedir(testDir);
         } else {
-            TEST_LOG("ERROR: /opt/preinstall directory is NOT accessible, errno: %d (%s)", errno, strerror(errno));
-            // Try one more time with different approach
-            TEST_LOG("Attempting to fix permissions and retry...");
-            system("sudo chmod -R 755 /opt/preinstall 2>/dev/null");
-            system("sudo chown -R $USER:$USER /opt/preinstall 2>/dev/null");
+            TEST_LOG("ERROR: /opt/preinstall directory is NOT accessible, errno: %d (%s)", opendir_errno, strerror(opendir_errno));
             
-            DIR* retryDir = opendir("/opt/preinstall");
-            if (retryDir != nullptr) {
-                TEST_LOG("SUCCESS: /opt/preinstall directory is now accessible after permission fix");
-                closedir(retryDir);
+            // Check if this is a permission issue or directory doesn't exist
+            if (statResult == 0) {
+                TEST_LOG("Directory exists but opendir failed - likely a permission issue");
+                TEST_LOG("Attempting to fix permissions and retry...");
+                system("sudo chmod -R 755 /opt/preinstall 2>/dev/null");
+                system("sudo chown -R $USER:$USER /opt/preinstall 2>/dev/null");
+                
+                // Small delay after permission change
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                
+                errno = 0;
+                DIR* retryDir = opendir("/opt/preinstall");
+                int retry_errno = errno;
+                
+                if (retryDir != nullptr) {
+                    TEST_LOG("SUCCESS: /opt/preinstall directory is now accessible after permission fix");
+                    closedir(retryDir);
+                } else {
+                    TEST_LOG("WARNING: /opt/preinstall directory is still not accessible after permission fix, errno: %d (%s)", retry_errno, strerror(retry_errno));
+                    TEST_LOG("Continuing with test - directory operations may use mocks instead");
+                }
             } else {
-                TEST_LOG("CRITICAL ERROR: /opt/preinstall directory is still NOT accessible after permission fix, errno: %d (%s)", errno, strerror(errno));
+                TEST_LOG("Directory does not exist - mkdir may have failed");
             }
         }
 
-        // Create test package files with verification
+        // Create test package files with verification using fopen instead of system calls
         TEST_LOG("Creating test package files:");
         
-        int touchResult1 = system(("touch " + testApp1Dir + "/package.wgt").c_str());
-        TEST_LOG("touch result for %s/package.wgt: %d", testApp1Dir.c_str(), touchResult1);
+        std::string file1Path = testApp1Dir + "/package.wgt";
+        FILE* file1 = fopen(file1Path.c_str(), "w");
+        bool touchResult1 = (file1 != nullptr);
+        if (file1) {
+            fclose(file1);
+        }
+        TEST_LOG("file creation result for %s: %s (errno: %d)", file1Path.c_str(), 
+                 touchResult1 ? "success" : "failed", touchResult1 ? 0 : errno);
         
-        int touchResult2 = system(("touch " + testApp2Dir + "/package.wgt").c_str());
-        TEST_LOG("touch result for %s/package.wgt: %d", testApp2Dir.c_str(), touchResult2);
+        std::string file2Path = testApp2Dir + "/package.wgt";
+        FILE* file2 = fopen(file2Path.c_str(), "w");
+        bool touchResult2 = (file2 != nullptr);
+        if (file2) {
+            fclose(file2);
+        }
+        TEST_LOG("file creation result for %s: %s (errno: %d)", file2Path.c_str(), 
+                 touchResult2 ? "success" : "failed", touchResult2 ? 0 : errno);
         
-        int touchResult3 = system(("touch " + testApp3Dir + "/package.wgt").c_str());
-        TEST_LOG("touch result for %s/package.wgt: %d", testApp3Dir.c_str(), touchResult3);
+        std::string file3Path = testApp3Dir + "/package.wgt";
+        FILE* file3 = fopen(file3Path.c_str(), "w");
+        bool touchResult3 = (file3 != nullptr);
+        if (file3) {
+            fclose(file3);
+        }
+        TEST_LOG("file creation result for %s: %s (errno: %d)", file3Path.c_str(), 
+                 touchResult3 ? "success" : "failed", touchResult3 ? 0 : errno);
         
-        // Check if any touch commands failed
-        if (touchResult1 != 0 || touchResult2 != 0 || touchResult3 != 0) {
-            TEST_LOG("WARNING: One or more touch commands failed. Retrying with corrected permissions...");
+        // Check if any file creation failed
+        if (!touchResult1 || !touchResult2 || !touchResult3) {
+            TEST_LOG("WARNING: One or more file creations failed. Retrying with corrected permissions...");
             system("chmod -R 755 /opt/preinstall");
-            system(("touch " + testApp1Dir + "/package.wgt").c_str());
-            system(("touch " + testApp2Dir + "/package.wgt").c_str());
-            system(("touch " + testApp3Dir + "/package.wgt").c_str());
+            
+            // Retry file creation with system touch as fallback
+            if (!touchResult1) {
+                system(("touch " + testApp1Dir + "/package.wgt").c_str());
+            }
+            if (!touchResult2) {
+                system(("touch " + testApp2Dir + "/package.wgt").c_str());
+            }
+            if (!touchResult3) {
+                system(("touch " + testApp3Dir + "/package.wgt").c_str());
+            }
         }
 
         // Final verification
@@ -400,26 +452,30 @@ protected:
         TEST_LOG("Final permission check:");
         system("ls -la /opt/preinstall/*/");
 
-        // Use real directory operations instead of mocks
-        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* path) -> DIR* {
-                return opendir(path);
-            }));
+        // Use real directory operations instead of mocks (with safety check)
+        if (p_wrapsImplMock != nullptr) {
+            ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+                .WillByDefault(::testing::Invoke([](const char* path) -> DIR* {
+                    return opendir(path);
+                }));
 
-        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
-                return readdir(dir);
-            }));
+            ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+                .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
+                    return readdir(dir);
+                }));
 
-        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-            .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
-                return closedir(dir);
-            }));
+            ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+                .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
+                    return closedir(dir);
+                }));
 
-        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* path, struct stat* buf) -> int {
-                return stat(path, buf);
-            }));
+            ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+                .WillByDefault(::testing::Invoke([](const char* path, struct stat* buf) -> int {
+                    return stat(path, buf);
+                }));
+        } else {
+            TEST_LOG("WARNING: p_wrapsImplMock is null - mock setup skipped");
+        }
     }
 
     void CleanUpPreinstallDirectory()
@@ -442,51 +498,77 @@ protected:
         std::string testApp2Dir = "/opt/preinstall/testapp2"; 
         std::string testApp3Dir = "/opt/preinstall/testapp3";
         
-        // Remove files first, then directories
+        // Remove files first, then directories with proper error handling
         TEST_LOG("Removing test app1 files and directory: %s", testApp1Dir.c_str());
-        unlink((testApp1Dir + "/package.wgt").c_str());
+        int unlinkResult1 = unlink((testApp1Dir + "/package.wgt").c_str());
+        if (unlinkResult1 != 0 && errno != ENOENT) {
+            TEST_LOG("Warning: unlink failed for %s/package.wgt, errno: %d", testApp1Dir.c_str(), errno);
+        }
+        errno = 0;
         int result1 = rmdir(testApp1Dir.c_str());
+        int rmdir1_errno = errno;
         TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp1Dir.c_str(), 
-                 (result1 == 0) ? "success" : "failed", errno);
+                 (result1 == 0) ? "success" : "failed", rmdir1_errno);
         
         TEST_LOG("Removing test app2 files and directory: %s", testApp2Dir.c_str());
-        unlink((testApp2Dir + "/package.wgt").c_str());
+        int unlinkResult2 = unlink((testApp2Dir + "/package.wgt").c_str());
+        if (unlinkResult2 != 0 && errno != ENOENT) {
+            TEST_LOG("Warning: unlink failed for %s/package.wgt, errno: %d", testApp2Dir.c_str(), errno);
+        }
+        errno = 0;
         int result2 = rmdir(testApp2Dir.c_str());
+        int rmdir2_errno = errno;
         TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp2Dir.c_str(), 
-                 (result2 == 0) ? "success" : "failed", errno);
+                 (result2 == 0) ? "success" : "failed", rmdir2_errno);
         
         TEST_LOG("Removing test app3 files and directory: %s", testApp3Dir.c_str());
-        unlink((testApp3Dir + "/package.wgt").c_str());
+        int unlinkResult3 = unlink((testApp3Dir + "/package.wgt").c_str());
+        if (unlinkResult3 != 0 && errno != ENOENT) {
+            TEST_LOG("Warning: unlink failed for %s/package.wgt, errno: %d", testApp3Dir.c_str(), errno);
+        }
+        errno = 0;
         int result3 = rmdir(testApp3Dir.c_str());
+        int rmdir3_errno = errno;
         TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp3Dir.c_str(), 
-                 (result3 == 0) ? "success" : "failed", errno);
+                 (result3 == 0) ? "success" : "failed", rmdir3_errno);
         
         // Finally remove the base preinstall directory
         TEST_LOG("Removing base preinstall directory: /opt/preinstall");
+        errno = 0;
         int baseResult = rmdir("/opt/preinstall");
+        int base_errno = errno;
         TEST_LOG("rmdir result for /opt/preinstall: %s (errno: %d)", 
-                 (baseResult == 0) ? "success" : "failed", errno);
+                 (baseResult == 0) ? "success" : "failed", base_errno);
         
         // If any rmdir commands failed, try with sudo fallback
         bool anyFailed = (result1 != 0) || (result2 != 0) || (result3 != 0) || (baseResult != 0);
         if (anyFailed) {
             TEST_LOG("WARNING: One or more rmdir commands failed. Trying with sudo fallback...");
-            int sudoResult = system("sudo rm -rf /opt/preinstall");
+            int sudoResult = system("sudo rm -rf /opt/preinstall 2>/dev/null");
             if (sudoResult == 0) {
                 TEST_LOG("Sudo fallback cleanup succeeded");
             } else {
-                TEST_LOG("ERROR: Even sudo cleanup failed");
+                TEST_LOG("ERROR: Even sudo cleanup failed, result: %d", sudoResult);
             }
         }
         
-        // Verify cleanup
+        // Verify cleanup with safe error handling
         TEST_LOG("Verifying cleanup - /opt/preinstall should not exist:");
+        errno = 0;
         DIR* postCleanupDir = opendir("/opt/preinstall");
+        int verify_errno = errno;
+        
         if (postCleanupDir == nullptr) {
-            TEST_LOG("Directory successfully removed");
+            if (verify_errno == ENOENT) {
+                TEST_LOG("Directory successfully removed");
+            } else {
+                TEST_LOG("Directory access failed, errno: %d (%s)", verify_errno, strerror(verify_errno));
+            }
         } else {
             TEST_LOG("Directory still exists after cleanup");
-            closedir(postCleanupDir);
+            if (closedir(postCleanupDir) != 0) {
+                TEST_LOG("Warning: closedir failed, errno: %d", errno);
+            }
         }
     }
 
