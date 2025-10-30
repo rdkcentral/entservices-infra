@@ -35,8 +35,6 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (1000)
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 typedef enum : uint32_t {
     LifecycleManager_invalidEvent = 0,
@@ -209,7 +207,6 @@ protected:
 
     virtual ~LifecycleManagerTest() override
     {
-		DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
 		interface->Release();
 		stateInterface->Release();
 
@@ -307,7 +304,6 @@ protected:
 			EXPECT_CALL(*mServiceMock, Release())
               .WillOnce(::testing::Invoke(
               [&]() {
-				  		 DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
 						delete mServiceMock;
 						mServiceMock = nullptr;
 						return 0;
@@ -322,7 +318,6 @@ protected:
 			EXPECT_CALL(*mRuntimeManagerMock, Release())
               .WillOnce(::testing::Invoke(
               [&]() {
-				  		DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
 						delete mRuntimeManagerMock;
 						mRuntimeManagerMock = nullptr;
 						return 0;
@@ -337,7 +332,6 @@ protected:
 			EXPECT_CALL(*mWindowManagerMock, Release())
               .WillOnce(::testing::Invoke(
               [&]() {
-				  		DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
 						delete mWindowManagerMock;
 						mWindowManagerMock = nullptr;
 						return 0;
