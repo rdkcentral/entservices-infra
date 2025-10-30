@@ -269,7 +269,38 @@ protected:
         
         // Remove any existing directory first to ensure clean state
         TEST_LOG("Removing any existing /opt/preinstall directory");
-        system("rm -rf /opt/preinstall");
+        
+        // Check if directory exists before attempting removal
+        DIR* existingDir = opendir("/opt/preinstall");
+        if (existingDir != nullptr) {
+            closedir(existingDir);
+            
+            // Remove subdirectories and their contents first
+            std::string testApp1Dir = "/opt/preinstall/testapp1";
+            std::string testApp2Dir = "/opt/preinstall/testapp2";
+            std::string testApp3Dir = "/opt/preinstall/testapp3";
+            
+            // Remove files and subdirectories
+            unlink((testApp1Dir + "/package.wgt").c_str());
+            rmdir(testApp1Dir.c_str());
+            unlink((testApp2Dir + "/package.wgt").c_str());
+            rmdir(testApp2Dir.c_str());
+            unlink((testApp3Dir + "/package.wgt").c_str());
+            rmdir(testApp3Dir.c_str());
+            
+            // Finally remove the base directory
+            int removeResult = rmdir("/opt/preinstall");
+            TEST_LOG("rmdir result for /opt/preinstall: %s (errno: %d)", 
+                     (removeResult == 0) ? "success" : "failed", errno);
+            
+            // If rmdir failed, fallback to system call as last resort
+            if (removeResult != 0) {
+                TEST_LOG("rmdir failed, using system fallback");
+                system("rm -rf /opt/preinstall");
+            }
+        } else {
+            TEST_LOG("/opt/preinstall directory does not exist, no removal needed");
+        }
         
         // Create directories using mkdir function with 755 permissions
         TEST_LOG("Creating base preinstall directory: %s", preinstallDir.c_str());
