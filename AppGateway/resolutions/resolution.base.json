@@ -72,6 +72,14 @@
             "alias": "org.rdk.FbSettings",
             "useComRpc": true
         },
+        "accessibility.closedCaptions": {
+            "alias": "org.rdk.FbSettings",
+            "useComRpc": true
+        },
+        "accessibility.closedCaptionsSettings": {
+            "alias": "org.rdk.FbSettings",
+            "useComRpc": true
+        },
         "audiodescriptions.enabled": {
             "alias": "org.rdk.FbSettings",
             "useComRpc": true

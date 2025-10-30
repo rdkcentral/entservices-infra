@@ -416,12 +416,15 @@ class UserSettingsDelegate : public BaseEventDelegate{
                 if (!presentationLanguage.empty()) {
                     // Extract language part (before "-") from locale like "en-US" -> "en"
                     size_t dashPos = presentationLanguage.find('-');
+                    string language;
                     if (dashPos != string::npos) {
-                        result = presentationLanguage.substr(0, dashPos);
+                        language = presentationLanguage.substr(0, dashPos);
                     } else {
                         // If no dash found, return the whole string
-                        result = presentationLanguage;
+                        language = presentationLanguage;
                     }
+                    // Wrap in quotes to make it a valid JSON string
+                    result = "\"" + language + "\"";
                     return Core::ERROR_NONE;
                 } else {
                     result = "{\"error\":\"couldn't get language\"}";
@@ -452,7 +455,8 @@ class UserSettingsDelegate : public BaseEventDelegate{
                 // Transform: return_or_error(.result, "couldn't get locale")
                 // Return the full locale without any transformation
                 if (!presentationLanguage.empty()) {
-                    result = presentationLanguage;
+                    // Wrap in quotes to make it a valid JSON string
+                    result = "\"" + presentationLanguage + "\"";
                     return Core::ERROR_NONE;
                 } else {
                     result = "{\"error\":\"couldn't get locale\"}";

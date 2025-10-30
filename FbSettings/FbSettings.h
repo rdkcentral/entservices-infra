@@ -134,6 +134,7 @@ namespace WPEFramework {
             Core::hresult GetVoiceGuidanceHints(string &result /* @out */);
             Core::hresult SetVoiceGuidanceHints(const bool enabled /* @in */);
             Core::hresult GetVoiceGuidanceSettings(string &result /* @out */);
+            Core::hresult GetClosedCaptionsSettings(string &result /* @out */);
 
         private:
             PluginHost::IShell* mShell;
