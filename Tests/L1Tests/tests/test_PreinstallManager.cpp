@@ -60,42 +60,6 @@ using namespace WPEFramework;
 
 namespace {
 const string callSign = _T("PreinstallManager");
-
-// Global Wraps mock to ensure it's always available
-static WrapsImplMock* g_globalWrapsImplMock = nullptr;
-
-// Global setup class to initialize Wraps before any tests run
-class GlobalWrapsMockSetup {
-public:
-    GlobalWrapsMockSetup() {
-        if (g_globalWrapsImplMock == nullptr) {
-            g_globalWrapsImplMock = new NiceMock<WrapsImplMock>();
-            Wraps::setImpl(g_globalWrapsImplMock);
-            
-            // Set up default behaviors for all system calls
-            ON_CALL(*g_globalWrapsImplMock, system(::testing::_))
-                .WillByDefault(::testing::Return(0));
-            ON_CALL(*g_globalWrapsImplMock, opendir(::testing::_))
-                .WillByDefault(::testing::Return(nullptr));
-            ON_CALL(*g_globalWrapsImplMock, stat(::testing::_, ::testing::_))
-                .WillByDefault(::testing::Return(-1));
-            ON_CALL(*g_globalWrapsImplMock, access(::testing::_, ::testing::_))
-                .WillByDefault(::testing::Return(-1));
-        }
-    }
-    
-    ~GlobalWrapsMockSetup() {
-        if (g_globalWrapsImplMock != nullptr) {
-            Wraps::setImpl(nullptr);
-            delete g_globalWrapsImplMock;
-            g_globalWrapsImplMock = nullptr;
-        }
-    }
-};
-
-// Global instance to ensure Wraps is initialized before any tests run
-static GlobalWrapsMockSetup g_wrapsMockSetup;
-
 }
 
 class PreinstallManagerTest : public ::testing::Test {
@@ -122,14 +86,18 @@ protected:
 
     void createPreinstallManagerImpl()
     {
-        // Use the global Wraps mock
-        p_wrapsImplMock = g_globalWrapsImplMock;
-        if (p_wrapsImplMock == nullptr) {
-            TEST_LOG("Error: Global Wraps mock not initialized!");
-            return;
+        // Ensure clean state first
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
         }
         
-        // Set up additional mock behaviors for system calls if needed
+        // Initialize mocks before making any system calls
+        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+        Wraps::setImpl(p_wrapsImplMock);
+        
+        // Set up default mock behaviors for system calls
         ON_CALL(*p_wrapsImplMock, system(::testing::_))
             .WillByDefault(::testing::Return(0)); // Success return for directory creation
         
@@ -155,18 +123,23 @@ protected:
         // Cleanup the preinstall directory
         system("rm -rf /opt/preinstall");
         
-        // Note: Don't delete p_wrapsImplMock here as it's managed by SetUp/TearDown
+        // Clean up wraps mock
+        Wraps::setImpl(nullptr);
+        if (p_wrapsImplMock != nullptr) {
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
     }
 
     Core::hresult createResources()
     {
         Core::hresult status = Core::ERROR_GENERAL;
         
-        // Use the global Wraps mock that's already initialized
-        p_wrapsImplMock = g_globalWrapsImplMock;
-        if (p_wrapsImplMock == nullptr) {
-            TEST_LOG("Error: Global Wraps mock not initialized!");
-            return Core::ERROR_GENERAL;
+        // Ensure complete clean state before initialization
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);  // Clear implementation first
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
         }
         
         // Create the preinstall directory structure that's needed for StartPreinstall method
@@ -178,6 +151,16 @@ protected:
         mServiceMock = new NiceMock<ServiceMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
+        
+        // Create and validate Wraps mock
+        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+        if (p_wrapsImplMock == nullptr) {
+            TEST_LOG("Failed to create WrapsImplMock!");
+            return Core::ERROR_GENERAL;
+        }
+        
+        // Set the mock implementation (should be nullptr at this point)
+        Wraps::setImpl(p_wrapsImplMock);
         
         // Set up default mock behaviors before plugin initialization
         ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
@@ -239,8 +222,13 @@ protected:
                     }));
         }
 
-        // Note: Don't delete p_wrapsImplMock here as it's managed by SetUp/TearDown
-        // Just clean up other resources
+        // Ensure proper cleanup order for Wraps mock
+        if (p_wrapsImplMock != nullptr)
+        {
+            Wraps::setImpl(nullptr);  // Clear implementation first
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
 
         dispatcher->Deactivate();
         dispatcher->Release();
@@ -273,25 +261,53 @@ protected:
     virtual void SetUp() override 
     {
         TEST_LOG("SetUp - Ensuring clean test environment");
+        // Ensure clean state before each test
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
         
-        // Use the global Wraps mock that's already initialized
-        p_wrapsImplMock = g_globalWrapsImplMock;
+        // Initialize a minimal Wraps mock to prevent nullptr access errors
+        // This is needed even for simple tests that don't call createResources()
+        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+        Wraps::setImpl(p_wrapsImplMock);
         
-        // Initialize all pointers to null for clean state
+        // Set up default mock behaviors for system calls
+        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+            .WillByDefault(::testing::Return(-1));
+        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+            .WillByDefault(::testing::Return(nullptr));
+        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+            .WillByDefault(::testing::Return(nullptr));
+        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+            .WillByDefault(::testing::Return(0));
+        ON_CALL(*p_wrapsImplMock, system(::testing::_))
+            .WillByDefault(::testing::Return(0));
+        
         mServiceMock = nullptr;
         mPackageInstallerMock = nullptr;
         mPreinstallManagerImpl = nullptr;
         mPackageInstallerNotification_cb = nullptr;
         mPreinstallManagerNotification = nullptr;
         dispatcher = nullptr;
+        
+        // Clean up any existing preinstall directory
+        system("rm -rf /opt/preinstall");
     }
 
     virtual void TearDown() override 
     {
         TEST_LOG("TearDown - Cleaning up test environment");
+        // Ensure proper cleanup after each test
+        if (p_wrapsImplMock != nullptr) {
+            Wraps::setImpl(nullptr);
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
         
-        // Don't delete the global mock, just reset our reference
-        p_wrapsImplMock = nullptr;
+        // Clean up any remaining preinstall directory
+        system("rm -rf /opt/preinstall");
         
         // Reset all pointers to ensure clean state for next test
         mServiceMock = nullptr;
@@ -498,10 +514,8 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithoutForceInstall)
  */
 TEST_F(PreinstallManagerTest, StartPreinstallFailsWhenPackageManagerUnavailable)
 {
-    // Create the preinstall directory structure that's needed for StartPreinstall method
-    system("mkdir -p /opt/preinstall");
-    system("mkdir -p /opt/preinstall/testapp");
-    system("touch /opt/preinstall/testapp/package.wgt");
+    // Ensure Wraps mock is set up (from SetUp)
+    EXPECT_TRUE(p_wrapsImplMock != nullptr);
     
     // Create minimal setup without PackageManager mock
     mServiceMock = new NiceMock<ServiceMock>;
@@ -509,6 +523,14 @@ TEST_F(PreinstallManagerTest, StartPreinstallFailsWhenPackageManagerUnavailable)
     // Don't set up PackageInstaller mock in QueryInterfaceByCallsign
     EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(nullptr));
+    
+    // Mock directory operations to prevent crashes when readPreinstallDirectory is called
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(nullptr)); // Empty directory
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
     
     EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
     mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
@@ -519,10 +541,8 @@ TEST_F(PreinstallManagerTest, StartPreinstallFailsWhenPackageManagerUnavailable)
     
     plugin->Deinitialize(mServiceMock);
     delete mServiceMock;
+    mServiceMock = nullptr;
     mPreinstallManagerImpl = nullptr;
-    
-    // Cleanup the preinstall directory
-    system("rm -rf /opt/preinstall");
 }
 
 /**
@@ -2232,12 +2252,23 @@ TEST_F(PreinstallManagerTest, NotificationRegistrationEdgeCases)
  */
 TEST_F(PreinstallManagerTest, StartPreinstallErrorHandlingScenarios)
 {
+    // Ensure Wraps mock is set up (from SetUp)
+    EXPECT_TRUE(p_wrapsImplMock != nullptr);
+    
     // Initialize plugin first but without PackageInstaller mock to simulate unavailable PackageManager
     mServiceMock = new NiceMock<ServiceMock>;
     
     // Set up failing QueryInterfaceByCallsign to simulate PackageManager unavailable
     EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Return(nullptr));
+    
+    // Mock directory operations to prevent crashes when readPreinstallDirectory is called
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillRepeatedly(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillRepeatedly(::testing::Return(nullptr)); // Empty directory
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillRepeatedly(::testing::Return(0));
     
     // Initialize plugin to create singleton instance
     EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
@@ -2308,5 +2339,99 @@ TEST_F(PreinstallManagerTest, ReferenceCountingBehavior)
         preinstallInterface->Release();
     }
     
+    releaseResources();
+}
+
+/**
+ * @brief Test JSON-RPC method registration
+ *
+ * @details Test verifies that:
+ * - startPreinstall JSON-RPC method is registered
+ * - Method exists in the handler
+ */
+TEST_F(PreinstallManagerTest, RegisteredMethodsUsingJsonRpcSuccess)
+{
+    Core::hresult status;
+    status = createResources();
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    // Verify startPreinstall method is registered
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("startPreinstall")));
+
+    releaseResources();
+}
+
+/**
+ * @brief Test startPreinstall JSON-RPC method with forceInstall=true
+ *
+ * @details Test verifies that:
+ * - startPreinstall JSON-RPC method can be invoked
+ * - Method handles forceInstall parameter correctly
+ * - Returns appropriate response
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallUsingJSONRpcWithForceInstall)
+{
+    Core::hresult status;
+    status = createResources();
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    // Mock ListPackages to return existing packages
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            auto mockIterator = FillPackageIterator();
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
+            version = PREINSTALL_MANAGER_TEST_VERSION;
+            return Core::ERROR_NONE;
+        });
+
+    SetUpPreinstallDirectoryMocks();
+
+    // Test JSON-RPC method invocation with forceInstall=true
+    std::string request = "{\"forceInstall\": true}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("startPreinstall"), request, mJsonRpcResponse));
+
+    releaseResources();
+}
+
+/**
+ * @brief Test startPreinstall JSON-RPC method with forceInstall=false
+ *
+ * @details Test verifies that:
+ * - startPreinstall JSON-RPC method can be invoked
+ * - Method handles forceInstall=false parameter correctly
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallUsingJSONRpcWithoutForceInstall)
+{
+    Core::hresult status;
+    status = createResources();
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    // Mock ListPackages to return existing packages
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            auto mockIterator = FillPackageIterator();
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
+            version = PREINSTALL_MANAGER_TEST_VERSION;
+            return Core::ERROR_NONE;
+        });
+
+    SetUpPreinstallDirectoryMocks();
+
+    // Test JSON-RPC method invocation with forceInstall=false
+    std::string request = "{\"forceInstall\": false}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("startPreinstall"), request, mJsonRpcResponse));
+
     releaseResources();
 }
