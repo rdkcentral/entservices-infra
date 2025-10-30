@@ -115,11 +115,30 @@ protected:
         system("mkdir -p /opt/preinstall/testapp");
         system("touch /opt/preinstall/testapp/package.wgt");
         
+        // Ensure clean state before initialization
+        if (p_wrapsImplMock != nullptr) {
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
+        Wraps::setImpl(nullptr);
+        
+        // Initialize mocks before setting them
         mServiceMock = new NiceMock<ServiceMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
+        
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+        // Ensure the mock is valid before setting it
+        ASSERT_NE(p_wrapsImplMock, nullptr);
+        
+        // Clear any existing implementation first
+        Wraps::setImpl(nullptr);
+        // Now set our mock implementation
         Wraps::setImpl(p_wrapsImplMock);
+        
+        // Set up default mock behaviors before plugin initialization
+        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+            .WillByDefault(::testing::Return(-1));
 
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
@@ -145,9 +164,6 @@ protected:
                     mPackageInstallerNotification_cb = notification;
                     return Core::ERROR_NONE;
                 }));
-
-        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillByDefault(::testing::Return(-1));
         
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
@@ -180,9 +196,9 @@ protected:
                     }));
         }
 
-        Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr)
         {
+            Wraps::setImpl(nullptr);
             delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
         }
@@ -290,7 +306,7 @@ TEST_F(PreinstallManagerTest, CreatePreinstallManagerPlugin)
  */
 TEST_F(PreinstallManagerTest, RegisterNotification)
 {
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    createPreinstallManagerImpl();
 
     auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
     testing::Mock::AllowLeak(mockNotification.operator->()); // Allow leak since ProxyType manages lifecycle
@@ -300,7 +316,7 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
     
     // Cleanup
     mPreinstallManagerImpl->Unregister(mockNotification.operator->());
-    releaseResources();
+    releasePreinstallManagerImpl();
 }
 
 /**
@@ -312,7 +328,7 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
  */
 TEST_F(PreinstallManagerTest, UnregisterNotification)
 {
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    createPreinstallManagerImpl();
 
     auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
     testing::Mock::AllowLeak(mockNotification.operator->()); // Allow leak since ProxyType manages lifecycle
@@ -325,7 +341,7 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
     Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, unregisterStatus);
     
-    releaseResources();
+    releasePreinstallManagerImpl();
 }
 
 /**
