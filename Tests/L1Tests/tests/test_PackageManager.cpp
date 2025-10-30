@@ -79,8 +79,8 @@ protected:
     Core::ProxyType<WorkerPoolImplementation> workerPool;
 
     Exchange::IPackageDownloader* pkgdownloaderInterface = nullptr;
-    //Exchange::IPackageInstaller* pkginstallerInterface = nullptr;
-    //Exchange::IPackageHandler* pkghandlerInterface = nullptr;
+    Exchange::IPackageInstaller* pkginstallerInterface = nullptr;
+    Exchange::IPackageHandler* pkghandlerInterface = nullptr;
     Exchange::IPackageDownloader::Options options;
     Exchange::IPackageDownloader::DownloadId downloadId;
     Exchange::IPackageDownloader::ProgressInfo progress;
@@ -100,9 +100,9 @@ protected:
 
         pkgdownloaderInterface = static_cast<Exchange::IPackageDownloader*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageDownloader::ID));
 
-        //pkginstallerInterface = static_cast<Exchange::IPackageInstaller*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageInstaller::ID));
+        pkginstallerInterface = static_cast<Exchange::IPackageInstaller*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageInstaller::ID));
 
-        //pkghandlerInterface = static_cast<Exchange::IPackageHandler*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageHandler::ID));
+        pkghandlerInterface = static_cast<Exchange::IPackageHandler*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageHandler::ID));
 
 		Core::IWorkerPool::Assign(&(*workerPool));
 		workerPool->Run();
@@ -112,8 +112,8 @@ protected:
     virtual ~PackageManagerTest() override
     {
         pkgdownloaderInterface->Release();
-        //pkginstallerInterface->Release();
-        //pkghandlerInterface->Release();
+        pkginstallerInterface->Release();
+        pkghandlerInterface->Release();
         
         Core::IWorkerPool::Assign(nullptr);
 		workerPool.Release();
@@ -145,8 +145,8 @@ protected:
           .WillRepeatedly(::testing::Return(mSubSystemMock));
 
 		 ASSERT_TRUE(pkgdownloaderInterface != nullptr);
-		 //ASSERT_TRUE(pkginstallerInterface != nullptr);
-		// ASSERT_TRUE(pkghandlerInterface != nullptr);
+		 ASSERT_TRUE(pkginstallerInterface != nullptr);
+		 ASSERT_TRUE(pkghandlerInterface != nullptr);
     }
 
     void initforJsonRpc() 
@@ -166,11 +166,14 @@ protected:
 
     void initforComRpc() 
     {
+        EXPECT_CALL(*mServiceMock, Register(::testing::_))
+          .Times(::testing::AnyNumber());
+
         EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
 
         // Initialize the plugin for COM-RPC
-        pkgdownloaderInterface->Initialize(mServiceMock);
+        plugin->Initialize(mServiceMock);
     }
 
     void getDownloadParams()
@@ -201,8 +204,8 @@ protected:
         }
 
 		 ASSERT_TRUE(pkgdownloaderInterface != nullptr);
-		 //ASSERT_TRUE(pkginstallerInterface != nullptr);
-		 //ASSERT_TRUE(pkghandlerInterface != nullptr);
+		 ASSERT_TRUE(pkginstallerInterface != nullptr);
+		 ASSERT_TRUE(pkghandlerInterface != nullptr);
     }
 
     void deinitforJsonRpc() 
@@ -228,6 +231,9 @@ protected:
 
     void deinitforComRpc()
     {
+        EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
+          .Times(::testing::AnyNumber());
+
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
@@ -240,7 +246,7 @@ protected:
             }));
 
         // Deinitialize the plugin for COM-RPC
-        pkgdownloaderInterface->Deinitialize(mServiceMock);
+        plugin->Deinitialize(mServiceMock);
     }
 
     void waitforJsonRpc(uint32_t timeout_ms) 
@@ -1410,7 +1416,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
  * Verify that the install method fails by asserting that it returns Core::ERROR_INVALID_SIGNATURE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
 
     initforJsonRpc();
@@ -2074,4 +2080,3 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 
 	deinitforComRpc();
 }
-#endif
