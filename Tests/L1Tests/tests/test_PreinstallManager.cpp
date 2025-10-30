@@ -249,15 +249,27 @@ protected:
 
         TEST_LOG("SetUpPreinstallDirectoryWithRealFiles: Starting directory setup");
         
+        // Enhanced system diagnostics
+        TEST_LOG("=== System Diagnostics ===");
+        TEST_LOG("Current user: %s", getenv("USER") ? getenv("USER") : "unknown");
+        TEST_LOG("Current working directory:");
+        system("pwd");
+        TEST_LOG("User ID and Group ID:");
+        system("id");
+        
         // Check if /opt exists first
         TEST_LOG("Checking if /opt directory exists:");
         system("ls -la /opt");
+        
+        // Check /opt permissions
+        TEST_LOG("Checking /opt directory permissions:");
+        system("ls -ld /opt");
         
         // Remove any existing directory first to ensure clean state
         TEST_LOG("Removing any existing /opt/preinstall directory");
         system("rm -rf /opt/preinstall");
         
-        // Create directories with verbose logging
+        // Create directories with verbose logging and better error handling
         TEST_LOG("Creating directory: %s", testApp1Dir.c_str());
         int result1 = system(("mkdir -p " + testApp1Dir).c_str());
         TEST_LOG("mkdir result for %s: %d", testApp1Dir.c_str(), result1);
@@ -269,6 +281,27 @@ protected:
         TEST_LOG("Creating directory: %s", testApp3Dir.c_str());
         int result3 = system(("mkdir -p " + testApp3Dir).c_str());
         TEST_LOG("mkdir result for %s: %d", testApp3Dir.c_str(), result3);
+        
+        // Check if any mkdir commands failed
+        if (result1 != 0 || result2 != 0 || result3 != 0) {
+            TEST_LOG("WARNING: One or more mkdir commands failed. Creating with sudo...");
+            int sudoResult = system("sudo mkdir -p /opt/preinstall/testapp1 /opt/preinstall/testapp2 /opt/preinstall/testapp3");
+            if (sudoResult == 0) {
+                system("sudo chown -R $USER:$USER /opt/preinstall");
+            } else {
+                TEST_LOG("ERROR: Even sudo mkdir failed. This test environment may not support /opt access.");
+                // Could add fallback to temp directory here if needed
+                return;
+            }
+        }
+
+        // Set directory permissions immediately after creation to ensure accessibility
+        TEST_LOG("Setting directory permissions:");
+        int chmodResult = system("chmod -R 755 /opt/preinstall");
+        if (chmodResult != 0) {
+            TEST_LOG("WARNING: chmod failed, attempting with sudo...");
+            system("sudo chmod -R 755 /opt/preinstall");
+        }
 
         // Verify directory creation
         TEST_LOG("Verifying /opt/preinstall directory creation:");
@@ -283,7 +316,19 @@ protected:
             TEST_LOG("SUCCESS: /opt/preinstall directory is accessible");
             closedir(testDir);
         } else {
-            TEST_LOG("ERROR: /opt/preinstall directory is NOT accessible, errno: %d", errno);
+            TEST_LOG("ERROR: /opt/preinstall directory is NOT accessible, errno: %d (%s)", errno, strerror(errno));
+            // Try one more time with different approach
+            TEST_LOG("Attempting to fix permissions and retry...");
+            system("sudo chmod -R 755 /opt/preinstall 2>/dev/null");
+            system("sudo chown -R $USER:$USER /opt/preinstall 2>/dev/null");
+            
+            DIR* retryDir = opendir("/opt/preinstall");
+            if (retryDir != nullptr) {
+                TEST_LOG("SUCCESS: /opt/preinstall directory is now accessible after permission fix");
+                closedir(retryDir);
+            } else {
+                TEST_LOG("CRITICAL ERROR: /opt/preinstall directory is still NOT accessible after permission fix, errno: %d (%s)", errno, strerror(errno));
+            }
         }
 
         // Create test package files with verification
@@ -297,14 +342,19 @@ protected:
         
         int touchResult3 = system(("touch " + testApp3Dir + "/package.wgt").c_str());
         TEST_LOG("touch result for %s/package.wgt: %d", testApp3Dir.c_str(), touchResult3);
+        
+        // Check if any touch commands failed
+        if (touchResult1 != 0 || touchResult2 != 0 || touchResult3 != 0) {
+            TEST_LOG("WARNING: One or more touch commands failed. Retrying with corrected permissions...");
+            system("chmod -R 755 /opt/preinstall");
+            system(("touch " + testApp1Dir + "/package.wgt").c_str());
+            system(("touch " + testApp2Dir + "/package.wgt").c_str());
+            system(("touch " + testApp3Dir + "/package.wgt").c_str());
+        }
 
         // Final verification
         TEST_LOG("Final directory structure:");
         system("find /opt/preinstall -type f -name '*.wgt' -exec ls -la {} \\;");
-        
-        // Set directory permissions to ensure accessibility
-        TEST_LOG("Setting directory permissions:");
-        system("chmod -R 755 /opt/preinstall");
         
         TEST_LOG("Final permission check:");
         system("ls -la /opt/preinstall/*/");
@@ -339,9 +389,18 @@ protected:
         TEST_LOG("Contents before cleanup:");
         system("ls -la /opt/preinstall 2>/dev/null || echo 'Directory does not exist'");
         
+        // Try to change permissions before removal to ensure we can delete
+        system("chmod -R 755 /opt/preinstall 2>/dev/null");
+        
         // Clean up test directories
         int cleanupResult = system("rm -rf /opt/preinstall");
         TEST_LOG("Cleanup result: %d", cleanupResult);
+        
+        // If cleanup failed, try with sudo
+        if (cleanupResult != 0) {
+            TEST_LOG("Standard cleanup failed, trying with sudo...");
+            system("sudo rm -rf /opt/preinstall");
+        }
         
         // Verify cleanup
         TEST_LOG("Verifying cleanup - /opt/preinstall should not exist:");
