@@ -239,6 +239,8 @@ protected:
             .WillByDefault(::testing::Return(0));
     }
 
+
+
     void SetUpPreinstallDirectoryWithRealFiles()
     {
         // Create actual /opt/preinstall directory structure for comprehensive testing
@@ -269,38 +271,43 @@ protected:
         TEST_LOG("Removing any existing /opt/preinstall directory");
         system("rm -rf /opt/preinstall");
         
-        // Create directories with verbose logging and better error handling
+        // Create directories using mkdir function with 755 permissions
+        TEST_LOG("Creating base preinstall directory: %s", preinstallDir.c_str());
+        int baseResult = mkdir(preinstallDir.c_str(), 0755);
+        TEST_LOG("mkdir result for %s: %s (errno: %d)", preinstallDir.c_str(), 
+                 (baseResult == 0 || errno == EEXIST) ? "success" : "failed", errno);
+        
         TEST_LOG("Creating directory: %s", testApp1Dir.c_str());
-        int result1 = system(("mkdir -p " + testApp1Dir).c_str());
-        TEST_LOG("mkdir result for %s: %d", testApp1Dir.c_str(), result1);
+        int result1 = mkdir(testApp1Dir.c_str(), 0755);
+        TEST_LOG("mkdir result for %s: %s (errno: %d)", testApp1Dir.c_str(), 
+                 (result1 == 0 || errno == EEXIST) ? "success" : "failed", errno);
         
         TEST_LOG("Creating directory: %s", testApp2Dir.c_str());
-        int result2 = system(("mkdir -p " + testApp2Dir).c_str());
-        TEST_LOG("mkdir result for %s: %d", testApp2Dir.c_str(), result2);
+        int result2 = mkdir(testApp2Dir.c_str(), 0755);
+        TEST_LOG("mkdir result for %s: %s (errno: %d)", testApp2Dir.c_str(), 
+                 (result2 == 0 || errno == EEXIST) ? "success" : "failed", errno);
         
         TEST_LOG("Creating directory: %s", testApp3Dir.c_str());
-        int result3 = system(("mkdir -p " + testApp3Dir).c_str());
-        TEST_LOG("mkdir result for %s: %d", testApp3Dir.c_str(), result3);
+        int result3 = mkdir(testApp3Dir.c_str(), 0755);
+        TEST_LOG("mkdir result for %s: %s (errno: %d)", testApp3Dir.c_str(), 
+                 (result3 == 0 || errno == EEXIST) ? "success" : "failed", errno);
         
-        // Check if any mkdir commands failed
-        if (result1 != 0 || result2 != 0 || result3 != 0) {
-            TEST_LOG("WARNING: One or more mkdir commands failed. Creating with sudo...");
+        // Check if any mkdir commands failed (ignore EEXIST as it means directory already exists)
+        bool anyFailed = (baseResult != 0 && errno != EEXIST) || 
+                        (result1 != 0 && errno != EEXIST) || 
+                        (result2 != 0 && errno != EEXIST) || 
+                        (result3 != 0 && errno != EEXIST);
+        if (anyFailed) {
+            TEST_LOG("WARNING: One or more mkdir commands failed. Trying with sudo fallback...");
             int sudoResult = system("sudo mkdir -p /opt/preinstall/testapp1 /opt/preinstall/testapp2 /opt/preinstall/testapp3");
             if (sudoResult == 0) {
                 system("sudo chown -R $USER:$USER /opt/preinstall");
+                system("sudo chmod -R 755 /opt/preinstall");
             } else {
                 TEST_LOG("ERROR: Even sudo mkdir failed. This test environment may not support /opt access.");
                 // Could add fallback to temp directory here if needed
                 return;
             }
-        }
-
-        // Set directory permissions immediately after creation to ensure accessibility
-        TEST_LOG("Setting directory permissions:");
-        int chmodResult = system("chmod -R 755 /opt/preinstall");
-        if (chmodResult != 0) {
-            TEST_LOG("WARNING: chmod failed, attempting with sudo...");
-            system("sudo chmod -R 755 /opt/preinstall");
         }
 
         // Verify directory creation
@@ -390,24 +397,66 @@ protected:
         
         // Show what we're about to remove
         TEST_LOG("Contents before cleanup:");
-        system("ls -la /opt/preinstall 2>/dev/null || echo 'Directory does not exist'");
+        DIR* preCleanupDir = opendir("/opt/preinstall");
+        if (preCleanupDir != nullptr) {
+            TEST_LOG("/opt/preinstall directory exists, proceeding with cleanup");
+            closedir(preCleanupDir);
+        } else {
+            TEST_LOG("/opt/preinstall directory does not exist, no cleanup needed");
+            return;
+        }
         
-        // Try to change permissions before removal to ensure we can delete
-        system("chmod -R 755 /opt/preinstall 2>/dev/null");
+        // Remove test app directories and their contents first
+        std::string testApp1Dir = "/opt/preinstall/testapp1";
+        std::string testApp2Dir = "/opt/preinstall/testapp2"; 
+        std::string testApp3Dir = "/opt/preinstall/testapp3";
         
-        // Clean up test directories
-        int cleanupResult = system("rm -rf /opt/preinstall");
-        TEST_LOG("Cleanup result: %d", cleanupResult);
+        // Remove files first, then directories
+        TEST_LOG("Removing test app1 files and directory: %s", testApp1Dir.c_str());
+        unlink((testApp1Dir + "/package.wgt").c_str());
+        int result1 = rmdir(testApp1Dir.c_str());
+        TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp1Dir.c_str(), 
+                 (result1 == 0) ? "success" : "failed", errno);
         
-        // If cleanup failed, try with sudo
-        if (cleanupResult != 0) {
-            TEST_LOG("Standard cleanup failed, trying with sudo...");
-            system("sudo rm -rf /opt/preinstall");
+        TEST_LOG("Removing test app2 files and directory: %s", testApp2Dir.c_str());
+        unlink((testApp2Dir + "/package.wgt").c_str());
+        int result2 = rmdir(testApp2Dir.c_str());
+        TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp2Dir.c_str(), 
+                 (result2 == 0) ? "success" : "failed", errno);
+        
+        TEST_LOG("Removing test app3 files and directory: %s", testApp3Dir.c_str());
+        unlink((testApp3Dir + "/package.wgt").c_str());
+        int result3 = rmdir(testApp3Dir.c_str());
+        TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp3Dir.c_str(), 
+                 (result3 == 0) ? "success" : "failed", errno);
+        
+        // Finally remove the base preinstall directory
+        TEST_LOG("Removing base preinstall directory: /opt/preinstall");
+        int baseResult = rmdir("/opt/preinstall");
+        TEST_LOG("rmdir result for /opt/preinstall: %s (errno: %d)", 
+                 (baseResult == 0) ? "success" : "failed", errno);
+        
+        // If any rmdir commands failed, try with sudo fallback
+        bool anyFailed = (result1 != 0) || (result2 != 0) || (result3 != 0) || (baseResult != 0);
+        if (anyFailed) {
+            TEST_LOG("WARNING: One or more rmdir commands failed. Trying with sudo fallback...");
+            int sudoResult = system("sudo rm -rf /opt/preinstall");
+            if (sudoResult == 0) {
+                TEST_LOG("Sudo fallback cleanup succeeded");
+            } else {
+                TEST_LOG("ERROR: Even sudo cleanup failed");
+            }
         }
         
         // Verify cleanup
         TEST_LOG("Verifying cleanup - /opt/preinstall should not exist:");
-        system("ls -la /opt/preinstall 2>/dev/null || echo 'Directory successfully removed'");
+        DIR* postCleanupDir = opendir("/opt/preinstall");
+        if (postCleanupDir == nullptr) {
+            TEST_LOG("Directory successfully removed");
+        } else {
+            TEST_LOG("Directory still exists after cleanup");
+            closedir(postCleanupDir);
+        }
     }
 
     void VerifyPreinstallDirectoryAccess()
