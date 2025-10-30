@@ -251,13 +251,11 @@ protected:
     }
 };
 
-class NotificationTest : public RPC::IRemoteConnection::INotification,
-                         public Exchange::IPackageDownloader::INotification, 
+class NotificationTest : public Exchange::IPackageDownloader::INotification, 
                          public Exchange::IPackageInstaller::INotification
 {
     private:
-        BEGIN_INTERFACE_MAP(NotificationTest)
-        INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+        BEGIN_INTERFACE_MAP(Notification)
         INTERFACE_ENTRY(Exchange::IPackageDownloader::INotification)
         INTERFACE_ENTRY(Exchange::IPackageInstaller::INotification)
         END_INTERFACE_MAP
@@ -329,34 +327,10 @@ class NotificationTest : public RPC::IRemoteConnection::INotification,
             m_condition_variable.notify_one();
         }
 
-        void Activated(RPC::IRemoteConnection*  /* connection */) override
-        {
-        }
-        void Deactivated(RPC::IRemoteConnection* connection) override
-        {
-        }
-        void Terminated (RPC::IRemoteConnection* /* connection */) override
-        {
-        }
-
-        uint32_t WaitForStatusSignal(uint32_t timeout_ms, PackageManagerTest_status_t status)
+        uint32_t WaitForStatusSignal(uint32_t timeout_ms)
         {
             DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
-            uint32_t status_signal = PackageManager_invalidStatus;
-            std::unique_lock<std::mutex> lock(m_mutex);
-            auto now = std::chrono::steady_clock::now();
-            auto timeout = std::chrono::milliseconds(timeout_ms);
-            DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
-            if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
-            {
-                DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
-                TEST_LOG("Timeout waiting for request status event");
-                return m_status_signal;
-            }
-            DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
-            status_signal = status;
-            status = PackageManager_invalidStatus;
-            return status_signal;
+            std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
         }
     };
 
@@ -501,7 +475,7 @@ TEST_F(PackageManagerTest, downloadMethodusingComRpcSuccess) {
     
     //statusParams.downloadId = "1001";
     //notification.SetStatusParams(statusParams);
-    signal = notification.WaitForStatusSignal(TIMEOUT, PackageManager_AppDownloadStatus);
+    notification.WaitForStatusSignal(TIMEOUT);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
