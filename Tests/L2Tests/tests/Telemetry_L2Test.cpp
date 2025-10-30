@@ -30,6 +30,7 @@
 #include <condition_variable>
 #include <fstream>
 #include <interfaces/ITelemetry.h>
+#include <interfaces/IUserSettings.h>
 
 #define JSON_TIMEOUT   (1000)
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
@@ -40,6 +41,41 @@ using ::testing::NiceMock;
 using namespace WPEFramework;
 using testing::StrictMock;
 using ::WPEFramework::Exchange::ITelemetry;
+using Success = WPEFramework::Exchange::ITelemetry::TelemetrySuccess;
+using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
+
+namespace {
+static void removeFile(const char* fileName)
+{
+    // Use sudo for protected files
+    if (strcmp(fileName, "/etc/device.properties") == 0 || strcmp(fileName, "/opt/persistent/ds/cecData_2.json") == 0 || strcmp(fileName, "/opt/uimgr_settings.bin") == 0) {
+        char cmd[256];
+        snprintf(cmd, sizeof(cmd), "sudo rm -f %s", fileName);
+        int ret = system(cmd);
+        if (ret != 0) {
+            printf("File %s failed to remove with sudo\n", fileName);
+            perror("Error deleting file");
+        } else {
+            printf("File %s successfully deleted with sudo\n", fileName);
+        }
+    } else {
+        if (std::remove(fileName) != 0) {
+            printf("File %s failed to remove\n", fileName);
+            perror("Error deleting file");
+        } else {
+            printf("File %s successfully deleted\n", fileName);
+        }
+    }
+}
+
+static void createFile(const char* fileName, const char* fileContent)
+{
+    std::ofstream fileContentStream(fileName);
+    fileContentStream << fileContent;
+    fileContentStream << "\n";
+    fileContentStream.close();
+}
+}
 
 typedef enum : uint32_t {
     Telemetry_OnReportUpload = 0x00000001,
@@ -153,6 +189,7 @@ Telemetry_L2test::Telemetry_L2test()
 {
     Core::hresult status = Core::ERROR_GENERAL;
     m_event_signalled = Telemetry_StateInvalid;
+    createFile("/tmp/pwrmgr_restarted", "2");
 
     EXPECT_CALL(*p_powerManagerHalMock, PLAT_DS_INIT())
     .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
@@ -213,7 +250,19 @@ Telemetry_L2test::Telemetry_L2test()
             return mfrERR_NONE;
     }));
 
+    EXPECT_CALL(*p_rBusApiImplMock, rbus_set(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly(::testing::Invoke(
+        [](rbusHandle_t handle, const char* name, rbusValue_t value, rbusSetOptions_t* options) {
+            return RBUS_ERROR_SUCCESS;
+    }));
+
     /* Activate plugin in constructor */
+    status = ActivateService("org.rdk.PersistentStore");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    status = ActivateService("org.rdk.UserSettings");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
     status = ActivateService("org.rdk.PowerManager");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
@@ -255,7 +304,13 @@ Telemetry_L2test::~Telemetry_L2test()
     EXPECT_CALL(*p_powerManagerHalMock, PLAT_DS_TERM())
     .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
 
-    //Deactivate PowerMgr
+    /* DeActivate plugin in constructor */
+    status = DeactivateService("org.rdk.PersistentStore");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    status = DeactivateService("org.rdk.UserSettings");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
     status = DeactivateService("org.rdk.PowerManager");
 
     if (m_telemetryplugin) {
@@ -266,6 +321,8 @@ Telemetry_L2test::~Telemetry_L2test()
     status = DeactivateService("org.rdk.Telemetry");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
+    removeFile("/tmp/pwrmgr_restarted");
+    removeFile("/opt/uimgr_settings.bin");
 }
 
 
@@ -352,10 +409,6 @@ uint32_t Telemetry_L2test::CreateTelemetryInterfaceObjectUsingComRPCConnection()
     Engine_Telemetry = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
     Client_Telemetry = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(Engine_Telemetry));
 
-    TEST_LOG("Creating Engine_Telemetry Announcements");
-#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
-    Engine_Telemetry->Announcements(mClient_Telemetry->Announcement());
-#endif
     if (!Client_Telemetry.IsValid())
     {
         TEST_LOG("Invalid Client_Telemetry");
@@ -893,5 +946,299 @@ TEST_F(Telemetry_L2test, SetReportProfileStatusUsingComrpc)
     {
         std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
         TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+}
+
+/************Test case Details **************************
+** 1.SetOptOutTelemetry with OptOut as "false" and "true" using comrpc.
+** 2.Verify OptOut value using IsOptOutTelemetry after each SetOptOutTelemetry call using comrpc.
+*******************************************************/
+TEST_F(Telemetry_L2test, SetOptOutTelemetry_COMRPC)
+{
+    Core::hresult status = Core::ERROR_GENERAL;
+    bool optOut = false;
+    Success result;
+
+    /* with OptOut as "false" */
+    status = m_telemetryplugin->SetOptOutTelemetry(optOut, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_TRUE(result.success);
+    if (status != Core::ERROR_NONE)
+    {
+        std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+        TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+
+    /* Verify OptOut value using IsOptOutTelemetry */
+    optOut = true; //initially setting to true, so that we can verify
+    bool ret = false;
+    status = m_telemetryplugin->IsOptOutTelemetry(optOut, ret);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_TRUE(result.success);
+    EXPECT_FALSE(optOut);
+    if (status != Core::ERROR_NONE)
+    {
+        std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+        TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+
+    /* with OptOut as "true" */
+    optOut = true;
+    status = m_telemetryplugin->SetOptOutTelemetry(optOut, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    if (status != Core::ERROR_NONE)
+    {
+        std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+        TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+
+    /* Verify OptOut value using IsOptOutTelemetry */
+    optOut = false; //initially setting to false, so that we can verify
+    ret = false;
+    status = m_telemetryplugin->IsOptOutTelemetry(optOut, ret);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_TRUE(optOut);
+    EXPECT_TRUE(result.success);
+    if (status != Core::ERROR_NONE)
+    {
+        std::string errorMsg = "COM-RPC returned error " + std::to_string(status) + " (" + std::string(Core::ErrorToString(status)) + ")";
+        TEST_LOG("Err: %s", errorMsg.c_str());
+    }
+}
+
+/************Test case Details **************************
+** 1.SetOptOutTelemetry with OptOut as "false" and "true" using Jsonrpc.
+** 2.Verify OptOut value using IsOptOutTelemetry after each SetOptOutTelemetry call using Jsonrpc.
+*******************************************************/
+TEST_F(Telemetry_L2test, SetOptOutTelemetry_JsonRPC)
+{
+    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(TELEMETRY_CALLSIGN, TELEMETRYL2TEST_CALLSIGN);
+    StrictMock<AsyncHandlerMock_Telemetry> async_handler;
+    uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params;
+    JsonObject result;
+
+    /* with OptOut as "false" */
+    params["Opt-Out"] = false;
+    status = InvokeServiceMethod("org.rdk.Telemetry.1", "setOptOutTelemetry", params, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_STREQ("null", result["value"].String().c_str());
+
+    /* Verify OptOut value using IsOptOutTelemetry */
+    params.Clear();
+    status = InvokeServiceMethod("org.rdk.Telemetry.1", "isOptOutTelemetry", params, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_FALSE(result["Opt-Out"].Boolean());
+    EXPECT_TRUE(result["success"].Boolean());
+    EXPECT_STREQ("null", result["value"].String().c_str());
+
+    /* with OptOut as "true" */
+    params.Clear();
+    params["Opt-Out"] = true;
+    status = InvokeServiceMethod("org.rdk.Telemetry.1", "setOptOutTelemetry", params, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_STREQ("null", result["value"].String().c_str());
+
+    /* Verify OptOut value using IsOptOutTelemetry */
+    params.Clear();
+    status = InvokeServiceMethod("org.rdk.Telemetry.1", "isOptOutTelemetry", params, result);
+    EXPECT_EQ(Core::ERROR_NONE, status);
+    EXPECT_TRUE(result["Opt-Out"].Boolean());
+    EXPECT_TRUE(result["success"].Boolean());
+    EXPECT_STREQ("null", result["value"].String().c_str());
+}
+
+/************Test case Details **************************
+ * Transition from POWER_STATE_ON to POWER_STATE_STANDBY_LIGHT_SLEEP
+ * This will trigger TELEMETRY_EVENT_UPLOADREPORT internally
+ ********************************************************/
+TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_LIGHTSLEEP)
+{
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEngine_PowerManager;
+    Core::ProxyType<RPC::CommunicatorClient> mClient_PowerManager;
+    PluginHost::IShell* mController_PowerManager;
+    uint32_t signalled = Telemetry_StateInvalid;
+
+    TEST_LOG("Creating mEngine_PowerManager");
+    mEngine_PowerManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+    mClient_PowerManager = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_PowerManager));
+
+
+    if (!mClient_PowerManager.IsValid()) {
+        TEST_LOG("Invalid mClient_PowerManager");
+    } else {
+        mController_PowerManager = mClient_PowerManager->Open<PluginHost::IShell>(_T("org.rdk.PowerManager"), ~0, 3000);
+        if (mController_PowerManager) {
+            auto PowerManagerPlugin = mController_PowerManager->QueryInterface<Exchange::IPowerManager>();
+
+            if (PowerManagerPlugin) {
+                int keyCode = 0;
+
+                uint32_t clientId = 0;
+                uint32_t status = PowerManagerPlugin->AddPowerModePreChangeClient("l2-test-client", clientId);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                EXPECT_CALL(*p_powerManagerHalMock, PLAT_API_SetPowerState(::testing::_))
+                    .WillRepeatedly(::testing::Invoke(
+                        [](PWRMgr_PowerState_t powerState) {
+                            EXPECT_EQ(powerState, PWRMGR_POWERSTATE_STANDBY_LIGHT_SLEEP);
+                            return PWRMGR_SUCCESS;
+                        }));
+
+                status = PowerManagerPlugin->SetPowerState(keyCode, PowerState::POWER_STATE_STANDBY_LIGHT_SLEEP, "l2-test");
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // some delay to destroy AckController after IModeChanged notification
+                std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+                signalled = notify.WaitForRequestStatus(JSON_TIMEOUT,Telemetry_OnReportUpload);
+                EXPECT_TRUE(signalled & Telemetry_OnReportUpload);
+
+                PowerManagerPlugin->Release();
+            } else {
+                TEST_LOG("PowerManagerPlugin is NULL");
+            }
+            mController_PowerManager->Release();
+        } else {
+            TEST_LOG("mController_PowerManager is NULL");
+        }
+    }
+}
+
+/************Test case Details **************************
+ * Transition to POWER_STATE_STANDBY_DEEP_SLEEP from POWER_STATE_ON
+ * This will trigger TELEMETRY_EVENT_ABORTREPORT internally
+ ********************************************************/
+TEST_F(Telemetry_L2test, TriggerOnPowerModeChangeEvent_DEEPSLEEP)
+{
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEngine_PowerManager;
+    Core::ProxyType<RPC::CommunicatorClient> mClient_PowerManager;
+    PluginHost::IShell* mController_PowerManager;
+    struct _rbusObject rbObject;
+
+    TEST_LOG("Creating mEngine_PowerManager");
+    mEngine_PowerManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+    mClient_PowerManager = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_PowerManager));
+
+    if (!mClient_PowerManager.IsValid()) {
+        TEST_LOG("Invalid mClient_PowerManager");
+    } else {
+        mController_PowerManager = mClient_PowerManager->Open<PluginHost::IShell>(_T("org.rdk.PowerManager"), ~0, 3000);
+        if (mController_PowerManager) {
+            auto PowerManagerPlugin = mController_PowerManager->QueryInterface<Exchange::IPowerManager>();
+
+            if (PowerManagerPlugin) {
+                int keyCode = 0;
+
+                uint32_t clientId = 0;
+                uint32_t status = PowerManagerPlugin->AddPowerModePreChangeClient("l2-test-client", clientId);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // Expect multiple power state transitions due to deep sleep timeout mechanism
+                EXPECT_CALL(*p_powerManagerHalMock, PLAT_API_SetPowerState(::testing::_))
+                    .Times(::testing::AtLeast(1))
+                    .WillRepeatedly(::testing::Invoke(
+                        [](PWRMgr_PowerState_t powerState) {
+                            // Accept both DEEP_SLEEP and LIGHT_SLEEP transitions
+                            // Deep sleep timeout causes automatic transition to light sleep
+                            EXPECT_TRUE(powerState == PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP || 
+                                       powerState == PWRMGR_POWERSTATE_STANDBY_LIGHT_SLEEP);
+                            return PWRMGR_SUCCESS;
+                        }));
+
+                //Expect calls for rbus_open and rbusMethod_InvokeAsync for AbortReport
+                EXPECT_CALL(*p_rBusApiImplMock, rbus_open(::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Return(RBUS_ERROR_SUCCESS));
+
+                EXPECT_CALL(*p_rBusApiImplMock, rbusMethod_InvokeAsync(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Invoke(
+                        [&](rbusHandle_t handle, char const* methodName, rbusObject_t inParams, rbusMethodAsyncRespHandler_t callback,  int timeout) {
+                            callback(handle, methodName, RBUS_ERROR_SUCCESS, &rbObject);
+                            return RBUS_ERROR_SUCCESS;
+                        }));
+
+                status = PowerManagerPlugin->SetPowerState(keyCode, PowerState::POWER_STATE_STANDBY_DEEP_SLEEP, "l2-test");
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // some delay to destroy AckController after IModeChanged notification
+                std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+
+                PowerManagerPlugin->Release();
+            } else {
+                TEST_LOG("PowerManagerPlugin is NULL");
+            }
+            mController_PowerManager->Release();
+        } else {
+            TEST_LOG("mController_PowerManager is NULL");
+        }
+    }
+}
+
+/************Test case Details **************************
+** 1.Trigger OnPrivacyModeChanged notification in Telemetry plugin
+** 2.Test UserSettings SetPrivacyMode API triggering Telemetry notification
+** 3.Verify that privacy mode changes are propagated to Telemetry plugin
+*******************************************************/
+TEST_F(Telemetry_L2test, TriggerOnPrivacyModeChangedNotification_COMRPC)
+{
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEngine_UserSettings;
+    Core::ProxyType<RPC::CommunicatorClient> mClient_UserSettings;
+    PluginHost::IShell* mController_UserSettings;
+
+    TEST_LOG("Creating mEngine_UserSettings");
+    mEngine_UserSettings = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+    mClient_UserSettings = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEngine_UserSettings));
+
+    if (!mClient_UserSettings.IsValid()) {
+        TEST_LOG("Invalid mClient_UserSettings");
+    } else {
+        mController_UserSettings = mClient_UserSettings->Open<PluginHost::IShell>(_T("org.rdk.UserSettings"), ~0, 3000);
+        if (mController_UserSettings) {
+            auto userSettingsPlugin = mController_UserSettings->QueryInterface<Exchange::IUserSettings>();
+
+            if (userSettingsPlugin) {
+                Core::hresult status = Core::ERROR_GENERAL;
+
+                // Mock RBUS calls for privacy mode notification to T2
+
+                EXPECT_CALL(*p_rBusApiImplMock, rbus_set(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .Times(::testing::AtLeast(1))
+                    .WillRepeatedly(::testing::Invoke(
+                        [](rbusHandle_t handle, const char* name, rbusValue_t value, rbusSetOptions_t* options) {
+                            TEST_LOG("RBUS set called for property: %s", name);
+                            EXPECT_STREQ(name, "Device.X_RDKCENTRAL-COM_Privacy.PrivacyMode");
+                            return RBUS_ERROR_SUCCESS;
+                        }));
+
+                // Test setting privacy mode from default "SHARE" to "DO_NOT_SHARE"
+                TEST_LOG("Setting privacy mode to DO_NOT_SHARE");
+                status = userSettingsPlugin->SetPrivacyMode("DO_NOT_SHARE");
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // Allow time for notification to be processed
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+                // Test setting privacy mode back to "SHARE"
+                TEST_LOG("Setting privacy mode to SHARE");
+                status = userSettingsPlugin->SetPrivacyMode("SHARE");
+                EXPECT_EQ(status, Core::ERROR_NONE);
+
+                // Allow time for notification to be processed
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+                // Verify current privacy mode
+                std::string currentPrivacyMode;
+                status = userSettingsPlugin->GetPrivacyMode(currentPrivacyMode);
+                EXPECT_EQ(status, Core::ERROR_NONE);
+                EXPECT_STREQ(currentPrivacyMode.c_str(), "SHARE");
+
+                userSettingsPlugin->Release();
+            } else {
+                TEST_LOG("UserSettingsPlugin is NULL");
+            }
+            mController_UserSettings->Release();
+        } else {
+            TEST_LOG("mController_UserSettings is NULL");
+        }
     }
 }
