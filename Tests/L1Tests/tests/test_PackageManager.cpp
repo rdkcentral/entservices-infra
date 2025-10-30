@@ -280,7 +280,7 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
             m_status_param = statusParam;
         }
 
-        void OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos)
+        void OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos) override
         {
             m_status_signal = PackageManager_AppDownloadStatus;
             JsonValue downloadId;
