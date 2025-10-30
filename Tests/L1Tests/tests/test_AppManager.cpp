@@ -375,6 +375,7 @@ protected:
         .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
             auto mockIterator = FillPackageIterator(); // Fill the package Info
             packages = mockIterator;
+            mockIterator->Release();
             return Core::ERROR_NONE;
         });
 
@@ -415,6 +416,7 @@ protected:
         .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
             auto mockIterator = FillPackageIterator(); // Fill the package Info
             packages = mockIterator;
+            mockIterator->Release();
             return Core::ERROR_NONE;
         });
 
@@ -617,6 +619,7 @@ TEST_F(AppManagerTest, GetInstalledAppsUsingComRpcSuccess)
     .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
         auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = mockIterator;
+        mockIterator->Release();
         return Core::ERROR_NONE;
     });
 
@@ -650,6 +653,7 @@ TEST_F(AppManagerTest, GetInstalledAppsUsingJSONRpcSuccess)
     .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
         auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = mockIterator;
+        mockIterator->Release();
         return Core::ERROR_NONE;
     });
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getInstalledApps"), _T("{\"apps\": \"\"}"), mJsonRpcResponse));
@@ -731,6 +735,7 @@ TEST_F(AppManagerTest, GetInstalledAppsUsingComRpcFailureListPackagesReturnError
     .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
         auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = mockIterator;
+        mockIterator->Release();
         return Core::ERROR_GENERAL;
     });
 
@@ -763,6 +768,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcSuccess)
     .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
         auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = mockIterator;
+        mockIterator->Release();
         return Core::ERROR_NONE;
     });
 
@@ -791,6 +797,7 @@ TEST_F(AppManagerTest, IsInstalledUsingJSONRpcSuccess)
     .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
         auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = mockIterator;
+        mockIterator->Release();
         return Core::ERROR_NONE;
     });
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\"}";
@@ -822,6 +829,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailureWrongAppID)
     .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
         auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = mockIterator;
+        mockIterator->Release();
         return Core::ERROR_NONE;
     });
 
@@ -854,6 +862,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailurePackageListEmpty)
     .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
         auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = nullptr;
+        mockIterator->Release();
         return Core::ERROR_NONE;
     });
 
@@ -910,6 +919,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailureListPackagesReturnError)
     .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
         auto mockIterator = FillPackageIterator(); // Fill the package Info
         packages = mockIterator;
+        mockIterator->Release();
         return Core::ERROR_GENERAL;
     });
 
