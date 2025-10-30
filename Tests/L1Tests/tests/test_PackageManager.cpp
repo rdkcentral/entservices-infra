@@ -331,10 +331,13 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
             std::unique_lock<std::mutex> lock(m_mutex);
             auto now = std::chrono::steady_clock::now();
             auto timeout = std::chrono::milliseconds(timeout_ms);
-            if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
+            while (!(status & m_status_signal))
             {
-                 TEST_LOG("Timeout waiting for request status event");
-                 return m_status_signal;
+                if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
+                {
+                    TEST_LOG("Timeout waiting for request status event");
+                    return m_status_signal;
+                }
             }
             status_signal = m_status_signal;
             m_status_signal = PackageManager_invalidStatus;
@@ -454,7 +457,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
+TEST_F(PackageManagerTest, downloadMethodusingComRpcSuccess) {
     
     initforComRpc();
 
@@ -502,7 +505,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
+TEST_F(PackageManagerTest, downloadMethodusingComRpcError) {
 
     initforComRpc();
 
