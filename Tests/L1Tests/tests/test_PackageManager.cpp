@@ -39,6 +39,8 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (500)
+#define DEBUG_PRINTF(fmt, ...) \
+    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
@@ -327,18 +329,22 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
 
         uint32_t WaitForStatusSignal(uint32_t timeout_ms, PackageManagerTest_status_t status)
         {
+            DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
             uint32_t status_signal = PackageManager_invalidStatus;
             std::unique_lock<std::mutex> lock(m_mutex);
             auto now = std::chrono::steady_clock::now();
             auto timeout = std::chrono::milliseconds(timeout_ms);
             while (!(status & m_status_signal))
             {
+                DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                 if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
                 {
+                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                     TEST_LOG("Timeout waiting for request status event");
                     return m_status_signal;
                 }
             }
+            DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
             status_signal = m_status_signal;
             m_status_signal = PackageManager_invalidStatus;
             return status_signal;
