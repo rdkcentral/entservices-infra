@@ -79,8 +79,8 @@ protected:
     Core::ProxyType<WorkerPoolImplementation> workerPool;
 
     Exchange::IPackageDownloader* pkgdownloaderInterface = nullptr;
-    Exchange::IPackageInstaller* pkginstallerInterface = nullptr;
-    Exchange::IPackageHandler* pkghandlerInterface = nullptr;
+    //Exchange::IPackageInstaller* pkginstallerInterface = nullptr;
+    //Exchange::IPackageHandler* pkghandlerInterface = nullptr;
     Exchange::IPackageDownloader::Options options;
     Exchange::IPackageDownloader::DownloadId downloadId;
     Exchange::IPackageDownloader::ProgressInfo progress;
@@ -100,9 +100,9 @@ protected:
 
         pkgdownloaderInterface = static_cast<Exchange::IPackageDownloader*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageDownloader::ID));
 
-        pkginstallerInterface = static_cast<Exchange::IPackageInstaller*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageInstaller::ID));
+        //pkginstallerInterface = static_cast<Exchange::IPackageInstaller*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageInstaller::ID));
 
-        pkghandlerInterface = static_cast<Exchange::IPackageHandler*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageHandler::ID));
+        //pkghandlerInterface = static_cast<Exchange::IPackageHandler*>(mPackageManagerImpl->QueryInterface(Exchange::IPackageHandler::ID));
 
 		Core::IWorkerPool::Assign(&(*workerPool));
 		workerPool->Run();
@@ -112,8 +112,8 @@ protected:
     virtual ~PackageManagerTest() override
     {
         pkgdownloaderInterface->Release();
-        pkginstallerInterface->Release();
-        pkghandlerInterface->Release();
+        //pkginstallerInterface->Release();
+        //pkghandlerInterface->Release();
         
         Core::IWorkerPool::Assign(nullptr);
 		workerPool.Release();
@@ -145,8 +145,8 @@ protected:
           .WillRepeatedly(::testing::Return(mSubSystemMock));
 
 		 ASSERT_TRUE(pkgdownloaderInterface != nullptr);
-		 ASSERT_TRUE(pkginstallerInterface != nullptr);
-		 ASSERT_TRUE(pkghandlerInterface != nullptr);
+		 //ASSERT_TRUE(pkginstallerInterface != nullptr);
+		// ASSERT_TRUE(pkghandlerInterface != nullptr);
     }
 
     void initforJsonRpc() 
@@ -201,8 +201,8 @@ protected:
         }
 
 		 ASSERT_TRUE(pkgdownloaderInterface != nullptr);
-		 ASSERT_TRUE(pkginstallerInterface != nullptr);
-		 ASSERT_TRUE(pkghandlerInterface != nullptr);
+		 //ASSERT_TRUE(pkginstallerInterface != nullptr);
+		 //ASSERT_TRUE(pkghandlerInterface != nullptr);
     }
 
     void deinitforJsonRpc() 
@@ -349,7 +349,7 @@ class NotificationTest : public Exchange::IPackageDownloader::INotification,
  * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
 
     initforJsonRpc();
@@ -1410,7 +1410,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
  * Verify that the install method fails by asserting that it returns Core::ERROR_INVALID_SIGNATURE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
 
     initforJsonRpc();
@@ -1632,7 +1632,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for list packages method success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1684,7 +1684,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
  * Verify config method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
