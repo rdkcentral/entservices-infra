@@ -143,6 +143,10 @@ protected:
         EXPECT_CALL(*mServiceMock, SubSystems())
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Return(mSubSystemMock));
+
+		 ASSERT_TRUE(pkgdownloaderInterface != nullptr);
+		 ASSERT_TRUE(pkginstallerInterface != nullptr);
+		 ASSERT_TRUE(pkghandlerInterface != nullptr);
     }
 
     void initforJsonRpc() 
@@ -195,6 +199,10 @@ protected:
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
         }
+
+		 ASSERT_TRUE(pkgdownloaderInterface != nullptr);
+		 ASSERT_TRUE(pkginstallerInterface != nullptr);
+		 ASSERT_TRUE(pkghandlerInterface != nullptr);
     }
 
     void deinitforJsonRpc() 
