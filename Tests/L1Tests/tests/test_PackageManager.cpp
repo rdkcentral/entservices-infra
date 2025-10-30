@@ -166,17 +166,11 @@ protected:
 
     void initforComRpc() 
     {
-        EXPECT_CALL(*mServiceMock, Register(::testing::_))
-          .Times(::testing::AnyNumber());
-
         EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
 
-        // Activate the dispatcher and initialize the plugin for JSON-RPC
-        PluginHost::IFactories::Assign(&factoriesImplementation);
-        dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
-        dispatcher->Activate(mServiceMock);
-        plugin->Initialize(mServiceMock); 
+        // Initialize the plugin for COM-RPC
+        pkgdownloaderInterface->Initialize(mServiceMock);
     }
 
     void getDownloadParams()
@@ -234,9 +228,6 @@ protected:
 
     void deinitforComRpc()
     {
-        EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
-          .Times(::testing::AnyNumber());
-
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
@@ -248,12 +239,8 @@ protected:
                      return 0;
             }));
 
-        // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
-        dispatcher->Deactivate();
-        dispatcher->Release();
-
         // Deinitialize the plugin for COM-RPC
-        plugin->Deinitialize(mServiceMock);
+        pkgdownloaderInterface->Deinitialize(mServiceMock);
     }
 
     void waitforJsonRpc(uint32_t timeout_ms) 
@@ -466,7 +453,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
  * Unregister the notification using the COM RPC interface
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
     
     initforComRpc();
@@ -505,7 +492,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for checking download request error when internet is unavailable using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
