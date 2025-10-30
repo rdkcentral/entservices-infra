@@ -33,8 +33,6 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TEST_APP_CONTAINER_ID "com.sky.as.appsyouTube"
-#define DEBUG_PRINTF(fmt, ...) \
-    std::printf("[DEBUG] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 using namespace WPEFramework;
 using ::testing::NiceMock;
@@ -66,7 +64,6 @@ protected:
     }
     virtual ~RuntimeManagerTest()
     {
-        DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
 
@@ -117,7 +114,6 @@ protected:
             EXPECT_CALL(*mociContainerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                     DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mociContainerMock;
                      return 0;
                     }));
@@ -128,7 +124,6 @@ protected:
             EXPECT_CALL(*mServiceMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                     DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mServiceMock;
                      return 0;
                     }));
@@ -139,7 +134,6 @@ protected:
             EXPECT_CALL(*mStoreageManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                     DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                      delete mStoreageManagerMock;
                      return 0;
                     }));
@@ -150,7 +144,6 @@ protected:
             EXPECT_CALL(*mWindowManagerMock, Release())
                 .WillOnce(::testing::Invoke(
                 [&]() {
-                    DEBUG_PRINTF("--------------------ERROR: RDKEMW-2803-----------------------------");
                     delete mWindowManagerMock;
                     return 0;
                     }));
@@ -1590,4 +1583,3 @@ TEST_F(RuntimeManagerTest, UnmountMethods)
 {
     EXPECT_EQ(Core::ERROR_NONE, interface->Unmount());
 }
-
