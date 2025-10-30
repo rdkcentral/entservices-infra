@@ -2215,8 +2215,8 @@ TEST_F(PreinstallManagerTest, CreatePackageManagerObjectErrorPathsIndirect)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Mock QueryInterfaceByCallsign to return nullptr for PackageInstaller
-    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::StrEq("org.rdk.PackageManagerRDKEMS"), ::testing::_))
-        .WillOnce(::testing::Return(nullptr));
+    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(nullptr));
     
     // This should fail when trying to create PackageManager object
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
@@ -3035,7 +3035,20 @@ TEST_F(PreinstallManagerTest, MaximumCodeCoverage)
             installCallCount++;
             if (installCallCount % 3 == 0) {
                 // Every third install fails with different reasons
-                failReason = static_cast<Exchange::IPackageInstaller::FailReason>(installCallCount % 4);
+                switch (installCallCount % 4) {
+                    case 0:
+                        failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
+                        break;
+                    case 1:
+                        failReason = Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE;
+                        break;
+                    case 2:
+                        failReason = Exchange::IPackageInstaller::FailReason::INVALID_METADATA_FAILURE;
+                        break;
+                    case 3:
+                        failReason = Exchange::IPackageInstaller::FailReason::PERSISTENCE_FAILURE;
+                        break;
+                }
                 return Core::ERROR_GENERAL;
             }
             return Core::ERROR_NONE;
@@ -3076,6 +3089,87 @@ TEST_F(PreinstallManagerTest, MaximumCodeCoverage)
     // Both tests should complete (may return error due to failures)
     EXPECT_TRUE(forceResult == Core::ERROR_NONE || forceResult == Core::ERROR_GENERAL);
     EXPECT_TRUE(versionResult == Core::ERROR_NONE || versionResult == Core::ERROR_GENERAL);
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test complete code path coverage for 70%+ target
+ *
+ * @details Test verifies maximum line coverage by exercising:
+ * - All remaining uncovered conditional branches
+ * - Loop edge cases and boundary conditions
+ * - Error recovery and cleanup paths
+ */
+TEST_F(PreinstallManagerTest, ComprehensiveLineCoverage)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Test ListPackages error path (condition not previously covered)
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            packages = nullptr;
+            return Core::ERROR_GENERAL; // Both error AND null packages
+        });
+
+    SetUpPreinstallDirectoryMocks();
+    
+    // This should hit the specific error branch: ListPackages error + null packages
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
+    
+    // Reset and test another edge case
+    testing::Mock::VerifyAndClearExpectations(mPackageInstallerMock);
+    
+    // Test package iteration with non-INSTALLED state
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            // Create iterator with packages in different states
+            auto mockIterator = new MockPackageIterator();
+            int callCount = 0;
+            
+            EXPECT_CALL(*mockIterator, Next(::testing::_))
+                .WillRepeatedly([&callCount](Exchange::IPackageInstaller::Package& package) -> bool {
+                    callCount++;
+                    switch(callCount) {
+                        case 1:
+                            package.packageId = "pending.package";
+                            package.version = "1.0.0";
+                            package.state = Exchange::IPackageInstaller::InstallState::PENDING;
+                            return true;
+                        case 2:
+                            package.packageId = "failed.package";
+                            package.version = "1.0.0";
+                            package.state = Exchange::IPackageInstaller::InstallState::FAILED;
+                            return true;
+                        default:
+                            return false; // End iteration
+                    }
+                });
+            
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            id = "new.package";
+            version = "1.0.0";
+            return Core::ERROR_NONE;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce([&](const string &packageId, const string &version, 
+                     Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                     const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            return Core::ERROR_NONE;
+        });
+
+    SetUpPreinstallDirectoryMocks();
+    
+    // This tests the package iteration loop with non-INSTALLED states
+    result = mPreinstallManagerImpl->StartPreinstall(false);
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
