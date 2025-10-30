@@ -9,7 +9,14 @@
 #define CONTAINERUTILS_H
 
 #include <functional>
-#include <string>
+#include "tracing/Logging.h"
+#include "UtilsLogging.h"
+#include "tracing/Logging.h"
+
+namespace WPEFramework
+{
+namespace Plugin
+{
 
 class ContainerUtils
 {
@@ -78,5 +85,6 @@ private:
 */
 };
 
-
+}
+}
 #endif // CONTAINERUTILS_H

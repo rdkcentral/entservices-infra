@@ -22,6 +22,11 @@
 #include <netinet/in.h>
 
 
+namespace WPEFramework
+{
+namespace Plugin
+{
+
 #if !defined(SYS_execveat)
 #  if defined(__NR_execveat)
 #    define SYS_execveat  __NR_execveat
@@ -46,10 +51,11 @@
 static void nsThread(int newNsFd, int nsType, bool *success,
                      std::function<void()> &func)
 {
+	LOGINFO("nsThread started");
     // unshare the specific namespace from the thread
     if (unshare(nsType) != 0)
     {
-        //qErrnoWarning(errno, "failed to unshare");
+        LOGERR("failed to unshare");
         *success = false;
         return;
     }
@@ -57,15 +63,17 @@ static void nsThread(int newNsFd, int nsType, bool *success,
     // switch into the new namespace
     if (setns(newNsFd, nsType) != 0)
     {
-        //qErrnoWarning(errno, "failed to switch into new namespace");
+        LOGERR("failed to switch into new namespace");
         *success = false;
         return;
+
     }
 
     // execute the caller's function
     func();
 
     *success = true;
+    LOGINFO("nsThread End");
 }
 
 // -----------------------------------------------------------------------------
@@ -125,7 +133,7 @@ static bool nsEnterWithPid(pid_t pid, int nsType,
 {
     char nsName[8];
     char nsPath[32];
-
+LOGINFO("Enter with PID");
     strcpy(nsName, "net");
 
     bool success;
@@ -135,22 +143,24 @@ static bool nsEnterWithPid(pid_t pid, int nsType,
     int newNsFd = open(nsPath, O_RDONLY | O_CLOEXEC);
     if (newNsFd < 0)
     {
-//        qErrnoWarning(errno, "failed to open container namespace @ '%s'", nsPath);
+        LOGERR("failed to open container namespace @ '%s'", nsPath);
         success = false;
     }
     else
     {
+	LOGINFO("thread started");
         // spawn the thread to run the callback in
         std::thread thread = std::thread(std::bind(&nsThread, newNsFd, nsType, &success, func));
 
         // block until the thread completes
         thread.join();
+	LOGINFO("thread end");
     }
 
     // close the namespaces
     if ((newNsFd >= 0) && (close(newNsFd) != 0))
     {
-//        qErrnoWarning(errno, "failed to close namespace");
+        LOGERR("failed to close namespace");
     }
 
     return success;
@@ -169,20 +179,21 @@ static bool nsEnterWithPid(pid_t pid, int nsType,
  */
 static pid_t findContainerPid(const std::string &containerId)
 {
+	return 0;
     // the container id is used as the name for the cgroups, so we can use to
     // get a list of pids within a cgroup, which effectively from our PoV is
     // list of pids within a container
-
+LOGINFO("Container IP: %s", containerId.c_str());
     const std::string cgroupPath = "/sys/fs/cgroup/memory/" + containerId + "/cgroup.procs";
     int procsFd = open(cgroupPath.c_str(), O_RDONLY | O_CLOEXEC);
     if (procsFd < 0)
     {
         if (errno == ENOENT)
 	{
-            //qInfo("no cgroup file @ '%s'", qPrintable(cgroupPath));
+            LOGINFO("no cgroup file @ %s", cgroupPath.c_str());
 	}
         else{
-            //qErrnoWarning(errno, "failed to open cgroup file @ '%s'", qPrintable(cgroupPath));
+            LOGERR("failed to open cgroup file @ %s", cgroupPath.c_str());
 	}
 
         return -1;
@@ -196,7 +207,7 @@ static pid_t findContainerPid(const std::string &containerId)
     std::string line;
     if (!std::getline(fileStream, line))
     {
-        //qWarning("cgroup procs file is empty - no pids in container?");
+        LOGERR("cgroup procs file is empty - no pids in container?");
         return -1;
     }
 
@@ -222,11 +233,12 @@ static pid_t findContainerPid(const std::string &containerId)
 bool ContainerUtils::nsEnterImpl(const std::string &containerId, std::string type,
                                  const std::function<void()> &func)
 {
+	LOGINFO("Enter IMPl");
     // find a pid in the container
     pid_t containerPid = findContainerPid(containerId);
     if (containerPid <= 0)
     {
-        //qWarning("no container found with id '%s'", qPrintable(containerId));
+        LOGERR("no container found with id '%s'", containerId.c_str());
         return false;
     }
 
@@ -249,6 +261,8 @@ bool ContainerUtils::nsEnterImpl(const std::string &containerId, std::string typ
  */
 uint32_t ContainerUtils::getContainerIpAddress(const std::string &containerId)
 {
+	LOGINFO("Container ID: %s", containerId.c_str());
+	return 0;
     uint32_t ipv4Addr = 0;
 
     // lambda to run on a thread in the context of the container network
@@ -264,21 +278,21 @@ uint32_t ContainerUtils::getContainerIpAddress(const std::string &containerId)
         int sock = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
         if (sock < 0)
         {
-            //qErrnoWarning(errno, "failed to create socket");
+            LOGERR("failed to create socket");
             return;
         }
 
         // attempt to get the interface details
         if (ioctl(sock, SIOCGIFADDR, &ifr) < 0)
         {
-            //qErrnoWarning(errno, "failed to get interface ip address");
+            LOGERR("failed to get interface ip address");
             close(sock);
             return;
         }
 
         if (close(sock) < 0)
         {
-            //qErrnoWarning(errno, "failed to close ifcase socket");
+            LOGERR("failed to close ifcase socket");
         }
 
         // finally, get and store the ip address
@@ -291,10 +305,7 @@ uint32_t ContainerUtils::getContainerIpAddress(const std::string &containerId)
     {
         return ipv4Addr;
     }
-    else
-    {
-        return 0;
-    }
+    return 0;
 }
 
 // -----------------------------------------------------------------------------
@@ -689,3 +700,5 @@ QDir ContainerUtils::openCGroupDirectory(const QString &containerId,
     return QDir(path);
 }
 */
+}
+}
