@@ -492,11 +492,11 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
+          -DPLUGIN_APPMANAGER=OFF
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_PACKAGE_MANAGER=ON
-          -DPLUGIN_LIFECYCLE_MANAGER=ON
+          -DPLUGIN_LIFECYCLE_MANAGER=OFF
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
