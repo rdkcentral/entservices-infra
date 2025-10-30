@@ -3125,29 +3125,21 @@ TEST_F(PreinstallManagerTest, ComprehensiveLineCoverage)
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
         .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
             // Create iterator with packages in different states
-            auto mockIterator = new MockPackageIterator();
-            int callCount = 0;
+            std::list<Exchange::IPackageInstaller::Package> packageList;
             
-            EXPECT_CALL(*mockIterator, Next(::testing::_))
-                .WillRepeatedly([&callCount](Exchange::IPackageInstaller::Package& package) -> bool {
-                    callCount++;
-                    switch(callCount) {
-                        case 1:
-                            package.packageId = "pending.package";
-                            package.version = "1.0.0";
-                            package.state = Exchange::IPackageInstaller::InstallState::PENDING;
-                            return true;
-                        case 2:
-                            package.packageId = "failed.package";
-                            package.version = "1.0.0";
-                            package.state = Exchange::IPackageInstaller::InstallState::FAILED;
-                            return true;
-                        default:
-                            return false; // End iteration
-                    }
-                });
+            Exchange::IPackageInstaller::Package package1;
+            package1.packageId = "installing.package";
+            package1.version = "1.0.0";
+            package1.state = Exchange::IPackageInstaller::InstallState::INSTALLING;
+            packageList.emplace_back(package1);
             
-            packages = mockIterator;
+            Exchange::IPackageInstaller::Package package2;
+            package2.packageId = "another.package";
+            package2.version = "1.0.0"; 
+            package2.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+            packageList.emplace_back(package2);
+            
+            packages = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
             return Core::ERROR_NONE;
         });
 
