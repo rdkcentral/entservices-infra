@@ -116,6 +116,11 @@ set (TELEMETRY_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/Telemetry ${CMAKE_SO
 set (TELEMETRY_LIBS ${NAMESPACE}Telemetry ${NAMESPACE}TelemetryImplementation)
 add_plugin_test_ex(PLUGIN_TELEMETRY tests/test_Telemetry.cpp "${TELEMETRY_INC}" "${TELEMETRY_LIBS}")
 
+#PLUGIN_PACKAGE_MANAGER
+set (PACKAGEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PackageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (PACKAGEMANAGER_LIBS ${NAMESPACE}PackageManagerRDKEMS)
+add_plugin_test_ex(PLUGIN_PACKAGE_MANAGER tests/test_PackageManager.cpp "${PACKAGEMANAGER_INC}" "${PACKAGEMANAGER_LIBS}")
+
 # PLUGIN_APPMANAGER
 set (APPMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/AppManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (APPMANAGER_LIBS ${NAMESPACE}AppManager ${NAMESPACE}AppManagerImplementation)
@@ -150,11 +155,6 @@ add_plugin_test_ex(PLUGIN_STORAGE_MANAGER tests/test_StorageManager.cpp "${STORA
 set (LIFECYCLEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/LifecycleManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (LIFECYCLEMANAGER_LIBS ${NAMESPACE}LifecycleManager)
 add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${LIFECYCLEMANAGER_INC}" "${LIFECYCLEMANAGER_LIBS}")
-
-#PLUGIN_PACKAGE_MANAGER
-set (PACKAGEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PackageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-set (PACKAGEMANAGER_LIBS ${NAMESPACE}PackageManagerRDKEMS)
-add_plugin_test_ex(PLUGIN_PACKAGE_MANAGER tests/test_PackageManager.cpp "${PACKAGEMANAGER_INC}" "${PACKAGEMANAGER_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
