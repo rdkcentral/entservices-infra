@@ -212,30 +212,7 @@ protected:
         return Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
     }
 
-    void SetUpPreinstallDirectoryMocks()
-    {
-        // Mock directory operations for preinstall directory
-        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Non-null pointer
 
-        // Create mock dirent structure for testing
-        static struct dirent testDirent;
-        strcpy(testDirent.d_name, "testapp");
-        static struct dirent* direntPtr = &testDirent;
-        static bool firstCall = true;
-
-        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
-                if (firstCall) {
-                    firstCall = false;
-                    return direntPtr; // Return test directory entry first time
-                }
-                return nullptr; // End of directory
-            }));
-
-        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-            .WillByDefault(::testing::Return(0));
-    }
 };
 
 // Mock notification class using GMock
@@ -321,6 +298,23 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
+    // Set up directory mocks to ensure opendir succeeds
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Non-null pointer
+
+    // Create mock dirent structure for testing
+    static struct dirent testDirent;
+    strcpy(testDirent.d_name, "testapp");
+    static struct dirent* direntPtr = &testDirent;
+    static bool firstCall = true;
+
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(direntPtr))  // Return test directory entry first time
+        .WillOnce(::testing::Return(nullptr));   // End of directory second time
+
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
+    
     // Mock PackageInstaller methods
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
@@ -335,14 +329,11 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
                            const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
             return Core::ERROR_NONE;
         });
-
-    SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
-    // We mainly test that the method doesn't crash
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    // Now that directory operations are properly mocked, we expect success
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
@@ -358,6 +349,22 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithoutForceInstall)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
+    // Set up directory mocks to ensure opendir succeeds
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Non-null pointer
+
+    // Create mock dirent structure for testing  
+    static struct dirent testDirent2;
+    strcpy(testDirent2.d_name, "testapp2");
+    static struct dirent* direntPtr2 = &testDirent2;
+
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(direntPtr2))  // Return test directory entry first time
+        .WillOnce(::testing::Return(nullptr));    // End of directory second time
+
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
+    
     // Mock ListPackages to return existing packages
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
         .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
@@ -372,13 +379,11 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithoutForceInstall)
             version = PREINSTALL_MANAGER_TEST_VERSION;
             return Core::ERROR_NONE;
         });
-
-    SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
     
-    // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    // Now that directory operations are properly mocked, we expect success
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
