@@ -425,6 +425,7 @@ namespace WPEFramework
             eventData["navigationIntent"] = intent;
             eventData["errorReason"] = "";
             dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, eventData);
+            status = Core::ERROR_NONE;
             return status;
         }
 
