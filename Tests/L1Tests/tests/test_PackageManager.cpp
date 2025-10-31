@@ -1347,8 +1347,6 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     // TC-34: Error on install due to invalid signature using ComRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-    additionalMetadata->Release();
-
 	deinitforComRpc();
 }
 
@@ -1385,8 +1383,6 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
     EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     waitforSignal(timeout_ms);
-
-    additionalMetadata->Release();
 
 	deinitforComRpc();   
 }
@@ -1527,7 +1523,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 }
-
+#endif
 /* Test Case for config method failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
@@ -1546,34 +1542,34 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
     string packageId = "testPackage";
     string version = "2.0";
-   // string fileLocator = "/opt/CDL/package1001";
-   // Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
-   // list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
+    string fileLocator = "/opt/CDL/package1001";
+    Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
+    list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
     Exchange::RuntimeConfig runtimeConfig = {};
 
-   // auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+    auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
 
-	#if 0
+	
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
-   #endif
-   // EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+   
+    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-   // waitforSignal(timeout_ms);
+    waitforSignal(timeout_ms);
 
     // TC-41: Success in config using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Config(packageId, version, runtimeConfig));
 
-	//timeout_ms = 1000;
+	timeout_ms = 1000;
     waitforSignal(timeout_ms);
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
