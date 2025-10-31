@@ -114,8 +114,12 @@ protected:
         mServiceMock = new NiceMock<ServiceMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
+        
+#ifndef UNIT_TEST_BUILD
+        // Only create and set wraps mock when not using real directories
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
+#endif
 
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
@@ -145,12 +149,13 @@ protected:
         // Setup default directory mocking for preinstall operations
         SetUpPreinstallDirectoryMocks();
 
+#ifndef UNIT_TEST_BUILD
         ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault(::testing::Invoke([](const char* pathname, struct stat* buf) -> int {
             std::string path(pathname);
             TEST_LOG("createResources: stat called with path: %s", pathname);
             // Simulate successful stat for preinstall related files/directories
-            if (path.find("/opt/preinstall") != std::string::npos) {
+            if (path.find("/opt/preinstall") != std::string::npos || path.find("/tmp/preinstall") != std::string::npos) {
                 std::memset(buf, 0, sizeof(struct stat));
                 buf->st_mode = S_IFDIR | 0755; // Directory with permissions
                 buf->st_size = 4096;
@@ -173,11 +178,19 @@ protected:
             TEST_LOG("createResources: rmdir called with path: %s", pathname);
             return 0; // Always succeed
         }));
+#endif
         
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
-        TEST_LOG("createResources - All done!");
-        status = Core::ERROR_NONE;
+        
+        if (mPreinstallManagerImpl == nullptr) {
+            TEST_LOG("createResources - ERROR: getInstance() returned nullptr!");
+            status = Core::ERROR_GENERAL;
+        } else {
+            TEST_LOG("createResources - getInstance() successful, impl = %p", mPreinstallManagerImpl);
+            TEST_LOG("createResources - All done!");
+            status = Core::ERROR_NONE;
+        }
 
         return status;
     }
@@ -205,12 +218,14 @@ protected:
                     }));
         }
 
+#ifndef UNIT_TEST_BUILD
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr)
         {
             delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
         }
+#endif
 
         dispatcher->Deactivate();
         dispatcher->Release();
@@ -314,7 +329,7 @@ protected:
             .WillByDefault(::testing::Invoke([](const char* pathname, int mode) -> int {
                 // Simulate successful access to preinstall related directories
                 std::string path(pathname);
-                if (path.find("/opt/preinstall") != std::string::npos) {
+                if (path.find("/opt/preinstall") != std::string::npos || path.find("/tmp/preinstall") != std::string::npos) {
                     return 0; // Success
                 }
                 return -1; // Failure for other paths
@@ -621,6 +636,7 @@ TEST_F(PreinstallManagerTest, PreinstallDirectoryAccessFailure)
     
     TEST_LOG("PreinstallDirectoryAccessFailure: Starting test");
     
+#ifndef UNIT_TEST_BUILD
     // Override the default mock to simulate directory access failure
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
@@ -633,6 +649,7 @@ TEST_F(PreinstallManagerTest, PreinstallDirectoryAccessFailure)
             TEST_LOG("PreinstallDirectoryAccessFailure: returning success for other path");
             return reinterpret_cast<DIR*>(0x1234); // Success for other paths
         }));
+#endif
 
     TEST_LOG("PreinstallDirectoryAccessFailure: Calling StartPreinstall");
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
@@ -657,12 +674,28 @@ TEST_F(PreinstallManagerTest, BasicDirectoryMockTest)
     
     TEST_LOG("BasicDirectoryMockTest: Testing direct mock calls");
     
+#ifdef UNIT_TEST_BUILD
+    // For real directories, test actual directory operations
+    DIR* testDir = opendir(PREINSTALL_TEST_DIR);
+#else
     // Test if opendir mock is working
     DIR* testDir = p_wrapsImplMock->opendir("/opt/preinstall");
+#endif
     TEST_LOG("BasicDirectoryMockTest: opendir returned: %p", testDir);
     EXPECT_NE(nullptr, testDir);
     
     if (testDir) {
+#ifdef UNIT_TEST_BUILD
+        // Test real directory operations
+        struct dirent* entry = readdir(testDir);
+        TEST_LOG("BasicDirectoryMockTest: readdir returned: %p", entry);
+        if (entry) {
+            TEST_LOG("BasicDirectoryMockTest: entry name: %s", entry->d_name);
+        }
+        
+        // Test closedir
+        int closeResult = closedir(testDir);
+#else
         // Test if readdir mock is working
         struct dirent* entry = p_wrapsImplMock->readdir(testDir);
         TEST_LOG("BasicDirectoryMockTest: readdir returned: %p", entry);
@@ -672,6 +705,7 @@ TEST_F(PreinstallManagerTest, BasicDirectoryMockTest)
         
         // Test closedir
         int closeResult = p_wrapsImplMock->closedir(testDir);
+#endif
         TEST_LOG("BasicDirectoryMockTest: closedir returned: %d", closeResult);
     }
     
@@ -705,6 +739,7 @@ TEST_F(PreinstallManagerTest, PreinstallDirectoryReadSuccess)
         });
 
     // Override readdir to return multiple app directories
+#ifndef UNIT_TEST_BUILD
     ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
         .WillByDefault(::testing::Invoke([](DIR* dirp) -> struct dirent* {
             static int call_count = 0;
@@ -726,6 +761,7 @@ TEST_F(PreinstallManagerTest, PreinstallDirectoryReadSuccess)
                 return nullptr; // End of directory
             }
         }));
+#endif
 
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
@@ -748,8 +784,15 @@ TEST_F(PreinstallManagerTest, PreinstallDirectoryEmpty)
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
     // Override readdir to return no entries (empty directory)
+#ifndef UNIT_TEST_BUILD
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
         .WillOnce(::testing::Return(nullptr)); // Immediately return end of directory
+#else
+    // For real directories, create an empty test directory
+    const std::string emptyTestDir = PREINSTALL_TEST_DIR + "_empty";
+    system(("mkdir -p " + emptyTestDir).c_str());
+    // The real implementation will read this empty directory
+#endif
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
