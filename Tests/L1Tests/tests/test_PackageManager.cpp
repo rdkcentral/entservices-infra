@@ -1501,7 +1501,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 	// TC-39: list packages using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
 
-    packages->Release();
+    //packages->Release();
 
 	deinitforComRpc();
 }
@@ -1515,7 +1515,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
  * Verify config method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
@@ -1527,7 +1527,7 @@ TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
 	deinitforJsonRpc();
 }
-#endif
+
 /* Test Case for config method failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
