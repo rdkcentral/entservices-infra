@@ -164,7 +164,7 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     Json::Value consoleObj;
     consoleObj["limit"] = mAIConfiguration->getContainerConsoleLogCap();
     //TODO: SUPPORT Read console path from runtime config: RDKEMW-4432
-    consoleObj["path"] = "/opt/logs/apps.log";
+    consoleObj["path"] = "/opt/logs/" + config.mAppId + ".log";
     spec["console"] = std::move(consoleObj);
 #endif // (AI_BUILD_TYPE == AI_DEBUG)
 
