@@ -1542,7 +1542,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
     initforComRpc();
 
-    uint32_t timeout_ms = 1000;
+    uint32_t timeout_ms = 500;
 
     string packageId = "testPackage";
     string version = "2.0";
