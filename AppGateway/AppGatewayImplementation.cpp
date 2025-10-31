@@ -361,8 +361,9 @@ namespace WPEFramework
                     needsUpdate = true;
                 }
                 if (additionalContext.IsSet()) {
-                    additionalContext["origin"] = origin;
-                    paramsObj["additionalContext"] = additionalContext;
+                    JsonObject contextWithOrigin = additionalContext.Object();
+                    contextWithOrigin["origin"] = origin;
+                    paramsObj["additionalContext"] = contextWithOrigin;
                     needsUpdate = true;
                 }
 
