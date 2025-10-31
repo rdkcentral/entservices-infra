@@ -320,10 +320,10 @@ namespace WPEFramework
             if (mResolverPtr->HasEvent(method)) {
                 result = PreProcessEvent(context, alias, method, origin, params, resolution);
             } else if(mResolverPtr->HasComRpcRequestSupport(method)) {
-                result = ProcessComRpcRequest(context, alias, method, params, resolution);
+                result = ProcessComRpcRequest(context, alias, method, params, origin, resolution);
             } else {
                 // Check if includeContext is enabled for this method
-                std::string finalParams = UpdateContext(context, method, params);
+                std::string finalParams = UpdateContext(context, method, params, origin);
                 LOGDBG("Final Request params alias=%s Params = %s", alias.c_str(), finalParams.c_str());
 
                 result = mResolverPtr->CallThunderPlugin(alias, finalParams, resolution);
@@ -338,8 +338,8 @@ namespace WPEFramework
             }
             return result;
         }
-        
-        string AppGatewayImplementation::UpdateContext(const Context &context, const string& method, const string& params, const bool& onlyAdditionalContext) {
+
+        string AppGatewayImplementation::UpdateContext(const Context &context, const string& method, const string& params, const string& origin, const bool& onlyAdditionalContext) {
             // Check if includeContext is enabled for this method
             std::string finalParams = params;
             JsonValue additionalContext;
@@ -361,6 +361,7 @@ namespace WPEFramework
                     needsUpdate = true;
                 }
                 if (additionalContext.IsSet()) {
+                    additionalContext["origin"] = origin;
                     paramsObj["additionalContext"] = additionalContext;
                     needsUpdate = true;
                 }
@@ -374,11 +375,11 @@ namespace WPEFramework
             return finalParams;
         }
 
-        uint32_t AppGatewayImplementation::ProcessComRpcRequest(const Context &context, const string& alias, const string& method, const string& params, string &resolution) {
+        uint32_t AppGatewayImplementation::ProcessComRpcRequest(const Context &context, const string& alias, const string& method, const string& params, const string& origin, string &resolution) {
             uint32_t result = Core::ERROR_GENERAL;
             Exchange::IAppGatewayRequestHandler *requestHandler = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayRequestHandler>(alias);
             if (requestHandler != nullptr) {
-                std::string finalParams = UpdateContext(context, method, params, true);
+                std::string finalParams = UpdateContext(context, method, params, origin, true);
                 if (Core::ERROR_NONE != requestHandler->HandleAppGatewayRequest(context, method, finalParams, resolution)) {
                     LOGERR("HandleAppGatewayRequest failed for callsign: %s", alias.c_str());
                     ErrorUtils::CustomInternal("HandleAppGatewayRequest failed", resolution);
