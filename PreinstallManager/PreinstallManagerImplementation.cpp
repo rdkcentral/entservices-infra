@@ -24,7 +24,7 @@
 #ifdef UNIT_TEST_BUILD
     #define AI_PREINSTALL_DIRECTORY "/tmp/preinstall" //test directory for unit tests
 #else
-    #define AI_PREINSTALL_DIRECTORY "/opt/preinstall" //temporary directory for preinstall packages
+    #define AI_PREINSTALL_DIRECTORY "/opt/preinstall" //temporary directory for preinstaLl packages
 #endif
 
 namespace WPEFramework
