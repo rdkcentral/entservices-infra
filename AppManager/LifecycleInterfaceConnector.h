@@ -37,6 +37,7 @@
 #include <interfaces/ILifecycleManagerState.h>
 #include <interfaces/IAppManager.h>
 #include <condition_variable>
+#include <map>
 
 namespace WPEFramework
 {
@@ -116,6 +117,7 @@ namespace WPEFramework
                     std::condition_variable mStateChangedCV;
                     std::mutex mStateMutex;
                     std::string mAppIdAwaitingPause;
+		    std::map<std::string, Exchange::IAppManager::AppLifecycleState> mAppCurrentActionList;
         };
     }
 }
