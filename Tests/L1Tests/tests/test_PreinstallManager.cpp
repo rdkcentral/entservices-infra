@@ -192,7 +192,7 @@ protected:
 
         EXPECT_CALL(*mPackageInstallerMock, Register(::testing::_))
             .WillOnce(::testing::Invoke(
-                [&](Exchange::IPackageInstaller::INotification* notification) {
+                [&](Exchange::IPackageInstaller::INotification* notification) -> Core::hresult {
                     mPackageInstallerNotification_cb = notification;
                     return Core::ERROR_NONE;
                 }));
@@ -353,7 +353,7 @@ protected:
 
         // Mock PackageInstaller GetConfigForPackage
         ON_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-            .WillByDefault(::testing::Invoke([testPackages](const string &fileLocator, string& packageId, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            .WillByDefault(::testing::Invoke([testPackages](const string &fileLocator, string& packageId, string &version, WPEFramework::Exchange::RuntimeConfig &config) -> Core::hresult {
                 for (const auto& pkg : testPackages) {
                     std::string expectedPath = "/opt/preinstall/" + pkg.name + "/package.wgt";
                     if (fileLocator == expectedPath) {
@@ -371,7 +371,7 @@ protected:
         ON_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
             .WillByDefault(::testing::Invoke([testPackages](const string &packageId, const string &version, 
                                Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                               const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+                               const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) -> Core::hresult {
                 for (const auto& pkg : testPackages) {
                     if (packageId == pkg.packageId) {
                         failReason = pkg.failReason;
@@ -466,7 +466,7 @@ protected:
 
         // Setup PackageInstaller mocks for mixed packages
         ON_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-            .WillByDefault(::testing::Invoke([mixedPackages](const string &fileLocator, string& packageId, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            .WillByDefault(::testing::Invoke([mixedPackages](const string &fileLocator, string& packageId, string &version, WPEFramework::Exchange::RuntimeConfig &config) -> Core::hresult {
                 if (fileLocator.find("validPackage/package.wgt") != string::npos) {
                     packageId = "com.valid.package";
                     version = "1.5.2";
@@ -479,7 +479,7 @@ protected:
         ON_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
             .WillByDefault(::testing::Invoke([](const string &packageId, const string &version, 
                                Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                               const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+                               const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) -> Core::hresult {
                 if (packageId == "com.valid.package") {
                     failReason = Exchange::IPackageInstaller::FailReason::NONE;
                     return Core::ERROR_NONE;
@@ -607,7 +607,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithoutForceInstall)
     
     // Mock ListPackages to return existing packages
     EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) -> Core::hresult {
             auto mockIterator = FillPackageIterator();
             packages = mockIterator;
             return Core::ERROR_NONE;
@@ -784,7 +784,7 @@ TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryWithDummyPackageStructure)
 
     // Mock PackageInstaller GetConfigForPackage calls for different scenarios
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Invoke([&](const string &fileLocator, string& packageId, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+        .WillRepeatedly(::testing::Invoke([&](const string &fileLocator, string& packageId, string &version, WPEFramework::Exchange::RuntimeConfig &config) -> Core::hresult {
             // Determine response based on file locator path
             if (fileLocator.find("pkg1/package.wgt") != string::npos) {
                 packageId = "com.test.pkg1";
@@ -807,7 +807,7 @@ TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryWithDummyPackageStructure)
     EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly(::testing::Invoke([&](const string &packageId, const string &version, 
                            Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) -> Core::hresult {
             // Simulate successful installation for pkg1
             if (packageId == "com.test.pkg1") {
                 failReason = Exchange::IPackageInstaller::FailReason::NONE;
