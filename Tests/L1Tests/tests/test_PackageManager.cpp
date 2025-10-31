@@ -1825,7 +1825,7 @@ TEST_F(PackageManagerTest, getLockedInfousingJsonRpcError) {
 
 	deinitforJsonRpc();
 }
-#endif
+
 /* Test Case for get locked info error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -1850,3 +1850,4 @@ TEST_F(PackageManagerTest, getLockedInfousingComRpcError) {
 
 	deinitforComRpc();
 }
+#endif
