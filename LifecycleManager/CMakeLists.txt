@@ -44,7 +44,9 @@ set(PLUGIN_LIFECYCLE_MANAGER_SOURCES
 	WindowManagerHandler.cpp
 	State.cpp
 	StateHandler.cpp
-	StateTransitionHandler.cpp)
+	StateTransitionHandler.cpp
+	AppGatewayAuthenticator.cpp
+)
 
 if (AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
 list( APPEND PLUGIN_LIFECYCLE_MANAGER_SOURCES

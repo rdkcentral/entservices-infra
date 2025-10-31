@@ -33,7 +33,7 @@ namespace WPEFramework
     {
         SERVICE_REGISTRATION(LifecycleManagerImplementation, 1, 0);
 
-        LifecycleManagerImplementation::LifecycleManagerImplementation(): mLifecycleManagerNotification(), mLifecycleManagerStateNotification(), mLoadedApplications(), mService(nullptr)
+        LifecycleManagerImplementation::LifecycleManagerImplementation(): mLifecycleManagerNotification(), mLifecycleManagerStateNotification(), mLoadedApplications(), mService(nullptr), mAppGatewayAuthenticator(nullptr)
         {
             LOGINFO("Create LifecycleManagerImplementation Instance");
         }
@@ -50,6 +50,21 @@ namespace WPEFramework
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             LifecycleManagerTelemetryReporting::getInstance().initialize(service);
 #endif
+            if (ret)
+            {
+                mService = service;
+                mService->AddRef();
+                mAppGatewayAuthenticator = new AppGatewayAuthenticator(service);
+                if (mAppGatewayAuthenticator == nullptr)
+                {
+                    LOGERR("Failed to create AppGatewayAuthenticator");
+                    ret = false;
+                }
+            }
+            else
+            {
+                LOGERR("Failed to initialize RequestHandler");
+            }
 	    return ret;
         }
 
@@ -67,6 +82,11 @@ namespace WPEFramework
             {
                mService->Release();
                mService = nullptr;
+            }
+            if (mAppGatewayAuthenticator != nullptr)
+            {
+                delete mAppGatewayAuthenticator;
+                mAppGatewayAuthenticator = nullptr;
             }
         }
 
@@ -549,6 +569,7 @@ namespace WPEFramework
                 printf("unable to configure lifecyclemanager \n");
 		fflush(stdout);
 	    }
+
             return result;
         }
 

@@ -28,6 +28,7 @@
 #include "tracing/Logging.h"
 #include <mutex>
 #include "ApplicationContext.h"
+#include "AppGatewayAuthenticator.h"
 
 namespace WPEFramework
 {
@@ -139,6 +140,7 @@ namespace WPEFramework
 	        std::list<Exchange::ILifecycleManagerState::INotification*> mLifecycleManagerStateNotification;
                 std::list<ApplicationContext*> mLoadedApplications;
                 PluginHost::IShell* mService;
+                AppGatewayAuthenticator* mAppGatewayAuthenticator;
 	    private: /* internal methods */
                 bool initialize(PluginHost::IShell* service);
                 void terminate();
