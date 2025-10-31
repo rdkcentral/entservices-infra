@@ -259,50 +259,7 @@ protected:
         return Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
     }
 
-    void SetUpPreinstallDirectoryMocks()
-    {
-        // Mock directory operations for preinstall directory using real opendir like StorageManager
-        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* pathname) {
-                // Use real opendir function to avoid segmentation faults
-                return __real_opendir(pathname);
-            }));
 
-        // Create mock dirent structure for testing - similar to StorageManager approach
-        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault([](DIR* dirp) -> struct dirent* {
-                static int call_count = 0;
-                static struct dirent entry;
-                if (call_count == 0) {
-                    std::strncpy(entry.d_name, "testapp1", sizeof(entry.d_name) - 1);
-                    entry.d_name[sizeof(entry.d_name) - 1] = '\0'; // Ensure null termination
-                    entry.d_type = DT_DIR;
-                    call_count++;
-                    return &entry;
-                } else if (call_count == 1) {
-                    std::strncpy(entry.d_name, "testapp2", sizeof(entry.d_name) - 1);
-                    entry.d_name[sizeof(entry.d_name) - 1] = '\0'; // Ensure null termination
-                    entry.d_type = DT_DIR;
-                    call_count++;
-                    return &entry;
-                } else if (call_count == 2) {
-                    std::strncpy(entry.d_name, "testapp3", sizeof(entry.d_name) - 1);
-                    entry.d_name[sizeof(entry.d_name) - 1] = '\0'; // Ensure null termination
-                    entry.d_type = DT_DIR;
-                    call_count++;
-                    return &entry;
-                } else {
-                    call_count = 0; // Reset for next traversal
-                    return nullptr; // End of directory
-                }
-            });
-
-        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-            .WillByDefault([](DIR* dirp) {
-                // Simulate successful close
-                return 0;
-            });
-    }
 
 
 
@@ -318,25 +275,6 @@ protected:
         std::string testApp3Dir = preinstallDir + "/testapp3";
 
         TEST_LOG("SetUpPreinstallDirectoryWithRealFiles: Starting directory setup");
-        
-        // Enhanced system diagnostics
-        TEST_LOG("=== System Diagnostics ===");
-        TEST_LOG("Current user: %s", getenv("USER") ? getenv("USER") : "unknown");
-        TEST_LOG("Current working directory:");
-        system("pwd");
-        TEST_LOG("User ID and Group ID:");
-        system("id");
-        
-        // Check if /opt exists first
-        TEST_LOG("Checking if /opt directory exists:");
-        system("ls -la /opt");
-        
-        // Check /opt permissions
-        TEST_LOG("Checking /opt directory permissions:");
-        system("ls -ld /opt");
-        
-        // Remove any existing directory first to ensure clean state
-        TEST_LOG("Removing any existing /opt/preinstall directory");
         
         // Check if directory exists before attempting removal using system call
         int dir_exists = system("test -d /opt/preinstall");
@@ -371,25 +309,10 @@ protected:
         }
         
         // Create directories using mkdir function with 755 permissions
-        TEST_LOG("Creating base preinstall directory: %s", preinstallDir.c_str());
         int baseResult = mkdir(preinstallDir.c_str(), 0755);
-        TEST_LOG("mkdir result for %s: %s (errno: %d)", preinstallDir.c_str(), 
-                 (baseResult == 0 || errno == EEXIST) ? "success" : "failed", errno);
-        
-        TEST_LOG("Creating directory: %s", testApp1Dir.c_str());
         int result1 = mkdir(testApp1Dir.c_str(), 0755);
-        TEST_LOG("mkdir result for %s: %s (errno: %d)", testApp1Dir.c_str(), 
-                 (result1 == 0 || errno == EEXIST) ? "success" : "failed", errno);
-        
-        TEST_LOG("Creating directory: %s", testApp2Dir.c_str());
         int result2 = mkdir(testApp2Dir.c_str(), 0755);
-        TEST_LOG("mkdir result for %s: %s (errno: %d)", testApp2Dir.c_str(), 
-                 (result2 == 0 || errno == EEXIST) ? "success" : "failed", errno);
-        
-        TEST_LOG("Creating directory: %s", testApp3Dir.c_str());
         int result3 = mkdir(testApp3Dir.c_str(), 0755);
-        TEST_LOG("mkdir result for %s: %s (errno: %d)", testApp3Dir.c_str(), 
-                 (result3 == 0 || errno == EEXIST) ? "success" : "failed", errno);
         
         // Check if any mkdir commands failed (ignore EEXIST as it means directory already exists)
         bool anyFailed = (baseResult != 0 && errno != EEXIST) || 
@@ -409,48 +332,21 @@ protected:
             }
         }
 
-        // Verify directory creation
-        TEST_LOG("Verifying /opt/preinstall directory creation:");
-        system("ls -la /opt/preinstall");
-        
-        TEST_LOG("Checking directory permissions:");
-        system("ls -ld /opt/preinstall");
-        
         // Sleep for a moment to allow filesystem operations to complete
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         
         // Check if we can access the directory using system commands for safety
         int access_result = system("test -r /opt/preinstall && test -x /opt/preinstall");
-        if (access_result == 0) {
-            TEST_LOG("SUCCESS: /opt/preinstall directory is accessible");
-        } else {
-            TEST_LOG("ERROR: /opt/preinstall directory is NOT accessible");
-            
+        if (access_result != 0) {
             // Try to fix permissions
-            TEST_LOG("Attempting to fix permissions...");
             system("sudo chmod -R 755 /opt/preinstall 2>/dev/null");
             system("sudo chown -R $USER:$USER /opt/preinstall 2>/dev/null");
-            
-            // Check again
-            int retry_result = system("test -r /opt/preinstall && test -x /opt/preinstall");
-            if (retry_result == 0) {
-                TEST_LOG("SUCCESS: /opt/preinstall directory is now accessible after permission fix");
-            } else {
-                TEST_LOG("CRITICAL ERROR: /opt/preinstall directory is still NOT accessible after permission fix");
-            }
         }
 
-        // Create test package files with verification
-        TEST_LOG("Creating test package files:");
-        
+        // Create test package files
         int touchResult1 = system(("touch " + testApp1Dir + "/package.wgt").c_str());
-        TEST_LOG("touch result for %s/package.wgt: %d", testApp1Dir.c_str(), touchResult1);
-        
         int touchResult2 = system(("touch " + testApp2Dir + "/package.wgt").c_str());
-        TEST_LOG("touch result for %s/package.wgt: %d", testApp2Dir.c_str(), touchResult2);
-        
         int touchResult3 = system(("touch " + testApp3Dir + "/package.wgt").c_str());
-        TEST_LOG("touch result for %s/package.wgt: %d", testApp3Dir.c_str(), touchResult3);
         
         // Check if any touch commands failed
         if (touchResult1 != 0 || touchResult2 != 0 || touchResult3 != 0) {
@@ -461,33 +357,7 @@ protected:
             system(("touch " + testApp3Dir + "/package.wgt").c_str());
         }
 
-        // Final verification
-        TEST_LOG("Final directory structure:");
-        system("find /opt/preinstall -type f -name '*.wgt' -exec ls -la {} \\;");
-        
-        TEST_LOG("Final permission check:");
-        system("ls -la /opt/preinstall/*/");
-
-        // Use real directory operations instead of mocks
-        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* path) -> DIR* {
-                return opendir(path);
-            }));
-
-        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
-                return readdir(dir);
-            }));
-
-        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-            .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
-                return closedir(dir);
-            }));
-
-        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* path, struct stat* buf) -> int {
-                return stat(path, buf);
-            }));
+        TEST_LOG("SetUpPreinstallDirectoryWithRealFiles: Setup completed");
     }
 
     void CleanUpPreinstallDirectory()
@@ -495,21 +365,10 @@ protected:
         // Lock to prevent race conditions with other directory operations
         std::lock_guard<std::mutex> lock(g_directoryOperationsMutex);
         
-        TEST_LOG("CleanUpPreinstallDirectory: Cleaning up test directories");
-        
-        // Clear errno before any directory operations
-        errno = 0;
-        
-        // Show what we're about to remove
-        TEST_LOG("Contents before cleanup:");
-        
         // Use system command for safer directory checking
         int check_result = system("test -d /opt/preinstall");
-        if (check_result == 0) {
-            TEST_LOG("/opt/preinstall directory exists, proceeding with cleanup");
-        } else {
-            TEST_LOG("/opt/preinstall directory does not exist, no cleanup needed");
-            return;
+        if (check_result != 0) {
+            return; // Directory doesn't exist, no cleanup needed
         }
         
         // Remove test app directories and their contents first
@@ -518,86 +377,32 @@ protected:
         std::string testApp3Dir = "/opt/preinstall/testapp3";
         
         // Remove files first, then directories
-        TEST_LOG("Removing test app1 files and directory: %s", testApp1Dir.c_str());
         unlink((testApp1Dir + "/package.wgt").c_str());
         int result1 = rmdir(testApp1Dir.c_str());
-        TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp1Dir.c_str(), 
-                 (result1 == 0) ? "success" : "failed", errno);
         
-        TEST_LOG("Removing test app2 files and directory: %s", testApp2Dir.c_str());
         unlink((testApp2Dir + "/package.wgt").c_str());
         int result2 = rmdir(testApp2Dir.c_str());
-        TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp2Dir.c_str(), 
-                 (result2 == 0) ? "success" : "failed", errno);
         
-        TEST_LOG("Removing test app3 files and directory: %s", testApp3Dir.c_str());
         unlink((testApp3Dir + "/package.wgt").c_str());
         int result3 = rmdir(testApp3Dir.c_str());
-        TEST_LOG("rmdir result for %s: %s (errno: %d)", testApp3Dir.c_str(), 
-                 (result3 == 0) ? "success" : "failed", errno);
         
         // Finally remove the base preinstall directory
-        TEST_LOG("Removing base preinstall directory: /opt/preinstall");
         int baseResult = rmdir("/opt/preinstall");
-        TEST_LOG("rmdir result for /opt/preinstall: %s (errno: %d)", 
-                 (baseResult == 0) ? "success" : "failed", errno);
         
         // If any rmdir commands failed, try with sudo fallback
         bool anyFailed = (result1 != 0) || (result2 != 0) || (result3 != 0) || (baseResult != 0);
         if (anyFailed) {
-            TEST_LOG("WARNING: One or more rmdir commands failed. Trying with sudo fallback...");
-            int sudoResult = system("sudo rm -rf /opt/preinstall");
-            if (sudoResult == 0) {
-                TEST_LOG("Sudo fallback cleanup succeeded");
-            } else {
-                TEST_LOG("ERROR: Even sudo cleanup failed");
-            }
-        }
-        
-        // Verify cleanup
-        TEST_LOG("Verifying cleanup - /opt/preinstall should not exist:");
-        DIR* postCleanupDir = opendir("/opt/preinstall");
-        if (postCleanupDir == nullptr) {
-            TEST_LOG("Directory successfully removed");
-        } else {
-            TEST_LOG("Directory still exists after cleanup");
-            closedir(postCleanupDir);
+            system("sudo rm -rf /opt/preinstall");
         }
     }
 
     void VerifyPreinstallDirectoryAccess()
     {
-        TEST_LOG("=== Directory Access Verification ===");
-        
-        // Check current working directory
-        char cwd[1024];
-        if (getcwd(cwd, sizeof(cwd)) != NULL) {
-            TEST_LOG("Current working directory: %s", cwd);
-        }
-        
-        // Check /opt directory
-        TEST_LOG("Checking /opt directory:");
-        system("ls -la /opt 2>/dev/null || echo '/opt does not exist'");
-        
-        // Check if /opt/preinstall exists
+        // Simplified verification - just check if directory exists
         struct stat st;
-        if (stat("/opt/preinstall", &st) == 0) {
-            TEST_LOG("/opt/preinstall exists - Type: %s, Permissions: %o", 
-                     S_ISDIR(st.st_mode) ? "directory" : "file", st.st_mode & 0777);
-        } else {
-            TEST_LOG("/opt/preinstall does not exist, errno: %d (%s)", errno, strerror(errno));
+        if (stat("/opt/preinstall", &st) != 0) {
+            TEST_LOG("WARNING: /opt/preinstall does not exist");
         }
-        
-        // Try to open the directory
-        DIR* dir = opendir("/opt/preinstall");
-        if (dir != nullptr) {
-            TEST_LOG("opendir(/opt/preinstall) SUCCESS");
-            closedir(dir);
-        } else {
-            TEST_LOG("opendir(/opt/preinstall) FAILED, errno: %d (%s)", errno, strerror(errno));
-        }
-        
-        TEST_LOG("=== End Verification ===");
     }
 };
 
@@ -1034,8 +839,6 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithGetConfigFailure)
         .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
             return Core::ERROR_GENERAL; // Simulate failure
         });
-
-    SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
@@ -1069,8 +872,6 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithListPackagesFailure)
             version = PREINSTALL_MANAGER_TEST_VERSION;
             return Core::ERROR_NONE;
         });
-
-    SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
     
@@ -1105,8 +906,6 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithInstallFailure)
             failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
             return Core::ERROR_GENERAL;
         });
-
-    SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
@@ -1163,8 +962,6 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithEmptyPackageFields)
     // Install should not be called for packages with empty fields
     EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(0);
-
-    SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
@@ -1310,8 +1107,6 @@ TEST_F(PreinstallManagerTest, PackageManagerObjectLifecycle)
                            const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
             return Core::ERROR_NONE;
         });
-
-    SetUpPreinstallDirectoryMocks();
     
     // First call should create and release package manager object
     Core::hresult result1 = mPreinstallManagerImpl->StartPreinstall(true);
@@ -1451,30 +1246,6 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithPartialSuccess)
                 return Core::ERROR_GENERAL;
             }
         });
-
-    // Mock multiple directory entries using real opendir
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* pathname) {
-            return __real_opendir(pathname);
-        }));
-
-    static std::vector<std::string> multiEntries = {"app1", "app2", "app3"};
-    static size_t multiEntryIndex = 0;
-    static struct dirent multiDirent;
-    
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
-            if (multiEntryIndex < multiEntries.size()) {
-                strcpy(multiDirent.d_name, multiEntries[multiEntryIndex].c_str());
-                multiEntryIndex++;
-                return &multiDirent;
-            }
-            multiEntryIndex = 0; // Reset for next test
-            return nullptr;
-        }));
-
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Return(0));
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
@@ -1999,32 +1770,6 @@ TEST_F(PreinstallManagerTest, MultiplePackagesInPreinstall)
             }
             return Core::ERROR_NONE;
         });
-
-    // Mock directory with multiple entries using real opendir
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* pathname) {
-            return __real_opendir(pathname);
-        }));
-
-    static std::vector<std::string> multiPackageEntries = {"app1", "app2", "app3"};
-    static size_t multiPackageIndex = 0;
-    static struct dirent multiPackageDirent;
-    
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
-            if (multiPackageIndex < multiPackageEntries.size()) {
-                strcpy(multiPackageDirent.d_name, multiPackageEntries[multiPackageIndex].c_str());
-                multiPackageIndex++;
-                return &multiPackageDirent;
-            }
-            multiPackageIndex = 0; // Reset for next test
-            packageIndex = 0;      // Reset package index
-            installCallCount = 0;  // Reset install count
-            return nullptr;
-        }));
-
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Return(0));
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
@@ -2178,21 +1923,7 @@ TEST_F(PreinstallManagerTest, FailureReasonMappingComprehensive)
     system(("touch " + testDir + "/app3/package.wgt").c_str());
     system(("touch " + testDir + "/app4/package.wgt").c_str());
     
-    // Mock directory operations
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([testDir](const char* path) -> DIR* {
-            return opendir(testDir.c_str());
-        }));
-    
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> struct dirent* {
-            return readdir(dir);
-        }));
-        
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dir) -> int {
-            return closedir(dir);
-        }));
+    // Use default mocks from constructor - no need to override
     
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
@@ -2887,7 +2618,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithMissingPreinstallDirectory)
     // Don't set up any directory mocks - let it try to access real filesystem
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillByDefault(::testing::Invoke([](const char* path) -> DIR* {
-            return opendir(path);  // Will return NULL for non-existent directory
+            return __real_opendir(path);  // Will return NULL for non-existent directory
         }));
     
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
@@ -2945,7 +2676,7 @@ TEST_F(PreinstallManagerTest, DebugPreinstallDirectoryCreation)
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillByDefault(::testing::Invoke([](const char* path) -> DIR* {
             TEST_LOG("opendir called with path: %s", path);
-            DIR* result = opendir(path);
+            DIR* result = __real_opendir(path);
             if (result == nullptr) {
                 TEST_LOG("opendir failed for %s, errno: %d (%s)", path, errno, strerror(errno));
             } else {
