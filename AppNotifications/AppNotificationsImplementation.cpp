@@ -29,7 +29,8 @@ namespace WPEFramework
         AppNotificationsImplementation::AppNotificationsImplementation() : 
         mShell(nullptr),
         mSubMap(*this),
-        mThunderManager(*this)
+        mThunderManager(*this),
+        mEmitter(*this)
         {
         }
 
@@ -65,15 +66,6 @@ namespace WPEFramework
                     Core::IWorkerPool::Instance().Submit(SubscriberJob::Create(this, module, event, listen));
                 }
             }
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult AppNotificationsImplementation::Emit(const string &event /* @in */,
-                                    const string &payload /* @in @opaque */,
-                                    const string &appId /* @in */) {
-            LOGINFO("Emit [event= %s payload=%s appId=%s]",
-                    event.c_str(), payload.c_str(), appId.c_str());
-            Core::IWorkerPool::Instance().Submit(EmitJob::Create(this, event, payload, appId));
             return Core::ERROR_NONE;
         }
 
@@ -235,7 +227,7 @@ namespace WPEFramework
             LOGDBG("Inside Notifier: ");
             Exchange::IAppNotificationHandler *internalNotifier = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppNotificationHandler>(module);
             if (internalNotifier != nullptr) {
-                if (Core::ERROR_NONE == internalNotifier->HandleAppEventNotifier(event, listen, status)) {
+                if (Core::ERROR_NONE == internalNotifier->HandleAppEventNotifier(&mParent.mEmitter, event, listen, status)) {
                     LOGINFO("Notifier status for %s:%s is %s", module.c_str(), event.c_str(), status ? "true" : "false");
                 } else {
                     LOGERR("Notification subscription failure");

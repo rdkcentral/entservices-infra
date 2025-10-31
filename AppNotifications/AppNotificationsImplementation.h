@@ -27,7 +27,6 @@
 #include "ThunderUtils.h"
 #include "ContextUtils.h"
 #include "UtilsCallsign.h"
-#define HANDLE_NOTIFIER_SUFFIX ".handleAppEventNotifier"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -140,10 +139,6 @@ namespace Plugin {
                                             const string &module /* @in */,
                                             const string &event /* @in */) override;
 
-        Core::hresult Emit(const string &event /* @in */,
-                                    const string &payload /* @in @opaque */,
-                                    const string &appId /* @in */) override;
-
         Core::hresult Cleanup(const uint32_t connectionId /* @in */, const string &origin /* @in */) override;
 
         // IConfiguration interface
@@ -215,10 +210,35 @@ namespace Plugin {
                 string mAppId;
         };
 
+        class Emitter: public Exchange::IAppNotificationHandler::IEmitter {
+        private:
+            Emitter(const Emitter&) = delete;
+            Emitter& operator=(const Emitter&) = delete;
+        public:
+            Emitter(AppNotificationsImplementation& parent) : mParent(parent) {}
+
+            virtual void Emit(const string &event /* @in */,
+                              const string &payload /* @in @opaque */,
+                              const string &appId /* @in */) override
+            {
+                LOGINFO("Emit [event= %s payload=%s appId=%s]",
+                    event.c_str(), payload.c_str(), appId.c_str());
+                Core::IWorkerPool::Instance().Submit(EmitJob::Create(&mParent, event, payload, appId));
+            }
+
+            BEGIN_INTERFACE_MAP(Emitter)
+            INTERFACE_ENTRY(Exchange::IAppNotificationHandler::IEmitter)
+            END_INTERFACE_MAP
+
+        private:
+            AppNotificationsImplementation& mParent;
+        };
+
     private:
         PluginHost::IShell* mShell;
         SubscriberMap mSubMap;
         ThunderSubscriptionManager mThunderManager;
+        Core::Sink<Emitter> mEmitter;
     };
 }
 }

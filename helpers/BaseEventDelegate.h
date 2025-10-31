@@ -23,6 +23,7 @@
 #include "UtilsLogging.h"
 #include <set>
 #include "UtilsCallsign.h"
+#include <mutex>
 
 
 using namespace WPEFramework;
@@ -60,21 +61,21 @@ class BaseEventDelegate {
                 string mPayload;
         };
 
-        BaseEventDelegate(Exchange::IAppNotifications* appNotifications) : mAppNotifications(appNotifications),
+        BaseEventDelegate() : mRegisteredNotifications(),
         mRegisterMutex() {
         }
 
         ~BaseEventDelegate() {
-            mRegisteredNotifications.clear();
-
-            if (mAppNotifications != nullptr) {
-                mAppNotifications->Release();
-                mAppNotifications = nullptr;
+            // Cleanup registered notifications
+            for (auto& entry : mRegisteredNotifications) {
+                entry.second->Release();
             }
+
+            mRegisteredNotifications.clear();
         }
 
 
-        virtual bool HandleEvent(const string &event, const bool listen, bool &registrationError) = 0;
+        virtual bool HandleEvent(Exchange::IAppNotificationHandler::IEmitter *cb, const string &event, const bool listen, bool &registrationError) { return false; };
 
         bool Dispatch(const string &event, const string &payload) {
             LOGDBG("Dispatching %s with payload %s", event.c_str(), payload.c_str());
@@ -92,22 +93,24 @@ class BaseEventDelegate {
 
         bool DispatchToAppNotifications(const string& event, const string& payload) {
 
-            auto result = mAppNotifications->Emit(event, payload, "");
-
-            if (result == Core::ERROR_NONE) {
+            auto emitter = GetEmitterForNotification(event);
+            if (emitter != nullptr) {
+                LOGDBG("Using registered emitter for event %s", event.c_str());
+                emitter->Emit(event, payload, "");
                 return true;
-            } else {
-                LOGERR("Failed to emit event %s with payload %s", event.c_str(), payload.c_str());
-                return false;
             }
+            
+            LOGERR("No emitter found for event %s", event.c_str());
+            return false;
         }
 
         // new method to register notifications
         // which accepts a string and adds it to the mRegisteredNotifications vector
-        void AddNotification(const string& event) {
+        void AddNotification(const string& event, Exchange::IAppNotificationHandler::IEmitter *cb) {
             string event_l = StringUtils::toLower(event);
             std::lock_guard<std::mutex> lock(mRegisterMutex);
-            mRegisteredNotifications.insert(event_l);
+            mRegisteredNotifications[event_l] = cb;
+            cb->AddRef();
             LOGDBG("Notification registered = %s", event_l.c_str());
         }
 
@@ -120,18 +123,29 @@ class BaseEventDelegate {
             return result;
         }
 
+        Exchange::IAppNotificationHandler::IEmitter * GetEmitterForNotification(const string& event) {
+            string event_l = StringUtils::toLower(event);
+            std::lock_guard<std::mutex> lock(mRegisterMutex);
+            auto it = mRegisteredNotifications.find(event_l);
+            if (it != mRegisteredNotifications.end()) {
+                return it->second;
+            }
+            return nullptr;
+        }
+
         // new method remove the notification
         void RemoveNotification(const string& event) {
             string event_l = StringUtils::toLower(event);
             std::lock_guard<std::mutex> lock(mRegisterMutex);
+            auto it = mRegisteredNotifications.find(event_l);
+            if (it != mRegisteredNotifications.end()) {
+                it->second->Release();
+            }
             mRegisteredNotifications.erase(event_l);
         }
 
-    protected:
-        Exchange::IAppNotifications* mAppNotifications;
-
     private:
-        std::set<string> mRegisteredNotifications;
+        std::map<string, Exchange::IAppNotificationHandler::IEmitter*> mRegisteredNotifications;
         std::mutex mRegisterMutex;
 
 
