@@ -789,7 +789,7 @@ TEST_F(PreinstallManagerTest, PreinstallDirectoryEmpty)
         .WillOnce(::testing::Return(nullptr)); // Immediately return end of directory
 #else
     // For real directories, create an empty test directory
-    const std::string emptyTestDir = PREINSTALL_TEST_DIR + "_empty";
+    const std::string emptyTestDir = std::string(PREINSTALL_TEST_DIR) + "_empty";
     system(("mkdir -p " + emptyTestDir).c_str());
     // The real implementation will read this empty directory
 #endif
