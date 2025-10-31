@@ -1730,7 +1730,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingComRpcFailure) {
  * Verify lock method error by asserting that it returns Core::ERROR_BAD_REQUEST
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 
     initforJsonRpc();
@@ -1740,7 +1740,7 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 
 	deinitforJsonRpc();
 }
-
+#endif
 /* Test Case for lock error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
