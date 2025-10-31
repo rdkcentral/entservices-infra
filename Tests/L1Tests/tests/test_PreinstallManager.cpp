@@ -29,6 +29,9 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <fstream>
 
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
@@ -44,6 +47,12 @@
 extern "C" DIR* __real_opendir(const char* pathname);
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
+
+#ifdef UNIT_TEST_BUILD
+    #define PREINSTALL_TEST_DIR "/tmp/preinstall"
+#else
+    #define PREINSTALL_TEST_DIR "/opt/preinstall"
+#endif
 
 #define TIMEOUT   (50000)
 #define PREINSTALL_MANAGER_TEST_PACKAGE_ID      "com.test.preinstall.app"
@@ -224,6 +233,12 @@ protected:
     virtual ~PreinstallManagerTest() override
     {
         TEST_LOG("Delete ~PreinstallManagerTest Instance!");
+        
+#ifdef UNIT_TEST_BUILD
+        // Clean up test directory if using real directories
+        CleanUpRealTestDirectory();
+#endif
+        
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
@@ -245,13 +260,17 @@ protected:
 
     void SetUpPreinstallDirectoryMocks()
     {
+#ifdef UNIT_TEST_BUILD
+        // For unit tests, we'll use real directory operations with /tmp/preinstall
+        SetUpRealTestDirectory();
+#else
         // Mock directory operations for preinstall directory
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
             .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
                 TEST_LOG("SetUpPreinstallDirectoryMocks: opendir called with path: %s", pathname);
-                // Mock successful opening of /opt/preinstall directory
-                if (std::string(pathname) == "/opt/preinstall") {
-                    TEST_LOG("SetUpPreinstallDirectoryMocks: /opt/preinstall found, returning success");
+                // Mock successful opening of preinstall directory
+                if (std::string(pathname) == PREINSTALL_TEST_DIR) {
+                    TEST_LOG("SetUpPreinstallDirectoryMocks: preinstall directory found, returning success");
                     return reinterpret_cast<DIR*>(0x1234); // Non-null pointer for success
                 }
                 TEST_LOG("SetUpPreinstallDirectoryMocks: other path, returning null");
@@ -300,6 +319,57 @@ protected:
                 }
                 return -1; // Failure for other paths
             }));
+#endif
+    }
+
+    void SetUpRealTestDirectory()
+    {
+        // Create real test directory structure for unit tests
+        const std::string testDir = PREINSTALL_TEST_DIR;
+        
+        TEST_LOG("SetUpRealTestDirectory: Creating test directory structure");
+        
+        // Create base test directory
+        system(("mkdir -p " + testDir).c_str());
+        
+        // Create test app directories with sample widgets
+        std::vector<std::string> testApps = {"testapp1", "testapp2", "samplewidget"};
+        
+        for (const auto& app : testApps) {
+            std::string appDir = testDir + "/" + app;
+            system(("mkdir -p " + appDir).c_str());
+            
+            // Create a sample widget file in each app directory
+            std::string widgetFile = appDir + "/package.wgt";
+            std::ofstream widget(widgetFile);
+            if (widget.is_open()) {
+                widget << "Sample widget content for " << app << std::endl;
+                widget << "This is a test widget file" << std::endl;
+                widget.close();
+                TEST_LOG("SetUpRealTestDirectory: Created widget file: %s", widgetFile.c_str());
+            }
+            
+            // Create config.xml for each app
+            std::string configFile = appDir + "/config.xml";
+            std::ofstream config(configFile);
+            if (config.is_open()) {
+                config << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl;
+                config << "<widget xmlns=\"http://www.w3.org/ns/widgets\" id=\"com.test." << app << "\" version=\"1.0.0\">" << std::endl;
+                config << "  <name>" << app << "</name>" << std::endl;
+                config << "  <description>Test widget for " << app << "</description>" << std::endl;
+                config << "</widget>" << std::endl;
+                config.close();
+                TEST_LOG("SetUpRealTestDirectory: Created config file: %s", configFile.c_str());
+            }
+        }
+    }
+
+    void CleanUpRealTestDirectory()
+    {
+        // Clean up test directory
+        const std::string testDir = PREINSTALL_TEST_DIR;
+        system(("rm -rf " + testDir).c_str());
+        TEST_LOG("CleanUpRealTestDirectory: Cleaned up test directory");
     }
 };
 
