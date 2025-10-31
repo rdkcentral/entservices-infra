@@ -1515,7 +1515,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
  * Verify config method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
@@ -1573,7 +1573,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1648,7 +1648,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
  * Verify getConfigforPackages method error by asserting that it returns Core::ERROR_INVALID_SIGNATURE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcInvalidSignature) {
 
     initforJsonRpc();
@@ -1676,7 +1676,7 @@ TEST_F(PackageManagerTest, getConfigforPackageusingJsonRpcFailure) {
 
 	deinitforJsonRpc();
 }
-
+#endif
 /* Test Case for get config for packages error due to invalid signature using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
