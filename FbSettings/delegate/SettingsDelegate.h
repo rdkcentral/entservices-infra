@@ -20,7 +20,6 @@
 #ifndef __SETTINGSDELEGATE_H__
 #define __SETTINGSDELEGATE_H__
 #include "StringUtils.h"
-#include "TTSDelegate.h"
 #include "UserSettingsDelegate.h"
 #include "SystemDelegate.h"
 #include "NetworkDelegate.h"
@@ -32,10 +31,9 @@ using namespace WPEFramework;
 
 class SettingsDelegate {
     public:
-        SettingsDelegate(): tts(nullptr), userSettings(nullptr), systemDelegate(nullptr), networkDelegate(nullptr), mAppNotifications(nullptr) {}
+        SettingsDelegate(): userSettings(nullptr), systemDelegate(nullptr), networkDelegate(nullptr), mAppNotifications(nullptr) {}
 
         ~SettingsDelegate() {
-            tts = nullptr;
             userSettings = nullptr;
             systemDelegate = nullptr;
             networkDelegate = nullptr;
@@ -49,12 +47,12 @@ class SettingsDelegate {
                                     const bool listen) {
             LOGDBG("Passing on HandleAppEventNotifier");
             bool registrationError;
-            if (tts == nullptr || userSettings==nullptr || networkDelegate==nullptr) {
+            if (userSettings==nullptr || networkDelegate==nullptr) {
                 LOGERR("Services not available");
                 return;
             }
 
-            std::vector<std::shared_ptr<BaseEventDelegate>> delegates = {tts, userSettings, networkDelegate};
+            std::vector<std::shared_ptr<BaseEventDelegate>> delegates = {userSettings, networkDelegate};
             bool handled = false;
 
             for (const auto& delegate : delegates) {
@@ -88,12 +86,6 @@ class SettingsDelegate {
                 return;
             }
 
-
-
-            if (tts == nullptr) {
-                tts = std::make_shared<TTSDelegate>(shell, mAppNotifications);
-            }
-
             if (userSettings == nullptr) {
                 userSettings = std::make_shared<UserSettingsDelegate>(shell, mAppNotifications);
             }
@@ -105,6 +97,12 @@ class SettingsDelegate {
             if (networkDelegate == nullptr) {
                 networkDelegate = std::make_shared<NetworkDelegate>(shell, mAppNotifications);
             }
+        }
+
+        void Cleanup() {
+            systemDelegate.reset();
+            userSettings.reset();
+            networkDelegate.reset();
         }
 
 	std::shared_ptr<SystemDelegate> getSystemDelegate() const {
@@ -119,7 +117,6 @@ class SettingsDelegate {
             return networkDelegate;
         }
     private:
-        std::shared_ptr<TTSDelegate> tts;
         std::shared_ptr<UserSettingsDelegate> userSettings;
         std::shared_ptr<SystemDelegate> systemDelegate;
         std::shared_ptr<NetworkDelegate> networkDelegate;

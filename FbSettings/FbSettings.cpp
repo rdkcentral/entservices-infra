@@ -77,6 +77,7 @@ namespace Plugin {
         ASSERT(service == mShell);
         mConnectionId = 0;
 
+        mDelegate->Cleanup();
         // Clean up the delegate
         mDelegate.reset();
 

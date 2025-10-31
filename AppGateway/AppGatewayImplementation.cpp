@@ -343,28 +343,33 @@ namespace WPEFramework
             // Check if includeContext is enabled for this method
             std::string finalParams = params;
             JsonValue additionalContext;
+            bool needsUpdate = false;
             if (mResolverPtr->HasIncludeContext(method, additionalContext)) {
                 LOGDBG("Method '%s' requires context inclusion", method.c_str());
-
-                // Construct params with context
-                JsonObject contextObj;
-                contextObj["appId"] = context.appId;
-                contextObj["connectionId"] = context.connectionId;
-                contextObj["requestId"] = context.requestId;
                 JsonObject paramsObj;
                 if (!paramsObj.FromString(params))
                 {
                     LOGWARN("Failed to parse original params as JSON: %s", params.c_str());
                 }
-                paramsObj["context"] = contextObj;
-
+                // In json rpc params are optional
+                if (!onlyAdditionalContext) {
+                    JsonObject contextObj;
+                    contextObj["appId"] = context.appId;
+                    contextObj["connectionId"] = context.connectionId;
+                    contextObj["requestId"] = context.requestId;
+                    paramsObj["context"] = contextObj;
+                    needsUpdate = true;
+                }
                 if (additionalContext.IsSet()) {
                     paramsObj["additionalContext"] = additionalContext;
+                    needsUpdate = true;
                 }
 
-                paramsObj.ToString(finalParams);
-
-                LOGDBG("Modified params with context: %s", finalParams.c_str());
+                if (needsUpdate) {
+                    paramsObj.ToString(finalParams);
+                    LOGDBG("Modified params with context: %s", finalParams.c_str());
+                }
+                
             }
             return finalParams;
         }
