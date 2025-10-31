@@ -136,6 +136,10 @@
             "alias": "org.rdk.FbSettings",
             "useComRpc": true
         },
+        "accessibility.voiceGuidance": {
+            "alias": "org.rdk.FbSettings",
+            "useComRpc": true
+        },
         "device.network": {
             "alias": "org.rdk.FbSettings",
             "useComRpc": true

@@ -242,6 +242,10 @@ namespace Plugin {
             {
                 return GetVoiceGuidanceSettings(result);
             }
+            else if (lowerMethod == "accessibility.voiceguidance")
+            {
+                return GetVoiceGuidanceSettings(result);
+            }
 
             // Route audio description methods
             else if (lowerMethod == "accessibility.audiodescriptionsettings")
