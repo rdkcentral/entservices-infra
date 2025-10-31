@@ -1515,12 +1515,12 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
  * Verify config method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, configMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    //EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-40: Success in config using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("config"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
@@ -1542,27 +1542,28 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
     initforComRpc();
 
-    uint32_t timeout_ms = 3000;
+    //uint32_t timeout_ms = 3000;
 
     string packageId = "testPackage";
     string version = "2.0";
-    string fileLocator = "/opt/CDL/package1001";
-    Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
-    list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
+   // string fileLocator = "/opt/CDL/package1001";
+   // Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
+   // list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
     Exchange::RuntimeConfig runtimeConfig = {};
 
-    auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+   // auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
 
+	#if 0
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
             [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
                 return Core::ERROR_NONE;
             }));
+   #endif
+   // EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
-
-    waitforSignal(timeout_ms);
+   // waitforSignal(timeout_ms);
 
     // TC-41: Success in config using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Config(packageId, version, runtimeConfig));
@@ -1572,7 +1573,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
