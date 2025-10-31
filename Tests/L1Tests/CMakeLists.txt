@@ -181,6 +181,10 @@ target_include_directories(${MODULE_NAME}
 
 target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
 
+# Add UNIT_TEST_BUILD definition when PreinstallManager tests are enabled
+if(PLUGIN_PREINSTALL_MANAGER)
+    target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST_BUILD)
+endif()
 #install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
