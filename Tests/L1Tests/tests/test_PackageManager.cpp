@@ -1740,7 +1740,7 @@ TEST_F(PackageManagerTest, lockmethodusingJsonRpcError) {
 
 	deinitforJsonRpc();
 }
-#endif
+
 /* Test Case for lock error using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -1768,7 +1768,7 @@ TEST_F(PackageManagerTest, lockmethodusingComRpcError) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for unlock error using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
