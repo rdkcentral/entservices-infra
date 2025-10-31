@@ -17,6 +17,10 @@
 * limitations under the License.
 **/
 
+#ifndef UNIT_TEST
+#define UNIT_TEST
+#endif
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <string>
@@ -70,7 +74,14 @@ class PreinstallManagerTest : public ::testing::Test {
             // Setup directory operation mocks
             ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
                 .WillByDefault(::testing::Invoke([](const char* pathname) {
-                    // Use real opendir function to avoid segmentation faults
+                    // Handle /opt/preinstall directory access like StorageManager handles /opt/persistent
+                    std::string path_str(pathname);
+                    if (path_str == "/opt/preinstall" || path_str.find("/opt/preinstall") != std::string::npos) {
+                        // For preinstall directory, create a mock DIR* to ensure accessibility
+                        static DIR mock_dir;
+                        return &mock_dir;
+                    }
+                    // For other paths, use real opendir function
                     return __real_opendir(pathname);
                 }));
 
@@ -103,7 +114,14 @@ class PreinstallManagerTest : public ::testing::Test {
 
             ON_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
                 .WillByDefault([](const char* path, int mode) {
-                    // Simulate file accessible
+                    // Simulate file accessible, especially for /opt/preinstall directory
+                    return 0;
+                });
+
+            // Mock the mkdir function to allow creation of /opt/preinstall directory (like StorageManager test)
+            ON_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+                .WillByDefault([](const char* path, mode_t mode) {
+                    // Simulate successful directory creation
                     return 0;
                 });
 
