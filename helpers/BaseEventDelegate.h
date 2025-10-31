@@ -109,6 +109,10 @@ class BaseEventDelegate {
         void AddNotification(const string& event, Exchange::IAppNotificationHandler::IEmitter *cb) {
             string event_l = StringUtils::toLower(event);
             std::lock_guard<std::mutex> lock(mRegisterMutex);
+            auto it = mRegisteredNotifications.find(event_l);
+            if (it != mRegisteredNotifications.end()) {
+                it->second->Release();
+            }
             mRegisteredNotifications[event_l] = cb;
             cb->AddRef();
             LOGDBG("Notification registered = %s", event_l.c_str());
