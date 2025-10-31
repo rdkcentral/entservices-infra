@@ -39,7 +39,7 @@ namespace WPEFramework
             return mInstance;
 	}
 
-        RequestHandler::RequestHandler(): mRuntimeManagerHandler(nullptr), mWindowManagerHandler(nullptr), mRippleHandler(nullptr), mEventHandler(nullptr)
+        RequestHandler::RequestHandler(): mRuntimeManagerHandler(nullptr), mWindowManagerHandler(nullptr), mEventHandler(nullptr)
 	{
 	}
 
@@ -51,14 +51,6 @@ namespace WPEFramework
 	{
 	    bool ret = false;
 	    mEventHandler = eventHandler;	
-            mRippleHandler = new RippleHandler();
-            ret = mRippleHandler->initialize(eventHandler);
-	    if (!ret)
-	    {
-                printf("unable to initialize with ripple \n");
-		fflush(stdout);
-		return ret;
-	    }
             mRuntimeManagerHandler = new RuntimeManagerHandler();
             ret = mRuntimeManagerHandler->initialize(service, eventHandler);
 	    if (!ret)
@@ -82,7 +74,6 @@ namespace WPEFramework
         void RequestHandler::terminate()
 	{
             StateTransitionHandler::getInstance()->terminate();
-            mRippleHandler->terminate();
             if (mWindowManagerHandler)
             {
                 mWindowManagerHandler->terminate();
@@ -113,13 +104,8 @@ namespace WPEFramework
 
         bool RequestHandler::sendIntent(ApplicationContext* context, const string& intent, string& errorReason)
 	{
-	   std::string appId = context->getAppId();
-           bool ret = mRippleHandler->sendIntent(appId, intent, errorReason);
-           if (ret)
-	   {
-               context->setMostRecentIntent(intent);
-	   }
-           return ret;
+           context->setMostRecentIntent(intent);
+           return true;
 	}
 
 	bool RequestHandler::updateState(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState state, string& errorReason)
