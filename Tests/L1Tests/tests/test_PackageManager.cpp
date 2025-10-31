@@ -1542,7 +1542,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
 
     initforComRpc();
 
-    //uint32_t timeout_ms = 3000;
+    uint32_t timeout_ms = 1000;
 
     string packageId = "testPackage";
     string version = "2.0";
@@ -1569,7 +1569,7 @@ TEST_F(PackageManagerTest, configMethodusingComRpcSuccess) {
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Config(packageId, version, runtimeConfig));
 
 	//timeout_ms = 1000;
-    //waitforSignal(timeout_ms);
+    waitforSignal(timeout_ms);
 
 	deinitforComRpc();
 }
