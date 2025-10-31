@@ -115,11 +115,9 @@ protected:
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
         
-#ifndef UNIT_TEST_BUILD
-        // Only create and set wraps mock when not using real directories
+        // Always create wraps mock - but configure it differently based on test type
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
-#endif
 
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
@@ -149,7 +147,7 @@ protected:
         // Setup default directory mocking for preinstall operations
         SetUpPreinstallDirectoryMocks();
 
-#ifndef UNIT_TEST_BUILD
+        // Setup stat mock for both unit test and regular builds
         ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault(::testing::Invoke([](const char* pathname, struct stat* buf) -> int {
             std::string path(pathname);
@@ -178,7 +176,37 @@ protected:
             TEST_LOG("createResources: rmdir called with path: %s", pathname);
             return 0; // Always succeed
         }));
+
+        // Add default mocks for other common wrapped functions that might be called
+        ON_CALL(*p_wrapsImplMock, fopen(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke([](const char* pathname, const char* mode) -> FILE* {
+            TEST_LOG("createResources: fopen called with path: %s, mode: %s", pathname, mode);
+#ifdef UNIT_TEST_BUILD
+            return fopen(pathname, mode); // Use real fopen for unit tests
+#else
+            return nullptr; // Mock failure for regular tests
 #endif
+        }));
+
+        ON_CALL(*p_wrapsImplMock, fclose(::testing::_))
+        .WillByDefault(::testing::Invoke([](FILE* fp) -> int {
+            TEST_LOG("createResources: fclose called");
+#ifdef UNIT_TEST_BUILD
+            return fclose(fp); // Use real fclose for unit tests
+#else
+            return 0; // Mock success for regular tests
+#endif
+        }));
+
+        ON_CALL(*p_wrapsImplMock, system(::testing::_))
+        .WillByDefault(::testing::Invoke([](const char* command) -> int {
+            TEST_LOG("createResources: system called with command: %s", command);
+#ifdef UNIT_TEST_BUILD
+            return system(command); // Use real system for unit tests
+#else
+            return 0; // Mock success for regular tests
+#endif
+        }));
         
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
@@ -218,14 +246,12 @@ protected:
                     }));
         }
 
-#ifndef UNIT_TEST_BUILD
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr)
         {
             delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
         }
-#endif
 
         dispatcher->Deactivate();
         dispatcher->Release();
@@ -278,6 +304,33 @@ protected:
 #ifdef UNIT_TEST_BUILD
         // For unit tests, we'll use real directory operations with /tmp/preinstall
         SetUpRealTestDirectory();
+        
+        // Set up mock to delegate to real functions for preinstall directory
+        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+            .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
+                TEST_LOG("SetUpPreinstallDirectoryMocks: opendir called with path: %s", pathname);
+                // For preinstall directory, use real opendir
+                if (std::string(pathname).find(PREINSTALL_TEST_DIR) != std::string::npos) {
+                    TEST_LOG("SetUpPreinstallDirectoryMocks: using real opendir for preinstall path");
+                    return __real_opendir(pathname);
+                }
+                TEST_LOG("SetUpPreinstallDirectoryMocks: other path, returning null");
+                return nullptr; // Return null for other paths
+            }));
+
+        // For readdir, delegate to real function
+        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+            .WillByDefault(::testing::Invoke([](DIR* dirp) -> struct dirent* {
+                // Use real readdir for actual directory operations
+                return readdir(dirp);
+            }));
+
+        // For closedir, delegate to real function  
+        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+            .WillByDefault(::testing::Invoke([](DIR* dirp) -> int {
+                // Use real closedir for actual directory operations
+                return closedir(dirp);
+            }));
 #else
         // Mock directory operations for preinstall directory
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
