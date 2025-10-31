@@ -21,9 +21,9 @@
 #include "StringUtils.h"
 #include <interfaces/IAppNotifications.h>
 #include "UtilsLogging.h"
-#include <set>
 #include "UtilsCallsign.h"
 #include <mutex>
+#include <map>
 
 
 using namespace WPEFramework;
@@ -97,6 +97,7 @@ class BaseEventDelegate {
             if (emitter != nullptr) {
                 LOGDBG("Using registered emitter for event %s", event.c_str());
                 emitter->Emit(event, payload, "");
+                emitter->Release();
                 return true;
             }
             
@@ -129,12 +130,16 @@ class BaseEventDelegate {
 
         Exchange::IAppNotificationHandler::IEmitter * GetEmitterForNotification(const string& event) {
             string event_l = StringUtils::toLower(event);
+            Exchange::IAppNotificationHandler::IEmitter * emitter = nullptr;
             std::lock_guard<std::mutex> lock(mRegisterMutex);
             auto it = mRegisteredNotifications.find(event_l);
             if (it != mRegisteredNotifications.end()) {
-                return it->second;
+                emitter = it->second;
+                if (emitter != nullptr) {
+                    emitter->AddRef();
+                }
             }
-            return nullptr;
+            return emitter;
         }
 
         // new method remove the notification

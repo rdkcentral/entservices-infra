@@ -45,6 +45,9 @@ namespace WPEFramework {
                 Exchange::IAppNotificationHandler::IEmitter *cb,
                 const string &event,
                 const bool listen): mParent(*parent), mCallback(cb), mEvent(event), mListen(listen) {
+                    if (mCallback != nullptr) {
+                        mCallback->AddRef();
+                    }
                 }
             public:
                 EventRegistrationJob() = delete;
@@ -52,6 +55,10 @@ namespace WPEFramework {
                 EventRegistrationJob &operator=(const EventRegistrationJob &) = delete;
                 ~EventRegistrationJob()
                 {
+                    if (mCallback != nullptr) {
+                        mCallback->Release();
+                        mCallback = nullptr;
+                    }
                 }
 
                 static Core::ProxyType<Core::IDispatch> Create(FbSettings *parent,
