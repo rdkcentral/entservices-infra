@@ -144,8 +144,8 @@ class BaseEventDelegate {
             auto it = mRegisteredNotifications.find(event_l);
             if (it != mRegisteredNotifications.end()) {
                 it->second->Release();
+                mRegisteredNotifications.erase(event_l);
             }
-            mRegisteredNotifications.erase(event_l);
         }
 
     private:
