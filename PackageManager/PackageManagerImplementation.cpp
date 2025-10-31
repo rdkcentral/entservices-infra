@@ -29,11 +29,11 @@ namespace WPEFramework {
 namespace Plugin {
 
     SERVICE_REGISTRATION(PackageManagerImplementation, 1, 0);
-
+    #ifdef USE_LIBPACKAGE
     #define CHECK_CACHE() { if ((packageImpl.get() == nullptr) || (!cacheInitialized)) { \
         return Core::ERROR_UNAVAILABLE; \
     }}
-
+    #endif
     PackageManagerImplementation::PackageManagerImplementation()
         : mDownloaderNotifications()
         , mInstallNotifications()
@@ -95,10 +95,6 @@ namespace Plugin {
         LOGINFO();
         ASSERT(notification != nullptr);
         Core::hresult result = Core::ERROR_NONE;
-
-        done = true;
-        cv.notify_one();
-        mDownloadThreadPtr->join();
 
         mAdminLock.Lock();
         auto item = std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification);
@@ -169,6 +165,10 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
+
+        done = true;
+        cv.notify_one();
+        mDownloadThreadPtr->join();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         if (nullptr != mTelemetryMetricsObject)
@@ -449,7 +449,9 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("Installing '%s' ver:'%s' fileLocator: '%s'", packageId.c_str(), version.c_str(), fileLocator.c_str());
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
+        #endif
         if (fileLocator.empty()) {
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             recordAndPublishTelemetryData(TELEMETRY_MARKER_INSTALL_ERROR, packageId, requestTime, PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE);
@@ -457,15 +459,18 @@ namespace Plugin {
             return Core::ERROR_INVALID_SIGNATURE;
         }
 
-
+        #ifdef USE_LIBPACKAGE
         packagemanager::NameValues keyValues;
+        #endif
         struct IPackageInstaller::KeyValue kv;
         if (additionalMetadata != nullptr)
         {
             while (additionalMetadata->Next(kv) == true)
             {
                 LOGDBG("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
+                #ifdef USE_LIBPACKAGE
                 keyValues.push_back(std::make_pair(kv.name, kv.value));
+                #endif
             }
         }
         else
@@ -553,8 +558,9 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("Uninstalling id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-
+        #endif
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
@@ -613,7 +619,9 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages)
     {
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
+        #endif
         LOGTRACE("entry");
         Core::hresult result = Core::ERROR_NONE;
         std::list<Exchange::IPackageInstaller::Package> packageList;
@@ -636,7 +644,9 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig)
     {
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
+        #endif
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
@@ -655,7 +665,9 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version,
         Exchange::IPackageInstaller::InstallState &installState)
     {
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
+        #endif
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
@@ -721,8 +733,9 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-
+        #endif
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
@@ -801,6 +814,7 @@ namespace Plugin {
         runtimeConfig.runtimePath = config.runtimePath;
     }
 
+    #ifdef USE_LIBPACKAGE
     void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig)
     {
         runtimeConfig.dial = config.dial;
@@ -832,6 +846,7 @@ namespace Plugin {
         runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
     }
+    #endif
 
     Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version)
     {
@@ -843,8 +858,9 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-
+        #endif
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
@@ -884,7 +900,9 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
         string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked)
     {
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
+        #endif
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -904,7 +922,9 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::GetConfigForPackage(const string &fileLocator, string& id, string &version, Exchange::RuntimeConfig& config)
     {
+        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
+        #endif
         Core::hresult result = Core::ERROR_GENERAL;
 
         if (fileLocator.empty())
@@ -927,10 +947,12 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
+        #ifdef USE_THUNDER_R443
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
         }
+        #endif
 
         #ifdef USE_LIBPACKAGE
         packageImpl = packagemanager::IPackageImpl::instance();
@@ -946,9 +968,11 @@ namespace Plugin {
         }
         #endif
 
+        #ifdef USE_THUNDER_R443
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
+        #endif
         cacheInitialized = true;
         LOGDBG("exit");
     }
