@@ -156,6 +156,8 @@ set (PREINSTALLMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PreinstallMa
 set (PREINSTALLMANAGER_LIBS ${NAMESPACE}PreinstallManager ${NAMESPACE}PreinstallManagerImplementation)
 add_plugin_test_ex(PLUGIN_PREINSTALL_MANAGER tests/test_PreinstallManager.cpp "${PREINSTALLMANAGER_INC}" "${PREINSTALLMANAGER_LIBS}")
 
+# Add unit test build flag for PreinstallManager tests to enable test-friendly directory paths
+target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST_BUILD)
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
