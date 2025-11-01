@@ -463,6 +463,193 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
 }
 
 /**
+ * @brief Test readPreinstallDirectory method with real directory structure
+ *
+ * @details Test verifies that:
+ * - readPreinstallDirectory method is called and works correctly
+ * - Mock file system is properly accessed
+ * - Method can read mock preinstall directory contents
+ */
+TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryWithMockFileSystem)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Create a temporary directory structure for testing
+    std::string tempDir = "/tmp/test_preinstall";
+    std::string testAppDir = tempDir + "/testapp";
+    std::string packageFile = testAppDir + "/package.wgt";
+    
+    // Set up comprehensive mocks that simulate a working file system
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillByDefault(::testing::Invoke([tempDir](const char* pathname) {
+            // Check if this is the preinstall directory or our temp directory
+            if (std::string(pathname) == "/opt/preinstall" || std::string(pathname) == tempDir) {
+                // Return a fake but valid DIR pointer for the preinstall directory
+                return reinterpret_cast<DIR*>(0x1234);
+            }
+            // For other directories, try real opendir but don't fail if it doesn't exist
+            DIR* realDir = __real_opendir(pathname);
+            return realDir ? realDir : reinterpret_cast<DIR*>(0x1234);
+        }));
+
+    // Mock readdir to return our test app directory
+    static bool readDirFirstCall = true;
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault([](DIR*) -> struct dirent* {
+            static struct dirent testEntry;
+            if (readDirFirstCall) {
+                readDirFirstCall = false;
+                strcpy(testEntry.d_name, "testapp");
+                testEntry.d_type = DT_DIR;
+                return &testEntry;
+            }
+            return nullptr; // End of directory
+        });
+
+    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillByDefault(::testing::Return(0));
+
+    // Mock file access checks
+    ON_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
+        .WillByDefault([](const char* pathname, int mode) {
+            // Simulate that package.wgt files exist
+            std::string path(pathname);
+            if (path.find("package.wgt") != std::string::npos) {
+                return 0; // File exists
+            }
+            return -1; // File doesn't exist
+        });
+
+    // Mock PackageInstaller methods to simulate successful package reading
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            TEST_LOG("GetConfigForPackage called with fileLocator: %s", fileLocator.c_str());
+            if (fileLocator.find("testapp/package.wgt") != std::string::npos) {
+                id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
+                version = PREINSTALL_MANAGER_TEST_VERSION;
+                return Core::ERROR_NONE;
+            }
+            return Core::ERROR_GENERAL;
+        });
+
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            TEST_LOG("Install called for packageId: %s, version: %s, fileLocator: %s", 
+                     packageId.c_str(), version.c_str(), fileLocator.c_str());
+            return Core::ERROR_NONE;
+        });
+
+    // Call StartPreinstall which should internally call readPreinstallDirectory
+    TEST_LOG("Starting preinstall test...");
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // We expect this to succeed now that we have proper mocks
+    EXPECT_EQ(Core::ERROR_NONE, result) << "StartPreinstall should succeed with proper mocks";
+    
+    TEST_LOG("ReadPreinstallDirectoryWithMockFileSystem test completed with result: %d", result);
+    
+    // Reset static variable for next test
+    readDirFirstCall = true;
+    
+    releaseResources();
+}
+
+/**
+ * @brief Direct test of readPreinstallDirectory method using friend class access
+ *
+ * @details Test verifies that:
+ * - readPreinstallDirectory method can be called directly
+ * - Method properly handles mocked directory operations
+ * - Package information is correctly populated
+ */
+TEST_F(PreinstallManagerTest, DirectReadPreinstallDirectoryTest)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Set up comprehensive mocks for directory operations
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillByDefault(::testing::Invoke([](const char* pathname) {
+            TEST_LOG("opendir called with pathname: %s", pathname);
+            // For /opt/preinstall, return a valid fake DIR pointer
+            if (std::string(pathname) == "/opt/preinstall") {
+                return reinterpret_cast<DIR*>(0x1234);
+            }
+            return __real_opendir(pathname);
+        }));
+
+    // Mock readdir to return a test directory entry
+    static bool directReadDirFirstCall = true;
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault([](DIR* dirp) -> struct dirent* {
+            TEST_LOG("readdir called with DIR pointer: %p", dirp);
+            static struct dirent testEntry;
+            if (directReadDirFirstCall) {
+                directReadDirFirstCall = false;
+                strcpy(testEntry.d_name, "directtestapp");
+                testEntry.d_type = DT_DIR;
+                TEST_LOG("readdir returning entry: %s", testEntry.d_name);
+                return &testEntry;
+            }
+            TEST_LOG("readdir returning nullptr (end of directory)");
+            return nullptr; // End of directory
+        });
+
+    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillByDefault(::testing::Invoke([](DIR* dirp) {
+            TEST_LOG("closedir called with DIR pointer: %p", dirp);
+            return 0;
+        }));
+
+    // Mock GetConfigForPackage to simulate finding a valid package
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            TEST_LOG("GetConfigForPackage called with fileLocator: %s", fileLocator.c_str());
+            if (fileLocator.find("directtestapp/package.wgt") != std::string::npos) {
+                id = "com.direct.test.app";
+                version = "2.0.0";
+                TEST_LOG("GetConfigForPackage returning SUCCESS for %s", id.c_str());
+                return Core::ERROR_NONE;
+            }
+            TEST_LOG("GetConfigForPackage returning ERROR for %s", fileLocator.c_str());
+            return Core::ERROR_GENERAL;
+        });
+
+    // Create a list to hold packages
+    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
+    
+    // Directly call the private method using friend class access
+    TEST_LOG("Calling readPreinstallDirectory directly...");
+    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    
+    TEST_LOG("readPreinstallDirectory returned: %s", result ? "true" : "false");
+    TEST_LOG("Number of packages found: %zu", packages.size());
+    
+    // Verify the results
+    EXPECT_TRUE(result) << "readPreinstallDirectory should succeed with proper mocks";
+    EXPECT_GT(packages.size(), 0) << "At least one package should be found";
+    
+    // Check the package details if any were found
+    if (!packages.empty()) {
+        const auto& package = packages.front();
+        TEST_LOG("Found package - ID: %s, Version: %s, FileLocator: %s", 
+                 package.packageId.c_str(), 
+                 package.version.c_str(), 
+                 package.fileLocator.c_str());
+        
+        EXPECT_EQ(package.packageId, "com.direct.test.app");
+        EXPECT_EQ(package.version, "2.0.0");
+        EXPECT_TRUE(package.fileLocator.find("directtestapp/package.wgt") != std::string::npos);
+    }
+    
+    // Reset static variable for next test
+    directReadDirFirstCall = true;
+    
+    releaseResources();
+}
+
+/**
  * @brief Test QueryInterface functionality
  *
  * @details Test verifies that:
