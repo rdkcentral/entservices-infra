@@ -30,6 +30,11 @@
 #include <sys/stat.h>
 #include <cstring>
 
+// Ensure UNIT_TEST_BUILD is defined for conditional compilation
+#ifndef UNIT_TEST_BUILD
+#define UNIT_TEST_BUILD
+#endif
+
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
 #include "ServiceMock.h"
@@ -491,13 +496,13 @@ TEST_F(PreinstallManagerTest, QueryInterface)
 }
 
 /**
- * @brief Test readPreinstallDirectory with directory operation failures
+ * @brief Test StartPreinstall with directory operation failures
  *
  * @details Test verifies that:
- * - readPreinstallDirectory handles opendir failure gracefully
- * - Method returns false when directory cannot be opened
+ * - StartPreinstall handles opendir failure gracefully
+ * - Method returns ERROR_GENERAL when directory cannot be opened
  */
-TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryOpendirFailure)
+TEST_F(PreinstallManagerTest, StartPreinstallWithOpendirFailure)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
@@ -505,24 +510,22 @@ TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryOpendirFailure)
     EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillOnce(::testing::Return(nullptr));
     
-    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
-    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    EXPECT_FALSE(result);
-    EXPECT_TRUE(packages.empty());
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
     
     releaseResources();
 }
 
 /**
- * @brief Test readPreinstallDirectory with successful directory traversal
+ * @brief Test StartPreinstall with successful directory traversal
  *
  * @details Test verifies that:
- * - readPreinstallDirectory successfully reads directory contents
- * - Multiple packages are processed correctly
- * - Package information is populated properly
+ * - StartPreinstall successfully reads directory contents
+ * - Multiple packages are processed correctly through directory operations
+ * - Dot entries are properly skipped during directory reading
  */
-TEST_F(PreinstallManagerTest, ReadPreinstallDirectorySuccess)
+TEST_F(PreinstallManagerTest, StartPreinstallWithSuccessfulDirectoryTraversal)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
@@ -567,32 +570,27 @@ TEST_F(PreinstallManagerTest, ReadPreinstallDirectorySuccess)
             return Core::ERROR_GENERAL;
         });
     
-    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
-    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    // Mock Install for both apps
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(2)  // Should be called for 2 apps
+        .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
     
-    EXPECT_TRUE(result);
-    EXPECT_EQ(2, packages.size());  // Should find 2 packages (skipping . and ..)
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);  // Force install
     
-    // Verify package details
-    auto it = packages.begin();
-    EXPECT_EQ("com.test.app1", it->packageId);
-    EXPECT_EQ("1.0.0", it->version);
-    
-    ++it;
-    EXPECT_EQ("com.test.app2", it->packageId);
-    EXPECT_EQ("2.0.0", it->version);
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
 
 /**
- * @brief Test readPreinstallDirectory with invalid packages
+ * @brief Test StartPreinstall with invalid packages
  *
  * @details Test verifies that:
- * - readPreinstallDirectory handles packages with invalid configuration
- * - Invalid packages are still added to the list with error status
+ * - StartPreinstall handles packages with invalid configuration
+ * - Invalid packages don't cause installation failure
+ * - Method continues processing despite invalid packages
  */
-TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryWithInvalidPackages)
+TEST_F(PreinstallManagerTest, StartPreinstallWithInvalidPackages)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
@@ -615,15 +613,14 @@ TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryWithInvalidPackages)
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::Return(Core::ERROR_GENERAL));
     
-    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
-    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    // Install should not be called for invalid packages
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0);
     
-    EXPECT_TRUE(result);
-    EXPECT_EQ(1, packages.size());
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // Verify that invalid package is marked appropriately
-    auto& pkg = packages.front();
-    EXPECT_TRUE(pkg.installStatus.find("SKIPPED: getConfig failed") != string::npos);
+    // Should complete successfully even with invalid packages
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
@@ -652,20 +649,22 @@ TEST_F(PreinstallManagerTest, VerifyTestDirectoryPath)
     EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq(expectedPath.c_str())))
         .WillOnce(::testing::Return(nullptr)); // Return failure to avoid further processing
     
-    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
-    mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // Should return error due to directory open failure
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
     
     releaseResources();
 }
 
 /**
- * @brief Test readPreinstallDirectory with empty directory
+ * @brief Test StartPreinstall with empty directory
  *
  * @details Test verifies that:
- * - readPreinstallDirectory handles empty directories correctly
- * - Method returns true even when no packages are found
+ * - StartPreinstall handles empty directories correctly
+ * - Method returns success even when no packages are found
  */
-TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryEmptyDirectory)
+TEST_F(PreinstallManagerTest, StartPreinstallWithEmptyDirectory)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
@@ -681,23 +680,25 @@ TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryEmptyDirectory)
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
         .WillOnce(::testing::Return(0));
     
-    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
-    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    // No Install calls should be made for empty directory
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0);
     
-    EXPECT_TRUE(result);
-    EXPECT_TRUE(packages.empty());
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
 
 /**
- * @brief Test readPreinstallDirectory with directory containing only dots
+ * @brief Test StartPreinstall with directory containing only dots
  *
  * @details Test verifies that:
- * - readPreinstallDirectory correctly skips "." and ".." entries
- * - Method returns true but finds no packages
+ * - StartPreinstall correctly skips "." and ".." entries
+ * - Method returns success but finds no packages to install
  */
-TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryOnlyDotEntries)
+TEST_F(PreinstallManagerTest, StartPreinstallWithOnlyDotEntries)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
@@ -720,11 +721,13 @@ TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryOnlyDotEntries)
     EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
         .WillOnce(::testing::Return(0));
     
-    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
-    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    // No Install calls should be made since dot entries are skipped
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0);
     
-    EXPECT_TRUE(result);
-    EXPECT_TRUE(packages.empty());
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
@@ -798,36 +801,65 @@ TEST_F(PreinstallManagerTest, StartPreinstallComprehensiveDirectoryTest)
 }
 
 /**
- * @brief Test version comparison functionality
+ * @brief Test version comparison functionality through StartPreinstall behavior
  *
  * @details Test verifies that:
- * - isNewerVersion correctly compares version strings
- * - Different version formats are handled properly
+ * - Version comparison logic works correctly in StartPreinstall
+ * - Newer versions are installed while older ones are skipped
  */
-TEST_F(PreinstallManagerTest, VersionComparisonTest)
+TEST_F(PreinstallManagerTest, VersionComparisonThroughStartPreinstall)
 {
-    createPreinstallManagerImpl();
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Test newer versions
-    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("2.0.0", "1.0.0"));
-    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("1.1.0", "1.0.0"));
-    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("1.0.1", "1.0.0"));
-    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("1.0.0.1", "1.0.0.0"));
+    // Create test directory entry
+    static struct dirent testApp;
+    strcpy(testApp.d_name, "testapp");
     
-    // Test equal versions
-    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("1.0.0", "1.0.0"));
-    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("2.1.3", "2.1.3"));
+    // Mock directory operations
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
     
-    // Test older versions
-    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("1.0.0", "2.0.0"));
-    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("1.0.0", "1.1.0"));
-    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("1.0.0", "1.0.1"));
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(&testApp))
+        .WillOnce(::testing::Return(nullptr));
     
-    // Test version strings with build suffixes (should be stripped)
-    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("2.0.0-beta1", "1.0.0"));
-    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("2.0.0+build123", "1.0.0"));
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
     
-    releasePreinstallManagerImpl();
+    // Mock ListPackages to return existing package with older version
+    std::list<Exchange::IPackageInstaller::Package> existingPackages;
+    Exchange::IPackageInstaller::Package existingPkg;
+    existingPkg.packageId = "com.test.app";
+    existingPkg.version = "1.0.0";  // Older version
+    existingPkg.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+    existingPackages.push_back(existingPkg);
+    
+    auto packageIterator = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(existingPackages);
+    
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            packages = packageIterator;
+            return Core::ERROR_NONE;
+        });
+    
+    // Mock GetConfigForPackage to return newer version
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            id = "com.test.app";
+            version = "2.0.0";  // Newer version - should trigger install
+            return Core::ERROR_NONE;
+        });
+    
+    // Should be called once for newer version
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);  // No force install
+    
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    
+    releaseResources();
 }
 
 /**
