@@ -219,7 +219,12 @@ protected:
         // Mock directory operations for preinstall directory
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
             .WillByDefault(::testing::Invoke([](const char* pathname) {
-                // Simulate success
+                // Check if this is the preinstall directory
+                if (std::string(pathname) == "/opt/preinstall") {
+                    // Return a fake but valid DIR pointer for the preinstall directory
+                    return reinterpret_cast<DIR*>(0x1234);
+                }
+                // For other directories, use the real opendir
                 return __real_opendir(pathname);
             }));
 
