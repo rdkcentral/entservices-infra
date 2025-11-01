@@ -21,13 +21,10 @@
 
 #include "PreinstallManagerImplementation.h"
 
-// Conditional compilation for unit tests vs production
-#ifdef UNIT_TEST_BUILD
-    // For unit tests: Use a testable directory path that exists or can be created
-    #define AI_PREINSTALL_DIRECTORY "/tmp/test_preinstall" //test directory for unit tests
+#ifdef UNIT_TESTING
+    #define AI_PREINSTALL_DIRECTORY "/tmp/install" // Test directory for unit tests
 #else
-    // For production: Use the original production path
-    #define AI_PREINSTALL_DIRECTORY "/opt/preinstall" //temporary directory for preinstall packages
+    #define AI_PREINSTALL_DIRECTORY "/opt/preinstall" // Original production directory
 #endif
 
 namespace WPEFramework
