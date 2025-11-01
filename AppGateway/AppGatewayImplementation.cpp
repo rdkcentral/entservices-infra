@@ -343,35 +343,29 @@ namespace WPEFramework
             // Check if includeContext is enabled for this method
             std::string finalParams = params;
             JsonValue additionalContext;
-            bool needsUpdate = false;
             if (mResolverPtr->HasIncludeContext(method, additionalContext)) {
                 LOGDBG("Method '%s' requires context inclusion", method.c_str());
                 JsonObject paramsObj;
                 if (!paramsObj.FromString(params))
                 {
+                    // In json rpc params are optional
                     LOGWARN("Failed to parse original params as JSON: %s", params.c_str());
                 }
-                // In json rpc params are optional
-                if (!onlyAdditionalContext) {
+                if (onlyAdditionalContext && additionalContext.IsSet()) {
+                    JsonObject contextWithOrigin = additionalContext.Object();
+                    contextWithOrigin["origin"] = origin;
+                    JsonObject finalParamsObject;
+                    finalParamsObject["params"] = paramsObj;
+                    finalParamsObject["_additionalContext"] = contextWithOrigin;
+                    finalParamsObject.ToString(finalParams);
+                } else {
                     JsonObject contextObj;
                     contextObj["appId"] = context.appId;
                     contextObj["connectionId"] = context.connectionId;
                     contextObj["requestId"] = context.requestId;
                     paramsObj["context"] = contextObj;
-                    needsUpdate = true;
-                }
-                if (additionalContext.IsSet()) {
-                    JsonObject contextWithOrigin = additionalContext.Object();
-                    contextWithOrigin["origin"] = origin;
-                    paramsObj["additionalContext"] = contextWithOrigin;
-                    needsUpdate = true;
-                }
-
-                if (needsUpdate) {
                     paramsObj.ToString(finalParams);
-                    LOGDBG("Modified params with context: %s", finalParams.c_str());
-                }
-                
+                }                
             }
             return finalParams;
         }
