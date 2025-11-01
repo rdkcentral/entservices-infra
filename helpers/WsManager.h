@@ -217,8 +217,7 @@ public:
         void ToMessage(const Core::ProxyType<Core::JSON::IElement> &jsonObject) {
             string jsonMessage;
             jsonObject->ToString(jsonMessage);
-            LOGDBG("WebSocket Bytes: %d", static_cast<uint32_t>(jsonMessage.size()));
-            LOGDBG("WebSocket Sent: %s", jsonMessage.c_str());
+            LOGTRACE("WebSocket Sent: %s", jsonMessage.c_str());
         }
         void ProcessMessage(Core::ProxyType<Core::JSONRPC::Message> &message, uint32_t connectionId) {
             // Check for message->Id.IsSet()
@@ -244,7 +243,7 @@ public:
 
                     std::string methodName = message->Designator.Value();
                     
-                    LOGDBG("[ProcessMessage] Method: %s, RequestId: %d, ConnectionId: %d",
+                    LOGTRACE("[ProcessMessage] Method: %s, RequestId: %d, ConnectionId: %d",
                             methodName.c_str(), requestId, connectionId);
 
                     // SYNCHRONOUS PROCESSING
@@ -359,7 +358,7 @@ public:
 
 
 
-        LOGINFO("[SendJSONRPCResponse] Sending response for requestId=%d, connectionId=%d response=%s", requestId, connectionId, result.c_str());
+        LOGTRACE("[SendJSONRPCResponse] Sending response for requestId=%d, connectionId=%d response=%s", requestId, connectionId, result.c_str());
 
         // Send the response back to the WebSocket client
         mChannel->Submit(connectionId, Core::ProxyType<Core::JSON::IElement>(response));

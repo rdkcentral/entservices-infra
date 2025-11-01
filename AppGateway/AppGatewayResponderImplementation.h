@@ -297,6 +297,9 @@ namespace Plugin {
 
 
         void ReturnMessageInSocket(const uint32_t connectionId, const int requestId, const string payload ) {
+             LOGDBG("<--[[%d-%d]] payload=%s",
+                    connectionId, requestId, payload.c_str());
+
             // Send response back to client
             mWsManager.SendMessageToConnection(connectionId, payload, requestId);
         }

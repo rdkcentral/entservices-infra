@@ -105,9 +105,10 @@ namespace WPEFramework
                     r.event = ExtractStringField(resolutionObj, "event");
                     r.permissionGroup = ExtractStringField(resolutionObj, "permissionGroup");
                     r.additionalContext = ExtractAdditionalContext(resolutionObj, "additionalContext");
-                    r.includeContext = ExtractBooleanField(resolutionObj, "includeContext", r.additionalContext.IsSet() && !r.additionalContext.IsNull());
-                    r.useComRpc = ExtractBooleanField(resolutionObj, "useComRpc", r.additionalContext.IsSet() && !r.additionalContext.IsNull());
-                    
+                    bool hasAdditionalContext = r.additionalContext.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT;
+                    r.includeContext = ExtractBooleanField(resolutionObj, "includeContext", hasAdditionalContext);
+                    r.useComRpc = ExtractBooleanField(resolutionObj, "useComRpc", hasAdditionalContext);
+
                     LOGDBG("[Resolver] Loaded resolution for key: %s -> alias: %s, event: %s, permissionGroup: %s, includeContext: %s, useComRpc: %s",
                            key.c_str(), r.alias.c_str(), r.event.c_str(), r.permissionGroup.c_str(),
                            r.includeContext ? "true" : "false", r.useComRpc ? "true" : "false");

@@ -257,7 +257,7 @@ namespace WPEFramework
 
         Core::hresult AppGatewayImplementation::Resolve(const Context& context, const string& origin, const string& method, const string& params, string& resolution)
         {
-            LOGINFO("method=%s params=%s", method.c_str(), params.c_str());
+            LOGTRACE("method=%s params=%s", method.c_str(), params.c_str());
             return InternalResolve(context, method, params, origin, resolution);
         }
 
@@ -265,7 +265,7 @@ namespace WPEFramework
         {
             Core::hresult result = FetchResolvedData(context, method, params, origin, resolution);
             if (!resolution.empty()) {
-                LOGINFO("Final resolution: %s", resolution.c_str());
+                LOGTRACE("Final resolution: %s", resolution.c_str());
                 Core::IWorkerPool::Instance().Submit(RespondJob::Create(this, context, resolution, origin));
             }
             return result;
@@ -315,7 +315,7 @@ namespace WPEFramework
                     }
                 }
             }
-            LOGDBG("Resolved method '%s' to alias '%s'", method.c_str(), alias.c_str());            
+            LOGTRACE("Resolved method '%s' to alias '%s'", method.c_str(), alias.c_str());            
             // Check if the given method is an event
             if (mResolverPtr->HasEvent(method)) {
                 result = PreProcessEvent(context, alias, method, origin, params, resolution);
@@ -324,7 +324,7 @@ namespace WPEFramework
             } else {
                 // Check if includeContext is enabled for this method
                 std::string finalParams = UpdateContext(context, method, params, origin);
-                LOGDBG("Final Request params alias=%s Params = %s", alias.c_str(), finalParams.c_str());
+                LOGTRACE("Final Request params alias=%s Params = %s", alias.c_str(), finalParams.c_str());
 
                 result = mResolverPtr->CallThunderPlugin(alias, finalParams, resolution);
                 if (result != Core::ERROR_NONE) {
@@ -351,13 +351,17 @@ namespace WPEFramework
                     // In json rpc params are optional
                     LOGWARN("Failed to parse original params as JSON: %s", params.c_str());
                 }
-                if (onlyAdditionalContext && additionalContext.IsSet()) {
-                    JsonObject contextWithOrigin = additionalContext.Object();
-                    contextWithOrigin["origin"] = origin;
-                    JsonObject finalParamsObject;
-                    finalParamsObject["params"] = paramsObj;
-                    finalParamsObject["_additionalContext"] = contextWithOrigin;
-                    finalParamsObject.ToString(finalParams);
+                if (onlyAdditionalContext) {
+                    if (additionalContext.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
+                        JsonObject contextWithOrigin = additionalContext.Object();
+                        contextWithOrigin["origin"] = origin;
+                        JsonObject finalParamsObject;
+                        finalParamsObject["params"] = paramsObj;
+                        finalParamsObject["_additionalContext"] = contextWithOrigin;
+                        finalParamsObject.ToString(finalParams);
+                    } else {
+                        LOGERR("Additional context is not a JSON object for method: %s", method.c_str());
+                    }
                 } else {
                     JsonObject contextObj;
                     contextObj["appId"] = context.appId;
@@ -398,7 +402,7 @@ namespace WPEFramework
                     bool resultValue;
                     // Use ObjectUtils::HasBooleanEntry and populate resultValue
                     if (ObjectUtils::HasBooleanEntry(params_obj, "listen", resultValue)) {
-                        LOGDBG("Event method '%s' with listen: %s", method.c_str(), resultValue ? "true" : "false");
+                        LOGTRACE("Event method '%s' with listen: %s", method.c_str(), resultValue ? "true" : "false");
                         auto ret_value = HandleEvent(context, alias, method, origin, resultValue);
                         JsonObject returnResult;
                         returnResult["listening"] = resultValue;

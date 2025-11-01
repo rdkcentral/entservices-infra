@@ -188,37 +188,33 @@ namespace WPEFramework
                                                      const uint32_t requestId,
                                                      const uint32_t connectionId)
         {
-
-            LOGINFO("Received message: method=%s, params=%s, requestId=%d, connectionId=%d",
-                    method.c_str(), params.c_str(), requestId, connectionId);
-
             std::string resolution;
             string appId;
 
             if (mAppIdRegistry.Get(connectionId, appId)) {
+
+                LOGDBG("-->[[%d-%d]] appid=%s, method=%s, params=%s",
+                    connectionId, requestId, appId.c_str(), method.c_str(), params.c_str());
+
                 // App Id is available
                 Context context = {
-                requestId,
-                connectionId,
-                appId};
+                    requestId,
+                    connectionId,
+                    appId
+                };
 
                 if (mResolver == nullptr) {
                     mResolver = mService->QueryInterface<Exchange::IAppGatewayResolver>();
-                } else {
-                    LOGDBG("mResolver already initialized");
                 }
 
                 if (mResolver == nullptr) {
                     LOGERR("Resolver interface not available");
                     return;
-                } else {
-                    LOGDBG("Same as before");
                 }
+
                 string resolution;
                 if (Core::ERROR_NONE != mResolver->Resolve(context, APP_GATEWAY_CALLSIGN, method, params, resolution)) {
                     LOGERR("Resolver Failure");
-                } else {
-                    LOGDBG("mResolver was successful");
                 }
             } else {
                 LOGERR("No App ID found for connection %d. Terminate connection", connectionId);
