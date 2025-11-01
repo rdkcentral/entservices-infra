@@ -29,9 +29,6 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cstring>
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
 
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
@@ -44,15 +41,7 @@
 #include "WrapsMock.h"
 #include "FactoriesImplementation.h"
 
-extern "C" DIR* __real_opendir(const char* pathname);
-
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
-
-#ifdef UNIT_TEST_BUILD
-    #define PREINSTALL_TEST_DIR "/tmp/preinstall"
-#else
-    #define PREINSTALL_TEST_DIR "/opt/preinstall"
-#endif
 
 #define TIMEOUT   (50000)
 #define PREINSTALL_MANAGER_TEST_PACKAGE_ID      "com.test.preinstall.app"
@@ -114,8 +103,6 @@ protected:
         mServiceMock = new NiceMock<ServiceMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
-        
-        // Always create wraps mock - but configure it differently based on test type
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
 
@@ -144,81 +131,13 @@ protected:
                     return Core::ERROR_NONE;
                 }));
 
-        // Setup default directory mocking for preinstall operations
-        SetUpPreinstallDirectoryMocks();
-
-        // Setup stat mock for both unit test and regular builds
         ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* pathname, struct stat* buf) -> int {
-            std::string path(pathname);
-            TEST_LOG("createResources: stat called with path: %s", pathname);
-            // Simulate successful stat for preinstall related files/directories
-            if (path.find("/opt/preinstall") != std::string::npos || path.find("/tmp/preinstall") != std::string::npos) {
-                std::memset(buf, 0, sizeof(struct stat));
-                buf->st_mode = S_IFDIR | 0755; // Directory with permissions
-                buf->st_size = 4096;
-                TEST_LOG("createResources: stat returning success for preinstall path");
-                return 0; // Success
-            }
-            TEST_LOG("createResources: stat returning failure for other path");
-            return -1; // Failure for other paths
-        }));
-
-        // Add additional file system mocks that might be needed
-        ON_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* pathname, mode_t mode) -> int {
-            TEST_LOG("createResources: mkdir called with path: %s", pathname);
-            return 0; // Always succeed
-        }));
-
-        ON_CALL(*p_wrapsImplMock, rmdir(::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* pathname) -> int {
-            TEST_LOG("createResources: rmdir called with path: %s", pathname);
-            return 0; // Always succeed
-        }));
-
-        // Add default mocks for other common wrapped functions that might be called
-        ON_CALL(*p_wrapsImplMock, fopen(::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* pathname, const char* mode) -> FILE* {
-            TEST_LOG("createResources: fopen called with path: %s, mode: %s", pathname, mode);
-#ifdef UNIT_TEST_BUILD
-            return fopen(pathname, mode); // Use real fopen for unit tests
-#else
-            return nullptr; // Mock failure for regular tests
-#endif
-        }));
-
-        ON_CALL(*p_wrapsImplMock, fclose(::testing::_))
-        .WillByDefault(::testing::Invoke([](FILE* fp) -> int {
-            TEST_LOG("createResources: fclose called");
-#ifdef UNIT_TEST_BUILD
-            return fclose(fp); // Use real fclose for unit tests
-#else
-            return 0; // Mock success for regular tests
-#endif
-        }));
-
-        ON_CALL(*p_wrapsImplMock, system(::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* command) -> int {
-            TEST_LOG("createResources: system called with command: %s", command);
-#ifdef UNIT_TEST_BUILD
-            return system(command); // Use real system for unit tests
-#else
-            return 0; // Mock success for regular tests
-#endif
-        }));
+        .WillByDefault(::testing::Return(-1));
         
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
-        
-        if (mPreinstallManagerImpl == nullptr) {
-            TEST_LOG("createResources - ERROR: getInstance() returned nullptr!");
-            status = Core::ERROR_GENERAL;
-        } else {
-            TEST_LOG("createResources - getInstance() successful, impl = %p", mPreinstallManagerImpl);
-            TEST_LOG("createResources - All done!");
-            status = Core::ERROR_NONE;
-        }
+        TEST_LOG("createResources - All done!");
+        status = Core::ERROR_NONE;
 
         return status;
     }
@@ -274,12 +193,6 @@ protected:
     virtual ~PreinstallManagerTest() override
     {
         TEST_LOG("Delete ~PreinstallManagerTest Instance!");
-        
-#ifdef UNIT_TEST_BUILD
-        // Clean up test directory if using real directories
-        CleanUpRealTestDirectory();
-#endif
-        
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
@@ -301,143 +214,40 @@ protected:
 
     void SetUpPreinstallDirectoryMocks()
     {
-#ifdef UNIT_TEST_BUILD
-        // For unit tests, we'll use real directory operations with /tmp/preinstall
-        SetUpRealTestDirectory();
-        
-        // Set up mock to delegate to real functions for preinstall directory
-        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
-                TEST_LOG("SetUpPreinstallDirectoryMocks: opendir called with path: %s", pathname);
-                // For preinstall directory, use real opendir
-                if (std::string(pathname).find(PREINSTALL_TEST_DIR) != std::string::npos) {
-                    TEST_LOG("SetUpPreinstallDirectoryMocks: using real opendir for preinstall path");
-                    return __real_opendir(pathname);
-                }
-                TEST_LOG("SetUpPreinstallDirectoryMocks: other path, returning null");
-                return nullptr; // Return null for other paths
-            }));
-
-        // For readdir, delegate to real function
-        ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Invoke([](DIR* dirp) -> struct dirent* {
-                // Use real readdir for actual directory operations
-                return readdir(dirp);
-            }));
-
-        // For closedir, delegate to real function  
-        ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-            .WillByDefault(::testing::Invoke([](DIR* dirp) -> int {
-                // Use real closedir for actual directory operations
-                return closedir(dirp);
-            }));
-#else
         // Mock directory operations for preinstall directory
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
-                TEST_LOG("SetUpPreinstallDirectoryMocks: opendir called with path: %s", pathname);
-                // Mock successful opening of preinstall directory
-                if (std::string(pathname) == PREINSTALL_TEST_DIR) {
-                    TEST_LOG("SetUpPreinstallDirectoryMocks: preinstall directory found, returning success");
-                    return reinterpret_cast<DIR*>(0x1234); // Non-null pointer for success
-                }
-                TEST_LOG("SetUpPreinstallDirectoryMocks: other path, returning null");
-                return nullptr; // Return null for other paths to simulate directory not found
-            }));
+            .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Non-null pointer
 
         // Create mock dirent structure for testing
         static struct dirent testDirent;
-        std::memset(&testDirent, 0, sizeof(testDirent));
-        std::strncpy(testDirent.d_name, "testapp", sizeof(testDirent.d_name) - 1);
-        testDirent.d_type = DT_DIR;
+        strcpy(testDirent.d_name, "testapp");
+        static struct dirent* direntPtr = &testDirent;
+        static bool firstCall = true;
 
         ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Invoke([](DIR* dirp) -> struct dirent* {
-                static int call_count = 0;
-                static struct dirent entry;
-                TEST_LOG("SetUpPreinstallDirectoryMocks: readdir called, call_count = %d", call_count);
-                
-                if (call_count == 0) {
-                    std::strncpy(entry.d_name, "testapp", sizeof(entry.d_name) - 1);
-                    entry.d_type = DT_DIR;
-                    call_count++;
-                    TEST_LOG("SetUpPreinstallDirectoryMocks: returning testapp");
-                    return &entry;
-                } else if (call_count == 1) {
-                    std::strncpy(entry.d_name, "preinstallapp", sizeof(entry.d_name) - 1);
-                    entry.d_type = DT_DIR;
-                    call_count++;
-                    return &entry;
-                } else {
-                    call_count = 0; // Reset for next traversal
-                    return nullptr; // End of directory
+            .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
+                if (firstCall) {
+                    firstCall = false;
+                    return direntPtr; // Return test directory entry first time
                 }
+                return nullptr; // End of directory
             }));
 
         ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
             .WillByDefault(::testing::Return(0));
 
-        // Mock access function to simulate directory permissions
+        // Mock additional file system operations that might be needed
         ON_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
-            .WillByDefault(::testing::Invoke([](const char* pathname, int mode) -> int {
-                // Simulate successful access to preinstall related directories
-                std::string path(pathname);
-                if (path.find("/opt/preinstall") != std::string::npos || path.find("/tmp/preinstall") != std::string::npos) {
-                    return 0; // Success
-                }
-                return -1; // Failure for other paths
-            }));
-#endif
-    }
+            .WillByDefault(::testing::Return(0)); // Success
 
-    void SetUpRealTestDirectory()
-    {
-        // Create real test directory structure for unit tests
-        const std::string testDir = PREINSTALL_TEST_DIR;
-        
-        TEST_LOG("SetUpRealTestDirectory: Creating test directory structure");
-        
-        // Create base test directory
-        system(("mkdir -p " + testDir).c_str());
-        
-        // Create test app directories with sample widgets
-        std::vector<std::string> testApps = {"testapp1", "testapp2", "samplewidget"};
-        
-        for (const auto& app : testApps) {
-            std::string appDir = testDir + "/" + app;
-            system(("mkdir -p " + appDir).c_str());
-            
-            // Create a sample widget file in each app directory
-            std::string widgetFile = appDir + "/package.wgt";
-            std::ofstream widget(widgetFile);
-            if (widget.is_open()) {
-                widget << "Sample widget content for " << app << std::endl;
-                widget << "This is a test widget file" << std::endl;
-                widget.close();
-                TEST_LOG("SetUpRealTestDirectory: Created widget file: %s", widgetFile.c_str());
-            }
-            
-            // Create config.xml for each app
-            std::string configFile = appDir + "/config.xml";
-            std::ofstream config(configFile);
-            if (config.is_open()) {
-                config << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl;
-                config << "<widget xmlns=\"http://www.w3.org/ns/widgets\" id=\"com.test." << app << "\" version=\"1.0.0\">" << std::endl;
-                config << "  <name>" << app << "</name>" << std::endl;
-                config << "  <description>Test widget for " << app << "</description>" << std::endl;
-                config << "</widget>" << std::endl;
-                config.close();
-                TEST_LOG("SetUpRealTestDirectory: Created config file: %s", configFile.c_str());
-            }
-        }
-    }
+        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+            .WillByDefault(::testing::Return(0)); // Success
 
-    void CleanUpRealTestDirectory()
-    {
-        // Clean up test directory
-        const std::string testDir = PREINSTALL_TEST_DIR;
-        system(("rm -rf " + testDir).c_str());
-        TEST_LOG("CleanUpRealTestDirectory: Cleaned up test directory");
+        ON_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+            .WillByDefault(::testing::Return(0)); // Success
+
+        ON_CALL(*p_wrapsImplMock, rmdir(::testing::_))
+            .WillByDefault(::testing::Return(0)); // Success
     }
 };
 
@@ -538,6 +348,8 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
                            const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
             return Core::ERROR_NONE;
         });
+
+    SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
@@ -573,6 +385,8 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithoutForceInstall)
             version = PREINSTALL_MANAGER_TEST_VERSION;
             return Core::ERROR_NONE;
         });
+
+    SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
     
@@ -677,181 +491,416 @@ TEST_F(PreinstallManagerTest, QueryInterface)
 }
 
 /**
- * @brief Test PreinstallDirectory access failure scenario
+ * @brief Test readPreinstallDirectory with directory operation failures
  *
  * @details Test verifies that:
- * - StartPreinstall handles directory access failures gracefully
- * - Proper error codes are returned when directory operations fail
+ * - readPreinstallDirectory handles opendir failure gracefully
+ * - Method returns false when directory cannot be opened
  */
-TEST_F(PreinstallManagerTest, PreinstallDirectoryAccessFailure)
+TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryOpendirFailure)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    TEST_LOG("PreinstallDirectoryAccessFailure: Starting test");
+    // Mock opendir to return nullptr (failure)
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(nullptr));
     
-#ifndef UNIT_TEST_BUILD
-    // Override the default mock to simulate directory access failure
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
-            TEST_LOG("PreinstallDirectoryAccessFailure: opendir called with path: %s", pathname);
-            // Simulate failure to open /opt/preinstall directory
-            if (std::string(pathname) == "/opt/preinstall") {
-                TEST_LOG("PreinstallDirectoryAccessFailure: returning nullptr for /opt/preinstall");
-                return nullptr; // Simulate directory not found or permission denied
-            }
-            TEST_LOG("PreinstallDirectoryAccessFailure: returning success for other path");
-            return reinterpret_cast<DIR*>(0x1234); // Success for other paths
-        }));
-#endif
-
-    TEST_LOG("PreinstallDirectoryAccessFailure: Calling StartPreinstall");
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
+    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
     
-    // Should handle the failure gracefully - could return ERROR_GENERAL or ERROR_NONE depending on implementation
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    TEST_LOG("PreinstallDirectoryAccessFailure result = %u", result);
+    EXPECT_FALSE(result);
+    EXPECT_TRUE(packages.empty());
     
     releaseResources();
 }
 
 /**
- * @brief Test basic directory mocking functionality
+ * @brief Test readPreinstallDirectory with successful directory traversal
  *
  * @details Test verifies that:
- * - Directory mocks are properly set up and working
- * - We can call directory functions and get expected results
+ * - readPreinstallDirectory successfully reads directory contents
+ * - Multiple packages are processed correctly
+ * - Package information is populated properly
  */
-TEST_F(PreinstallManagerTest, BasicDirectoryMockTest)
+TEST_F(PreinstallManagerTest, ReadPreinstallDirectorySuccess)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    TEST_LOG("BasicDirectoryMockTest: Testing direct mock calls");
+    // Create test directory entries
+    static struct dirent testApp1, testApp2, dotEntry, dotdotEntry;
+    strcpy(testApp1.d_name, "testapp1");
+    strcpy(testApp2.d_name, "testapp2");
+    strcpy(dotEntry.d_name, ".");
+    strcpy(dotdotEntry.d_name, "..");
     
-#ifdef UNIT_TEST_BUILD
-    // For real directories, test actual directory operations
-    DIR* testDir = opendir(PREINSTALL_TEST_DIR);
-#else
-    // Test if opendir mock is working
-    DIR* testDir = p_wrapsImplMock->opendir("/opt/preinstall");
-#endif
-    TEST_LOG("BasicDirectoryMockTest: opendir returned: %p", testDir);
-    EXPECT_NE(nullptr, testDir);
+    // Set up sequence for readdir calls
+    testing::InSequence seq;
     
-    if (testDir) {
-#ifdef UNIT_TEST_BUILD
-        // Test real directory operations
-        struct dirent* entry = readdir(testDir);
-        TEST_LOG("BasicDirectoryMockTest: readdir returned: %p", entry);
-        if (entry) {
-            TEST_LOG("BasicDirectoryMockTest: entry name: %s", entry->d_name);
-        }
-        
-        // Test closedir
-        int closeResult = closedir(testDir);
-#else
-        // Test if readdir mock is working
-        struct dirent* entry = p_wrapsImplMock->readdir(testDir);
-        TEST_LOG("BasicDirectoryMockTest: readdir returned: %p", entry);
-        if (entry) {
-            TEST_LOG("BasicDirectoryMockTest: entry name: %s", entry->d_name);
-        }
-        
-        // Test closedir
-        int closeResult = p_wrapsImplMock->closedir(testDir);
-#endif
-        TEST_LOG("BasicDirectoryMockTest: closedir returned: %d", closeResult);
-    }
+    // Mock opendir to return success
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
     
-    releaseResources();
-}
-
-/**
- * @brief Test PreinstallDirectory read operations success scenario
- *
- * @details Test verifies that:
- * - StartPreinstall can successfully read preinstall directory contents
- * - Multiple app directories are processed correctly
- */
-TEST_F(PreinstallManagerTest, PreinstallDirectoryReadSuccess)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    // Mock readdir to return entries in sequence
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(&dotEntry))     // First: "." (should be skipped)
+        .WillOnce(::testing::Return(&dotdotEntry))  // Second: ".." (should be skipped)
+        .WillOnce(::testing::Return(&testApp1))     // Third: "testapp1"
+        .WillOnce(::testing::Return(&testApp2))     // Fourth: "testapp2"
+        .WillOnce(::testing::Return(nullptr));      // End of directory
     
-    // Mock PackageInstaller methods for successful installation
+    // Mock closedir
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
+    
+    // Mock GetConfigForPackage for both apps
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = PREINSTALL_MANAGER_TEST_VERSION;
-            return Core::ERROR_NONE;
+            if (fileLocator.find("testapp1") != string::npos) {
+                id = "com.test.app1";
+                version = "1.0.0";
+                return Core::ERROR_NONE;
+            } else if (fileLocator.find("testapp2") != string::npos) {
+                id = "com.test.app2";
+                version = "2.0.0";
+                return Core::ERROR_NONE;
+            }
+            return Core::ERROR_GENERAL;
         });
+    
+    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
+    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(2, packages.size());  // Should find 2 packages (skipping . and ..)
+    
+    // Verify package details
+    auto it = packages.begin();
+    EXPECT_EQ("com.test.app1", it->packageId);
+    EXPECT_EQ("1.0.0", it->version);
+    
+    ++it;
+    EXPECT_EQ("com.test.app2", it->packageId);
+    EXPECT_EQ("2.0.0", it->version);
+    
+    releaseResources();
+}
 
+/**
+ * @brief Test readPreinstallDirectory with invalid packages
+ *
+ * @details Test verifies that:
+ * - readPreinstallDirectory handles packages with invalid configuration
+ * - Invalid packages are still added to the list with error status
+ */
+TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryWithInvalidPackages)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Create test directory entry
+    static struct dirent invalidApp;
+    strcpy(invalidApp.d_name, "invalidapp");
+    
+    // Mock directory operations
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(&invalidApp))
+        .WillOnce(::testing::Return(nullptr));
+    
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
+    
+    // Mock GetConfigForPackage to fail
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_GENERAL));
+    
+    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
+    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    
+    EXPECT_TRUE(result);
+    EXPECT_EQ(1, packages.size());
+    
+    // Verify that invalid package is marked appropriately
+    auto& pkg = packages.front();
+    EXPECT_TRUE(pkg.installStatus.find("SKIPPED: getConfig failed") != string::npos);
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test directory path configuration for unit tests
+ *
+ * @details Test verifies that:
+ * - AI_PREINSTALL_DIRECTORY is set correctly for unit tests
+ * - Directory path is /tmp/preinstall when UNIT_TEST_BUILD is defined
+ */
+TEST_F(PreinstallManagerTest, VerifyTestDirectoryPath)
+{
+    // This test verifies the conditional compilation works correctly
+    #ifdef UNIT_TEST_BUILD
+        // In unit test builds, directory should be /tmp/preinstall
+        std::string expectedPath = "/tmp/preinstall";
+    #else
+        // In production builds, directory should be /opt/preinstall
+        std::string expectedPath = "/opt/preinstall";
+    #endif
+    
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Mock opendir and check the path being used
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::StrEq(expectedPath.c_str())))
+        .WillOnce(::testing::Return(nullptr)); // Return failure to avoid further processing
+    
+    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
+    mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test readPreinstallDirectory with empty directory
+ *
+ * @details Test verifies that:
+ * - readPreinstallDirectory handles empty directories correctly
+ * - Method returns true even when no packages are found
+ */
+TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryEmptyDirectory)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Mock opendir to return success
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    
+    // Mock readdir to return only null (empty directory)
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(nullptr));
+    
+    // Mock closedir
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
+    
+    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
+    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    
+    EXPECT_TRUE(result);
+    EXPECT_TRUE(packages.empty());
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test readPreinstallDirectory with directory containing only dots
+ *
+ * @details Test verifies that:
+ * - readPreinstallDirectory correctly skips "." and ".." entries
+ * - Method returns true but finds no packages
+ */
+TEST_F(PreinstallManagerTest, ReadPreinstallDirectoryOnlyDotEntries)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Create dot entries
+    static struct dirent dotEntry, dotdotEntry;
+    strcpy(dotEntry.d_name, ".");
+    strcpy(dotdotEntry.d_name, "..");
+    
+    // Mock opendir to return success
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    
+    // Mock readdir to return dot entries and then null
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(&dotEntry))
+        .WillOnce(::testing::Return(&dotdotEntry))
+        .WillOnce(::testing::Return(nullptr));
+    
+    // Mock closedir
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
+    
+    std::list<Plugin::PreinstallManagerImplementation::PackageInfo> packages;
+    bool result = mPreinstallManagerImpl->readPreinstallDirectory(packages);
+    
+    EXPECT_TRUE(result);
+    EXPECT_TRUE(packages.empty());
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test StartPreinstall with comprehensive directory operations
+ *
+ * @details Test verifies that:
+ * - StartPreinstall works end-to-end with directory operations
+ * - Multiple packages are processed correctly
+ * - Installation status is properly tracked
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallComprehensiveDirectoryTest)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Create multiple test directory entries
+    static struct dirent validApp1, validApp2, invalidApp, dotEntry;
+    strcpy(validApp1.d_name, "validapp1");
+    strcpy(validApp2.d_name, "validapp2");
+    strcpy(invalidApp.d_name, "invalidapp");
+    strcpy(dotEntry.d_name, ".");
+    
+    // Setup directory operation mocks
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    
+    // Return entries in sequence: dot entry (skipped), valid apps, invalid app, then end
+    EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillOnce(::testing::Return(&dotEntry))     // Should be skipped
+        .WillOnce(::testing::Return(&validApp1))    // Valid app 1
+        .WillOnce(::testing::Return(&validApp2))    // Valid app 2
+        .WillOnce(::testing::Return(&invalidApp))   // Invalid app
+        .WillOnce(::testing::Return(nullptr));      // End of directory
+    
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
+    
+    // Mock PackageInstaller methods
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            if (fileLocator.find("validapp1") != string::npos) {
+                id = "com.test.valid.app1";
+                version = "1.0.0";
+                return Core::ERROR_NONE;
+            } else if (fileLocator.find("validapp2") != string::npos) {
+                id = "com.test.valid.app2";
+                version = "2.0.0";
+                return Core::ERROR_NONE;
+            } else {
+                // Invalid app - config retrieval fails
+                return Core::ERROR_GENERAL;
+            }
+        });
+    
+    // Mock install operations for valid apps
     EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(2)  // Should be called for 2 valid apps
         .WillRepeatedly([&](const string &packageId, const string &version, 
                            Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
                            const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
             return Core::ERROR_NONE;
         });
-
-    // Override readdir to return multiple app directories
-#ifndef UNIT_TEST_BUILD
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([](DIR* dirp) -> struct dirent* {
-            static int call_count = 0;
-            static struct dirent entry;
-            TEST_LOG("PreinstallDirectoryReadSuccess: readdir called, call_count = %d", call_count);
-            
-            if (call_count == 0) {
-                std::strncpy(entry.d_name, "testapp1", sizeof(entry.d_name) - 1);
-                entry.d_type = DT_DIR;
-                call_count++;
-                return &entry;
-            } else if (call_count == 1) {
-                std::strncpy(entry.d_name, "testapp2", sizeof(entry.d_name) - 1);
-                entry.d_type = DT_DIR;
-                call_count++;
-                return &entry;
-            } else {
-                call_count = 0; // Reset for next traversal
-                return nullptr; // End of directory
-            }
-        }));
-#endif
-
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // Should succeed with proper directory structure - but may return ERROR_GENERAL if no packages found
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    TEST_LOG("PreinstallDirectoryReadSuccess result = %u", result);
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);  // Force install
+    
+    // Should succeed overall even if some packages fail
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
 
 /**
- * @brief Test PreinstallDirectory with empty directory scenario
+ * @brief Test version comparison functionality
  *
  * @details Test verifies that:
- * - StartPreinstall handles empty preinstall directory correctly
- * - No apps to install scenario is handled gracefully
+ * - isNewerVersion correctly compares version strings
+ * - Different version formats are handled properly
  */
-TEST_F(PreinstallManagerTest, PreinstallDirectoryEmpty)
+TEST_F(PreinstallManagerTest, VersionComparisonTest)
+{
+    createPreinstallManagerImpl();
+    
+    // Test newer versions
+    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("2.0.0", "1.0.0"));
+    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("1.1.0", "1.0.0"));
+    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("1.0.1", "1.0.0"));
+    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("1.0.0.1", "1.0.0.0"));
+    
+    // Test equal versions
+    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("1.0.0", "1.0.0"));
+    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("2.1.3", "2.1.3"));
+    
+    // Test older versions
+    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("1.0.0", "2.0.0"));
+    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("1.0.0", "1.1.0"));
+    EXPECT_FALSE(mPreinstallManagerImpl->isNewerVersion("1.0.0", "1.0.1"));
+    
+    // Test version strings with build suffixes (should be stripped)
+    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("2.0.0-beta1", "1.0.0"));
+    EXPECT_TRUE(mPreinstallManagerImpl->isNewerVersion("2.0.0+build123", "1.0.0"));
+    
+    releasePreinstallManagerImpl();
+}
+
+/**
+ * @brief Test StartPreinstall with selective installation based on version
+ *
+ * @details Test verifies that:
+ * - StartPreinstall skips apps with older or equal versions when forceInstall=false
+ * - Only newer versions are installed
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallSelectiveInstallation)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Override readdir to return no entries (empty directory)
-#ifndef UNIT_TEST_BUILD
+    // Create test directory entries
+    static struct dirent testApp1, testApp2;
+    strcpy(testApp1.d_name, "testapp1");
+    strcpy(testApp2.d_name, "testapp2");
+    
+    // Setup directory operation mocks
+    EXPECT_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillOnce(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+    
     EXPECT_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillOnce(::testing::Return(nullptr)); // Immediately return end of directory
-#else
-    // For real directories, create an empty test directory
-    const std::string emptyTestDir = std::string(PREINSTALL_TEST_DIR) + "_empty";
-    system(("mkdir -p " + emptyTestDir).c_str());
-    // The real implementation will read this empty directory
-#endif
+        .WillOnce(::testing::Return(&testApp1))
+        .WillOnce(::testing::Return(&testApp2))
+        .WillOnce(::testing::Return(nullptr));
     
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    EXPECT_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillOnce(::testing::Return(0));
     
-    // Should handle empty directory gracefully
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    TEST_LOG("PreinstallDirectoryEmpty result = %u", result);
+    // Mock ListPackages to return existing installed packages
+    std::list<Exchange::IPackageInstaller::Package> existingPackages;
+    Exchange::IPackageInstaller::Package existingPkg;
+    existingPkg.packageId = "com.test.app1";
+    existingPkg.version = "2.0.0";  // Newer version already installed
+    existingPkg.state = Exchange::IPackageInstaller::InstallState::INSTALLED;
+    existingPackages.push_back(existingPkg);
+    
+    auto packageIterator = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(existingPackages);
+    
+    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            packages = packageIterator;
+            return Core::ERROR_NONE;
+        });
+    
+    // Mock GetConfigForPackage
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            if (fileLocator.find("testapp1") != string::npos) {
+                id = "com.test.app1";
+                version = "1.0.0";  // Older version - should be skipped
+                return Core::ERROR_NONE;
+            } else if (fileLocator.find("testapp2") != string::npos) {
+                id = "com.test.app2";
+                version = "1.0.0";  // New app - should be installed
+                return Core::ERROR_NONE;
+            }
+            return Core::ERROR_GENERAL;
+        });
+    
+    // Should only be called for testapp2 (not already installed)
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::Eq("com.test.app2"), ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+    
+    // Should NOT be called for testapp1 (older version)
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::Eq("com.test.app1"), ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0);
+    
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);  // No force install
+    
+    EXPECT_EQ(Core::ERROR_NONE, result);
     
     releaseResources();
 }
