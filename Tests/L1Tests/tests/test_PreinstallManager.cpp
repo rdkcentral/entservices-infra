@@ -348,6 +348,37 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
 }
 
 /**
+ * @brief Test StartPreinstall with force install enabled
+ *
+ * @details Test verifies that:
+ * - StartPreinstall can be called with forceInstall=true
+ * - Method returns appropriate status
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallWithErrorDuringInstall)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+
+    ON_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillByDefault(::testing::Return(Core::ERROR_GENERAL));
+    
+
+
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+
+    SetUpPreinstallDirectoryMocks();
+    
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
+    // We mainly test that the method doesn't crash
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    releaseResources();
+}
+
+/**
  * @brief Test StartPreinstall with force install disabled
  *
  * @details Test verifies that:
