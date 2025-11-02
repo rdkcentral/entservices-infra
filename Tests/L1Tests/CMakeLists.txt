@@ -154,12 +154,13 @@ add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${L
 # PLUGIN_PREINSTALL_MANAGER
 set (PREINSTALLMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PreinstallManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (PREINSTALLMANAGER_LIBS ${NAMESPACE}PreinstallManager ${NAMESPACE}PreinstallManagerImplementation)
+
+# Define UNIT_TESTING compile definition for PreinstallManager libraries when building tests
+add_compile_definitions(UNIT_TESTING)
+
 add_plugin_test_ex(PLUGIN_PREINSTALL_MANAGER tests/test_PreinstallManager.cpp "${PREINSTALLMANAGER_INC}" "${PREINSTALLMANAGER_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
-
-# Define UNIT_TESTING macro for unit test builds
-target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TESTING)
 
 if (RDK_SERVICES_L1_TEST)
     target_link_options(${MODULE_NAME} PRIVATE "-Wl,-wrap,opendir")
@@ -182,9 +183,9 @@ target_include_directories(${MODULE_NAME}
         )
 
 target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
+
+
 #install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
 write_config(${PLUGIN_NAME})
-
-

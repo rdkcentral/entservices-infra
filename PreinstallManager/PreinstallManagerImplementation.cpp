@@ -24,8 +24,10 @@
 // Conditional compilation for unit tests vs production
 #ifdef UNIT_TESTING
     #define AI_PREINSTALL_DIRECTORY "/tmp/install" // Test directory for unit tests
+    #pragma message("UNIT_TESTING is defined - using /tmp/install")
 #else
     #define AI_PREINSTALL_DIRECTORY "/opt/preinstall" // Original production directory
+    #pragma message("UNIT_TESTING not defined - using /opt/preinstall")
 #endif
 
 namespace WPEFramework
