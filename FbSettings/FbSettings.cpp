@@ -349,6 +349,18 @@ namespace Plugin {
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
             }
+            else if (lowerMethod == "device.version")
+            {
+                return GetFirmwareVersion(result);
+            }
+            else if (lowerMethod == "device.screenresolution")
+            {
+                return GetScreenResolution(result);
+            }
+            else if (lowerMethod == "device.videoresolution")
+            {
+                return GetVideoResolution(result);
+            }
 
             // If method not found, return error
             ErrorUtils::NotSupported(result);
@@ -963,6 +975,26 @@ namespace Plugin {
             }
 
             return networkDelegate->GetInternetConnectionStatus(result);
+        }
+
+        Core::hresult FbSettings::GetFirmwareVersion(string &result /* @out */)
+        {
+            if (!mDelegate)
+                return Core::ERROR_UNAVAILABLE;
+            auto systemDelegate = mDelegate->getSystemDelegate();
+            if (!systemDelegate)
+                return Core::ERROR_UNAVAILABLE;
+            return systemDelegate->GetFirmwareVersion(result);
+        }
+
+        Core::hresult FbSettings::GetScreenResolution(string &result /* out */) {
+            result = R"([1920,1080])";
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult FbSettings::GetVideoResolution(string &result /* out */) {
+            result = R"([1920,1080])";
+            return Core::ERROR_NONE;
         }
 
 } // namespace Plugin

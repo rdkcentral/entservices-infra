@@ -300,7 +300,7 @@ namespace WPEFramework
 
             std::string permissionGroup;
             if (mResolverPtr->HasPermissionGroup(method, permissionGroup)) {
-                LOGDBG("Method '%s' requires permission group '%s'", method.c_str(), permissionGroup.c_str());
+                LOGTRACE("Method '%s' requires permission group '%s'", method.c_str(), permissionGroup.c_str());
                 if (SetupAppGatewayAuthenticator()) {
                     bool allowed = false;
                     if (Core::ERROR_NONE != mAuthenticator->CheckPermissionGroup(context.appId, permissionGroup, allowed)) {
@@ -344,7 +344,7 @@ namespace WPEFramework
             std::string finalParams = params;
             JsonValue additionalContext;
             if (mResolverPtr->HasIncludeContext(method, additionalContext)) {
-                LOGDBG("Method '%s' requires context inclusion", method.c_str());
+                LOGTRACE("Method '%s' requires context inclusion", method.c_str());
                 JsonObject paramsObj;
                 if (!paramsObj.FromString(params))
                 {

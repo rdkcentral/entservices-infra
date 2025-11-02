@@ -193,8 +193,8 @@ namespace WPEFramework
 
             if (mAppIdRegistry.Get(connectionId, appId)) {
 
-                LOGDBG("-->[[%d-%d]] appid=%s, method=%s, params=%s",
-                    connectionId, requestId, appId.c_str(), method.c_str(), params.c_str());
+                LOGDBG("%s-->[[a-%d-%d]] method=%s, params=%s",
+                    appId.c_str(),connectionId, requestId, method.c_str(), params.c_str());
 
                 // App Id is available
                 Context context = {
