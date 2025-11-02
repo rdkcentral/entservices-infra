@@ -31,7 +31,6 @@
 #include <cstring>
 #include <cstdlib>
 
-
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
 #include "ServiceMock.h"
@@ -136,6 +135,10 @@ protected:
         ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(-1));
         
+        // Create the test directory for UNIT_TESTING (when using /tmp/install)
+        std::system("mkdir -p /tmp/install");
+        TEST_LOG("Created test directory: /tmp/install");
+        
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
         TEST_LOG("createResources - All done!");
@@ -195,6 +198,9 @@ protected:
     virtual ~PreinstallManagerTest() override
     {
         TEST_LOG("Delete ~PreinstallManagerTest Instance!");
+        // Clean up test directory
+        std::system("rm -rf /tmp/install");
+        TEST_LOG("Cleaned up test directory: /tmp/install");
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
