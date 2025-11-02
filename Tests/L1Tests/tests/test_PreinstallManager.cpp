@@ -30,6 +30,8 @@
 #include <sys/stat.h>
 #include <cstring>
 #include <cstdlib>
+#include <unistd.h>
+#include <errno.h>
 
 #define UNIT_TESTING
 
@@ -499,9 +501,30 @@ TEST_F(PreinstallManagerTest, UnitTestingDirectoryAccess)
     
     TEST_LOG("========================================");
     TEST_LOG("Setting up real test directory: %s", testDir.c_str());
+    TEST_LOG("Platform: Windows detected");
+    TEST_LOG("Note: /tmp may not exist on Windows - this could explain the issue");
     TEST_LOG("========================================");
     
+    // Check current working directory first
+    char currentDir[1024];
+    if (getcwd(currentDir, sizeof(currentDir)) != nullptr) {
+        TEST_LOG("Current working directory: %s", currentDir);
+    } else {
+        TEST_LOG("Failed to get current working directory");
+    }
+    
+    // Also print pwd using system command for verification
+    TEST_LOG("Executing 'pwd' command to verify current directory:");
+    int pwdStatus = std::system("pwd");
+    TEST_LOG("pwd command status: %d", pwdStatus);
+    
+    // On Windows, also try 'cd' command which shows current directory
+    TEST_LOG("Executing Windows 'cd' command:");
+    int cdStatus = std::system("cd");
+    TEST_LOG("cd command status: %d", cdStatus);
+    
     // Create the test directory structure with status checking
+    TEST_LOG("Attempting to create directories...");
     int mkdirStatus1 = std::system(("mkdir -p " + testDir).c_str());
     TEST_LOG("mkdir status for %s: %d", testDir.c_str(), mkdirStatus1);
     
@@ -511,16 +534,50 @@ TEST_F(PreinstallManagerTest, UnitTestingDirectoryAccess)
     int mkdirStatus3 = std::system(("mkdir -p " + package2Dir).c_str());
     TEST_LOG("mkdir status for %s: %d", package2Dir.c_str(), mkdirStatus3);
     
-    // Verify directories exist using stat
+    // On Windows, try alternative commands if needed
+    if (mkdirStatus1 != 0) {
+        TEST_LOG("mkdir -p failed, trying Windows md command...");
+        int winMkdirStatus = std::system(("md \"" + testDir + "\" 2>nul").c_str());
+        TEST_LOG("Windows md command status: %d", winMkdirStatus);
+    }
+    
+    // Verify directories exist using stat with detailed logging
     struct stat dirStat;
-    bool testDirExists = (stat(testDir.c_str(), &dirStat) == 0) && S_ISDIR(dirStat.st_mode);
-    bool package1DirExists = (stat(package1Dir.c_str(), &dirStat) == 0) && S_ISDIR(dirStat.st_mode);
-    bool package2DirExists = (stat(package2Dir.c_str(), &dirStat) == 0) && S_ISDIR(dirStat.st_mode);
+    
+    // Check testDir
+    int statResult1 = stat(testDir.c_str(), &dirStat);
+    bool testDirExists = (statResult1 == 0) && S_ISDIR(dirStat.st_mode);
+    TEST_LOG("stat() result for %s: %d (errno: %d)", testDir.c_str(), statResult1, errno);
+    if (statResult1 == 0) {
+        TEST_LOG("  stat mode: 0x%x, S_ISDIR: %s", dirStat.st_mode, S_ISDIR(dirStat.st_mode) ? "YES" : "NO");
+    }
+    
+    // Check package1Dir  
+    int statResult2 = stat(package1Dir.c_str(), &dirStat);
+    bool package1DirExists = (statResult2 == 0) && S_ISDIR(dirStat.st_mode);
+    TEST_LOG("stat() result for %s: %d (errno: %d)", package1Dir.c_str(), statResult2, errno);
+    if (statResult2 == 0) {
+        TEST_LOG("  stat mode: 0x%x, S_ISDIR: %s", dirStat.st_mode, S_ISDIR(dirStat.st_mode) ? "YES" : "NO");
+    }
+    
+    // Check package2Dir
+    int statResult3 = stat(package2Dir.c_str(), &dirStat);
+    bool package2DirExists = (statResult3 == 0) && S_ISDIR(dirStat.st_mode);
+    TEST_LOG("stat() result for %s: %d (errno: %d)", package2Dir.c_str(), statResult3, errno);
+    if (statResult3 == 0) {
+        TEST_LOG("  stat mode: 0x%x, S_ISDIR: %s", dirStat.st_mode, S_ISDIR(dirStat.st_mode) ? "YES" : "NO");
+    }
     
     TEST_LOG("Directory existence verification:");
     TEST_LOG("  %s exists: %s", testDir.c_str(), testDirExists ? "YES" : "NO");
     TEST_LOG("  %s exists: %s", package1Dir.c_str(), package1DirExists ? "YES" : "NO");
     TEST_LOG("  %s exists: %s", package2Dir.c_str(), package2DirExists ? "YES" : "NO");
+    
+    // Alternative check using access() function
+    TEST_LOG("Alternative check using access():");
+    TEST_LOG("  %s access: %s", testDir.c_str(), (access(testDir.c_str(), F_OK) == 0) ? "YES" : "NO");
+    TEST_LOG("  %s access: %s", package1Dir.c_str(), (access(package1Dir.c_str(), F_OK) == 0) ? "YES" : "NO");
+    TEST_LOG("  %s access: %s", package2Dir.c_str(), (access(package2Dir.c_str(), F_OK) == 0) ? "YES" : "NO");
     
     // Create dummy package files to simulate real packages with status checking
     int fileStatus1 = std::system(("echo 'test package 1 content' > " + package1Dir + "/package.json").c_str());
