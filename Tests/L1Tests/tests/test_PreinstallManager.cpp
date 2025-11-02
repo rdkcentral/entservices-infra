@@ -31,6 +31,8 @@
 #include <cstring>
 #include <cstdlib>
 
+#define UNIT_TESTING
+
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
 #include "ServiceMock.h"
@@ -135,10 +137,6 @@ protected:
         ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(-1));
         
-        // Create the test directory for UNIT_TESTING (when using /tmp/install)
-        std::system("mkdir -p /tmp/install");
-        TEST_LOG("Created test directory: /tmp/install");
-        
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
         TEST_LOG("createResources - All done!");
@@ -198,9 +196,6 @@ protected:
     virtual ~PreinstallManagerTest() override
     {
         TEST_LOG("Delete ~PreinstallManagerTest Instance!");
-        // Clean up test directory
-        std::system("rm -rf /tmp/install");
-        TEST_LOG("Cleaned up test directory: /tmp/install");
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
@@ -506,20 +501,64 @@ TEST_F(PreinstallManagerTest, UnitTestingDirectoryAccess)
     TEST_LOG("Setting up real test directory: %s", testDir.c_str());
     TEST_LOG("========================================");
     
-    // Create the test directory structure
-    std::system(("mkdir -p " + testDir).c_str());
-    std::system(("mkdir -p " + package1Dir).c_str());
-    std::system(("mkdir -p " + package2Dir).c_str());
+    // Create the test directory structure with status checking
+    int mkdirStatus1 = std::system(("mkdir -p " + testDir).c_str());
+    TEST_LOG("mkdir status for %s: %d", testDir.c_str(), mkdirStatus1);
     
-    // Create dummy package files to simulate real packages
-    std::system(("echo 'test package 1 content' > " + package1Dir + "/package.json").c_str());
-    std::system(("echo 'test package 2 content' > " + package2Dir + "/package.json").c_str());
-    std::system(("echo 'manifest data' > " + package1Dir + "/manifest.json").c_str());
-    std::system(("echo 'manifest data' > " + package2Dir + "/manifest.json").c_str());
+    int mkdirStatus2 = std::system(("mkdir -p " + package1Dir).c_str());
+    TEST_LOG("mkdir status for %s: %d", package1Dir.c_str(), mkdirStatus2);
+    
+    int mkdirStatus3 = std::system(("mkdir -p " + package2Dir).c_str());
+    TEST_LOG("mkdir status for %s: %d", package2Dir.c_str(), mkdirStatus3);
+    
+    // Verify directories exist using stat
+    struct stat dirStat;
+    bool testDirExists = (stat(testDir.c_str(), &dirStat) == 0) && S_ISDIR(dirStat.st_mode);
+    bool package1DirExists = (stat(package1Dir.c_str(), &dirStat) == 0) && S_ISDIR(dirStat.st_mode);
+    bool package2DirExists = (stat(package2Dir.c_str(), &dirStat) == 0) && S_ISDIR(dirStat.st_mode);
+    
+    TEST_LOG("Directory existence verification:");
+    TEST_LOG("  %s exists: %s", testDir.c_str(), testDirExists ? "YES" : "NO");
+    TEST_LOG("  %s exists: %s", package1Dir.c_str(), package1DirExists ? "YES" : "NO");
+    TEST_LOG("  %s exists: %s", package2Dir.c_str(), package2DirExists ? "YES" : "NO");
+    
+    // Create dummy package files to simulate real packages with status checking
+    int fileStatus1 = std::system(("echo 'test package 1 content' > " + package1Dir + "/package.json").c_str());
+    TEST_LOG("File creation status for %s/package.json: %d", package1Dir.c_str(), fileStatus1);
+    
+    int fileStatus2 = std::system(("echo 'test package 2 content' > " + package2Dir + "/package.json").c_str());
+    TEST_LOG("File creation status for %s/package.json: %d", package2Dir.c_str(), fileStatus2);
+    
+    int fileStatus3 = std::system(("echo 'manifest data' > " + package1Dir + "/manifest.json").c_str());
+    TEST_LOG("File creation status for %s/manifest.json: %d", package1Dir.c_str(), fileStatus3);
+    
+    int fileStatus4 = std::system(("echo 'manifest data' > " + package2Dir + "/manifest.json").c_str());
+    TEST_LOG("File creation status for %s/manifest.json: %d", package2Dir.c_str(), fileStatus4);
+    
+    // Verify files exist
+    std::string pkg1JsonPath = package1Dir + "/package.json";
+    std::string pkg2JsonPath = package2Dir + "/package.json";
+    std::string pkg1ManifestPath = package1Dir + "/manifest.json";
+    std::string pkg2ManifestPath = package2Dir + "/manifest.json";
+    
+    bool pkg1JsonExists = (stat(pkg1JsonPath.c_str(), &dirStat) == 0) && S_ISREG(dirStat.st_mode);
+    bool pkg2JsonExists = (stat(pkg2JsonPath.c_str(), &dirStat) == 0) && S_ISREG(dirStat.st_mode);
+    bool pkg1ManifestExists = (stat(pkg1ManifestPath.c_str(), &dirStat) == 0) && S_ISREG(dirStat.st_mode);
+    bool pkg2ManifestExists = (stat(pkg2ManifestPath.c_str(), &dirStat) == 0) && S_ISREG(dirStat.st_mode);
+    
+    TEST_LOG("File existence verification:");
+    TEST_LOG("  %s exists: %s", pkg1JsonPath.c_str(), pkg1JsonExists ? "YES" : "NO");
+    TEST_LOG("  %s exists: %s", pkg2JsonPath.c_str(), pkg2JsonExists ? "YES" : "NO");
+    TEST_LOG("  %s exists: %s", pkg1ManifestPath.c_str(), pkg1ManifestExists ? "YES" : "NO");
+    TEST_LOG("  %s exists: %s", pkg2ManifestPath.c_str(), pkg2ManifestExists ? "YES" : "NO");
     
     TEST_LOG("Created test packages:");
-    TEST_LOG("  - %s", package1Dir.c_str());
-    TEST_LOG("  - %s", package2Dir.c_str());
+    TEST_LOG("  - %s (Dir: %s, Files: %s)", package1Dir.c_str(), 
+             package1DirExists ? "OK" : "FAIL", 
+             (pkg1JsonExists && pkg1ManifestExists) ? "OK" : "FAIL");
+    TEST_LOG("  - %s (Dir: %s, Files: %s)", package2Dir.c_str(), 
+             package2DirExists ? "OK" : "FAIL", 
+             (pkg2JsonExists && pkg2ManifestExists) ? "OK" : "FAIL");
     
     // Mock the package installer to handle our test packages
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -564,8 +603,14 @@ TEST_F(PreinstallManagerTest, UnitTestingDirectoryAccess)
     EXPECT_EQ(Core::ERROR_NONE, result) << "StartPreinstall should succeed with real test directory";
     
     // Clean up the test directory
-    std::system(("rm -rf " + testDir).c_str());
-    TEST_LOG("Cleaned up test directory: %s", testDir.c_str());
+    int cleanupStatus = std::system(("rm -rf " + testDir).c_str());
+    TEST_LOG("Cleanup command status for %s: %d", testDir.c_str(), cleanupStatus);
+    
+    // Verify cleanup was successful
+    struct stat cleanupStat;
+    bool dirStillExists = (stat(testDir.c_str(), &cleanupStat) == 0);
+    TEST_LOG("Directory after cleanup - %s still exists: %s", 
+             testDir.c_str(), dirStillExists ? "YES (cleanup failed)" : "NO (cleanup successful)");
     
     releaseResources();
 }
