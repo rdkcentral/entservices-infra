@@ -222,15 +222,19 @@ public:
         void ProcessMessage(Core::ProxyType<Core::JSONRPC::Message> &message, uint32_t connectionId) {
             // Check for message->Id.IsSet()
                     if(!message->Id.IsSet()) {
+                        string jsonMessage;
+                        message->ToString(jsonMessage);
                         // Log an Error for this usecase
-                        LOGERR("Message MUST contain an id field");
+                        LOGERR("Message MUST contain an id field %s", jsonMessage.c_str());
                         return;
                     }
 
                     int requestId = message->Id.Value();
 
                     if (_id==0) {
-                        LOGDBG("Connection ID Not set adding request to Pending queue");
+                        string jsonMessage;
+                        message->ToString(jsonMessage);
+                        LOGERR("Connection ID Not set adding request to Pending queue %s", jsonMessage.c_str());
                         AddToPending(message);
                         return;
                     }

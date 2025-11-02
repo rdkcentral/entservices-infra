@@ -381,7 +381,9 @@ namespace WPEFramework
                 std::string finalParams = UpdateContext(context, method, params, origin, true);
                 if (Core::ERROR_NONE != requestHandler->HandleAppGatewayRequest(context, method, finalParams, resolution)) {
                     LOGERR("HandleAppGatewayRequest failed for callsign: %s", alias.c_str());
-                    ErrorUtils::CustomInternal("HandleAppGatewayRequest failed", resolution);
+                    if (resolution.empty()){
+                        ErrorUtils::CustomInternal("HandleAppGatewayRequest failed", resolution);
+                    }
                 } else {
                     result = Core::ERROR_NONE;
                 }
