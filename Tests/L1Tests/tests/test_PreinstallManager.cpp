@@ -31,7 +31,6 @@
 #include <cstring>
 #include <cstdlib>
 
-#define UNIT_TESTING
 
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
