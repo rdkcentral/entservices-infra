@@ -26,6 +26,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <future>
+#include <atomic>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cstring>
@@ -102,7 +103,6 @@ protected:
         Core::hresult status = Core::ERROR_GENERAL;
         mServiceMock = new NiceMock<ServiceMock>;
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
-        testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
         Wraps::setImpl(p_wrapsImplMock);
 
@@ -172,8 +172,12 @@ protected:
             mServiceMock = nullptr;
         }
         
-        // PackageInstallerMock will be cleaned up by testing framework due to AllowLeak
-        mPackageInstallerMock = nullptr;
+        // Properly cleanup PackageInstallerMock
+        if (mPackageInstallerMock != nullptr) {
+            delete mPackageInstallerMock;
+            mPackageInstallerMock = nullptr;
+        }
+        
         mPreinstallManagerImpl = nullptr;
     }
 
@@ -222,13 +226,27 @@ protected:
 // Mock notification class using GMock
 class MockNotificationTest : public Exchange::IPreinstallManager::INotification 
 {
+private:
+    mutable std::atomic<uint32_t> m_refCount{1};
+
 public:
     MockNotificationTest() = default;
     virtual ~MockNotificationTest() = default;
     
     MOCK_METHOD(void, OnAppInstallationStatus, (const string& jsonresponse), (override));
-    MOCK_METHOD(void, AddRef, (), (const, override));
-    MOCK_METHOD(uint32_t, Release, (), (const, override));
+    
+    // Properly implement reference counting to avoid double free
+    void AddRef() const override {
+        m_refCount.fetch_add(1);
+    }
+    
+    uint32_t Release() const override {
+        uint32_t refCount = m_refCount.fetch_sub(1);
+        if (refCount == 1) {
+            delete this;
+        }
+        return refCount - 1;
+    }
 
     BEGIN_INTERFACE_MAP(MockNotificationTest)
     INTERFACE_ENTRY(Exchange::IPreinstallManager::INotification)
@@ -255,14 +273,16 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
-    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
-    testing::Mock::AllowLeak(mockNotification.operator->()); // Allow leak since ProxyType manages lifecycle
-    Core::hresult status = mPreinstallManagerImpl->Register(mockNotification.operator->());
+    // Create notification object without using ProxyType to avoid double free
+    MockNotificationTest* mockNotification = new MockNotificationTest();
+    Core::hresult status = mPreinstallManagerImpl->Register(mockNotification);
     
     EXPECT_EQ(Core::ERROR_NONE, status);
     
-    // Cleanup
-    mPreinstallManagerImpl->Unregister(mockNotification.operator->());
+    // Cleanup - unregister first, then release
+    mPreinstallManagerImpl->Unregister(mockNotification);
+    mockNotification->Release(); // Proper cleanup
+    
     releaseResources();
 }
 
@@ -277,16 +297,19 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
 
-    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
-    testing::Mock::AllowLeak(mockNotification.operator->()); // Allow leak since ProxyType manages lifecycle
+    // Create notification object without using ProxyType to avoid double free
+    MockNotificationTest* mockNotification = new MockNotificationTest();
     
     // First register
-    Core::hresult registerStatus = mPreinstallManagerImpl->Register(mockNotification.operator->());
+    Core::hresult registerStatus = mPreinstallManagerImpl->Register(mockNotification);
     EXPECT_EQ(Core::ERROR_NONE, registerStatus);
     
     // Then unregister
-    Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification.operator->());
+    Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification);
     EXPECT_EQ(Core::ERROR_NONE, unregisterStatus);
+    
+    // Proper cleanup
+    mockNotification->Release();
     
     releaseResources();
 }
@@ -375,14 +398,14 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
-    testing::Mock::AllowLeak(mockNotification.operator->()); // Allow leak since ProxyType manages lifecycle
+    // Create notification object without using ProxyType to avoid double free
+    MockNotificationTest* mockNotification = new MockNotificationTest();
     
     // Expect the notification method to be called - use simple synchronous expectation
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
         .Times(1);
     
-    mPreinstallManagerImpl->Register(mockNotification.operator->());
+    mPreinstallManagerImpl->Register(mockNotification);
     
     // Simulate installation status notification
     string testJsonResponse = R"({"packageId":"testApp","version":"1.0.0","status":"SUCCESS"})";
@@ -391,7 +414,9 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     mPreinstallManagerImpl->handleOnAppInstallationStatus(testJsonResponse);
     
     // Cleanup
-    mPreinstallManagerImpl->Unregister(mockNotification.operator->());
+    mPreinstallManagerImpl->Unregister(mockNotification);
+    mockNotification->Release();
+    
     releaseResources();
 }
 
@@ -469,11 +494,11 @@ TEST_F(PreinstallManagerTest, TestGetFailReasonIndirectly)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
-    testing::Mock::AllowLeak(mockNotification.operator->());
+    // Create notification object without using ProxyType to avoid double free
+    MockNotificationTest* mockNotification = new MockNotificationTest();
     
     // Register for notifications
-    mPreinstallManagerImpl->Register(mockNotification.operator->());
+    mPreinstallManagerImpl->Register(mockNotification);
     
     // Set up expectation for notification - use simple expectation without async
     EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
@@ -489,6 +514,8 @@ TEST_F(PreinstallManagerTest, TestGetFailReasonIndirectly)
     // The expectation will be verified during cleanup - no async waiting needed
     
     // Cleanup
-    mPreinstallManagerImpl->Unregister(mockNotification.operator->());
+    mPreinstallManagerImpl->Unregister(mockNotification);
+    mockNotification->Release();
+    
     releaseResources();
 }
