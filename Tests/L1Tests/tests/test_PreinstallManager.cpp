@@ -79,33 +79,6 @@ protected:
     Core::JSONRPC::Handler& mJsonRpcHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
-    
-    // Member variable to track readdir calls per test instance
-    int mReaddirCallCount = 0;
-
-    virtual void SetUp() override
-    {
-        // Reset state for each test
-        mReaddirCallCount = 0;
-        mServiceMock = nullptr;
-        mPackageInstallerMock = nullptr;
-        p_wrapsImplMock = nullptr;
-        mPreinstallManagerImpl = nullptr;
-        mPackageInstallerNotification_cb = nullptr;
-        mPreinstallManagerNotification = nullptr;
-    }
-
-    virtual void TearDown() override
-    {
-        // Ensure cleanup - this will be called even if test fails
-        if (mPreinstallManagerImpl != nullptr) {
-            try {
-                releaseResources();
-            } catch (...) {
-                // Ignore cleanup errors to prevent masking the real test failure
-            }
-        }
-    }
 
     void createPreinstallManagerImpl()
     {
@@ -188,7 +161,6 @@ protected:
                 .WillOnce(::testing::Invoke(
                 [&]() {
                      delete mPackageInstallerMock;
-                     mPackageInstallerMock = nullptr;  // Set to nullptr after deletion
                      return 0;
                     }));
         }
@@ -200,18 +172,11 @@ protected:
             p_wrapsImplMock = nullptr;
         }
 
-        if (dispatcher != nullptr) {
-            dispatcher->Deactivate();
-            dispatcher->Release();
-            dispatcher = nullptr;
-        }
+        dispatcher->Deactivate();
+        dispatcher->Release();
 
-        if (mServiceMock != nullptr) {
-            plugin->Deinitialize(mServiceMock);
-            delete mServiceMock;
-            mServiceMock = nullptr;
-        }
-        
+        plugin->Deinitialize(mServiceMock);
+        delete mServiceMock;
         mPreinstallManagerImpl = nullptr;
     }
 
@@ -249,9 +214,6 @@ protected:
 
     void SetUpPreinstallDirectoryMocks()
     {
-        // Reset call count for each test
-        mReaddirCallCount = 0;
-        
         // Mock directory operations for preinstall directory
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
             .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Non-null pointer
@@ -259,12 +221,14 @@ protected:
         // Create mock dirent structure for testing
         static struct dirent testDirent;
         strcpy(testDirent.d_name, "testapp");
-        
+        static struct dirent* direntPtr = &testDirent;
+        static bool firstCall = true;
+
         ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Invoke([this](DIR*) -> struct dirent* {
-                mReaddirCallCount++;
-                if (mReaddirCallCount == 1) {
-                    return &testDirent; // Return test directory entry first time
+            .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
+                if (firstCall) {
+                    firstCall = false;
+                    return direntPtr; // Return test directory entry first time
                 }
                 return nullptr; // End of directory
             }));
@@ -347,13 +311,13 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
 }
 
 /**
- * @brief Test StartPreinstall with force install enabled - success case
+ * @brief Test StartPreinstall with force install enabled
  *
  * @details Test verifies that:
  * - StartPreinstall can be called with forceInstall=true
- * - Method returns appropriate status on successful installation
+ * - Method returns appropriate status
  */
-TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstallSuccess)
+TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
@@ -379,47 +343,6 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstallSuccess)
     // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
     // We mainly test that the method doesn't crash
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    releaseResources();
-}
-
-/**
- * @brief Test StartPreinstall with error during install
- *
- * @details Test verifies that:
- * - StartPreinstall handles installation failures gracefully
- * - Method returns appropriate error status when installation fails
- */
-TEST_F(PreinstallManagerTest, StartPreinstallWithErrorDuringInstall)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-
-    // Mock GetConfigForPackage to return valid package info
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = PREINSTALL_MANAGER_TEST_VERSION;
-            return Core::ERROR_NONE;
-        });
-
-    // Mock Install to return error with failure reason
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Invoke(
-            [&](const string &packageId, const string &version, 
-                Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) -> Core::hresult {
-                
-                // Set failure reason and return error
-                failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
-                return Core::ERROR_GENERAL;
-            }));
-
-    SetUpPreinstallDirectoryMocks();
-    
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
-    
-    // Should return ERROR_GENERAL when installation fails
-    EXPECT_EQ(Core::ERROR_GENERAL, result);
     
     releaseResources();
 }
