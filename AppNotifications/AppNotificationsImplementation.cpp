@@ -195,11 +195,21 @@ namespace WPEFramework
             mInternalGatewayNotifier->Respond(gatewayContext, payload);
         }
 
+        AppNotificationsImplementation::ThunderSubscriptionManager::~ThunderSubscriptionManager() {
+            std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
+            // Unsubscribe from all registered notifications
+            for (const auto& notification : mRegisteredNotifications) {
+                HandleNotifier(notification.module, notification.event, false);
+            }
+
+            mRegisteredNotifications.clear();
+        }
+
         void AppNotificationsImplementation::ThunderSubscriptionManager::Subscribe(const string& module, const string& event) {
             // Subscribe to Thunder notifications
 
             // check if the notification is already registered
-            if (IsNotificationRegistered(event)) {
+            if (IsNotificationRegistered(module, event)) {
                 // log a debug message that the notification is not registered
                 LOGDBG("Notification is already registered: %s", event.c_str());
             } else {
@@ -212,7 +222,7 @@ namespace WPEFramework
             // Unsubscribe from Thunder notifications
             
             // check if the notification is already registered
-            if (IsNotificationRegistered(event)) {
+            if (IsNotificationRegistered(module, event)) {
                 // trigger UnregisterNotification
                 UnregisterNotification(module, event);
             } else {
@@ -244,7 +254,7 @@ namespace WPEFramework
             // call notifier and start listening
             if (HandleNotifier(module, event, true)) {
                 std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-                mRegisteredNotifications.push_back(std::move(lowerEvent));
+                mRegisteredNotifications.push_back({module, std::move(lowerEvent)});
             }
         }
 
@@ -252,14 +262,14 @@ namespace WPEFramework
             string lowerEvent = StringUtils::toLower(event);
             if (HandleNotifier(module, lowerEvent, false)) {
                 std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-                mRegisteredNotifications.erase(std::remove(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), lowerEvent), mRegisteredNotifications.end());
+                mRegisteredNotifications.erase(std::remove(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), NotificationKey{module, lowerEvent}), mRegisteredNotifications.end());
             }
         }
 
-        bool AppNotificationsImplementation::ThunderSubscriptionManager::IsNotificationRegistered(const string& notification) const {
+        bool AppNotificationsImplementation::ThunderSubscriptionManager::IsNotificationRegistered(const string& module, const string& notification) const {
             string lowerEvent = StringUtils::toLower(notification);
             std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-            return std::find(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), lowerEvent) != mRegisteredNotifications.end();
+            return std::find(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), NotificationKey{module, lowerEvent}) != mRegisteredNotifications.end();
         }
 
     }

@@ -91,13 +91,9 @@ namespace Plugin {
         class ThunderSubscriptionManager {
             public:
                 ThunderSubscriptionManager(AppNotificationsImplementation& parent) : mParent(parent) {
-                    mThunderClient = ThunderUtils::getThunderControllerClient();
                 }
 
-                ~ThunderSubscriptionManager() {
-                    std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-                    mRegisteredNotifications.clear();
-                }
+                ~ThunderSubscriptionManager();
 
                 void Subscribe(const string& module, const string& event);
 
@@ -112,13 +108,22 @@ namespace Plugin {
                 void UnregisterNotification(const string& module, const string& event);
 
                 // check if a given string has an existing entry in mRegisteredNotifications
-                bool IsNotificationRegistered(const string& notification) const;
+                bool IsNotificationRegistered(const string& module, const string& notification) const;
 
             private:
+
+                struct NotificationKey {
+                    string module;
+                    string event;
+
+                    bool operator==(const NotificationKey& other) const {
+                        return (this->module == other.module) && (this->event == other.event);
+                    }
+                };
+
                 AppNotificationsImplementation& mParent;
                 mutable std::mutex mThunderSubscriberMutex;
-                std::vector<string> mRegisteredNotifications;
-                std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> mThunderClient = nullptr;
+                std::vector<NotificationKey> mRegisteredNotifications;
         };
 
         AppNotificationsImplementation(const AppNotificationsImplementation&) = delete;

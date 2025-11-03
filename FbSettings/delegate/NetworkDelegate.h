@@ -84,7 +84,7 @@ public:
         else
         {
             // Not removing the notification subscription for cases where only one event is removed
-            RemoveNotification(event);
+            RemoveNotification(event, cb);
         }
         return false;
     }

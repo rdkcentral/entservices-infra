@@ -68,7 +68,9 @@ class BaseEventDelegate {
         ~BaseEventDelegate() {
             // Cleanup registered notifications
             for (auto& entry : mRegisteredNotifications) {
-                entry.second->Release();
+                for (auto emitter : entry.second) {
+                    emitter->Release();
+                }
             }
 
             mRegisteredNotifications.clear();
@@ -93,11 +95,13 @@ class BaseEventDelegate {
 
         bool DispatchToAppNotifications(const string& event, const string& payload) {
 
-            auto emitter = GetEmitterForNotification(event);
-            if (emitter != nullptr) {
+            auto emitters = GetEmittersForNotification(event);
+            if (!emitters.empty()) {
                 LOGDBG("Using registered emitter for event %s", event.c_str());
-                emitter->Emit(event, payload, "");
-                emitter->Release();
+                for (auto emitter : emitters) {
+                    emitter->Emit(event, payload, "");
+                    emitter->Release();
+                }
                 return true;
             }
             
@@ -108,15 +112,28 @@ class BaseEventDelegate {
         // new method to register notifications
         // which accepts a string and adds it to the mRegisteredNotifications vector
         void AddNotification(const string& event, Exchange::IAppNotificationHandler::IEmitter *cb) {
+            ASSERT(cb != nullptr);
             string event_l = StringUtils::toLower(event);
             std::lock_guard<std::mutex> lock(mRegisterMutex);
             auto it = mRegisteredNotifications.find(event_l);
+            // add to the existing one
             if (it != mRegisteredNotifications.end()) {
-                it->second->Release();
+                // check if cb is already registered
+                if (it->second.find(cb) != it->second.end()) {
+                    LOGDBG("Notification %s already registered for this emitter", event_l.c_str());
+                } else {
+                    it->second.insert(cb);
+                    cb->AddRef();
+                    LOGDBG("Added additional emitter for notification = %s", event_l.c_str());
+                }
             }
-            mRegisteredNotifications[event_l] = cb;
-            cb->AddRef();
-            LOGDBG("Notification registered = %s", event_l.c_str());
+            else {
+                std::unordered_set<Exchange::IAppNotificationHandler::IEmitter*> emitters;
+                emitters.insert(cb);
+                mRegisteredNotifications[event_l] = emitters;
+                cb->AddRef();
+                LOGDBG("Notification registered = %s", event_l.c_str());
+            }
         }
 
         // new method to check if a notification is registered 
@@ -128,33 +145,65 @@ class BaseEventDelegate {
             return result;
         }
 
-        Exchange::IAppNotificationHandler::IEmitter * GetEmitterForNotification(const string& event) {
+        std::unordered_set<Exchange::IAppNotificationHandler::IEmitter*> GetEmittersForNotification(const string& event) {
             string event_l = StringUtils::toLower(event);
-            Exchange::IAppNotificationHandler::IEmitter * emitter = nullptr;
+            std::unordered_set<Exchange::IAppNotificationHandler::IEmitter*> emitters;
             std::lock_guard<std::mutex> lock(mRegisterMutex);
             auto it = mRegisteredNotifications.find(event_l);
             if (it != mRegisteredNotifications.end()) {
-                emitter = it->second;
-                if (emitter != nullptr) {
+                emitters = it->second;
+                for (auto emitter : emitters) {
                     emitter->AddRef();
                 }
             }
-            return emitter;
+            return emitters;
         }
 
         // new method remove the notification
-        void RemoveNotification(const string& event) {
+        void RemoveNotification(const string& event, Exchange::IAppNotificationHandler::IEmitter *cb) {
+            ASSERT(cb != nullptr);
             string event_l = StringUtils::toLower(event);
             std::lock_guard<std::mutex> lock(mRegisterMutex);
+            // Remove specific emitter for the event
             auto it = mRegisteredNotifications.find(event_l);
             if (it != mRegisteredNotifications.end()) {
-                it->second->Release();
-                mRegisteredNotifications.erase(event_l);
+                auto emitter = it->second.find(cb);
+                if (emitter != it->second.end()) {
+                    (*emitter)->Release();
+                    it->second.erase(emitter);
+                    LOGDBG("Removed emitter for notification = %s", event_l.c_str());
+                }
+
+                // If no more emitters for the event, remove the event entry
+                if (it->second.empty()) {
+                    mRegisteredNotifications.erase(it);
+                    LOGDBG("No more emitters for notification = %s, event entry removed", event_l.c_str());
+                }
+            }
+
+            // For empty event, remove all events for the cb emitter
+            if (event.empty()) {
+                for (auto it = mRegisteredNotifications.begin(); it != mRegisteredNotifications.end(); ) {
+                    auto emitter = it->second.find(cb);
+                    if (emitter != it->second.end()) {
+                        (*emitter)->Release();
+                        it->second.erase(emitter);
+                        LOGDBG("Removed emitter for notification = %s", it->first.c_str());
+                    }
+
+                    // If no more emitters for the event, remove the event entry
+                    if (it->second.empty()) {
+                        LOGDBG("No more emitters for notification = %s, event entry removed", it->first.c_str());
+                        it = mRegisteredNotifications.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
             }
         }
 
     private:
-        std::map<string, Exchange::IAppNotificationHandler::IEmitter*> mRegisteredNotifications;
+        std::map<string, std::unordered_set<Exchange::IAppNotificationHandler::IEmitter*>> mRegisteredNotifications;
         std::mutex mRegisterMutex;
 
 

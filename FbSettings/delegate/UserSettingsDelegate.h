@@ -74,7 +74,7 @@ class UserSettingsDelegate : public BaseEventDelegate{
                 // Not removing the notification subscription for cases where only one event is removed 
                 // Registration is lazy one but we need to evaluate if there is any value in unregistering
                 // given these API calls are always made
-                RemoveNotification(event);
+                RemoveNotification(event, cb);
             }
             return false;
         }
