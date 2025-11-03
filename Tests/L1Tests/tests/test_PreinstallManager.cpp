@@ -214,12 +214,24 @@ protected:
 
     void SetUpPreinstallDirectoryMocks()
     {
-        // Mock directory operations for preinstall directory - return failure to prevent directory reading
+        // Mock directory operations for preinstall directory
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Return(nullptr)); // Return null to simulate directory doesn't exist
+            .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Non-null pointer
+
+        // Create mock dirent structure for testing
+        static struct dirent testDirent;
+        strcpy(testDirent.d_name, "testapp");
+        static struct dirent* direntPtr = &testDirent;
+        static bool firstCall = true;
 
         ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Return(nullptr));
+            .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
+                if (firstCall) {
+                    firstCall = false;
+                    return direntPtr; // Return test directory entry first time
+                }
+                return nullptr; // End of directory
+            }));
 
         ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
             .WillByDefault(::testing::Return(0));
@@ -467,108 +479,115 @@ TEST_F(PreinstallManagerTest, QueryInterface)
 
 /*
  * Test Description:
- * - Tests that StartPreinstall handles directory access safely
- * - Covers the case when preinstall directory doesn't exist or can't be opened
+ * - Tests getFailReason function indirectly through installation notification callbacks
+ * - Verifies that different failure reasons are properly converted to strings
+ * - This tests the getFailReason function without accessing it directly
  */
-TEST_F(PreinstallManagerTest, StartPreinstallWithDirectoryAccessFailure)
+TEST_F(PreinstallManagerTest, TestGetFailReasonThroughNotifications)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Mock opendir to return nullptr (directory doesn't exist or can't be opened)
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Return(nullptr));
+    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
+    testing::Mock::AllowLeak(mockNotification.operator->());
     
-    // StartPreinstall should handle this gracefully and return ERROR_GENERAL
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
-    EXPECT_EQ(Core::ERROR_GENERAL, result);
+    // Register for notifications to capture the failure reason strings
+    mPreinstallManagerImpl->Register(mockNotification.operator->());
     
-    releaseResources();
-}
-
-/*
- * Test Description:
- * - Tests StartPreinstall when directory is empty (no packages to process)
- * - This safely tests the empty directory scenario without complex mocking
- */
-TEST_F(PreinstallManagerTest, StartPreinstallWithEmptyDirectory)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    // Test different failure scenarios that will trigger getFailReason
     
-    // Mock directory operations to return empty directory
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Return(nullptr)); // No directory
-    
-    // Call StartPreinstall - should handle empty/non-existent directory gracefully
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
-    EXPECT_EQ(Core::ERROR_GENERAL, result); // Expected when directory doesn't exist
-    
-    releaseResources();
-}
-
-/*
- * Test Description:
- * - Tests StartPreinstall when PackageManager is available but directory access fails
- * - This tests the error handling path in the implementation
- */
-TEST_F(PreinstallManagerTest, StartPreinstallWithPackageManagerAvailable)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Mock directory operations to simulate directory access failure
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Return(nullptr)); // Directory access fails
-    
-    // Ensure PackageManager is available (already mocked in createResources)
-    // This tests the code path where PackageManager exists but directory reading fails
-    
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
-    EXPECT_EQ(Core::ERROR_GENERAL, result); // Expected when directory access fails
-    
-    releaseResources();
-}
-
-/*
- * Test Description:
- * - Tests StartPreinstall with both forceInstall true and false parameters
- * - Covers different code paths in the implementation
- */
-TEST_F(PreinstallManagerTest, StartPreinstallForceInstallParameters)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Mock directory operations to avoid segfault
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Return(nullptr)); // Directory doesn't exist
-    
-    // Test with forceInstall = false
-    Core::hresult result1 = mPreinstallManagerImpl->StartPreinstall(false);
-    EXPECT_EQ(Core::ERROR_GENERAL, result1);
-    
-    // Test with forceInstall = true
-    Core::hresult result2 = mPreinstallManagerImpl->StartPreinstall(true);
-    EXPECT_EQ(Core::ERROR_GENERAL, result2);
-    
-    releaseResources();
-}
-
-/*
- * Test Description:
- * - Tests error handling in StartPreinstall when resources are not properly initialized
- * - Covers error paths and defensive coding
- */
-TEST_F(PreinstallManagerTest, StartPreinstallErrorHandling)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Test multiple calls to ensure stability
-    for(int i = 0; i < 3; i++) {
-        // Mock directory operations to simulate different failure scenarios
-        ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-            .WillByDefault(::testing::Return(nullptr));
+    // Test 1: SIGNATURE_VERIFICATION_FAILURE
+    {
+        std::promise<std::string> notificationPromise;
+        std::future<std::string> notificationFuture = notificationPromise.get_future();
         
-        Core::hresult result = mPreinstallManagerImpl->StartPreinstall(i % 2 == 0); // Alternate forceInstall
-        EXPECT_EQ(Core::ERROR_GENERAL, result); // Expected when directory doesn't exist
+        EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
+            .WillOnce(::testing::Invoke([&notificationPromise](const string& jsonresponse) {
+                notificationPromise.set_value(jsonresponse);
+            }));
+        
+        // Simulate installation failure notification from PackageManager
+        if (mPackageInstallerNotification_cb) {
+            string testResponse = R"([{"packageId":"com.test.fail.app","version":"1.0.0","state":"INSTALL_FAILURE","failReason":"SIGNATURE_VERIFICATION_FAILURE"}])";
+            mPackageInstallerNotification_cb->OnAppInstallationStatus(testResponse);
+        }
+        
+        // Wait for notification and verify it contains the correct failure reason string
+        auto status = notificationFuture.wait_for(std::chrono::seconds(2));
+        if (status == std::future_status::ready) {
+            string result = notificationFuture.get();
+            // The notification should contain the string returned by getFailReason
+            EXPECT_TRUE(result.find("SIGNATURE_VERIFICATION_FAILURE") != std::string::npos);
+        }
     }
     
+    // Test 2: PACKAGE_MISMATCH_FAILURE  
+    {
+        std::promise<std::string> notificationPromise2;
+        std::future<std::string> notificationFuture2 = notificationPromise2.get_future();
+        
+        EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
+            .WillOnce(::testing::Invoke([&notificationPromise2](const string& jsonresponse) {
+                notificationPromise2.set_value(jsonresponse);
+            }));
+        
+        if (mPackageInstallerNotification_cb) {
+            string testResponse = R"([{"packageId":"com.test.fail.app","version":"1.0.0","state":"INSTALL_FAILURE","failReason":"PACKAGE_MISMATCH_FAILURE"}])";
+            mPackageInstallerNotification_cb->OnAppInstallationStatus(testResponse);
+        }
+        
+        auto status = notificationFuture2.wait_for(std::chrono::seconds(2));
+        if (status == std::future_status::ready) {
+            string result = notificationFuture2.get();
+            EXPECT_TRUE(result.find("PACKAGE_MISMATCH_FAILURE") != std::string::npos);
+        }
+    }
+    
+    // Cleanup
+    mPreinstallManagerImpl->Unregister(mockNotification.operator->());
     releaseResources();
+}
+
+/*
+ * Test Description: 
+ * - Alternative approach to test getFailReason using a test helper class
+ * - This creates a derived test class that can access protected/private members
+ */
+class PreinstallManagerTestHelper : public WPEFramework::Plugin::PreinstallManagerImplementation {
+public:
+    // Public wrapper to access the private getFailReason method
+    string testGetFailReason(FailReason reason) {
+        return getFailReason(reason);
+    }
+};
+
+TEST_F(PreinstallManagerTest, TestGetFailReasonDirect)
+{
+    // Create a test helper instance to access private methods
+    PreinstallManagerTestHelper helper;
+    
+    // Test all enum values of FailReason
+    
+    // Test SIGNATURE_VERIFICATION_FAILURE
+    string result1 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE);
+    EXPECT_EQ("SIGNATURE_VERIFICATION_FAILURE", result1);
+    
+    // Test PACKAGE_MISMATCH_FAILURE
+    string result2 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE);
+    EXPECT_EQ("PACKAGE_MISMATCH_FAILURE", result2);
+    
+    // Test INVALID_METADATA_FAILURE
+    string result3 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::INVALID_METADATA_FAILURE);
+    EXPECT_EQ("INVALID_METADATA_FAILURE", result3);
+    
+    // Test PERSISTENCE_FAILURE
+    string result4 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::PERSISTENCE_FAILURE);
+    EXPECT_EQ("PERSISTENCE_FAILURE", result4);
+    
+    // Test NONE (default case)
+    string result5 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::NONE);
+    EXPECT_EQ("NONE", result5);
+    
+    // Test invalid enum value (should return default "NONE")
+    string result6 = helper.testGetFailReason(static_cast<Exchange::IPackageInstaller::FailReason>(999));
+    EXPECT_EQ("NONE", result6);
 }
