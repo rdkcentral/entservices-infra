@@ -228,9 +228,10 @@ class MockNotificationTest : public Exchange::IPreinstallManager::INotification
 {
 private:
     mutable std::atomic<uint32_t> m_refCount{1};
+    bool m_manualCleanup{false};
 
 public:
-    MockNotificationTest() = default;
+    MockNotificationTest(bool manualCleanup = true) : m_manualCleanup(manualCleanup) {}
     virtual ~MockNotificationTest() = default;
     
     MOCK_METHOD(void, OnAppInstallationStatus, (const string& jsonresponse), (override));
@@ -242,7 +243,7 @@ public:
     
     uint32_t Release() const override {
         uint32_t refCount = m_refCount.fetch_sub(1);
-        if (refCount == 1) {
+        if (refCount == 1 && !m_manualCleanup) {
             delete this;
         }
         return refCount - 1;
@@ -271,19 +272,30 @@ TEST_F(PreinstallManagerTest, CreatePreinstallManagerPlugin)
  */
 TEST_F(PreinstallManagerTest, RegisterNotification)
 {
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    // Setup minimal resources without PackageInstaller expectations
+    mServiceMock = new NiceMock<ServiceMock>;
+    
+    // Don't set up PackageInstaller mock expectations since we're testing PreinstallManager notifications
+    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(nullptr));
+    
+    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
 
-    // Create notification object without using ProxyType to avoid double free
+    // Create notification object
     MockNotificationTest* mockNotification = new MockNotificationTest();
     Core::hresult status = mPreinstallManagerImpl->Register(mockNotification);
     
     EXPECT_EQ(Core::ERROR_NONE, status);
     
-    // Cleanup - unregister first, then release
+    // Cleanup - unregister first, then manual delete
     mPreinstallManagerImpl->Unregister(mockNotification);
-    mockNotification->Release(); // Proper cleanup
+    delete mockNotification;
     
-    releaseResources();
+    // Simple cleanup
+    plugin->Deinitialize(mServiceMock);
+    delete mServiceMock;
+    mPreinstallManagerImpl = nullptr;
 }
 
 /**
@@ -295,9 +307,17 @@ TEST_F(PreinstallManagerTest, RegisterNotification)
  */
 TEST_F(PreinstallManagerTest, UnregisterNotification)
 {
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    // Setup minimal resources without PackageInstaller expectations
+    mServiceMock = new NiceMock<ServiceMock>;
+    
+    // Don't set up PackageInstaller mock expectations since we're testing PreinstallManager notifications
+    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(nullptr));
+    
+    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
 
-    // Create notification object without using ProxyType to avoid double free
+    // Create notification object
     MockNotificationTest* mockNotification = new MockNotificationTest();
     
     // First register
@@ -308,10 +328,13 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
     Core::hresult unregisterStatus = mPreinstallManagerImpl->Unregister(mockNotification);
     EXPECT_EQ(Core::ERROR_NONE, unregisterStatus);
     
-    // Proper cleanup
-    mockNotification->Release();
+    // Manual cleanup
+    delete mockNotification;
     
-    releaseResources();
+    // Simple cleanup
+    plugin->Deinitialize(mServiceMock);
+    delete mServiceMock;
+    mPreinstallManagerImpl = nullptr;
 }
 
 /**
@@ -396,9 +419,17 @@ TEST_F(PreinstallManagerTest, StartPreinstallFailsWhenPackageManagerUnavailable)
  */
 TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
 {
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    // Setup minimal resources without PackageInstaller expectations
+    mServiceMock = new NiceMock<ServiceMock>;
     
-    // Create notification object without using ProxyType to avoid double free
+    // Don't set up PackageInstaller mock expectations since we're testing PreinstallManager notifications
+    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(nullptr));
+    
+    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
+    
+    // Create notification object
     MockNotificationTest* mockNotification = new MockNotificationTest();
     
     // Expect the notification method to be called - use simple synchronous expectation
@@ -415,9 +446,12 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
     
     // Cleanup
     mPreinstallManagerImpl->Unregister(mockNotification);
-    mockNotification->Release();
+    delete mockNotification;
     
-    releaseResources();
+    // Simple cleanup
+    plugin->Deinitialize(mServiceMock);
+    delete mServiceMock;
+    mPreinstallManagerImpl = nullptr;
 }
 
 /**
@@ -429,7 +463,15 @@ TEST_F(PreinstallManagerTest, HandleAppInstallationStatusNotification)
  */
 TEST_F(PreinstallManagerTest, QueryInterface)
 {
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    // Setup minimal resources without PackageInstaller expectations
+    mServiceMock = new NiceMock<ServiceMock>;
+    
+    // Don't set up PackageInstaller mock expectations 
+    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(nullptr));
+    
+    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
     
     // Test querying IPreinstallManager interface
     Exchange::IPreinstallManager* preinstallInterface = 
@@ -442,7 +484,10 @@ TEST_F(PreinstallManagerTest, QueryInterface)
         preinstallInterface->Release();
     }
     
-    releaseResources();
+    // Simple cleanup
+    plugin->Deinitialize(mServiceMock);
+    delete mServiceMock;
+    mPreinstallManagerImpl = nullptr;
 }
 
 /*
@@ -492,9 +537,17 @@ TEST_F(PreinstallManagerTest, TestEmptyFieldValidation)
  */
 TEST_F(PreinstallManagerTest, TestGetFailReasonIndirectly)
 {
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    // Setup minimal resources without PackageInstaller expectations
+    mServiceMock = new NiceMock<ServiceMock>;
     
-    // Create notification object without using ProxyType to avoid double free
+    // Don't set up PackageInstaller mock expectations since we're testing PreinstallManager notifications
+    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(nullptr));
+    
+    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
+    
+    // Create notification object
     MockNotificationTest* mockNotification = new MockNotificationTest();
     
     // Register for notifications
@@ -515,7 +568,11 @@ TEST_F(PreinstallManagerTest, TestGetFailReasonIndirectly)
     
     // Cleanup
     mPreinstallManagerImpl->Unregister(mockNotification);
-    mockNotification->Release();
+    delete mockNotification;
     
-    releaseResources();
+    // Simple cleanup
+    plugin->Deinitialize(mServiceMock);
+    delete mServiceMock;
+    mPreinstallManagerImpl = nullptr;
 }
+
