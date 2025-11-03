@@ -22,7 +22,6 @@
 #include "ApplicationContext.h"
 #include "RuntimeManagerHandler.h"
 #include "WindowManagerHandler.h"
-#include "RippleHandler.h"
 #include "IEventHandler.h"
 
 namespace WPEFramework
@@ -54,7 +53,6 @@ namespace WPEFramework
                 // different component handlers
                 RuntimeManagerHandler* mRuntimeManagerHandler;
 		WindowManagerHandler* mWindowManagerHandler;
-                RippleHandler* mRippleHandler;
                 IEventHandler* mEventHandler;
         };
     } /* namespace Plugin */
