@@ -257,7 +257,7 @@ namespace WPEFramework
 
         Core::hresult AppGatewayImplementation::Resolve(const Context& context, const string& origin, const string& method, const string& params, string& resolution)
         {
-            LOGINFO("method=%s params=%s", method.c_str(), params.c_str());
+            LOGTRACE("method=%s params=%s", method.c_str(), params.c_str());
             return InternalResolve(context, method, params, origin, resolution);
         }
 
@@ -265,7 +265,7 @@ namespace WPEFramework
         {
             Core::hresult result = FetchResolvedData(context, method, params, origin, resolution);
             if (!resolution.empty()) {
-                LOGINFO("Final resolution: %s", resolution.c_str());
+                LOGTRACE("Final resolution: %s", resolution.c_str());
                 Core::IWorkerPool::Instance().Submit(RespondJob::Create(this, context, resolution, origin));
             }
             return result;
@@ -300,7 +300,7 @@ namespace WPEFramework
 
             std::string permissionGroup;
             if (mResolverPtr->HasPermissionGroup(method, permissionGroup)) {
-                LOGDBG("Method '%s' requires permission group '%s'", method.c_str(), permissionGroup.c_str());
+                LOGTRACE("Method '%s' requires permission group '%s'", method.c_str(), permissionGroup.c_str());
                 if (SetupAppGatewayAuthenticator()) {
                     bool allowed = false;
                     if (Core::ERROR_NONE != mAuthenticator->CheckPermissionGroup(context.appId, permissionGroup, allowed)) {
@@ -315,16 +315,16 @@ namespace WPEFramework
                     }
                 }
             }
-            LOGDBG("Resolved method '%s' to alias '%s'", method.c_str(), alias.c_str());            
+            LOGTRACE("Resolved method '%s' to alias '%s'", method.c_str(), alias.c_str());            
             // Check if the given method is an event
             if (mResolverPtr->HasEvent(method)) {
                 result = PreProcessEvent(context, alias, method, origin, params, resolution);
             } else if(mResolverPtr->HasComRpcRequestSupport(method)) {
-                result = ProcessComRpcRequest(context, alias, method, params, resolution);
+                result = ProcessComRpcRequest(context, alias, method, params, origin, resolution);
             } else {
                 // Check if includeContext is enabled for this method
-                std::string finalParams = UpdateContext(context, method, params);
-                LOGDBG("Final Request params alias=%s Params = %s", alias.c_str(), finalParams.c_str());
+                std::string finalParams = UpdateContext(context, method, params, origin);
+                LOGTRACE("Final Request params alias=%s Params = %s", alias.c_str(), finalParams.c_str());
 
                 result = mResolverPtr->CallThunderPlugin(alias, finalParams, resolution);
                 if (result != Core::ERROR_NONE) {
@@ -338,50 +338,52 @@ namespace WPEFramework
             }
             return result;
         }
-        
-        string AppGatewayImplementation::UpdateContext(const Context &context, const string& method, const string& params, const bool& onlyAdditionalContext) {
+
+        string AppGatewayImplementation::UpdateContext(const Context &context, const string& method, const string& params, const string& origin, const bool& onlyAdditionalContext) {
             // Check if includeContext is enabled for this method
             std::string finalParams = params;
             JsonValue additionalContext;
-            bool needsUpdate = false;
             if (mResolverPtr->HasIncludeContext(method, additionalContext)) {
-                LOGDBG("Method '%s' requires context inclusion", method.c_str());
+                LOGTRACE("Method '%s' requires context inclusion", method.c_str());
                 JsonObject paramsObj;
                 if (!paramsObj.FromString(params))
                 {
+                    // In json rpc params are optional
                     LOGWARN("Failed to parse original params as JSON: %s", params.c_str());
                 }
-                // In json rpc params are optional
-                if (!onlyAdditionalContext) {
+                if (onlyAdditionalContext) {
+                    if (additionalContext.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
+                        JsonObject contextWithOrigin = additionalContext.Object();
+                        contextWithOrigin["origin"] = origin;
+                        JsonObject finalParamsObject;
+                        finalParamsObject["params"] = paramsObj;
+                        finalParamsObject["_additionalContext"] = contextWithOrigin;
+                        finalParamsObject.ToString(finalParams);
+                    } else {
+                        LOGERR("Additional context is not a JSON object for method: %s", method.c_str());
+                    }
+                } else {
                     JsonObject contextObj;
                     contextObj["appId"] = context.appId;
                     contextObj["connectionId"] = context.connectionId;
                     contextObj["requestId"] = context.requestId;
                     paramsObj["context"] = contextObj;
-                    needsUpdate = true;
-                }
-                if (additionalContext.IsSet()) {
-                    paramsObj["additionalContext"] = additionalContext;
-                    needsUpdate = true;
-                }
-
-                if (needsUpdate) {
                     paramsObj.ToString(finalParams);
-                    LOGDBG("Modified params with context: %s", finalParams.c_str());
-                }
-                
+                }                
             }
             return finalParams;
         }
 
-        uint32_t AppGatewayImplementation::ProcessComRpcRequest(const Context &context, const string& alias, const string& method, const string& params, string &resolution) {
+        uint32_t AppGatewayImplementation::ProcessComRpcRequest(const Context &context, const string& alias, const string& method, const string& params, const string& origin, string &resolution) {
             uint32_t result = Core::ERROR_GENERAL;
             Exchange::IAppGatewayRequestHandler *requestHandler = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayRequestHandler>(alias);
             if (requestHandler != nullptr) {
-                std::string finalParams = UpdateContext(context, method, params, true);
+                std::string finalParams = UpdateContext(context, method, params, origin, true);
                 if (Core::ERROR_NONE != requestHandler->HandleAppGatewayRequest(context, method, finalParams, resolution)) {
                     LOGERR("HandleAppGatewayRequest failed for callsign: %s", alias.c_str());
-                    ErrorUtils::CustomInternal("HandleAppGatewayRequest failed", resolution);
+                    if (resolution.empty()){
+                        ErrorUtils::CustomInternal("HandleAppGatewayRequest failed", resolution);
+                    }
                 } else {
                     result = Core::ERROR_NONE;
                 }
@@ -402,7 +404,7 @@ namespace WPEFramework
                     bool resultValue;
                     // Use ObjectUtils::HasBooleanEntry and populate resultValue
                     if (ObjectUtils::HasBooleanEntry(params_obj, "listen", resultValue)) {
-                        LOGDBG("Event method '%s' with listen: %s", method.c_str(), resultValue ? "true" : "false");
+                        LOGTRACE("Event method '%s' with listen: %s", method.c_str(), resultValue ? "true" : "false");
                         auto ret_value = HandleEvent(context, alias, method, origin, resultValue);
                         JsonObject returnResult;
                         returnResult["listening"] = resultValue;

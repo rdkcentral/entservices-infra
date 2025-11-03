@@ -99,7 +99,7 @@ namespace Plugin {
     Core::hresult FbSettings::HandleAppEventNotifier(Exchange::IAppNotificationHandler::IEmitter *cb, const string& event /* @in */,
                                     bool listen /* @in */,
                                     bool &status /* @out */) {
-            LOGINFO("HandleFireboltNotifier [event=%s listen=%s]",
+            LOGTRACE("HandleFireboltNotifier [event=%s listen=%s]",
                     event.c_str(), listen ? "true" : "false");
             status = true;
             Core::IWorkerPool::Instance().Submit(EventRegistrationJob::Create(this, cb, event, listen));
@@ -111,7 +111,7 @@ namespace Plugin {
                                           const string &payload /* @in @opaque */,
                                           string& result /*@out @opaque */)
         {
-            LOGINFO("HandleAppGatewayRequest: method=%s, payload=%s, appId=%s",
+            LOGTRACE("HandleAppGatewayRequest: method=%s, payload=%s, appId=%s",
                     method.c_str(), payload.c_str(), context.appId.c_str());
             std::string lowerMethod = StringUtils::toLower(method);
             // Route System/Device methods
@@ -242,6 +242,10 @@ namespace Plugin {
             {
                 return GetVoiceGuidanceSettings(result);
             }
+            else if (lowerMethod == "accessibility.voiceguidance")
+            {
+                return GetVoiceGuidanceSettings(result);
+            }
 
             // Route audio description methods
             else if (lowerMethod == "accessibility.audiodescriptionsettings")
@@ -345,6 +349,18 @@ namespace Plugin {
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
             }
+            else if (lowerMethod == "device.version")
+            {
+                return GetFirmwareVersion(result);
+            }
+            else if (lowerMethod == "device.screenresolution")
+            {
+                return GetScreenResolution(result);
+            }
+            else if (lowerMethod == "device.videoresolution")
+            {
+                return GetVideoResolution(result);
+            }
 
             // If method not found, return error
             ErrorUtils::NotSupported(result);
@@ -367,7 +383,6 @@ namespace Plugin {
 
         Core::hresult FbSettings::GetDeviceMake(string &make)
         {
-            LOGINFO("GetDeviceMake FbSettings");
             if (!mDelegate)
                 return Core::ERROR_UNAVAILABLE;
             auto systemDelegate = mDelegate->getSystemDelegate();
@@ -892,7 +907,6 @@ namespace Plugin {
                        << ", \"navigationHints\": " << hintsResult << "}";
 
             result = jsonStream.str();
-            LOGINFO("GetVoiceGuidanceSettings: %s", result.c_str());
 
             return Core::ERROR_NONE;
         }
@@ -938,7 +952,6 @@ namespace Plugin {
                        << ", \"styles\": {}}";
 
             result = jsonStream.str();
-            LOGINFO("GetClosedCaptionsSettings: %s", result.c_str());
 
             return Core::ERROR_NONE;
         }
@@ -959,6 +972,26 @@ namespace Plugin {
             }
 
             return networkDelegate->GetInternetConnectionStatus(result);
+        }
+
+        Core::hresult FbSettings::GetFirmwareVersion(string &result /* @out */)
+        {
+            if (!mDelegate)
+                return Core::ERROR_UNAVAILABLE;
+            auto systemDelegate = mDelegate->getSystemDelegate();
+            if (!systemDelegate)
+                return Core::ERROR_UNAVAILABLE;
+            return systemDelegate->GetFirmwareVersion(result);
+        }
+
+        Core::hresult FbSettings::GetScreenResolution(string &result /* out */) {
+            result = R"([1920,1080])";
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult FbSettings::GetVideoResolution(string &result /* out */) {
+            result = R"([1920,1080])";
+            return Core::ERROR_NONE;
         }
 
 } // namespace Plugin

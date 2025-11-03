@@ -167,6 +167,86 @@ public:
         return Core::ERROR_NONE;
     }
 
+    Core::hresult GetFirmwareVersion(std::string &version)
+    {
+        mAdminLock.Lock();
+        version = mVersionResponse;
+        mAdminLock.Unlock();
+        
+        if (!version.empty()) {
+            return Core::ERROR_NONE;
+        }
+
+        auto link = AcquireLink();
+        if (!link)
+        {
+            return Core::ERROR_UNAVAILABLE;
+        }
+
+        WPEFramework::Core::JSON::VariantContainer params;
+        WPEFramework::Core::JSON::VariantContainer response;
+        const uint32_t rc = link->Invoke<decltype(params), decltype(response)>("getSystemVersions", params, response);
+        if (rc != Core::ERROR_NONE)
+        {
+            LOGERR("SystemDelegate: getSystemVersions failed rc=%u", rc);
+            return Core::ERROR_UNAVAILABLE;
+        }
+        if (!response.HasLabel(_T("receiverVersion"))) {
+            LOGERR("SystemDelegate: getSystemVersions missing receiverVersion");
+            return Core::ERROR_UNAVAILABLE;
+        }
+        std::string receiverVersion = response[_T("receiverVersion")].String();
+        if (receiverVersion.empty())
+        {
+            LOGERR("SystemDelegate: Failed to get Version");
+            return Core::ERROR_UNAVAILABLE;
+        }
+
+        std::string stbVersion = response[_T("stbVersion")].String();
+        if (stbVersion.empty())
+        {
+            LOGERR("SystemDelegate: Failed to get STB Version");
+            return Core::ERROR_UNAVAILABLE;
+        }
+
+        // receiver version is typically in 99.99.15.07 format need to set extract the first three parts only for major.minor.patch
+        // if receiverversion is not in number format return error
+        uint32_t major;
+        uint32_t minor;
+        uint32_t patch;
+
+        if (sscanf(receiverVersion.c_str(), "%u.%u.%u", &major, &minor, &patch) != 3)
+        {
+            LOGERR("SystemDelegate: receiverVersion is not in number format");
+            return Core::ERROR_UNAVAILABLE;
+        }
+
+        JsonObject versionObj;
+        JsonObject api;
+        api["major"] = 1;
+        api["minor"] = 7;
+        api["patch"] = 0;
+        api["readable"] = "Firebolt API v1.7.0";
+
+        JsonObject firmwareInfo;
+        firmwareInfo["major"] = major;
+        firmwareInfo["minor"] = minor;
+        firmwareInfo["patch"] = patch;
+        firmwareInfo["readable"] = stbVersion;
+        // Build this json data structure {"api":{"major":1,"minor":7,"patch":0,"readable":"Firebolt API v1.7.0"},"firmware":{"major":99,"minor":99,"patch":15,"readable":"SKXI11ADS_MIDDLEWARE_DEV_develop_20251101123542_TEST_CD"},"os":{"major":99,"minor":99,"patch":15,"readable":"SKXI11ADS_MIDDLEWARE_DEV_develop_20251101123542_TEST_CD"},"debug":"4.0.0"}
+        versionObj["api"] = api;
+        versionObj["firmware"] = firmwareInfo;
+        versionObj["os"] = firmwareInfo;
+        versionObj["debug"] = "4.0.0";
+
+        mAdminLock.Lock();
+        versionObj.ToString(mVersionResponse);
+        version = mVersionResponse;
+        mAdminLock.Unlock();
+
+        return Core::ERROR_NONE;
+    }
+
     // PUBLIC_INTERFACE
     Core::hresult GetCountryCode(std::string &code)
     {
@@ -363,5 +443,7 @@ private:
 private:
     PluginHost::IShell *_shell;
     std::unordered_set<std::string> _subscriptions;
+    mutable Core::CriticalSection mAdminLock;
+    std::string mVersionResponse;
 };
 

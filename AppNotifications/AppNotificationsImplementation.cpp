@@ -48,7 +48,7 @@ namespace WPEFramework
                                             bool listen /* @in */,
                                             const string &module /* @in */,
                                             const string &event /* @in */) {
-            LOGINFO("Subscribe [requestId=%d appId=%s connectionId=%d] register=%s, module=%s, event=%s",
+            LOGTRACE("Subscribe [requestId=%d appId=%s connectionId=%d] register=%s, module=%s, event=%s",
                     context.requestId, context.appId.c_str(), context.connectionId,
                     listen ? "true" : "false", module.c_str(), event.c_str());
             if (listen) {
@@ -72,14 +72,14 @@ namespace WPEFramework
         Core::hresult AppNotificationsImplementation::Emit(const string &event /* @in */,
                                     const string &payload /* @in @opaque */,
                                     const string &appId /* @in */) {
-            LOGINFO("Emit [event= %s payload=%s appId=%s]",
+            LOGTRACE("Emit [event= %s payload=%s appId=%s]",
                     event.c_str(), payload.c_str(), appId.c_str());
             Core::IWorkerPool::Instance().Submit(EmitJob::Create(this, event, payload, appId));
             return Core::ERROR_NONE;
         }
 
         Core::hresult AppNotificationsImplementation::Cleanup(const uint32_t connectionId /* @in */, const string &origin /* @in */) {
-            LOGINFO("Cleanup [connectionId=%d origin=%s]", connectionId, origin.c_str());
+            LOGTRACE("Cleanup [connectionId=%d origin=%s]", connectionId, origin.c_str());
             mSubMap.CleanupNotifications(connectionId, origin);
             return Core::ERROR_NONE;
         }
@@ -243,11 +243,10 @@ namespace WPEFramework
         bool AppNotificationsImplementation::ThunderSubscriptionManager::HandleNotifier(const string& module, const string& event, const bool& listen) {
             // Check if Plugins is activated before making a request
             bool status = false;
-            LOGDBG("Inside Notifier: ");
             Exchange::IAppNotificationHandler *internalNotifier = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppNotificationHandler>(module);
             if (internalNotifier != nullptr) {
                 if (Core::ERROR_NONE == internalNotifier->HandleAppEventNotifier(&mParent.mEmitter, event, listen, status)) {
-                    LOGINFO("Notifier status for %s:%s is %s", module.c_str(), event.c_str(), status ? "true" : "false");
+                    LOGTRACE("Notifier status for %s:%s is %s", module.c_str(), event.c_str(), status ? "true" : "false");
                 } else {
                     LOGERR("Notification subscription failure");
                 }
