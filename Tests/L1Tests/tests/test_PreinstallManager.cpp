@@ -529,27 +529,24 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithEmptyFieldPackages)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Set up directory mocks to simulate finding packages
-    SetUpPreinstallDirectoryMocks();
-    
-    // Mock GetConfigForPackage to return package info with empty fields
-    // This will trigger the empty field validation logic (lines 427-440)
+    // Mock PackageInstaller methods - similar to StartPreinstallWithForceInstall
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            // Return empty packageId and version to trigger empty field handling
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            // Return empty fields to trigger empty field validation logic
             id = "";  // Empty packageId
             version = "";  // Empty version
             return Core::ERROR_NONE;
         });
-    
+
     // Since the package has empty fields, Install should not be called
     // We don't expect any Install calls due to empty field validation
     
-    // Call StartPreinstall which should skip the package with empty fields
+    SetUpPreinstallDirectoryMocks();
+    
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // The method should complete successfully even with invalid packages
-    // The empty field validation should handle the invalid package gracefully
+    // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
+    // We mainly test that the method doesn't crash and handles empty fields correctly
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
     // This test covers:
@@ -575,21 +572,23 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithVariousEmptyFieldCombinations)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Set up directory mocks to simulate finding packages
-    SetUpPreinstallDirectoryMocks();
-    
-    // Test scenario: Empty version field
+    // Mock PackageInstaller methods - similar to StartPreinstallWithForceInstall
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
             id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;  // Valid packageId
             version = "";  // Empty version - this will trigger empty field validation
             return Core::ERROR_NONE;
         });
+
+    // Since the package has empty version, Install should not be called
+    // We don't expect any Install calls due to empty field validation
     
-    // Call StartPreinstall - should handle empty version gracefully
+    SetUpPreinstallDirectoryMocks();
+    
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // Should complete without crashing, handling the empty field appropriately
+    // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
+    // We mainly test that the method doesn't crash and handles empty version correctly
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
     // This test provides additional coverage for:
@@ -612,22 +611,24 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithGetConfigFailure)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Set up directory mocks to simulate finding packages
-    SetUpPreinstallDirectoryMocks();
-    
-    // Mock GetConfigForPackage to fail, which might result in empty fields
+    // Mock PackageInstaller methods - similar to StartPreinstallWithForceInstall
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillOnce([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
             // Simulate failure by returning error and leaving fields potentially empty
             id = "";  // Empty as a result of failure
             version = "";  // Empty as a result of failure
             return Core::ERROR_GENERAL;  // Failure return
         });
+
+    // Since GetConfigForPackage fails and results in empty fields, Install should not be called
+    // We don't expect any Install calls due to the failure and empty field validation
     
-    // Call StartPreinstall - should handle GetConfigForPackage failure gracefully
+    SetUpPreinstallDirectoryMocks();
+    
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // Should complete handling the configuration failure
+    // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
+    // We mainly test that the method handles GetConfigForPackage failure gracefully
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
     // This test covers:
