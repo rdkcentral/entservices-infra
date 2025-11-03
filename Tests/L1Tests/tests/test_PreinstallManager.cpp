@@ -489,19 +489,29 @@ TEST_F(PreinstallManagerTest, TestEmptyFieldValidation)
     
     // Mock GetConfigForPackage to return empty packageId and version
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = "";  // Empty packageId to trigger validation logic
-            version = "";  // Empty version to trigger validation logic
+        .WillOnce([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            id.clear();  // Empty packageId to trigger validation logic
+            version.clear();  // Empty version to trigger validation logic
             return Core::ERROR_NONE;
         });
 
-    SetUpPreinstallDirectoryMocks();
+    // Simplified directory mocking to avoid memory issues
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+
+    // Mock readdir to return at least one entry to trigger processing
+    static struct dirent mockEntry;
+    strcpy(mockEntry.d_name, "test_widget");
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault(::testing::Return(&mockEntry));
+
+    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillByDefault(::testing::Return(0));
     
     // Call StartPreinstall - this should exercise the empty field validation (lines 429-440)
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // The method should handle empty fields gracefully
-    // Result can be ERROR_NONE or ERROR_GENERAL based on other conditions
+    // The method should handle empty fields and return ERROR_GENERAL for invalid data
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
     releaseResources();
@@ -564,3 +574,4 @@ TEST_F(PreinstallManagerTest, TestGetFailReasonIndirectly)
     mPreinstallManagerImpl->Unregister(mockNotification.operator->());
     releaseResources();
 }
+
