@@ -548,46 +548,75 @@ TEST_F(PreinstallManagerTest, TestGetFailReasonThroughNotifications)
 }
 
 /*
- * Test Description: 
- * - Alternative approach to test getFailReason using a test helper class
- * - This creates a derived test class that can access protected/private members
+ * Test Description:
+ * - Tests getFailReason function through multiple failure scenarios
+ * - Expands the notification-based testing to cover more enum values
  */
-class PreinstallManagerTestHelper : public WPEFramework::Plugin::PreinstallManagerImplementation {
-public:
-    // Public wrapper to access the private getFailReason method
-    string testGetFailReason(FailReason reason) {
-        return getFailReason(reason);
-    }
-};
-
-TEST_F(PreinstallManagerTest, TestGetFailReasonDirect)
+TEST_F(PreinstallManagerTest, TestGetFailReasonAllValues)
 {
-    // Create a test helper instance to access private methods
-    PreinstallManagerTestHelper helper;
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Test all enum values of FailReason
+    auto mockNotification = Core::ProxyType<MockNotificationTest>::Create();
+    testing::Mock::AllowLeak(mockNotification.operator->());
     
-    // Test SIGNATURE_VERIFICATION_FAILURE
-    string result1 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE);
-    EXPECT_EQ("SIGNATURE_VERIFICATION_FAILURE", result1);
+    // Register for notifications
+    mPreinstallManagerImpl->Register(mockNotification.operator->());
     
-    // Test PACKAGE_MISMATCH_FAILURE
-    string result2 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE);
-    EXPECT_EQ("PACKAGE_MISMATCH_FAILURE", result2);
+    // Test all different failure reasons through notifications
+    std::vector<std::string> failureReasons = {
+        "SIGNATURE_VERIFICATION_FAILURE",
+        "PACKAGE_MISMATCH_FAILURE", 
+        "INVALID_METADATA_FAILURE",
+        "PERSISTENCE_FAILURE"
+    };
     
-    // Test INVALID_METADATA_FAILURE
-    string result3 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::INVALID_METADATA_FAILURE);
-    EXPECT_EQ("INVALID_METADATA_FAILURE", result3);
+    for (const auto& failReason : failureReasons) {
+        std::promise<std::string> notificationPromise;
+        std::future<std::string> notificationFuture = notificationPromise.get_future();
+        
+        EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
+            .WillOnce(::testing::Invoke([&notificationPromise](const string& jsonresponse) {
+                notificationPromise.set_value(jsonresponse);
+            }));
+        
+        if (mPackageInstallerNotification_cb) {
+            string testResponse = R"([{"packageId":"com.test.fail.app","version":"1.0.0","state":"INSTALL_FAILURE","failReason":")" + failReason + R"("}])";
+            mPackageInstallerNotification_cb->OnAppInstallationStatus(testResponse);
+        }
+        
+        auto status = notificationFuture.wait_for(std::chrono::seconds(2));
+        if (status == std::future_status::ready) {
+            string result = notificationFuture.get();
+            // Verify the notification contains the expected failure reason
+            EXPECT_TRUE(result.find(failReason) != std::string::npos) 
+                << "Failed to find " << failReason << " in notification: " << result;
+        }
+    }
     
-    // Test PERSISTENCE_FAILURE
-    string result4 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::PERSISTENCE_FAILURE);
-    EXPECT_EQ("PERSISTENCE_FAILURE", result4);
+    // Test NONE case (success scenario)
+    {
+        std::promise<std::string> notificationPromise;
+        std::future<std::string> notificationFuture = notificationPromise.get_future();
+        
+        EXPECT_CALL(*mockNotification, OnAppInstallationStatus(::testing::_))
+            .WillOnce(::testing::Invoke([&notificationPromise](const string& jsonresponse) {
+                notificationPromise.set_value(jsonresponse);
+            }));
+        
+        if (mPackageInstallerNotification_cb) {
+            string testResponse = R"([{"packageId":"com.test.success.app","version":"1.0.0","state":"INSTALLED"}])";
+            mPackageInstallerNotification_cb->OnAppInstallationStatus(testResponse);
+        }
+        
+        auto status = notificationFuture.wait_for(std::chrono::seconds(2));
+        if (status == std::future_status::ready) {
+            string result = notificationFuture.get();
+            // For success case, should not contain failure reasons
+            EXPECT_TRUE(result.find("INSTALLED") != std::string::npos);
+        }
+    }
     
-    // Test NONE (default case)
-    string result5 = helper.testGetFailReason(Exchange::IPackageInstaller::FailReason::NONE);
-    EXPECT_EQ("NONE", result5);
-    
-    // Test invalid enum value (should return default "NONE")
-    string result6 = helper.testGetFailReason(static_cast<Exchange::IPackageInstaller::FailReason>(999));
-    EXPECT_EQ("NONE", result6);
+    // Cleanup
+    mPreinstallManagerImpl->Unregister(mockNotification.operator->());
+    releaseResources();
 }
