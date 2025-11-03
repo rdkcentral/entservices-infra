@@ -476,3 +476,197 @@ TEST_F(PreinstallManagerTest, QueryInterface)
     
     releaseResources();
 }
+
+/*
+ * Test Description:
+ * - Tests getFailReason function with all possible FailReason enum values
+ * - Ensures complete code coverage for the getFailReason method
+ */
+TEST_F(PreinstallManagerTest, GetFailReasonAllEnumValues)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Test SIGNATURE_VERIFICATION_FAILURE
+    string result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE);
+    EXPECT_EQ("SIGNATURE_VERIFICATION_FAILURE", result);
+    
+    // Test PACKAGE_MISMATCH_FAILURE
+    result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE);
+    EXPECT_EQ("PACKAGE_MISMATCH_FAILURE", result);
+    
+    // Test INVALID_METADATA_FAILURE
+    result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::INVALID_METADATA_FAILURE);
+    EXPECT_EQ("INVALID_METADATA_FAILURE", result);
+    
+    // Test PERSISTENCE_FAILURE
+    result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::PERSISTENCE_FAILURE);
+    EXPECT_EQ("PERSISTENCE_FAILURE", result);
+    
+    // Test NONE (default case)
+    result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::NONE);
+    EXPECT_EQ("NONE", result);
+    
+    // Test invalid/unknown enum value (should return default "NONE")
+    result = mPreinstallManagerImpl->getFailReason(static_cast<Exchange::IPackageInstaller::FailReason>(999));
+    EXPECT_EQ("NONE", result);
+    
+    releaseResources();
+}
+
+/*
+ * Test Description:
+ * - Tests StartPreinstall with packages having empty packageId field
+ * - Covers lines 429-440: empty field validation and error handling
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallWithEmptyPackageId)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Create test files in the test directory
+    string testDir = "entservices-infra/Tests/L1Tests/tests";
+    string packageFile = testDir + "/testpackage_empty_id.wgt";
+    string metadataFile = testDir + "/testpackage_empty_id.json";
+    
+    // Create package file
+    std::ofstream packageStream(packageFile);
+    packageStream << "Test package content";
+    packageStream.close();
+    
+    // Create metadata file with empty packageId
+    std::ofstream metadataStream(metadataFile);
+    metadataStream << "{\n";
+    metadataStream << "  \"packageId\": \"\",\n";  // Empty packageId
+    metadataStream << "  \"version\": \"1.0.0\",\n";
+    metadataStream << "  \"fileLocator\": \"" << packageFile << "\"\n";
+    metadataStream << "}";
+    metadataStream.close();
+    
+    // Mock PackageInstaller to never be called since package should be skipped
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0);  // Should not be called due to empty packageId
+    
+    // Call StartPreinstall
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    EXPECT_EQ(Core::ERROR_NONE, result);  // Should succeed but skip the package
+    
+    // Clean up test files
+    std::remove(packageFile.c_str());
+    std::remove(metadataFile.c_str());
+    
+    releaseResources();
+}
+
+/*
+ * Test Description:
+ * - Tests StartPreinstall with packages having empty version field
+ * - Covers lines 429-440: empty field validation and error handling
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallWithEmptyVersion)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Create test files in the test directory
+    string testDir = "entservices-infra/Tests/L1Tests/tests";
+    string packageFile = testDir + "/testpackage_empty_version.wgt";
+    string metadataFile = testDir + "/testpackage_empty_version.json";
+    
+    // Create package file
+    std::ofstream packageStream(packageFile);
+    packageStream << "Test package content";
+    packageStream.close();
+    
+    // Create metadata file with empty version
+    std::ofstream metadataStream(metadataFile);
+    metadataStream << "{\n";
+    metadataStream << "  \"packageId\": \"com.test.emptyversion.app\",\n";
+    metadataStream << "  \"version\": \"\",\n";  // Empty version
+    metadataStream << "  \"fileLocator\": \"" << packageFile << "\"\n";
+    metadataStream << "}";
+    metadataStream.close();
+    
+    // Mock PackageInstaller to never be called since package should be skipped
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0);  // Should not be called due to empty version
+    
+    // Call StartPreinstall
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    EXPECT_EQ(Core::ERROR_NONE, result);  // Should succeed but skip the package
+    
+    // Clean up test files
+    std::remove(packageFile.c_str());
+    std::remove(metadataFile.c_str());
+    
+    releaseResources();
+}
+
+/*
+ * Test Description:
+ * - Tests StartPreinstall with packages having empty fileLocator field
+ * - Covers lines 429-440: empty field validation and error handling
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallWithEmptyFileLocator)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Create test files in the test directory
+    string testDir = "entservices-infra/Tests/L1Tests/tests";
+    string metadataFile = testDir + "/testpackage_empty_locator.json";
+    
+    // Create metadata file with empty fileLocator
+    std::ofstream metadataStream(metadataFile);
+    metadataStream << "{\n";
+    metadataStream << "  \"packageId\": \"com.test.emptylocator.app\",\n";
+    metadataStream << "  \"version\": \"1.0.0\",\n";
+    metadataStream << "  \"fileLocator\": \"\"\n";  // Empty fileLocator
+    metadataStream << "}";
+    metadataStream.close();
+    
+    // Mock PackageInstaller to never be called since package should be skipped
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0);  // Should not be called due to empty fileLocator
+    
+    // Call StartPreinstall
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    EXPECT_EQ(Core::ERROR_NONE, result);  // Should succeed but skip the package
+    
+    // Clean up test files
+    std::remove(metadataFile.c_str());
+    
+    releaseResources();
+}
+
+/*
+ * Test Description:
+ * - Tests StartPreinstall with packages having multiple empty fields
+ * - Covers lines 429-440: comprehensive empty field validation including field population logic
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallWithMultipleEmptyFields)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Create test files in the test directory
+    string testDir = "entservices-infra/Tests/L1Tests/tests";
+    string metadataFile = testDir + "/testpackage_multiple_empty.json";
+    
+    // Create metadata file with multiple empty fields
+    std::ofstream metadataStream(metadataFile);
+    metadataStream << "{\n";
+    metadataStream << "  \"packageId\": \"\",\n";     // Empty packageId
+    metadataStream << "  \"version\": \"\",\n";       // Empty version
+    metadataStream << "  \"fileLocator\": \"\"\n";    // Empty fileLocator
+    metadataStream << "}";
+    metadataStream.close();
+    
+    // Mock PackageInstaller to never be called since package should be skipped
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(0);  // Should not be called due to multiple empty fields
+    
+    // Call StartPreinstall - this should trigger lines 429-440 logic
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+    EXPECT_EQ(Core::ERROR_NONE, result);  // Should succeed but skip the package
+    
+    // Clean up test files
+    std::remove(metadataFile.c_str());
+    
+    releaseResources();
+}
