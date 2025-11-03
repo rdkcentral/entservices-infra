@@ -571,6 +571,8 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
+	uint32_t timeout_ms = 300;
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -580,7 +582,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(timeout_ms);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
