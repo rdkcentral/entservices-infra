@@ -94,9 +94,9 @@ namespace WPEFramework {
             END_INTERFACE_MAP
         
         public:
-            virtual Core::hresult HandleAppEventNotifier(Exchange::IAppNotificationHandler::IEmitter *cb /* @in */, 
-                const string& event /* @in */, 
-                bool listen /* @in */, 
+            virtual Core::hresult HandleAppEventNotifier(Exchange::IAppNotificationHandler::IEmitter *cb /* @in */,
+                const string& event /* @in */,
+                bool listen /* @in */,
                 bool& status /* @out */) override;
             
             virtual Core::hresult HandleAppGatewayRequest(const Exchange::GatewayContext &context /* @in */,

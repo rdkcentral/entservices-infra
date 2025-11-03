@@ -144,6 +144,10 @@ namespace Plugin {
                                             const string &module /* @in */,
                                             const string &event /* @in */) override;
 
+        Core::hresult Emit(const string& event /* @in */,
+                           const string& payload /* @in @opaque */,
+                           const string& appId /* @in */) override;
+
         Core::hresult Cleanup(const uint32_t connectionId /* @in */, const string &origin /* @in */) override;
 
         // IConfiguration interface

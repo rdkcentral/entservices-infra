@@ -69,6 +69,15 @@ namespace WPEFramework
             return Core::ERROR_NONE;
         }
 
+        Core::hresult AppNotificationsImplementation::Emit(const string &event /* @in */,
+                                    const string &payload /* @in @opaque */,
+                                    const string &appId /* @in */) {
+            LOGINFO("Emit [event= %s payload=%s appId=%s]",
+                    event.c_str(), payload.c_str(), appId.c_str());
+            Core::IWorkerPool::Instance().Submit(EmitJob::Create(this, event, payload, appId));
+            return Core::ERROR_NONE;
+        }
+
         Core::hresult AppNotificationsImplementation::Cleanup(const uint32_t connectionId /* @in */, const string &origin /* @in */) {
             LOGINFO("Cleanup [connectionId=%d origin=%s]", connectionId, origin.c_str());
             mSubMap.CleanupNotifications(connectionId, origin);
