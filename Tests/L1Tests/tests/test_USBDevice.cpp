@@ -2536,10 +2536,15 @@ TEST_F(USBDeviceTest, GetDeviceList_PerInterfaceClass_MassStorage_Success)
             *config = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
             (*config)->bNumInterfaces = 1;
             (*config)->interface = (libusb_interface *)malloc(sizeof(libusb_interface));
-            (*config)->interface[0].num_altsetting = 1;
-            (*config)->interface[0].altsetting = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
-            (*config)->interface[0].altsetting[0].bInterfaceClass = LIBUSB_CLASS_MASS_STORAGE;
-            (*config)->interface[0].altsetting[0].bInterfaceSubClass = 6;
+            
+            libusb_interface *iface = const_cast<libusb_interface*>(&(*config)->interface[0]);
+            *const_cast<int*>(&iface->num_altsetting) = 1;
+            *const_cast<libusb_interface_descriptor**>(&iface->altsetting) = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
+            
+            libusb_interface_descriptor *altsetting = const_cast<libusb_interface_descriptor*>(&iface->altsetting[0]);
+            *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = LIBUSB_CLASS_MASS_STORAGE;
+            *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = 6;
+            
             return LIBUSB_SUCCESS;
         });
 
@@ -2548,9 +2553,9 @@ TEST_F(USBDeviceTest, GetDeviceList_PerInterfaceClass_MassStorage_Success)
             if (config) {
                 if (config->interface) {
                     if (config->interface[0].altsetting) {
-                        free((void*)config->interface[0].altsetting);
+                        free(const_cast<libusb_interface_descriptor*>(config->interface[0].altsetting));
                     }
-                    free((void*)config->interface);
+                    free(const_cast<libusb_interface*>(config->interface));
                 }
                 free(config);
             }
@@ -2613,10 +2618,15 @@ TEST_F(USBDeviceTest, GetDeviceList_PerInterfaceClass_NoMassStorage_Success)
             *config = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
             (*config)->bNumInterfaces = 1;
             (*config)->interface = (libusb_interface *)malloc(sizeof(libusb_interface));
-            (*config)->interface[0].num_altsetting = 1;
-            (*config)->interface[0].altsetting = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
-            (*config)->interface[0].altsetting[0].bInterfaceClass = LIBUSB_CLASS_HID;
-            (*config)->interface[0].altsetting[0].bInterfaceSubClass = 0;
+            
+            libusb_interface *iface = const_cast<libusb_interface*>(&(*config)->interface[0]);
+            *const_cast<int*>(&iface->num_altsetting) = 1;
+            *const_cast<libusb_interface_descriptor**>(&iface->altsetting) = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
+            
+            libusb_interface_descriptor *altsetting = const_cast<libusb_interface_descriptor*>(&iface->altsetting[0]);
+            *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = LIBUSB_CLASS_HID;
+            *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = 0;
+            
             return LIBUSB_SUCCESS;
         });
 
@@ -2625,9 +2635,9 @@ TEST_F(USBDeviceTest, GetDeviceList_PerInterfaceClass_NoMassStorage_Success)
             if (config) {
                 if (config->interface) {
                     if (config->interface[0].altsetting) {
-                        free((void*)config->interface[0].altsetting);
+                        free(const_cast<libusb_interface_descriptor*>(config->interface[0].altsetting));
                     }
-                    free((void*)config->interface);
+                    free(const_cast<libusb_interface*>(config->interface));
                 }
                 free(config);
             }
@@ -2751,10 +2761,15 @@ TEST_F(USBDeviceTest, GetDeviceInfo_PerInterfaceClass_MassStorage_Success)
             *config = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
             (*config)->bNumInterfaces = 1;
             (*config)->interface = (libusb_interface *)malloc(sizeof(libusb_interface));
-            (*config)->interface[0].num_altsetting = 1;
-            (*config)->interface[0].altsetting = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
-            (*config)->interface[0].altsetting[0].bInterfaceClass = LIBUSB_CLASS_MASS_STORAGE;
-            (*config)->interface[0].altsetting[0].bInterfaceSubClass = 6;
+            
+            libusb_interface *iface = const_cast<libusb_interface*>(&(*config)->interface[0]);
+            *const_cast<int*>(&iface->num_altsetting) = 1;
+            *const_cast<libusb_interface_descriptor**>(&iface->altsetting) = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
+            
+            libusb_interface_descriptor *altsetting = const_cast<libusb_interface_descriptor*>(&iface->altsetting[0]);
+            *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = LIBUSB_CLASS_MASS_STORAGE;
+            *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = 6;
+            
             return LIBUSB_SUCCESS;
         });
 
@@ -2763,9 +2778,9 @@ TEST_F(USBDeviceTest, GetDeviceInfo_PerInterfaceClass_MassStorage_Success)
             if (config) {
                 if (config->interface) {
                     if (config->interface[0].altsetting) {
-                        free((void*)config->interface[0].altsetting);
+                        free(const_cast<libusb_interface_descriptor*>(config->interface[0].altsetting));
                     }
-                    free((void*)config->interface);
+                    free(const_cast<libusb_interface*>(config->interface));
                 }
                 free(config);
             }
@@ -2853,14 +2868,22 @@ TEST_F(USBDeviceTest, GetDeviceList_PerInterfaceClass_MultipleInterfaces_Success
             *config = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
             (*config)->bNumInterfaces = 2;
             (*config)->interface = (libusb_interface *)malloc(2 * sizeof(libusb_interface));
-            (*config)->interface[0].num_altsetting = 1;
-            (*config)->interface[0].altsetting = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
-            (*config)->interface[0].altsetting[0].bInterfaceClass = LIBUSB_CLASS_HID;
-            (*config)->interface[0].altsetting[0].bInterfaceSubClass = 0;
-            (*config)->interface[1].num_altsetting = 1;
-            (*config)->interface[1].altsetting = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
-            (*config)->interface[1].altsetting[0].bInterfaceClass = LIBUSB_CLASS_MASS_STORAGE;
-            (*config)->interface[1].altsetting[0].bInterfaceSubClass = 6;
+            
+            for (int i = 0; i < 2; i++) {
+                libusb_interface *iface = const_cast<libusb_interface*>(&(*config)->interface[i]);
+                *const_cast<int*>(&iface->num_altsetting) = 1;
+                *const_cast<libusb_interface_descriptor**>(&iface->altsetting) = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
+                
+                libusb_interface_descriptor *altsetting = const_cast<libusb_interface_descriptor*>(&iface->altsetting[0]);
+                if (i == 0) {
+                    *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = LIBUSB_CLASS_HID;
+                    *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = 0;
+                } else {
+                    *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = LIBUSB_CLASS_MASS_STORAGE;
+                    *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = 6;
+                }
+            }
+            
             return LIBUSB_SUCCESS;
         });
 
@@ -2870,10 +2893,10 @@ TEST_F(USBDeviceTest, GetDeviceList_PerInterfaceClass_MultipleInterfaces_Success
                 if (config->interface) {
                     for (int i = 0; i < config->bNumInterfaces; i++) {
                         if (config->interface[i].altsetting) {
-                            free((void*)config->interface[i].altsetting);
+                            free(const_cast<libusb_interface_descriptor*>(config->interface[i].altsetting));
                         }
                     }
-                    free((void*)config->interface);
+                    free(const_cast<libusb_interface*>(config->interface));
                 }
                 free(config);
             }
