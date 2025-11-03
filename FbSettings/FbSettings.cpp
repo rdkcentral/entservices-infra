@@ -360,6 +360,14 @@ namespace Plugin {
             else if (lowerMethod == "device.videoresolution")
             {
                 return GetVideoResolution(result);
+            }            
+            else if (method == "device.hdcp")
+            {
+                return GetHdcp(result);
+            }
+            else if (method == "device.hdr")
+            {
+                return GetHdr(result);
             }
 
             // If method not found, return error
@@ -984,15 +992,76 @@ namespace Plugin {
             return systemDelegate->GetFirmwareVersion(result);
         }
 
-        Core::hresult FbSettings::GetScreenResolution(string &result /* out */) {
-            result = R"([1920,1080])";
-            return Core::ERROR_NONE;
+        // Core::hresult FbSettings::GetScreenResolution(string &result /* out */) {
+        //     result = R"([1920,1080])";
+        //     return Core::ERROR_NONE;
+        // }
+
+        // Core::hresult FbSettings::GetVideoResolution(string &result /* out */) {
+        //     result = R"([1920,1080])";
+        //     return Core::ERROR_NONE;
+        // }
+
+        Core::hresult FbSettings::GetScreenResolution(string &result)
+        {
+            LOGINFO("GetScreenResolution FbSettings");
+            if (!mDelegate) {
+                result = "[1920,1080]";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            auto systemDelegate = mDelegate->getSystemDelegate();
+            if (!systemDelegate) {
+                result = "[1920,1080]";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            return systemDelegate->GetScreenResolution(result);
         }
 
-        Core::hresult FbSettings::GetVideoResolution(string &result /* out */) {
-            result = R"([1920,1080])";
-            return Core::ERROR_NONE;
+        Core::hresult FbSettings::GetVideoResolution(string &result)
+        {
+            LOGINFO("GetVideoResolution FbSettings");
+            if (!mDelegate) {
+                result = "[1920,1080]";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            auto systemDelegate = mDelegate->getSystemDelegate();
+            if (!systemDelegate) {
+                result = "[1920,1080]";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            return systemDelegate->GetVideoResolution(result);
         }
+
+        Core::hresult FbSettings::GetHdcp(string &result)
+        {
+            LOGINFO("GetHdcp FbSettings");
+            if (!mDelegate) {
+                result = "{\"hdcp1.4\":false,\"hdcp2.2\":false}";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            auto systemDelegate = mDelegate->getSystemDelegate();
+            if (!systemDelegate) {
+                result = "{\"hdcp1.4\":false,\"hdcp2.2\":false}";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            return systemDelegate->GetHdcp(result);
+        }
+
+        Core::hresult FbSettings::GetHdr(string &result)
+        {
+            LOGINFO("GetHdr FbSettings");
+            if (!mDelegate) {
+                result = "{\"hdr10\":false,\"dolbyVision\":false,\"hlg\":false,\"hdr10Plus\":false}";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            auto systemDelegate = mDelegate->getSystemDelegate();
+            if (!systemDelegate) {
+                result = "{\"hdr10\":false,\"dolbyVision\":false,\"hlg\":false,\"hdr10Plus\":false}";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            return systemDelegate->GetHdr(result);
+        }
+
 
 } // namespace Plugin
 } // namespace WPEFramework

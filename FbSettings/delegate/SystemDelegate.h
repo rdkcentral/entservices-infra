@@ -24,23 +24,69 @@
 #include <unordered_set>
 
 #include <plugins/plugins.h>
+#include <core/JSON.h>
 #include "UtilsLogging.h"
 #include "UtilsJsonrpcDirectLink.h"
+#include "ThunderUtils.h"
+#include "BaseEventDelegate.h"
+
+using namespace WPEFramework;
 
 // Define a callsign constant to match the AUTHSERVICE_CALLSIGN-style pattern.
 #ifndef SYSTEM_CALLSIGN
 #define SYSTEM_CALLSIGN "org.rdk.System"
 #endif
 
-class SystemDelegate
+#ifndef DISPLAYSETTINGS_CALLSIGN
+#define DISPLAYSETTINGS_CALLSIGN "org.rdk.DisplaySettings"
+#endif
+
+#ifndef HDCPPROFILE_CALLSIGN
+#define HDCPPROFILE_CALLSIGN "org.rdk.HdcpProfile"
+#endif
+
+class SystemDelegate: public BaseEventDelegate
 {
 public:
-    SystemDelegate(PluginHost::IShell *shell)
-        : _shell(shell)
+
+    // Event names exposed by this delegate (consumer subscriptions may vary in case)
+    static constexpr const char* EVENT_ON_VIDEO_RES_CHANGED   = "device.onVideoResolutionChanged";
+    static constexpr const char* EVENT_ON_SCREEN_RES_CHANGED  = "device.onScreenResolutionChanged";
+    static constexpr const char* EVENT_ON_HDR_CHANGED         = "device.onHdrChanged";
+    static constexpr const char* EVENT_ON_HDCP_CHANGED        = "device.onHdcpChanged";
+
+    SystemDelegate(PluginHost::IShell *shell, WPEFramework::Exchange::IAppNotifications* appNotifications)
+        : BaseEventDelegate(appNotifications)
+        , _shell(shell)
+        , _subscriptions()
+        , _displayRpc(nullptr)
+        , _hdcpRpc(nullptr)
+        , _displaySubscribed(false)
+        , _hdcpSubscribed(false)
     {
+        // Proactively subscribe to underlying Thunder events so we can react quickly.
+        // Actual dispatch to apps only happens if registrations exist (BaseEventDelegate check).
+        SetupDisplaySettingsSubscription();
+        SetupHdcpProfileSubscription();
     }
 
-    ~SystemDelegate() = default;
+    ~SystemDelegate()
+    {
+        // Cleanup subscriptions
+        try {
+            if (_displayRpc && _displaySubscribed) {
+                _displayRpc->Unsubscribe(2000, _T("resolutionChanged"));
+            }
+            if (_hdcpRpc && _hdcpSubscribed) {
+                _hdcpRpc->Unsubscribe(2000, _T("onDisplayConnectionChanged"));
+            }
+        } catch (...) {
+            // Safe-guard against destructor exceptions
+        }
+        _displayRpc.reset();
+        _hdcpRpc.reset();
+        _shell = nullptr;
+    }
 
     // PUBLIC_INTERFACE
     Core::hresult GetDeviceMake(std::string &make)
@@ -357,8 +403,329 @@ public:
         return GetDeviceName(name);
     }
 
+    // PUBLIC_INTERFACE
+    Core::hresult GetScreenResolution(std::string &jsonArray)
+    {
+        /**
+         * Get [w, h] screen resolution using DisplaySettings.getCurrentResolution.
+         * Returns "[1920,1080]" as fallback when unavailable.
+         */
+        LOGDBG("[FbSettings|GetScreenResolution] Invoked");
+        jsonArray = "[1920,1080]";
+        auto link = AcquireLink(DISPLAYSETTINGS_CALLSIGN);
+        if (!link) {
+            LOGERR("[FbSettings|GetScreenResolution] DisplaySettings link unavailable, returning default %s", jsonArray.c_str());
+            return Core::ERROR_UNAVAILABLE;
+        }
+
+        WPEFramework::Core::JSON::VariantContainer params;
+        WPEFramework::Core::JSON::VariantContainer response;
+        const uint32_t rc = link->Invoke<decltype(params), decltype(response)>("getCurrentResolution", params, response);
+        if (rc != Core::ERROR_NONE) {
+            LOGERR("[FbSettings|GetScreenResolution] getCurrentResolution failed rc=%u, returning default %s", rc, jsonArray.c_str());
+            return Core::ERROR_GENERAL;
+        }
+
+        int w = 1920, h = 1080;
+
+        // Try top-level first
+        if (response.HasLabel(_T("w")) && response.HasLabel(_T("h"))) {
+            auto wv = response.Get(_T("w"));
+            auto hv = response.Get(_T("h"));
+            if (wv.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER &&
+                hv.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER) {
+                w = static_cast<int>(wv.Number());
+                h = static_cast<int>(hv.Number());
+            }
+        } else if (response.HasLabel(_T("result"))) {
+            // Try nested "result"
+            auto r = response.Get(_T("result"));
+            if (r.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
+                auto wnv = r.Object().Get(_T("w"));
+                auto hnv = r.Object().Get(_T("h"));
+                auto wdv = r.Object().Get(_T("width"));
+                auto hdv = r.Object().Get(_T("height"));
+
+                if (wnv.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER &&
+                    hnv.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER) {
+                    w = static_cast<int>(wnv.Number());
+                    h = static_cast<int>(hnv.Number());
+                } else if (wdv.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER &&
+                           hdv.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER) {
+                    w = static_cast<int>(wdv.Number());
+                    h = static_cast<int>(hdv.Number());
+                }
+            }
+        }
+
+        jsonArray = "[" + std::to_string(w) + "," + std::to_string(h) + "]";
+        LOGDBG("[FbSettings|GetScreenResolution] Computed screenResolution: w=%d h=%d -> %s", w, h, jsonArray.c_str());
+        return Core::ERROR_NONE;
+    }
+
+    // PUBLIC_INTERFACE
+    Core::hresult GetVideoResolution(std::string &jsonArray)
+    {
+        /**
+         * Get [w, h] video resolution. Prefer DisplaySettings.getCurrentResolution width
+         * to infer UHD vs FHD; else default to 1080p.
+         * This is a stubbed approximation of the /system/hdmi.uhdConfigured logic.
+         */
+        std::string sr;
+        (void)GetScreenResolution(sr);
+        // sr expected format: "[w,h]"
+        int w = 1920, h = 1080;
+        if (sr.size() > 2 && sr.front() == '[' && sr.back() == ']') {
+            try {
+                // Simple parsing without heavy JSON dependencies
+                auto comma = sr.find(',');
+                if (comma != std::string::npos) {
+                    int sw = std::stoi(sr.substr(1, comma - 1));
+                    int sh = std::stoi(sr.substr(comma + 1, sr.size() - comma - 2));
+                    if (sw >= 3840 || sh >= 2160) {
+                        w = 3840; h = 2160;
+                    } else {
+                        w = 1920; h = 1080;
+                    }
+                    LOGDBG("[FbSettings|GetVideoResolution] Transform screen(%d x %d) -> video(%d x %d)", sw, sh, w, h);
+                }
+            } catch (...) {
+                // keep defaults
+                LOGDBG("[FbSettings|GetVideoResolution] Transform parse error for %s -> using defaults (%d x %d)", sr.c_str(), w, h);
+            }
+        }
+        jsonArray = "[" + std::to_string(w) + "," + std::to_string(h) + "]";
+        return Core::ERROR_NONE;
+    }
+
+    // PUBLIC_INTERFACE
+    Core::hresult GetHdcp(std::string &jsonObject)
+    {
+        /**
+         * Get HDCP status via HdcpProfile.getHDCPStatus.
+         * Return {"hdcp1.4":bool,"hdcp2.2":bool} with sensible defaults.
+         */
+        jsonObject = "{\"hdcp1.4\":false,\"hdcp2.2\":false}";
+        LOGDBG("[FbSettings|GetHdcp] Invoked");
+        auto link = AcquireLink(HDCPPROFILE_CALLSIGN);
+        if (!link) {
+            LOGERR("[FbSettings|GetHdcp] HdcpProfile link unavailable, returning default %s", jsonObject.c_str());
+            return Core::ERROR_UNAVAILABLE;
+        }
+
+        WPEFramework::Core::JSON::VariantContainer params;
+        WPEFramework::Core::JSON::VariantContainer response;
+        const uint32_t rc = link->Invoke<decltype(params), decltype(response)>("getHDCPStatus", params, response);
+        if (rc != Core::ERROR_NONE) {
+            LOGERR("[FbSettings|GetHdcp] getHDCPStatus failed rc=%u, returning default %s", rc, jsonObject.c_str());
+            return Core::ERROR_GENERAL;
+        }
+
+        bool hdcp14 = false;
+        bool hdcp22 = false;
+
+        // Prefer nested "result" if available
+        if (response.HasLabel(_T("result"))) {
+            auto r = response.Get(_T("result"));
+            if (r.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
+                auto succ = r.Object().Get(_T("success"));
+                auto status = r.Object().Get(_T("HDCPStatus"));
+                if (succ.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN && succ.Boolean() &&
+                    status.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
+                    auto reason = status.Object().Get(_T("hdcpReason"));
+                    auto version = status.Object().Get(_T("currentHDCPVersion"));
+                    if (reason.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER &&
+                        static_cast<int>(reason.Number()) == 2 &&
+                        version.Content() == WPEFramework::Core::JSON::Variant::type::STRING) {
+                        const std::string v = version.String();
+                        if (v == "1.4") { hdcp14 = true; }
+                        else { hdcp22 = true; }
+                    }
+                }
+            }
+        } else {
+            // Fallback: try top-level fields if present
+            auto status = response.Get(_T("HDCPStatus"));
+            if (status.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
+                auto reason = status.Object().Get(_T("hdcpReason"));
+                auto version = status.Object().Get(_T("currentHDCPVersion"));
+                if (reason.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER &&
+                    static_cast<int>(reason.Number()) == 2 &&
+                    version.Content() == WPEFramework::Core::JSON::Variant::type::STRING) {
+                    const std::string v = version.String();
+                    if (v == "1.4") { hdcp14 = true; }
+                    else { hdcp22 = true; }
+                }
+            }
+        }
+
+        jsonObject = std::string("{\"hdcp1.4\":") + (hdcp14 ? "true" : "false")
+                   + ",\"hdcp2.2\":" + (hdcp22 ? "true" : "false") + "}";
+        LOGDBG("[FbSettings|GetHdcp] Computed HDCP flags: hdcp1.4=%s hdcp2.2=%s -> %s",
+               hdcp14 ? "true" : "false", hdcp22 ? "true" : "false", jsonObject.c_str());
+        return Core::ERROR_NONE;
+    }
+
+    // PUBLIC_INTERFACE
+    Core::hresult GetHdr(std::string &jsonObject)
+    {
+        /**
+         * Retrieve HDR capability/state via DisplaySettings.getTVHDRCapabilities.
+         * Returns object with hdr10, dolbyVision, hlg, hdr10Plus flags (defaults false).
+         */
+        jsonObject = "{\"hdr10\":false,\"dolbyVision\":false,\"hlg\":false,\"hdr10Plus\":false}";
+        LOGDBG("[FbSettings|GetHdr] Invoked");
+        auto link = AcquireLink(DISPLAYSETTINGS_CALLSIGN);
+        if (!link) {
+            LOGERR("[FbSettings|GetHdr] DisplaySettings link unavailable, returning default %s", jsonObject.c_str());
+            return Core::ERROR_UNAVAILABLE;
+        }
+
+        WPEFramework::Core::JSON::VariantContainer params;
+        WPEFramework::Core::JSON::VariantContainer response;
+        const uint32_t rc = link->Invoke<decltype(params), decltype(response)>("getTVHDRCapabilities", params, response);
+        if (rc != Core::ERROR_NONE) {
+            LOGERR("[FbSettings|GetHdr] getTVHDRCapabilities failed rc=%u, returning default %s", rc, jsonObject.c_str());
+            return Core::ERROR_GENERAL;
+        }
+
+        bool hdr10 = false, dv = false, hlg = false, hdr10plus = false;
+
+        auto parseCaps = [&](const WPEFramework::Core::JSON::Variant& vobj) {
+            if (vobj.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
+                auto hdmi = vobj.Object().Get(_T("hdmi"));
+                if (hdmi.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
+                    auto sinkHDR10 = hdmi.Object().Get(_T("sinkHDR10"));
+                    auto sinkDolbyVision = hdmi.Object().Get(_T("sinkDolbyVision"));
+                    auto sinkHLG = hdmi.Object().Get(_T("sinkHLG"));
+                    auto sinkHDR10Plus = hdmi.Object().Get(_T("sinkHDR10Plus"));
+                    hdr10    = (sinkHDR10.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN) ? sinkHDR10.Boolean() : false;
+                    dv       = (sinkDolbyVision.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN) ? sinkDolbyVision.Boolean() : false;
+                    hlg      = (sinkHLG.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN) ? sinkHLG.Boolean() : false;
+                    hdr10plus= (sinkHDR10Plus.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN) ? sinkHDR10Plus.Boolean() : false;
+                }
+            }
+        };
+
+        if (response.HasLabel(_T("result"))) {
+            auto r = response.Get(_T("result"));
+            parseCaps(r);
+        } else {
+            parseCaps(response);
+        }
+
+        jsonObject = std::string("{\"hdr10\":") + (hdr10 ? "true" : "false")
+                   + ",\"dolbyVision\":" + (dv ? "true" : "false")
+                   + ",\"hlg\":" + (hlg ? "true" : "false")
+                   + ",\"hdr10Plus\":" + (hdr10plus ? "true" : "false") + "}";
+        LOGDBG("[FbSettings|GetHdr] Computed HDR flags: hdr10=%s dolbyVision=%s hlg=%s hdr10Plus=%s -> %s",
+               hdr10 ? "true" : "false",
+               dv ? "true" : "false",
+               hlg ? "true" : "false",
+               hdr10plus ? "true" : "false",
+               jsonObject.c_str());
+        return Core::ERROR_NONE;
+    }
+
+    // ---- Event exposure (Emit helpers) ----
+
+    // PUBLIC_INTERFACE
+    bool EmitOnVideoResolutionChanged()
+    {
+        std::string payload;
+        if (GetVideoResolution(payload) != Core::ERROR_NONE) {
+            LOGERR("[FbSettings|VideoResolutionChanged] handler=GetVideoResolution failed to compute payload");
+            return false;
+        }
+        // Transform to rpcv2_event wrapper: { "videoResolution": $event_handler_response }
+        const std::string wrapped = std::string("{\"videoResolution\":") + payload + "}";
+        LOGINFO("[FbSettings|VideoResolutionChanged] Final rpcv2_event payload=%s", wrapped.c_str());
+        LOGDBG("[FbSettings|VideoResolutionChanged] Emitting event: %s", EVENT_ON_VIDEO_RES_CHANGED);
+        Dispatch(EVENT_ON_VIDEO_RES_CHANGED, wrapped);
+            return true;
+    }
+
+    // PUBLIC_INTERFACE
+    bool EmitOnScreenResolutionChanged()
+    {
+        std::string payload;
+        if (GetScreenResolution(payload) != Core::ERROR_NONE) {
+            LOGERR("[FbSettings|ScreenResolutionChanged] handler=GetScreenResolution failed to compute payload");
+            return false;
+        }
+        // Transform to rpcv2_event wrapper: { "screenResolution": $event }
+        const std::string wrapped = std::string("{\"screenResolution\":") + payload + "}";
+        LOGINFO("[FbSettings|ScreenResolutionChanged] Final rpcv2_event payload=%s", wrapped.c_str());
+        LOGDBG("[FbSettings|ScreenResolutionChanged] Emitting event: %s", EVENT_ON_SCREEN_RES_CHANGED);
+        Dispatch(EVENT_ON_SCREEN_RES_CHANGED, wrapped);
+        return true;
+
+    }
+
+    // PUBLIC_INTERFACE
+    bool EmitOnHdcpChanged()
+    {
+        std::string payload;
+        if (GetHdcp(payload) != Core::ERROR_NONE) {
+            LOGERR("[FbSettings|HdcpChanged] handler=GetHdcp failed to compute payload");
+            return false;
+        }
+        LOGINFO("[FbSettings|HdcpChanged] Final rpcv2_event payload=%s", payload.c_str());
+        LOGDBG("[FbSettings|HdcpChanged] Emitting event: %s", EVENT_ON_HDCP_CHANGED);
+        Dispatch(EVENT_ON_HDCP_CHANGED, payload);
+        return true;
+
+    }
+
+    // PUBLIC_INTERFACE
+    bool EmitOnHdrChanged()
+    {
+        std::string payload;
+        if (GetHdr(payload) != Core::ERROR_NONE) {
+            LOGERR("[FbSettings|HdrChanged] handler=GetHdr failed to compute payload");
+            return false;
+        }
+        LOGINFO("[FbSettings|HdrChanged] Final rpcv2_event payload=%s", payload.c_str());
+        LOGDBG("[FbSettings|HdrChanged] Emitting event: %s", EVENT_ON_HDR_CHANGED);
+        Dispatch(EVENT_ON_HDR_CHANGED, payload);
+        return true;
+
+    }
+
+    // ---- AppNotifications registration hook ----
+    // Called by SettingsDelegate when app subscribes/unsubscribes to events.
+    bool HandleEvent(const std::string &event, const bool listen, bool &registrationError)
+    {
+        registrationError = false;
+
+        const std::string evLower = ToLower(event);
+
+        // Supported events (case-insensitive)
+        if (evLower == "device.onvideoresolutionchanged"
+            || evLower == "device.onscreenresolutionchanged"
+            || evLower == "device.onhdcpchanged"
+            || evLower == "device.onhdrchanged")
+        {
+            LOGINFO("[FbSettings|EventRegistration] event=%s listen=%s", event.c_str(), listen ? "true" : "false");
+            if (listen) {
+                AddNotification(event);
+                // Ensure underlying Thunder subscriptions are active
+                SetupDisplaySettingsSubscription();
+                SetupHdcpProfileSubscription();
+                registrationError = true; // indicate handled without error
+                return true;
+            } else {
+                RemoveNotification(event);
+                registrationError = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 private:
-    inline std::shared_ptr<WPEFramework::Utils::JSONRPCDirectLink> AcquireLink() const
+    inline std::shared_ptr<WPEFramework::Utils::JSONRPCDirectLink> AcquireLink(const std::string& callsign) const
     {
         // Create a direct JSON-RPC link to the Thunder System plugin using the Supporting_Files helper.
         if (_shell == nullptr)
@@ -369,6 +736,11 @@ private:
         return WPEFramework::Utils::GetThunderControllerClient(_shell, SYSTEM_CALLSIGN);
     }
 
+    inline std::shared_ptr<WPEFramework::Utils::JSONRPCDirectLink> AcquireLink() const
+    {
+        return AcquireLink(SYSTEM_CALLSIGN);
+    }
+    
     static std::string ToLower(const std::string &in)
     {
         std::string out;
@@ -439,11 +811,86 @@ private:
         }
         return true;
     }
+    // Setup subscriptions to underlying Thunder plugin events
+    void SetupDisplaySettingsSubscription()
+    {
+        if (_displaySubscribed) return;
+        try {
+            if (!_displayRpc) {
+                _displayRpc = ThunderUtils::getThunderControllerClient(DISPLAYSETTINGS_CALLSIGN);
+            }
+            if (_displayRpc) {
+                const uint32_t status = _displayRpc->Subscribe<WPEFramework::Core::JSON::VariantContainer>(
+                    2000, _T("resolutionChanged"), &SystemDelegate::OnDisplaySettingsResolutionChanged, this);
+                if (status == Core::ERROR_NONE) {
+                    LOGINFO("SystemDelegate: Subscribed to %s.resolutionChanged", DISPLAYSETTINGS_CALLSIGN);
+                    _displaySubscribed = true;
+                } else {
+                    LOGERR("SystemDelegate: Failed to subscribe to %s.resolutionChanged rc=%u", DISPLAYSETTINGS_CALLSIGN, status);
+                }
+            }
+        } catch (...) {
+            LOGERR("SystemDelegate: exception during DisplaySettings subscription");
+        }
+    }
+
+    void SetupHdcpProfileSubscription()
+    {
+        if (_hdcpSubscribed) return;
+        try {
+            if (!_hdcpRpc) {
+                _hdcpRpc = ThunderUtils::getThunderControllerClient(HDCPPROFILE_CALLSIGN);
+            }
+            if (_hdcpRpc) {
+                const uint32_t status = _hdcpRpc->Subscribe<WPEFramework::Core::JSON::VariantContainer>(
+                    2000, _T("onDisplayConnectionChanged"), &SystemDelegate::OnHdcpProfileDisplayConnectionChanged, this);
+                if (status == Core::ERROR_NONE) {
+                    LOGINFO("SystemDelegate: Subscribed to %s.onDisplayConnectionChanged", HDCPPROFILE_CALLSIGN);
+                    _hdcpSubscribed = true;
+                } else {
+                    LOGERR("SystemDelegate: Failed to subscribe to %s.onDisplayConnectionChanged rc=%u", HDCPPROFILE_CALLSIGN, status);
+                }
+            }
+        } catch (...) {
+            LOGERR("SystemDelegate: exception during HdcpProfile subscription");
+        }
+    }
+
+    // Event handlers invoked by Thunder JSON-RPC subscription
+    void OnDisplaySettingsResolutionChanged(const WPEFramework::Core::JSON::VariantContainer& params)
+    {
+        (void)params;
+        LOGINFO("[FbSettings|DisplaySettings.resolutionChanged] Incoming alias=%s.%s, invoking handlers...",
+                DISPLAYSETTINGS_CALLSIGN, "resolutionChanged");
+        // Re-query state and dispatch debounced events
+        const bool screenEmitted = EmitOnScreenResolutionChanged();
+        const bool videoEmitted = EmitOnVideoResolutionChanged();
+        LOGINFO("[FbSettings|DisplaySettings.resolutionChanged] Handler responses: onScreenResolutionChanged=%s onVideoResolutionChanged=%s",
+                screenEmitted ? "emitted" : "skipped", videoEmitted ? "emitted" : "skipped");
+    }
+
+    void OnHdcpProfileDisplayConnectionChanged(const WPEFramework::Core::JSON::VariantContainer& params)
+    {
+        (void)params;
+        LOGINFO("[FbSettings|HdcpProfile.onDisplayConnectionChanged] Incoming alias=%s.%s, invoking handlers...",
+                HDCPPROFILE_CALLSIGN, "onDisplayConnectionChanged");
+        // Re-query state and dispatch debounced events
+        const bool hdcpEmitted = EmitOnHdcpChanged();
+        const bool hdrEmitted = EmitOnHdrChanged();
+        LOGINFO("[FbSettings|HdcpProfile.onDisplayConnectionChanged] Handler responses: onHdcpChanged=%s onHdrChanged=%s",
+                hdcpEmitted ? "emitted" : "skipped", hdrEmitted ? "emitted" : "skipped");
+    }
 
 private:
     PluginHost::IShell *_shell;
     std::unordered_set<std::string> _subscriptions;
     mutable Core::CriticalSection mAdminLock;
     std::string mVersionResponse;
+
+    // JSONRPC clients for event subscriptions
+    std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> _displayRpc;
+    std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> _hdcpRpc;
+    bool _displaySubscribed;
+    bool _hdcpSubscribed;
 };
 

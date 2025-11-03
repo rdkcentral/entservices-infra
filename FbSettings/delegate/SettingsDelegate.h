@@ -91,7 +91,7 @@ class SettingsDelegate {
             }
 
             if (systemDelegate == nullptr) {
-                systemDelegate = std::make_shared<SystemDelegate>(shell);
+                systemDelegate = std::make_shared<SystemDelegate>(shell, mAppNotifications);
             }
 
             if (networkDelegate == nullptr) {

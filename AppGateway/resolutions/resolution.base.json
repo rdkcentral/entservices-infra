@@ -219,6 +219,30 @@
         "device.videoResolution": {
             "alias": "org.rdk.FbSettings",
             "useComRpc": true
+        },
+        "device.hdr": {
+            "alias": "org.rdk.FbSettings",
+            "useComRpc": true
+        },
+        "device.hdcp": {
+            "alias": "org.rdk.FbSettings",
+            "useComRpc": true
+        },
+        "device.onhdrchanged": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.onDisplayConnectionChanged"
+        },
+        "device.onhdcpchanged": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.onDisplayConnectionChanged"
+        },
+        "device.onvideoresolutionchanged": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.onScreenResolutionChanged"
+        },
+        "device.onscreenresolutionchanged": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.resolutionChanged"
         }
     }
 }
