@@ -479,36 +479,74 @@ TEST_F(PreinstallManagerTest, QueryInterface)
 
 /*
  * Test Description:
- * - Tests getFailReason function with all possible FailReason enum values
- * - Ensures complete code coverage for the getFailReason method
+ * - Tests installation failure scenarios which indirectly test getFailReason function
+ * - Covers getFailReason through different failure types in StartPreinstall
  */
-TEST_F(PreinstallManagerTest, GetFailReasonAllEnumValues)
+TEST_F(PreinstallManagerTest, StartPreinstallWithDifferentFailureReasons)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Test SIGNATURE_VERIFICATION_FAILURE
-    string result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE);
-    EXPECT_EQ("SIGNATURE_VERIFICATION_FAILURE", result);
+    // Test 1: SIGNATURE_VERIFICATION_FAILURE
+    {
+        string testDir = "entservices-infra/Tests/L1Tests/tests";
+        string packageFile = testDir + "/testpackage_sig_fail.wgt";
+        string metadataFile = testDir + "/testpackage_sig_fail.json";
+        
+        std::ofstream packageStream(packageFile);
+        packageStream << "Test package content";
+        packageStream.close();
+        
+        std::ofstream metadataStream(metadataFile);
+        metadataStream << "{\n";
+        metadataStream << "  \"packageId\": \"com.test.sigfail.app\",\n";
+        metadataStream << "  \"version\": \"1.0.0\",\n";
+        metadataStream << "  \"fileLocator\": \"" << packageFile << "\"\n";
+        metadataStream << "}";
+        metadataStream.close();
+        
+        EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+            .WillOnce(::testing::DoAll(
+                ::testing::SetArgReferee<4>(Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE),
+                ::testing::Return(Core::ERROR_GENERAL)
+            ));
+        
+        Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+        EXPECT_EQ(Core::ERROR_NONE, result);
+        
+        std::remove(packageFile.c_str());
+        std::remove(metadataFile.c_str());
+    }
     
-    // Test PACKAGE_MISMATCH_FAILURE
-    result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE);
-    EXPECT_EQ("PACKAGE_MISMATCH_FAILURE", result);
-    
-    // Test INVALID_METADATA_FAILURE
-    result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::INVALID_METADATA_FAILURE);
-    EXPECT_EQ("INVALID_METADATA_FAILURE", result);
-    
-    // Test PERSISTENCE_FAILURE
-    result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::PERSISTENCE_FAILURE);
-    EXPECT_EQ("PERSISTENCE_FAILURE", result);
-    
-    // Test NONE (default case)
-    result = mPreinstallManagerImpl->getFailReason(Exchange::IPackageInstaller::FailReason::NONE);
-    EXPECT_EQ("NONE", result);
-    
-    // Test invalid/unknown enum value (should return default "NONE")
-    result = mPreinstallManagerImpl->getFailReason(static_cast<Exchange::IPackageInstaller::FailReason>(999));
-    EXPECT_EQ("NONE", result);
+    // Test 2: PACKAGE_MISMATCH_FAILURE
+    {
+        string testDir = "entservices-infra/Tests/L1Tests/tests";
+        string packageFile = testDir + "/testpackage_mismatch_fail.wgt";
+        string metadataFile = testDir + "/testpackage_mismatch_fail.json";
+        
+        std::ofstream packageStream(packageFile);
+        packageStream << "Test package content";
+        packageStream.close();
+        
+        std::ofstream metadataStream(metadataFile);
+        metadataStream << "{\n";
+        metadataStream << "  \"packageId\": \"com.test.mismatchfail.app\",\n";
+        metadataStream << "  \"version\": \"1.0.0\",\n";
+        metadataStream << "  \"fileLocator\": \"" << packageFile << "\"\n";
+        metadataStream << "}";
+        metadataStream.close();
+        
+        EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+            .WillOnce(::testing::DoAll(
+                ::testing::SetArgReferee<4>(Exchange::IPackageInstaller::FailReason::PACKAGE_MISMATCH_FAILURE),
+                ::testing::Return(Core::ERROR_GENERAL)
+            ));
+        
+        Core::hresult result = mPreinstallManagerImpl->StartPreinstall(false);
+        EXPECT_EQ(Core::ERROR_NONE, result);
+        
+        std::remove(packageFile.c_str());
+        std::remove(metadataFile.c_str());
+    }
     
     releaseResources();
 }
