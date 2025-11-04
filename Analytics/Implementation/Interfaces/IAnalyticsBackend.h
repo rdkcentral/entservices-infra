@@ -42,6 +42,7 @@ namespace Plugin {
             uint64_t epochTimestamp;
             std::string appId;
             std::string eventPayload;
+            std::string additionalContext;
         };
 
         virtual const std::string& Name() const = 0;
