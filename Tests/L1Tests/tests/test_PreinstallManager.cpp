@@ -18,16 +18,24 @@
 **/
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <fstream>
 #include <string>
+#include <vector>
 #include <cstdio>
+#include <mutex>
 #include <chrono>
+#include <condition_variable>
 #include <future>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <cstring>
 
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
 #include "ServiceMock.h"
 #include "PackageManagerMock.h"
+#include "COMLinkMock.h"
+#include "ThunderPortability.h"
 #include "Module.h"
 #include "WorkerPoolImplementation.h"
 #include "WrapsMock.h"
@@ -35,27 +43,59 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
+#define TIMEOUT   (50000)
 #define PREINSTALL_MANAGER_TEST_PACKAGE_ID      "com.test.preinstall.app"
 #define PREINSTALL_MANAGER_TEST_VERSION         "1.0.0"
+#define PREINSTALL_MANAGER_TEST_FILE_LOCATOR    "/opt/preinstall/testapp/package.wgt"
+#define PREINSTALL_MANAGER_WRONG_PACKAGE_ID     "com.wrongtest.preinstall.app"
+
+typedef enum : uint32_t {
+    PreinstallManager_StateInvalid = 0x00000000,
+    PreinstallManager_onAppInstallationStatus = 0x00000001
+} PreinstallManagerL1test_async_events_t;
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
+
+namespace {
+const string callSign = _T("PreinstallManager");
+}
 
 class PreinstallManagerTest : public ::testing::Test {
 protected:
     ServiceMock* mServiceMock = nullptr;
     PackageInstallerMock* mPackageInstallerMock = nullptr;
     WrapsImplMock *p_wrapsImplMock = nullptr;
+    Core::JSONRPC::Message message;
     FactoriesImplementation factoriesImplementation;
     PLUGINHOST_DISPATCHER *dispatcher;
 
     Core::ProxyType<Plugin::PreinstallManager> plugin;
     Plugin::PreinstallManagerImplementation *mPreinstallManagerImpl;
     Exchange::IPackageInstaller::INotification* mPackageInstallerNotification_cb = nullptr;
+    Exchange::IPreinstallManager::INotification* mPreinstallManagerNotification = nullptr;
 
     Core::ProxyType<WorkerPoolImplementation> workerPool;
+    Core::JSONRPC::Handler& mJsonRpcHandler;
+    DECL_CORE_JSONRPC_CONX connection;
+    string mJsonRpcResponse;
 
+    void createPreinstallManagerImpl()
+    {
+        mServiceMock = new NiceMock<ServiceMock>;
+        
+        TEST_LOG("In createPreinstallManagerImpl!");
+        EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+        mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
+    }
 
+    void releasePreinstallManagerImpl()
+    {
+        TEST_LOG("In releasePreinstallManagerImpl!");
+        plugin->Deinitialize(mServiceMock);
+        delete mServiceMock;
+        mPreinstallManagerImpl = nullptr;
+    }
 
     Core::hresult createResources()
     {
@@ -142,7 +182,9 @@ protected:
 
     PreinstallManagerTest()
         : plugin(Core::ProxyType<Plugin::PreinstallManager>::Create()),
-        workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(2, Core::Thread::DefaultStackSize(), 16))
+        workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(2, Core::Thread::DefaultStackSize(), 16)),
+        mJsonRpcHandler(*plugin),
+        INIT_CONX(1, 0)
     {
         Core::IWorkerPool::Assign(&(*workerPool));
         workerPool->Run();
