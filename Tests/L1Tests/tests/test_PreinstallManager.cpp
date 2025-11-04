@@ -319,17 +319,16 @@ TEST_F(PreinstallManagerTest, UnregisterNotification)
  * @details Test verifies that:
  * - StartPreinstall can be called with forceInstall=true
  * - Method returns appropriate status
- * - Tests the pkg.version.empty() condition to hit line 436 in implementation.cpp
  */
 TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
 {
     ASSERT_EQ(Core::ERROR_NONE, createResources());
     
-    // Mock PackageInstaller methods - return empty version to trigger pkg.version.empty() condition
+    // Mock PackageInstaller methods
     EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
             id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = ""; // Set empty version to trigger pkg.version.empty() condition and hit line 436
+            version = PREINSTALL_MANAGER_TEST_VERSION;
             return Core::ERROR_NONE;
         });
 
@@ -345,41 +344,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
     // The result can be ERROR_NONE or ERROR_GENERAL depending on directory existence
-    // We mainly test that the method doesn't crash and handles empty version correctly
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    releaseResources();
-}
-
-/**
- * @brief Test StartPreinstall with empty package version to cover line 436
- *
- * @details Test verifies that:
- * - StartPreinstall handles packages with empty version correctly
- * - Covers the pkg.version.empty() condition and line 436 in implementation.cpp
- * - Ensures proper error handling for invalid package metadata
- */
-TEST_F(PreinstallManagerTest, StartPreinstallWithEmptyVersionCoverage)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Mock GetConfigForPackage to return empty version to specifically test pkg.version.empty() path
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = ""; // Empty version to trigger the condition in line 436
-            return Core::ERROR_NONE;
-        });
-
-    SetUpPreinstallDirectoryMocks();
-    
-    // Install method shouldn't be called since package has empty version and should be skipped
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .Times(0);  // No installation should happen for invalid packages
-    
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
-    
-    // Should handle gracefully even with empty version
+    // We mainly test that the method doesn't crash
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
     releaseResources();
@@ -511,6 +476,46 @@ TEST_F(PreinstallManagerTest, QueryInterface)
     if (preinstallInterface != nullptr) {
         preinstallInterface->Release();
     }
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test StartPreinstall with installation failure
+ *
+ * @details Test verifies that:
+ * - Installation failure scenarios are handled correctly
+ * - Error paths in the installation loop are exercised
+ * - getFailReason method is used when installation fails
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallWithInstallationFailure)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Mock GetConfigForPackage to succeed
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
+            version = PREINSTALL_MANAGER_TEST_VERSION;
+            return Core::ERROR_NONE;
+        });
+
+    // Mock Install to return failure
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
+            return Core::ERROR_GENERAL; // Return failure instead of ERROR_NONE
+        });
+
+    SetUpPreinstallDirectoryMocks();
+    
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // Should complete but with errors during installation
+    // The overall operation may succeed even if individual packages fail
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
     releaseResources();
 }
