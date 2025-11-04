@@ -37,7 +37,7 @@ namespace WPEFramework
         , mWindowManagerConnector(nullptr)
         , mDobbyEventListener(nullptr)
         , mUserIdManager(nullptr)
-        , mRuntimeAppPortal("com.sky.as.apps") // Default value
+        , mRuntimeAppPortal("")
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         , mTelemetryMetricsObject(nullptr)
 #endif
@@ -149,7 +149,7 @@ namespace WPEFramework
 
             JsonObject obj = params.Object();
             string appIdFromContainer = obj["containerId"].String();
-            if (appIdFromContainer.find(mRuntimeAppPortal) == 0) // TODO improve logic of fetching appInstanceId
+            if (!mRuntimeAppPortal.empty() && appIdFromContainer.find(mRuntimeAppPortal) == 0) // TODO improve logic of fetching appInstanceId
             {
                 appIdFromContainer.erase(0, mRuntimeAppPortal.length());
             }
@@ -240,7 +240,6 @@ namespace WPEFramework
         uint32_t RuntimeManagerImplementation::Configure(PluginHost::IShell* service)
         {
             uint32_t result = Core::ERROR_GENERAL;
-            string configStr;
 
             if (service != nullptr)
             {
@@ -283,14 +282,11 @@ namespace WPEFramework
                     LOGINFO("created OCIContainerPluginObject");
                     result = Core::ERROR_NONE;
                 }
-                configStr = service->ConfigLine().c_str();
-                LOGINFO("ConfigLine=%s", service->ConfigLine().c_str());
                 RuntimeManagerImplementation::Configuration config;
                 config.FromString(service->ConfigLine());
-                mRuntimeAppPortal = config.runtimeAppPortal.Value();
-                if (mRuntimeAppPortal.empty())
+                if (!config.runtimeAppPortal.Value().empty())
                 {
-                    mRuntimeAppPortal = "com.sky.as.apps"; // Default value
+                    mRuntimeAppPortal = config.runtimeAppPortal.Value();
                 }
                 LOGINFO("runtimeAppPortal=%s", mRuntimeAppPortal.c_str());
             }
@@ -498,7 +494,7 @@ err_ret:
 
         std::string RuntimeManagerImplementation::getContainerId(const string& appInstanceId)
         {
-           string containerId = "";
+            string containerId = "";
 
             if (!appInstanceId.empty())
             {
