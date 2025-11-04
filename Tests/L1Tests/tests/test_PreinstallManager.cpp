@@ -20,19 +20,14 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <cstdio>
-#include <mutex>
 #include <chrono>
-#include <condition_variable>
 #include <future>
-#include <dirent.h>
-#include <sys/stat.h>
 #include <cstring>
 
 #include "PreinstallManager.h"
 #include "PreinstallManagerImplementation.h"
 #include "ServiceMock.h"
 #include "PackageManagerMock.h"
-#include "ThunderPortability.h"
 #include "Module.h"
 #include "WorkerPoolImplementation.h"
 #include "WrapsMock.h"
@@ -59,6 +54,8 @@ protected:
     Exchange::IPackageInstaller::INotification* mPackageInstallerNotification_cb = nullptr;
 
     Core::ProxyType<WorkerPoolImplementation> workerPool;
+
+
 
     Core::hresult createResources()
     {
