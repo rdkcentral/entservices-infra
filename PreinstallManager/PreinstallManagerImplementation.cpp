@@ -56,29 +56,17 @@ namespace WPEFramework
 
     PreinstallManagerImplementation::~PreinstallManagerImplementation()
     {
-        // DEBUG LOCK: Add debug logging and mutex to track destructor cleanup
-        static std::mutex destructor_mutex;
-        std::lock_guard<std::mutex> lock(destructor_mutex);
-        LOGINFO("DESTRUCTOR_DEBUG: Acquired destructor mutex, starting cleanup");
         LOGINFO("Delete PreinstallManagerImplementation Instance");
-        
         _instance = nullptr;
-        LOGINFO("DESTRUCTOR_DEBUG: Cleared instance pointer");
-        
         if (nullptr != mCurrentservice)
         {
-            LOGINFO("DESTRUCTOR_DEBUG: Releasing current service");
             mCurrentservice->Release();
             mCurrentservice = nullptr;
-            LOGINFO("DESTRUCTOR_DEBUG: Current service released");
         }
         if (nullptr != mPackageManagerInstallerObject)
         {
-            LOGINFO("DESTRUCTOR_DEBUG: Calling releasePackageManagerObject from destructor");
             releasePackageManagerObject();
-            LOGINFO("DESTRUCTOR_DEBUG: releasePackageManagerObject completed from destructor");
         }
-        LOGINFO("DESTRUCTOR_DEBUG: Destructor cleanup complete, releasing mutex");
     }
 
     /**
@@ -226,27 +214,13 @@ namespace WPEFramework
 
     void PreinstallManagerImplementation::releasePackageManagerObject()
     {
-        // DEBUG LOCK: Add debug logging and mutex to track PackageManager object cleanup
-        static std::mutex package_cleanup_mutex;
-        std::lock_guard<std::mutex> lock(package_cleanup_mutex);
-        LOGINFO("PKG_CLEANUP_DEBUG: Acquired package cleanup mutex, starting PackageManager object cleanup");
-        
         ASSERT(nullptr != mPackageManagerInstallerObject);
         if (mPackageManagerInstallerObject)
         {
-            LOGINFO("PKG_CLEANUP_DEBUG: Unregistering PackageManager notification");
             mPackageManagerInstallerObject->Unregister(&mPackageManagerNotification);
-            LOGINFO("PKG_CLEANUP_DEBUG: Notification unregistered, calling Release()");
             mPackageManagerInstallerObject->Release();
-            LOGINFO("PKG_CLEANUP_DEBUG: Release() called, setting pointer to nullptr");
             mPackageManagerInstallerObject = nullptr;
-            LOGINFO("PKG_CLEANUP_DEBUG: PackageManager object cleanup complete");
         }
-        else
-        {
-            LOGINFO("PKG_CLEANUP_DEBUG: mPackageManagerInstallerObject is already null");
-        }
-        LOGINFO("PKG_CLEANUP_DEBUG: releasePackageManagerObject() completed, releasing mutex");
     }
 
     //compare package versions
@@ -468,19 +442,12 @@ namespace WPEFramework
 
             LOGINFO("Installing package: %s, version: %s", pkg.packageId.c_str(), pkg.version.c_str());
 
-            // DEBUG LOCK: Add debug logging around Install call to track double free
-            static std::mutex install_mutex;
-            std::lock_guard<std::mutex> install_lock(install_mutex);
-            LOGINFO("INSTALL_DEBUG: Acquired install mutex, starting installation");
-
             FailReason failReason;
             Exchange::IPackageInstaller::IKeyValueIterator* additionalMetadata = nullptr; // todo add additionalMetadata if needed
                 // additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(keyValues);
 
-            LOGINFO("INSTALL_DEBUG: About to call Install() for package: %s", pkg.packageId.c_str());
+
             Core::hresult installResult = mPackageManagerInstallerObject->Install(pkg.packageId, pkg.version, additionalMetadata, pkg.fileLocator, failReason);
-            LOGINFO("INSTALL_DEBUG: Install() call completed with result: %d", installResult);
-            
             if (installResult != Core::ERROR_NONE)
             {
                 LOGERR("Failed to install package: %s, version: %s, failReason: %s", pkg.packageId.c_str(), pkg.version.c_str(), getFailReason(failReason).c_str());
@@ -488,7 +455,6 @@ namespace WPEFramework
                 failedApps++;
                 // failedAppsList.push_back(pkg.packageId + "_" + pkg.version);
                 pkg.installStatus = "FAILED: reason " + getFailReason(failReason);
-                LOGINFO("INSTALL_DEBUG: Install failed, continuing to next package");
                 continue;
             }
             else
@@ -496,7 +462,6 @@ namespace WPEFramework
                 LOGINFO("Successfully installed package: %s, version: %s, fileLocator: %s", pkg.packageId.c_str(), pkg.version.c_str(), pkg.fileLocator.c_str());
                 pkg.installStatus = "SUCCESS";
             }
-            LOGINFO("INSTALL_DEBUG: Install processing complete for package: %s", pkg.packageId.c_str());
         }
         auto installEnd = std::chrono::steady_clock::now();
         auto installDuration = std::chrono::duration_cast<std::chrono::seconds>(installEnd - installStart).count();
@@ -510,16 +475,13 @@ namespace WPEFramework
         }
 
         //cleanup
-        LOGINFO("STARTPREINSTALL_DEBUG: About to call releasePackageManagerObject()");
         releasePackageManagerObject();
-        LOGINFO("STARTPREINSTALL_DEBUG: releasePackageManagerObject() completed");
 
         if(!installError)
         {
             result = Core::ERROR_NONE; // return error if any app install fails todo required??
         }
 
-        LOGINFO("STARTPREINSTALL_DEBUG: StartPreinstall method completing with result: %d", result);
         return result;
     }
 
