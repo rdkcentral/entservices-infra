@@ -330,7 +330,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
         });
 
     EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(Return(Core::ERROR_GENERAL));
+        .WillRepeatedly(testing::Return(Core::ERROR_GENERAL));
         
     SetUpPreinstallDirectoryMocks();
     
