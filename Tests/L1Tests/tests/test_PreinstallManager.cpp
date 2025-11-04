@@ -26,6 +26,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <future>
+#include <thread>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cstring>
@@ -176,12 +177,23 @@ protected:
             p_wrapsImplMock = nullptr;
         }
 
-        dispatcher->Deactivate();
-        dispatcher->Release();
-
-        plugin->Deinitialize(mServiceMock);
-        delete mServiceMock;
+        // Clear implementation pointer before cleanup to avoid use-after-free
         mPreinstallManagerImpl = nullptr;
+
+        if (dispatcher != nullptr) {
+            dispatcher->Deactivate();
+            dispatcher->Release();
+            dispatcher = nullptr;
+        }
+
+        if (plugin.IsValid()) {
+            plugin->Deinitialize(mServiceMock);
+        }
+        
+        if (mServiceMock != nullptr) {
+            delete mServiceMock;
+            mServiceMock = nullptr;
+        }
     }
 
     PreinstallManagerTest()
@@ -203,9 +215,10 @@ protected:
 
     auto FillPackageIterator()
     {
-        std::list<Exchange::IPackageInstaller::Package> packageList;
+        static std::list<Exchange::IPackageInstaller::Package> packageList;
+        packageList.clear(); // Clear any previous contents
+        
         Exchange::IPackageInstaller::Package package_1;
-
         package_1.packageId = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
         package_1.version = PREINSTALL_MANAGER_TEST_VERSION;
         package_1.digest = "";
@@ -490,34 +503,107 @@ TEST_F(PreinstallManagerTest, QueryInterface)
  */
 TEST_F(PreinstallManagerTest, StartPreinstallWithInstallationFailure)
 {
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Mock GetConfigForPackage to succeed
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = PREINSTALL_MANAGER_TEST_VERSION;
-            return Core::ERROR_NONE;
-        });
+    // Use minimal resource creation to avoid complex mock interactions
+    mServiceMock = new NiceMock<ServiceMock>;
+    mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
+    testing::Mock::AllowLeak(mPackageInstallerMock);
+    p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+    testing::Mock::AllowLeak(p_wrapsImplMock);
+    Wraps::setImpl(p_wrapsImplMock);
 
-    // Mock Install to return failure
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([](const string &packageId, const string &version, 
-                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) -> Core::hresult {
-            failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
-            return Core::ERROR_GENERAL; // Return failure instead of ERROR_NONE
-        });
+    PluginHost::IFactories::Assign(&factoriesImplementation);
+    dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
+    plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
+    dispatcher->Activate(mServiceMock);
 
-    SetUpPreinstallDirectoryMocks();
+    // Set up minimal mock expectations
+    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const uint32_t id, const std::string& name) -> void* {
+            if (name == "org.rdk.PackageManagerRDKEMS") {
+                if (id == Exchange::IPackageInstaller::ID) {
+                    return reinterpret_cast<void*>(mPackageInstallerMock);
+                }
+            }
+            return nullptr;
+        }));
+
+    EXPECT_CALL(*mPackageInstallerMock, Register(::testing::_))
+        .WillOnce(::testing::Return(Core::ERROR_NONE));
+
+    ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(-1));
+
+    // Initialize plugin
+    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
+
+    // Mock GetConfigForPackage to succeed - use simple approach
+    ON_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::DoAll(
+            ::testing::SetArgReferee<1>(PREINSTALL_MANAGER_TEST_PACKAGE_ID),
+            ::testing::SetArgReferee<2>(PREINSTALL_MANAGER_TEST_VERSION),
+            ::testing::Return(Core::ERROR_NONE)
+        ));
+
+    // Mock Install to return failure - avoid lambda captures completely
+    ON_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::DoAll(
+            ::testing::SetArgReferee<4>(Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE),
+            ::testing::Return(Core::ERROR_GENERAL)
+        ));
+
+    // Set up directory mocks with simple approach
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
+        .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
+
+    strcpy(mTestDirent.d_name, "testapp");
+    mFirstDirReadCall = true;
+    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
+        .WillByDefault(::testing::Invoke([this](DIR*) -> struct dirent* {
+            if (mFirstDirReadCall) {
+                mFirstDirReadCall = false;
+                return &mTestDirent;
+            }
+            return nullptr;
+        }));
+
+    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
+        .WillByDefault(::testing::Return(0));
     
+    // Call the method under test
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
     
-    // Should complete but with errors during installation
-    // The overall operation may succeed even if individual packages fail
+    // Verify result
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
-    releaseResources();
+    // Clean up in correct order to prevent double-free
+    ON_CALL(*mPackageInstallerMock, Unregister(::testing::_))
+        .WillByDefault(::testing::Return(0));
+    ON_CALL(*mPackageInstallerMock, Release())
+        .WillByDefault(::testing::Return(0));
+
+    Wraps::setImpl(nullptr);
+    mPreinstallManagerImpl = nullptr;
+    
+    if (dispatcher != nullptr) {
+        dispatcher->Deactivate();
+        dispatcher->Release();
+        dispatcher = nullptr;
+    }
+
+    if (plugin.IsValid()) {
+        plugin->Deinitialize(mServiceMock);
+    }
+    
+    if (mServiceMock != nullptr) {
+        delete mServiceMock;
+        mServiceMock = nullptr;
+    }
+    
+    mPackageInstallerMock = nullptr;
+    p_wrapsImplMock = nullptr;
 }
 
 /**
