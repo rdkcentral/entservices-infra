@@ -330,12 +330,8 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
         });
 
     EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &packageId, const string &version, 
-                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
-            return Core::ERROR_NONE;
-        });
-
+        .WillRepeatedly(Return(Core::ERROR_GENERAL));
+        
     SetUpPreinstallDirectoryMocks();
     
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
