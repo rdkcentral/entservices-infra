@@ -54,6 +54,7 @@ public:
     static constexpr const char* EVENT_ON_SCREEN_RES_CHANGED  = "device.onScreenResolutionChanged";
     static constexpr const char* EVENT_ON_HDR_CHANGED         = "device.onHdrChanged";
     static constexpr const char* EVENT_ON_HDCP_CHANGED        = "device.onHdcpChanged";
+    static constexpr const char* EVENT_ON_NAME_CHANGED        = "device.onDeviceNameChanged";
 
     SystemDelegate(PluginHost::IShell *shell, WPEFramework::Exchange::IAppNotifications* appNotifications)
         : BaseEventDelegate(appNotifications)
@@ -61,13 +62,16 @@ public:
         , _subscriptions()
         , _displayRpc(nullptr)
         , _hdcpRpc(nullptr)
+        , _systemRpc(nullptr)
         , _displaySubscribed(false)
         , _hdcpSubscribed(false)
+        , _systemSubscribed(false)
     {
         // Proactively subscribe to underlying Thunder events so we can react quickly.
         // Actual dispatch to apps only happens if registrations exist (BaseEventDelegate check).
         SetupDisplaySettingsSubscription();
         SetupHdcpProfileSubscription();
+        SetupSystemSubscription();
     }
 
     ~SystemDelegate()
@@ -80,11 +84,15 @@ public:
             if (_hdcpRpc && _hdcpSubscribed) {
                 _hdcpRpc->Unsubscribe(2000, _T("onDisplayConnectionChanged"));
             }
+            if (_systemRpc && _systemSubscribed) {
+                _systemRpc->Unsubscribe(2000, _T("onFriendlyNameChanged"));
+            }
         } catch (...) {
             // Safe-guard against destructor exceptions
         }
         _displayRpc.reset();
         _hdcpRpc.reset();
+        _systemRpc.reset();
         _shell = nullptr;
     }
 
@@ -94,7 +102,7 @@ public:
         /** Retrieve the device make using org.rdk.System.getDeviceInfo */
         LOGINFO("GetDeviceMake FbSettings Delegate");
         make.clear();
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             make = "unknown";
@@ -127,7 +135,7 @@ public:
     {
         /** Retrieve the friendly name using org.rdk.System.getFriendlyName */
         name.clear();
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             name = "Living Room";
@@ -156,7 +164,7 @@ public:
     Core::hresult SetDeviceName(const std::string &name)
     {
         /** Set the friendly name using org.rdk.System.setFriendlyName */
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             return Core::ERROR_UNAVAILABLE;
@@ -179,7 +187,7 @@ public:
     {
         /** Retrieve the device SKU from org.rdk.System.getSystemVersions.stbVersion */
         skuOut.clear();
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             return Core::ERROR_UNAVAILABLE;
@@ -223,7 +231,7 @@ public:
             return Core::ERROR_NONE;
         }
 
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             return Core::ERROR_UNAVAILABLE;
@@ -298,7 +306,7 @@ public:
     {
         /** Retrieve Firebolt country code derived from org.rdk.System.getTerritory */
         code.clear();
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             code = "US";
@@ -326,7 +334,7 @@ public:
     Core::hresult SetCountryCode(const std::string &code)
     {
         /** Set territory using org.rdk.System.setTerritory mapped from Firebolt country code */
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             return Core::ERROR_UNAVAILABLE;
@@ -351,7 +359,7 @@ public:
     {
         /** Retrieve timezone using org.rdk.System.getTimeZoneDST */
         tz.clear();
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             return Core::ERROR_UNAVAILABLE;
@@ -378,7 +386,7 @@ public:
     Core::hresult SetTimeZone(const std::string &tz)
     {
         /** Set timezone using org.rdk.System.setTimeZoneDST */
-        auto link = AcquireLink();
+        auto link = AcquireLink(SYSTEM_CALLSIGN);
         if (!link)
         {
             return Core::ERROR_UNAVAILABLE;
@@ -591,28 +599,40 @@ public:
 
         bool hdr10 = false, dv = false, hlg = false, hdr10plus = false;
 
-        auto parseCaps = [&](const WPEFramework::Core::JSON::Variant& vobj) {
+        // Parse HDR capabilities bitmask
+        // HDRSTANDARD_NONE = 0x0
+        // HDRSTANDARD_HDR10 = 0x1
+        // HDRSTANDARD_HLG = 0x2
+        // HDRSTANDARD_DolbyVision = 0x4
+        // HDRSTANDARD_TechnicolorPrime = 0x8
+        // HDRSTANDARD_HDR10PLUS = 0x10
+        // HDRSTANDARD_SDR = 0x20
+
+        auto parseCapabilities = [&](const WPEFramework::Core::JSON::Variant& vobj) {
+            uint32_t capabilities = 0;
+
+            // For ex. if DisplaySettings returns: {"capabilities":32,"success":true}
+            // extract the "capabilities" field from the object
             if (vobj.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
-                auto hdmi = vobj.Object().Get(_T("hdmi"));
-                if (hdmi.Content() == WPEFramework::Core::JSON::Variant::type::OBJECT) {
-                    auto sinkHDR10 = hdmi.Object().Get(_T("sinkHDR10"));
-                    auto sinkDolbyVision = hdmi.Object().Get(_T("sinkDolbyVision"));
-                    auto sinkHLG = hdmi.Object().Get(_T("sinkHLG"));
-                    auto sinkHDR10Plus = hdmi.Object().Get(_T("sinkHDR10Plus"));
-                    hdr10    = (sinkHDR10.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN) ? sinkHDR10.Boolean() : false;
-                    dv       = (sinkDolbyVision.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN) ? sinkDolbyVision.Boolean() : false;
-                    hlg      = (sinkHLG.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN) ? sinkHLG.Boolean() : false;
-                    hdr10plus= (sinkHDR10Plus.Content() == WPEFramework::Core::JSON::Variant::type::BOOLEAN) ? sinkHDR10Plus.Boolean() : false;
+                auto caps = vobj.Object().Get(_T("capabilities"));
+                if (caps.Content() == WPEFramework::Core::JSON::Variant::type::NUMBER) {
+                    capabilities = static_cast<uint32_t>(caps.Number());
+                    LOGDBG("[FbSettings|GetHdr] Got capabilities from object: 0x%x (%d)",
+                           capabilities, capabilities);
                 }
             }
+
+            // Parse bitmask - always parse, even if 0 (HDRSTANDARD_NONE is valid)
+            hdr10     = (capabilities & 0x01) != 0;  // HDRSTANDARD_HDR10
+            hlg       = (capabilities & 0x02) != 0;  // HDRSTANDARD_HLG
+            dv        = (capabilities & 0x04) != 0;  // HDRSTANDARD_DolbyVision
+            hdr10plus = (capabilities & 0x10) != 0;  // HDRSTANDARD_HDR10PLUS
+            LOGDBG("[FbSettings|GetHdr] Parsed capabilities bitmask: 0x%x -> hdr10=%d hlg=%d dv=%d hdr10plus=%d",
+                   capabilities, hdr10, hlg, dv, hdr10plus);
         };
 
-        if (response.HasLabel(_T("result"))) {
-            auto r = response.Get(_T("result"));
-            parseCaps(r);
-        } else {
-            parseCaps(response);
-        }
+        // Response is at top level: {"capabilities":32,"success":true}
+        parseCapabilities(response);
 
         jsonObject = std::string("{\"hdr10\":") + (hdr10 ? "true" : "false")
                    + ",\"dolbyVision\":" + (dv ? "true" : "false")
@@ -692,6 +712,22 @@ public:
 
     }
 
+    // PUBLIC_INTERFACE
+    bool EmitOnNameChanged()
+    {
+        std::string payload;
+        if (GetDeviceName(payload) != Core::ERROR_NONE) {
+            LOGERR("[FbSettings|NameChanged] handler=GetDeviceName failed to compute payload");
+            return false;
+        }
+        // Transform to rpcv2_event wrapper: { "friendlyName": $event }
+        const std::string wrapped = std::string("{\"friendlyName\":") + payload + "}";
+        LOGINFO("[FbSettings|NameChanged] Final rpcv2_event payload=%s", wrapped.c_str());
+        LOGDBG("[FbSettings|NameChanged] Emitting event: %s", EVENT_ON_NAME_CHANGED);
+        Dispatch(EVENT_ON_NAME_CHANGED, wrapped);
+        return true;
+    }
+
     // ---- AppNotifications registration hook ----
     // Called by SettingsDelegate when app subscribes/unsubscribes to events.
     bool HandleEvent(const std::string &event, const bool listen, bool &registrationError)
@@ -704,7 +740,9 @@ public:
         if (evLower == "device.onvideoresolutionchanged"
             || evLower == "device.onscreenresolutionchanged"
             || evLower == "device.onhdcpchanged"
-            || evLower == "device.onhdrchanged")
+            || evLower == "device.onhdrchanged"
+            || evLower == "device.ondevicenamechanged"
+            || evLower == "device.onnamechanged")
         {
             LOGINFO("[FbSettings|EventRegistration] event=%s listen=%s", event.c_str(), listen ? "true" : "false");
             if (listen) {
@@ -712,11 +750,12 @@ public:
                 // Ensure underlying Thunder subscriptions are active
                 SetupDisplaySettingsSubscription();
                 SetupHdcpProfileSubscription();
-                registrationError = true; // indicate handled without error
+                SetupSystemSubscription();
+                registrationError = false; // no error - successfully handled
                 return true;
             } else {
                 RemoveNotification(event);
-                registrationError = true;
+                registrationError = false; // no error - successfully handled
                 return true;
             }
         }
@@ -727,18 +766,13 @@ public:
 private:
     inline std::shared_ptr<WPEFramework::Utils::JSONRPCDirectLink> AcquireLink(const std::string& callsign) const
     {
-        // Create a direct JSON-RPC link to the Thunder System plugin using the Supporting_Files helper.
+        // Create a direct JSON-RPC link to the specified Thunder plugin using the Supporting_Files helper.
         if (_shell == nullptr)
         {
             LOGERR("SystemDelegate: shell is null");
             return nullptr;
         }
-        return WPEFramework::Utils::GetThunderControllerClient(_shell, SYSTEM_CALLSIGN);
-    }
-
-    inline std::shared_ptr<WPEFramework::Utils::JSONRPCDirectLink> AcquireLink() const
-    {
-        return AcquireLink(SYSTEM_CALLSIGN);
+        return WPEFramework::Utils::GetThunderControllerClient(_shell, callsign);
     }
     
     static std::string ToLower(const std::string &in)
@@ -856,6 +890,28 @@ private:
         }
     }
 
+    void SetupSystemSubscription()
+    {
+        if (_systemSubscribed) return;
+        try {
+            if (!_systemRpc) {
+                _systemRpc = ThunderUtils::getThunderControllerClient(SYSTEM_CALLSIGN);
+            }
+            if (_systemRpc) {
+                const uint32_t status = _systemRpc->Subscribe<WPEFramework::Core::JSON::VariantContainer>(
+                    2000, _T("onFriendlyNameChanged"), &SystemDelegate::OnSystemFriendlyNameChanged, this);
+                if (status == Core::ERROR_NONE) {
+                    LOGINFO("SystemDelegate: Subscribed to %s.onFriendlyNameChanged", SYSTEM_CALLSIGN);
+                    _systemSubscribed = true;
+                } else {
+                    LOGERR("SystemDelegate: Failed to subscribe to %s.onFriendlyNameChanged rc=%u", SYSTEM_CALLSIGN, status);
+                }
+            }
+        } catch (...) {
+            LOGERR("SystemDelegate: exception during System subscription");
+        }
+    }
+
     // Event handlers invoked by Thunder JSON-RPC subscription
     void OnDisplaySettingsResolutionChanged(const WPEFramework::Core::JSON::VariantContainer& params)
     {
@@ -881,6 +937,17 @@ private:
                 hdcpEmitted ? "emitted" : "skipped", hdrEmitted ? "emitted" : "skipped");
     }
 
+    void OnSystemFriendlyNameChanged(const WPEFramework::Core::JSON::VariantContainer& params)
+    {
+        (void)params;
+        LOGINFO("[FbSettings|System.onFriendlyNameChanged] Incoming alias=%s.%s, invoking handlers...",
+                SYSTEM_CALLSIGN, "onFriendlyNameChanged");
+        // Re-query state and dispatch event
+        const bool nameEmitted = EmitOnNameChanged();
+        LOGINFO("[FbSettings|System.onFriendlyNameChanged] Handler responses: onNameChanged=%s",
+                nameEmitted ? "emitted" : "skipped");
+    }
+
 private:
     PluginHost::IShell *_shell;
     std::unordered_set<std::string> _subscriptions;
@@ -890,7 +957,8 @@ private:
     // JSONRPC clients for event subscriptions
     std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> _displayRpc;
     std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> _hdcpRpc;
+    std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> _systemRpc;
     bool _displaySubscribed;
     bool _hdcpSubscribed;
+    bool _systemSubscribed;
 };
-
