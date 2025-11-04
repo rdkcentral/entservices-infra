@@ -336,7 +336,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
         .WillRepeatedly([&](const string &packageId, const string &version, 
                            Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
                            const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
-            return Core::ERROR_NONE;
+            return Core::ERROR_GENERA;
         });
 
     SetUpPreinstallDirectoryMocks();
@@ -478,116 +478,6 @@ TEST_F(PreinstallManagerTest, QueryInterface)
     }
     
     releaseResources();
-}
-
-/**
- * @brief Test StartPreinstall with installation failure
- *
- * @details Test verifies that:
- * - Installation failure scenarios are handled correctly
- * - Error paths in the installation loop are exercised
- * - getFailReason method is used when installation fails
- */
-TEST_F(PreinstallManagerTest, StartPreinstallWithInstallationFailure)
-{
-    TEST_LOG("TEST_DEBUG: Starting StartPreinstallWithInstallationFailure test");
-    
-    // Use minimal setup to avoid complex mock lifecycle issues
-    mServiceMock = new NiceMock<ServiceMock>;
-    mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
-    testing::Mock::AllowLeak(mPackageInstallerMock);
-    p_wrapsImplMock = new NiceMock<WrapsImplMock>;
-    testing::Mock::AllowLeak(p_wrapsImplMock);
-    Wraps::setImpl(p_wrapsImplMock);
-
-    PluginHost::IFactories::Assign(&factoriesImplementation);
-    dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
-    plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
-    dispatcher->Activate(mServiceMock);
-
-    // Set up mock expectations for QueryInterfaceByCallsign
-    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-      .Times(::testing::AnyNumber())
-      .WillRepeatedly(::testing::Invoke(
-          [&](const uint32_t id, const std::string& name) -> void* {
-            if (name == "org.rdk.PackageManagerRDKEMS") {
-                if (id == Exchange::IPackageInstaller::ID) {
-                    return reinterpret_cast<void*>(mPackageInstallerMock);
-                }
-            }
-        return nullptr;
-    }));
-
-    // Set up Register mock 
-    EXPECT_CALL(*mPackageInstallerMock, Register(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](Exchange::IPackageInstaller::INotification* notification) {
-                mPackageInstallerNotification_cb = notification;
-                return Core::ERROR_NONE;
-            }));
-
-    // Set up mock expectations for cleanup calls - CRITICAL to prevent double free
-    EXPECT_CALL(*mPackageInstallerMock, Unregister(::testing::_))
-        .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
-
-    // IMPORTANT: Mock Release() to return 0 and prevent actual deletion
-    EXPECT_CALL(*mPackageInstallerMock, Release())
-        .WillRepeatedly(::testing::Return(0));
-
-    ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillByDefault(::testing::Return(-1));
-
-    // Initialize plugin
-    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
-    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
-
-    // Mock GetConfigForPackage to succeed
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = PREINSTALL_MANAGER_TEST_VERSION;
-            return Core::ERROR_NONE;
-        });
-
-    // Mock Install to return failure
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &packageId, const string &version, 
-                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
-            failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
-            return Core::ERROR_GENERAL; // Return failure instead of ERROR_NONE
-        });
-
-    SetUpPreinstallDirectoryMocks();
-    
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
-    
-    // Should complete but with errors during installation
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    // Clean up in specific order to prevent double free
-    Wraps::setImpl(nullptr);
-    mPreinstallManagerImpl = nullptr;
-    
-    if (dispatcher != nullptr) {
-        dispatcher->Deactivate();
-        dispatcher->Release();
-        dispatcher = nullptr;
-    }
-
-    if (plugin.IsValid()) {
-        plugin->Deinitialize(mServiceMock);
-    }
-    
-    if (mServiceMock != nullptr) {
-        delete mServiceMock;
-        mServiceMock = nullptr;
-    }
-    
-    // Clear pointers without deleting (AllowLeak handles cleanup)
-    mPackageInstallerMock = nullptr;
-    p_wrapsImplMock = nullptr;
-    mPackageInstallerNotification_cb = nullptr;
 }
 
 /**
