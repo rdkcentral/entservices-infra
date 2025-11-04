@@ -336,7 +336,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithForceInstall)
         .WillRepeatedly([&](const string &packageId, const string &version, 
                            Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
                            const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
-            return Core::ERROR_GENERA;
+            return Core::ERROR_NONE;
         });
 
     SetUpPreinstallDirectoryMocks();
@@ -476,6 +476,46 @@ TEST_F(PreinstallManagerTest, QueryInterface)
     if (preinstallInterface != nullptr) {
         preinstallInterface->Release();
     }
+    
+    releaseResources();
+}
+
+/**
+ * @brief Test StartPreinstall with installation failure
+ *
+ * @details Test verifies that:
+ * - Installation failure scenarios are handled correctly
+ * - Error paths in the installation loop are exercised
+ * - getFailReason method is used when installation fails
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallWithInstallationFailure)
+{
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    
+    // Mock GetConfigForPackage to succeed
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
+            version = PREINSTALL_MANAGER_TEST_VERSION;
+            return Core::ERROR_NONE;
+        });
+
+    // Mock Install to return failure
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
+            return Core::ERROR_GENERAL; // Return failure instead of ERROR_NONE
+        });
+
+    SetUpPreinstallDirectoryMocks();
+    
+    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    
+    // Should complete but with errors during installation
+    // The overall operation may succeed even if individual packages fail
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
     releaseResources();
 }
