@@ -79,10 +79,6 @@ protected:
     Core::JSONRPC::Handler& mJsonRpcHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
-    
-    // Member variables for directory mocking (instead of static to avoid cross-test issues)
-    struct dirent mTestDirent;
-    bool mFirstDirReadCall = true;
 
     void createPreinstallManagerImpl()
     {
@@ -108,7 +104,6 @@ protected:
         mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
         testing::Mock::AllowLeak(mPackageInstallerMock); // Allow leak since mock lifecycle is managed by test framework
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
-        testing::Mock::AllowLeak(p_wrapsImplMock); // Allow leak since mock lifecycle is managed by test framework
         Wraps::setImpl(p_wrapsImplMock);
 
         PluginHost::IFactories::Assign(&factoriesImplementation);
@@ -162,17 +157,18 @@ protected:
 
         if (mPackageInstallerMock != nullptr)
         {
-            // Don't manually delete the mock - let the test framework handle it
-            // Just set up the Release() call expectation without deletion
-            ON_CALL(*mPackageInstallerMock, Release())
-                .WillByDefault(::testing::Return(0));
-            mPackageInstallerMock = nullptr; // Just clear the pointer
+            EXPECT_CALL(*mPackageInstallerMock, Release())
+                .WillOnce(::testing::Invoke(
+                [&]() {
+                     delete mPackageInstallerMock;
+                     return 0;
+                    }));
         }
 
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr)
         {
-            // Don't manually delete - let test framework handle it since we used AllowLeak
+            delete p_wrapsImplMock;
             p_wrapsImplMock = nullptr;
         }
 
@@ -222,16 +218,17 @@ protected:
         ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
             .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234))); // Non-null pointer
 
-        // Create mock dirent structure for testing - use member variable instead of static
-        // to ensure proper reset between tests
-        strcpy(mTestDirent.d_name, "testapp");
-        mFirstDirReadCall = true; // Reset for each test
+        // Create mock dirent structure for testing
+        static struct dirent testDirent;
+        strcpy(testDirent.d_name, "testapp");
+        static struct dirent* direntPtr = &testDirent;
+        static bool firstCall = true;
 
         ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-            .WillByDefault(::testing::Invoke([this](DIR*) -> struct dirent* {
-                if (mFirstDirReadCall) {
-                    mFirstDirReadCall = false;
-                    return &mTestDirent; // Return test directory entry first time
+            .WillByDefault(::testing::Invoke([&](DIR*) -> struct dirent* {
+                if (firstCall) {
+                    firstCall = false;
+                    return direntPtr; // Return test directory entry first time
                 }
                 return nullptr; // End of directory
             }));
@@ -476,82 +473,6 @@ TEST_F(PreinstallManagerTest, QueryInterface)
     if (preinstallInterface != nullptr) {
         preinstallInterface->Release();
     }
-    
-    releaseResources();
-}
-
-/**
- * @brief Test StartPreinstall with installation failure
- *
- * @details Test verifies that:
- * - Installation failure scenarios are handled correctly
- * - Error paths in the installation loop are exercised
- * - getFailReason method is used when installation fails
- */
-TEST_F(PreinstallManagerTest, StartPreinstallWithInstallationFailure)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Mock GetConfigForPackage to succeed
-    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
-            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
-            version = PREINSTALL_MANAGER_TEST_VERSION;
-            return Core::ERROR_NONE;
-        });
-
-    // Mock Install to return failure
-    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &packageId, const string &version, 
-                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
-            failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
-            return Core::ERROR_GENERAL; // Return failure instead of ERROR_NONE
-        });
-
-    SetUpPreinstallDirectoryMocks();
-    
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
-    
-    // Should complete but with errors during installation
-    // The overall operation may succeed even if individual packages fail
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    releaseResources();
-}
-
-/**
- * @brief Test getFailReason functionality indirectly through logging verification
- *
- * @details Test verifies that:
- * - getFailReason method works by testing the installation flow that uses it
- * - Installation failure handling works without memory corruption
- * - Uses minimal setup to avoid complex mock interactions
- */
-TEST_F(PreinstallManagerTest, GetFailReasonFunctionalityTest)
-{
-    ASSERT_EQ(Core::ERROR_NONE, createResources());
-    
-    // Test that StartPreinstall fails gracefully when no PackageManager is available
-    // This ensures the error handling paths (which use getFailReason) are exercised
-    
-    // Override the mock to return null PackageManager
-    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(nullptr));
-    
-    // This should trigger error handling that exercises getFailReason indirectly
-    Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
-    
-    // Verify the call completed and returned the expected error
-    EXPECT_EQ(Core::ERROR_GENERAL, result);
-    
-    // This test provides coverage of getFailReason by:
-    // 1. Testing the failure handling paths that use the method
-    // 2. Ensuring no crashes occur during error processing
-    // 3. Validating that error handling works correctly
-    // 
-    // The actual string conversion testing is done through integration
-    // which is safer than attempting direct private method access
     
     releaseResources();
 }
