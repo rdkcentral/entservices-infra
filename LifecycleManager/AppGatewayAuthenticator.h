@@ -28,20 +28,21 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-
         class AppGatewayAuthenticator : public Exchange::IAppGatewayAuthenticator
         {
+
+        public:
             class AppStateChangeNotificationHandler : public Exchange::ILifecycleManager::INotification
             {
 
             public:
-                AppStateChangeNotificationHandler(AppGatewayAuthenticator &parent)
+                explicit AppStateChangeNotificationHandler(AppGatewayAuthenticator &parent)
                     : mParent(parent)
                 {
                 }
-                ~AppStateChangeNotificationHandler() {}
+                ~AppStateChangeNotificationHandler() override = default;
 
-                void OnAppStateChanged(const string &appId, Exchange::ILifecycleManager::LifecycleState state, const string &errorReason)
+                void OnAppStateChanged(const string &appId, Exchange::ILifecycleManager::LifecycleState state, const string &errorReason) override
                 {
                     mParent.OnAppStateChanged(appId, state, errorReason);
                 }
@@ -54,7 +55,6 @@ namespace WPEFramework
                 AppGatewayAuthenticator &mParent;
             };
 
-        public:
             AppGatewayAuthenticator(PluginHost::IShell *service);
             AppGatewayAuthenticator(const AppGatewayAuthenticator &) = delete;
             AppGatewayAuthenticator &operator=(const AppGatewayAuthenticator &) = delete;
@@ -70,6 +70,7 @@ namespace WPEFramework
 
         private:
             mutable Core::CriticalSection mAdminLock;
+            mutable uint32_t mRefCount;
             std::map<string, string> mAppIdToInstanceIDMap; // Map of appId to sessionId
             PluginHost::IShell *mCurrentservice;
             Core::Sink<AppStateChangeNotificationHandler> mAppStateChangeNotificationHandler;
@@ -78,7 +79,25 @@ namespace WPEFramework
             Core::hresult createLifecycleManagerRemoteObject();
 
         public /*members*/:
-            static AppGatewayAuthenticator *_instance;
+            BEGIN_INTERFACE_MAP(AppGatewayAuthenticator)
+            INTERFACE_ENTRY(Exchange::IAppGatewayAuthenticator)
+            END_INTERFACE_MAP
+            uint32_t AddRef() const override
+            {
+                Core::InterlockedIncrement(mRefCount);
+                return Core::ERROR_NONE;
+            }
+            uint32_t Release() const override
+            {
+                uint32_t result = Core::ERROR_NONE;
+                if (Core::InterlockedDecrement(mRefCount) == 0)
+                {
+                    delete this;
+                    result = Core::ERROR_DESTRUCTION_SUCCEEDED;
+                }
+                return (result);
+            }
+
         }; // class AppGatewayAuthenticator
-    } /* namespace Plugin */
+    }
 } /* namespace WPEFramework */

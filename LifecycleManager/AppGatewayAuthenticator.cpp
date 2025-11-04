@@ -1,21 +1,21 @@
 /**
-* If not stated otherwise in this file or this component's LICENSE
-* file the following copyright and licenses apply:
-*
-* Copyright 2025 RDK Management
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-**/
+ * If not stated otherwise in this file or this component's LICENSE
+ * file the following copyright and licenses apply:
+ *
+ * Copyright 2025 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
 #include "Module.h"
 #include "AppGatewayAuthenticator.h"
 
@@ -23,9 +23,7 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-        AppGatewayAuthenticator* AppGatewayAuthenticator::_instance = nullptr;
-
-        AppGatewayAuthenticator::AppGatewayAuthenticator(PluginHost::IShell* service)
+        AppGatewayAuthenticator::AppGatewayAuthenticator(PluginHost::IShell *service)
             : mCurrentservice(service),
               mAppStateChangeNotificationHandler(*this),
               mLifecycleManagerRemoteObject(nullptr)
@@ -37,7 +35,6 @@ namespace WPEFramework
                 mLifecycleManagerRemoteObject->AddRef();
                 mLifecycleManagerRemoteObject->Register(&mAppStateChangeNotificationHandler);
             }
-            AppGatewayAuthenticator::_instance = this;
         }
         AppGatewayAuthenticator::~AppGatewayAuthenticator()
         {
@@ -52,10 +49,9 @@ namespace WPEFramework
                 mCurrentservice->Release();
                 mCurrentservice = nullptr;
             }
-            AppGatewayAuthenticator::_instance = nullptr;
         }
 
-        Core::hresult AppGatewayAuthenticator::Authenticate(const string &sessionId /* @in */, string &appId /* @out */) 
+        Core::hresult AppGatewayAuthenticator::Authenticate(const string &sessionId /* @in */, string &appId /* @out */)
         {
             Core::hresult result = Core::ERROR_NOT_EXIST;
             mAdminLock.Lock();
@@ -64,7 +60,6 @@ namespace WPEFramework
             {
                 appId = it->first;
                 result = Core::ERROR_NONE;
-                
             }
             mAdminLock.Unlock();
             return result;
@@ -87,8 +82,8 @@ namespace WPEFramework
         Core::hresult AppGatewayAuthenticator::CheckPermissionGroup(const string &appId /* @in */, const string &permissionGroup /* @in */, bool &allowed /* @out */)
         {
             // For this implementation, we are not maintaining permission group mapping.
-            // This can be implemented as needed.
-            allowed = false;
+            // For the time being keeping it as allowed for all apps.
+            allowed = true;
             return Core::ERROR_NONE;
         }
 
@@ -97,7 +92,7 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_GENERAL;
             if (mCurrentservice != nullptr)
             {
-                //TODO: This should be using the callsign of the LifecycleManager plugin instead of hardcoding it here.
+                // TODO: This should be using the callsign of the LifecycleManager plugin instead of hardcoding it here.
                 mLifecycleManagerRemoteObject = mCurrentservice->QueryInterfaceByCallsign<Exchange::ILifecycleManager>("org.rdk.LifecycleManager");
                 if (mLifecycleManagerRemoteObject != nullptr)
                 {
