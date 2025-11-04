@@ -502,9 +502,9 @@ TEST_F(PreinstallManagerTest, StartPreinstallWithInstallationFailure)
 
     // Mock Install to return failure
     EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([&](const string &packageId, const string &version, 
+        .WillRepeatedly([](const string &packageId, const string &version, 
                            Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
-                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) -> Core::hresult {
             failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
             return Core::ERROR_GENERAL; // Return failure instead of ERROR_NONE
         });
