@@ -26,7 +26,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <future>
-#include <thread>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cstring>
@@ -151,49 +150,59 @@ protected:
     void releaseResources()
     {
         TEST_LOG("In releaseResources!");
+        
+        // DEBUG LOCK: Add debug logging and mutex to track cleanup order
+        static std::mutex cleanup_mutex;
+        std::lock_guard<std::mutex> lock(cleanup_mutex);
+        TEST_LOG("CLEANUP_DEBUG: Acquired cleanup mutex, starting resource cleanup");
 
         if (mPackageInstallerMock != nullptr && mPackageInstallerNotification_cb != nullptr)
         {
+            TEST_LOG("CLEANUP_DEBUG: Setting up Unregister mock");
             ON_CALL(*mPackageInstallerMock, Unregister(::testing::_))
                 .WillByDefault(::testing::Invoke([&]() {
+                    TEST_LOG("CLEANUP_DEBUG: Unregister called");
                     return 0;
                 }));
             mPackageInstallerNotification_cb = nullptr;
+            TEST_LOG("CLEANUP_DEBUG: Cleared notification callback");
         }
 
         if (mPackageInstallerMock != nullptr)
         {
+            TEST_LOG("CLEANUP_DEBUG: Setting up Release mock for PackageInstaller");
             // Don't manually delete the mock - let the test framework handle it
             // Just set up the Release() call expectation without deletion
             ON_CALL(*mPackageInstallerMock, Release())
                 .WillByDefault(::testing::Return(0));
             mPackageInstallerMock = nullptr; // Just clear the pointer
+            TEST_LOG("CLEANUP_DEBUG: Cleared PackageInstaller mock pointer");
         }
 
+        TEST_LOG("CLEANUP_DEBUG: Clearing Wraps implementation");
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr)
         {
             // Don't manually delete - let test framework handle it since we used AllowLeak
             p_wrapsImplMock = nullptr;
+            TEST_LOG("CLEANUP_DEBUG: Cleared WrapsImpl mock pointer");
         }
 
-        // Clear implementation pointer before cleanup to avoid use-after-free
-        mPreinstallManagerImpl = nullptr;
+        TEST_LOG("CLEANUP_DEBUG: Deactivating and releasing dispatcher");
+        dispatcher->Deactivate();
+        dispatcher->Release();
+        TEST_LOG("CLEANUP_DEBUG: Dispatcher cleanup complete");
 
-        if (dispatcher != nullptr) {
-            dispatcher->Deactivate();
-            dispatcher->Release();
-            dispatcher = nullptr;
-        }
-
-        if (plugin.IsValid()) {
-            plugin->Deinitialize(mServiceMock);
-        }
+        TEST_LOG("CLEANUP_DEBUG: Deinitializing plugin");
+        plugin->Deinitialize(mServiceMock);
+        TEST_LOG("CLEANUP_DEBUG: Plugin deinitialized");
         
-        if (mServiceMock != nullptr) {
-            delete mServiceMock;
-            mServiceMock = nullptr;
-        }
+        TEST_LOG("CLEANUP_DEBUG: Deleting ServiceMock");
+        delete mServiceMock;
+        TEST_LOG("CLEANUP_DEBUG: ServiceMock deleted");
+        
+        mPreinstallManagerImpl = nullptr;
+        TEST_LOG("CLEANUP_DEBUG: Resource cleanup complete, releasing mutex");
     }
 
     PreinstallManagerTest()
@@ -215,10 +224,9 @@ protected:
 
     auto FillPackageIterator()
     {
-        static std::list<Exchange::IPackageInstaller::Package> packageList;
-        packageList.clear(); // Clear any previous contents
-        
+        std::list<Exchange::IPackageInstaller::Package> packageList;
         Exchange::IPackageInstaller::Package package_1;
+
         package_1.packageId = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
         package_1.version = PREINSTALL_MANAGER_TEST_VERSION;
         package_1.digest = "";
@@ -503,107 +511,48 @@ TEST_F(PreinstallManagerTest, QueryInterface)
  */
 TEST_F(PreinstallManagerTest, StartPreinstallWithInstallationFailure)
 {
-    // Use minimal resource creation to avoid complex mock interactions
-    mServiceMock = new NiceMock<ServiceMock>;
-    mPackageInstallerMock = new NiceMock<PackageInstallerMock>;
-    testing::Mock::AllowLeak(mPackageInstallerMock);
-    p_wrapsImplMock = new NiceMock<WrapsImplMock>;
-    testing::Mock::AllowLeak(p_wrapsImplMock);
-    Wraps::setImpl(p_wrapsImplMock);
-
-    PluginHost::IFactories::Assign(&factoriesImplementation);
-    dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
-    plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
-    dispatcher->Activate(mServiceMock);
-
-    // Set up minimal mock expectations
-    EXPECT_CALL(*mServiceMock, QueryInterfaceByCallsign(::testing::_, ::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const uint32_t id, const std::string& name) -> void* {
-            if (name == "org.rdk.PackageManagerRDKEMS") {
-                if (id == Exchange::IPackageInstaller::ID) {
-                    return reinterpret_cast<void*>(mPackageInstallerMock);
-                }
-            }
-            return nullptr;
-        }));
-
-    EXPECT_CALL(*mPackageInstallerMock, Register(::testing::_))
-        .WillOnce(::testing::Return(Core::ERROR_NONE));
-
-    ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-        .WillByDefault(::testing::Return(-1));
-
-    // Initialize plugin
-    EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
-    mPreinstallManagerImpl = Plugin::PreinstallManagerImplementation::getInstance();
-
-    // Mock GetConfigForPackage to succeed - use simple approach
-    ON_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::DoAll(
-            ::testing::SetArgReferee<1>(PREINSTALL_MANAGER_TEST_PACKAGE_ID),
-            ::testing::SetArgReferee<2>(PREINSTALL_MANAGER_TEST_VERSION),
-            ::testing::Return(Core::ERROR_NONE)
-        ));
-
-    // Mock Install to return failure - avoid lambda captures completely
-    ON_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::DoAll(
-            ::testing::SetArgReferee<4>(Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE),
-            ::testing::Return(Core::ERROR_GENERAL)
-        ));
-
-    // Set up directory mocks with simple approach
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
-        .WillByDefault(::testing::Return(reinterpret_cast<DIR*>(0x1234)));
-
-    strcpy(mTestDirent.d_name, "testapp");
-    mFirstDirReadCall = true;
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault(::testing::Invoke([this](DIR*) -> struct dirent* {
-            if (mFirstDirReadCall) {
-                mFirstDirReadCall = false;
-                return &mTestDirent;
-            }
-            return nullptr;
-        }));
-
-    ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
-        .WillByDefault(::testing::Return(0));
+    TEST_LOG("TEST_DEBUG: Starting StartPreinstallWithInstallationFailure test");
+    ASSERT_EQ(Core::ERROR_NONE, createResources());
+    TEST_LOG("TEST_DEBUG: Resources created successfully");
     
-    // Call the method under test
+    // Mock GetConfigForPackage to succeed
+    EXPECT_CALL(*mPackageInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &fileLocator, string& id, string &version, WPEFramework::Exchange::RuntimeConfig &config) {
+            TEST_LOG("TEST_DEBUG: GetConfigForPackage mock called");
+            id = PREINSTALL_MANAGER_TEST_PACKAGE_ID;
+            version = PREINSTALL_MANAGER_TEST_VERSION;
+            return Core::ERROR_NONE;
+        });
+
+    // Mock Install to return failure
+    EXPECT_CALL(*mPackageInstallerMock, Install(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, 
+                           Exchange::IPackageInstaller::IKeyValueIterator* const& additionalMetadata, 
+                           const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) {
+            TEST_LOG("TEST_DEBUG: Install mock called, setting failure reason");
+            failReason = Exchange::IPackageInstaller::FailReason::SIGNATURE_VERIFICATION_FAILURE;
+            return Core::ERROR_GENERAL; // Return failure instead of ERROR_NONE
+        });
+
+    SetUpPreinstallDirectoryMocks();
+    TEST_LOG("TEST_DEBUG: Directory mocks set up");
+    
     Core::hresult result = mPreinstallManagerImpl->StartPreinstall(true);
+    TEST_LOG("TEST_DEBUG: StartPreinstall completed with result: %d", result);
     
-    // Verify result
+    // Should complete but with errors during installation
+    // The overall operation may succeed even if individual packages fail
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
     
-    // Clean up in correct order to prevent double-free
-    ON_CALL(*mPackageInstallerMock, Unregister(::testing::_))
-        .WillByDefault(::testing::Return(0));
-    ON_CALL(*mPackageInstallerMock, Release())
-        .WillByDefault(::testing::Return(0));
-
-    Wraps::setImpl(nullptr);
-    mPreinstallManagerImpl = nullptr;
+    TEST_LOG("TEST_DEBUG: About to call releaseResources()");
+    // Add debug lock before releaseResources to track when double free occurs
+    static std::mutex test_cleanup_mutex;
+    std::lock_guard<std::mutex> test_lock(test_cleanup_mutex);
+    TEST_LOG("TEST_DEBUG: Acquired test cleanup mutex, calling releaseResources");
     
-    if (dispatcher != nullptr) {
-        dispatcher->Deactivate();
-        dispatcher->Release();
-        dispatcher = nullptr;
-    }
-
-    if (plugin.IsValid()) {
-        plugin->Deinitialize(mServiceMock);
-    }
+    releaseResources();
     
-    if (mServiceMock != nullptr) {
-        delete mServiceMock;
-        mServiceMock = nullptr;
-    }
-    
-    mPackageInstallerMock = nullptr;
-    p_wrapsImplMock = nullptr;
+    TEST_LOG("TEST_DEBUG: releaseResources() completed, test finished");
 }
 
 /**
