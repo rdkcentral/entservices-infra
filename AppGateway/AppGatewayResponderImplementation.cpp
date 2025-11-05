@@ -265,7 +265,7 @@ namespace WPEFramework
             return status;
         }
 
-        void AppGatewayResponderImplementation::OnConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected)
+        void AppGatewayResponderImplementation::OnConnectionStatusChanged(const string& appId, const uint32_t connectionId, const bool connected)
         {
             Core::SafeSyncType<Core::CriticalSection> lock(mConnectionStatusImplLock);
             for (auto& notification : mConnectionStatusNotification)

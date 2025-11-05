@@ -61,7 +61,7 @@ namespace Plugin {
         virtual Core::hresult Register(Exchange::IAppGatewayResponder::INotification *notification) override;
         virtual Core::hresult Unregister(Exchange::IAppGatewayResponder::INotification *notification) override;
 
-        virtual void OnConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected);
+        virtual void OnConnectionStatusChanged(const string& appId, const uint32_t connectionId, const bool connected);
         
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
