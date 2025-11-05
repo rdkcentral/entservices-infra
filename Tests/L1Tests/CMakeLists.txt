@@ -156,6 +156,11 @@ set (MESSAGECONTROL_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/MessageControl 
 set (MESSAGECONTROL_LIBS ${NAMESPACE}MessageControl)
 add_plugin_test_ex(PLUGIN_MESSAGECONTROL tests/test_MessageControl.cpp "${MESSAGECONTROL_INC}" "${MESSAGECONTROL_LIBS}")
 
+# PLUGIN_MIGRATION
+set (MIGRATION_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/Migration ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (MIGRATION_LIBS ${NAMESPACE}Migration ${NAMESPACE}MigrationImplementation)
+add_plugin_test_ex(PLUGIN_MIGRATION tests/test_Migration.cpp "${MIGRATION_INC}" "${MIGRATION_LIBS}")
+
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
 if (RDK_SERVICES_L1_TEST)
