@@ -807,7 +807,9 @@ class UserSettingsDelegate : public BaseEventDelegate{
             // add logic to get the "en" if the value is "en-US"
             if (presentationLanguage.find('-') != string::npos) {
                 string language = presentationLanguage.substr(0, presentationLanguage.find('-'));
-                mParent.Dispatch( "localization.onlanguagechanged", std::move(language));
+                // Wrap in quotes to make it a valid JSON string
+                string languageJson = "\"" + language + "\"";
+                mParent.Dispatch( "localization.onlanguagechanged", languageJson);
             } else {
                 LOGWARN("invalid value=%s set it must be a delimited string like en-US", presentationLanguage.c_str());
             }
