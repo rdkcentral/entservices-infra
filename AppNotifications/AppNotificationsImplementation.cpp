@@ -21,9 +21,17 @@
 
 namespace WPEFramework
 {
+    namespace Exchange {
+        bool operator==(const IAppNotifications::AppNotificationContext& lhs,
+                        const IAppNotifications::AppNotificationContext& rhs) {
+            return lhs.requestId == rhs.requestId &&
+                lhs.connectionId == rhs.connectionId &&
+                lhs.appId == rhs.appId &&
+                lhs.origin == rhs.origin;
+        }
+    }
     namespace Plugin
     {
-
         SERVICE_REGISTRATION(AppNotificationsImplementation, 1, 0);
 
         AppNotificationsImplementation::AppNotificationsImplementation() : 
