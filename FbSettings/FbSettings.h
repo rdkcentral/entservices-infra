@@ -42,9 +42,12 @@ namespace WPEFramework {
         {
             protected:
                 EventRegistrationJob(FbSettings *parent,
+                Exchange::IAppNotificationHandler::IEmitter *cb,
                 const string &event,
-                const bool listen): mParent(*parent),mEvent(event),mListen(listen){
-
+                const bool listen): mParent(*parent), mCallback(cb), mEvent(event), mListen(listen) {
+                    if (mCallback != nullptr) {
+                        mCallback->AddRef();
+                    }
                 }
             public:
                 EventRegistrationJob() = delete;
@@ -52,20 +55,25 @@ namespace WPEFramework {
                 EventRegistrationJob &operator=(const EventRegistrationJob &) = delete;
                 ~EventRegistrationJob()
                 {
+                    if (mCallback != nullptr) {
+                        mCallback->Release();
+                        mCallback = nullptr;
+                    }
                 }
 
                 static Core::ProxyType<Core::IDispatch> Create(FbSettings *parent,
-                const string& event, const bool listen)
+                Exchange::IAppNotificationHandler::IEmitter *cb, const string& event, const bool listen)
                 {
-                    return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<EventRegistrationJob>::Create(parent, event, listen)));
+                    return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<EventRegistrationJob>::Create(parent, cb, event, listen)));
                 }
                 virtual void Dispatch()
                 {
-                    mParent.mDelegate->HandleAppEventNotifier(mEvent, mListen);
+                    mParent.mDelegate->HandleAppEventNotifier(mCallback, mEvent, mListen);
                 }
 
             private:
             FbSettings &mParent;
+            Exchange::IAppNotificationHandler::IEmitter *mCallback;
             const string mEvent;
             const bool mListen;
 
@@ -86,8 +94,9 @@ namespace WPEFramework {
             END_INTERFACE_MAP
         
         public:
-            virtual Core::hresult HandleAppEventNotifier(const string& event /* @in */, 
-                const bool& listen /* @in */, 
+            virtual Core::hresult HandleAppEventNotifier(Exchange::IAppNotificationHandler::IEmitter *cb /* @in */,
+                const string& event /* @in */,
+                bool listen /* @in */,
                 bool& status /* @out */) override;
             
             virtual Core::hresult HandleAppGatewayRequest(const Exchange::GatewayContext &context /* @in */,

@@ -96,13 +96,13 @@ namespace Plugin {
         }
     }
 
-    Core::hresult FbSettings::HandleAppEventNotifier(const string& event /* @in */,
-                                    const bool& listen /* @in */,
+    Core::hresult FbSettings::HandleAppEventNotifier(Exchange::IAppNotificationHandler::IEmitter *cb, const string& event /* @in */,
+                                    bool listen /* @in */,
                                     bool &status /* @out */) {
             LOGTRACE("HandleFireboltNotifier [event=%s listen=%s]",
                     event.c_str(), listen ? "true" : "false");
             status = true;
-            Core::IWorkerPool::Instance().Submit(EventRegistrationJob::Create(this, event, listen));
+            Core::IWorkerPool::Instance().Submit(EventRegistrationJob::Create(this, cb, event, listen));
             return Core::ERROR_NONE;
     }
 

@@ -27,7 +27,6 @@
 #include "ThunderUtils.h"
 #include "ContextUtils.h"
 #include "UtilsCallsign.h"
-#define HANDLE_NOTIFIER_SUFFIX ".handleAppEventNotifier"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -92,13 +91,9 @@ namespace Plugin {
         class ThunderSubscriptionManager {
             public:
                 ThunderSubscriptionManager(AppNotificationsImplementation& parent) : mParent(parent) {
-                    mThunderClient = ThunderUtils::getThunderControllerClient();
                 }
 
-                ~ThunderSubscriptionManager() {
-                    std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-                    mRegisteredNotifications.clear();
-                }
+                ~ThunderSubscriptionManager();
 
                 void Subscribe(const string& module, const string& event);
 
@@ -113,13 +108,22 @@ namespace Plugin {
                 void UnregisterNotification(const string& module, const string& event);
 
                 // check if a given string has an existing entry in mRegisteredNotifications
-                bool IsNotificationRegistered(const string& notification) const;
+                bool IsNotificationRegistered(const string& module, const string& notification) const;
 
             private:
+
+                struct NotificationKey {
+                    string module;
+                    string event;
+
+                    bool operator==(const NotificationKey& other) const {
+                        return (this->module == other.module) && (this->event == other.event);
+                    }
+                };
+
                 AppNotificationsImplementation& mParent;
                 mutable std::mutex mThunderSubscriberMutex;
-                std::vector<string> mRegisteredNotifications;
-                std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> mThunderClient = nullptr;
+                std::vector<NotificationKey> mRegisteredNotifications;
         };
 
         AppNotificationsImplementation(const AppNotificationsImplementation&) = delete;
@@ -140,9 +144,9 @@ namespace Plugin {
                                             const string &module /* @in */,
                                             const string &event /* @in */) override;
 
-        Core::hresult Emit(const string &event /* @in */,
-                                    const string &payload /* @in @opaque */,
-                                    const string &appId /* @in */) override;
+        Core::hresult Emit(const string& event /* @in */,
+                           const string& payload /* @in @opaque */,
+                           const string& appId /* @in */) override;
 
         Core::hresult Cleanup(const uint32_t connectionId /* @in */, const string &origin /* @in */) override;
 
@@ -215,10 +219,35 @@ namespace Plugin {
                 string mAppId;
         };
 
+        class Emitter: public Exchange::IAppNotificationHandler::IEmitter {
+        private:
+            Emitter(const Emitter&) = delete;
+            Emitter& operator=(const Emitter&) = delete;
+        public:
+            Emitter(AppNotificationsImplementation& parent) : mParent(parent) {}
+
+            virtual void Emit(const string &event /* @in */,
+                              const string &payload /* @in @opaque */,
+                              const string &appId /* @in */) override
+            {
+                LOGINFO("Emit [event= %s payload=%s appId=%s]",
+                    event.c_str(), payload.c_str(), appId.c_str());
+                Core::IWorkerPool::Instance().Submit(EmitJob::Create(&mParent, event, payload, appId));
+            }
+
+            BEGIN_INTERFACE_MAP(Emitter)
+            INTERFACE_ENTRY(Exchange::IAppNotificationHandler::IEmitter)
+            END_INTERFACE_MAP
+
+        private:
+            AppNotificationsImplementation& mParent;
+        };
+
     private:
         PluginHost::IShell* mShell;
         SubscriberMap mSubMap;
         ThunderSubscriptionManager mThunderManager;
+        Core::Sink<Emitter> mEmitter;
     };
 }
 }
