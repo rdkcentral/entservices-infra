@@ -20,19 +20,27 @@
 #pragma once
 
 #include <interfaces/IAppGateway.h>
-#include <interfaces/ILifecycleManager.h>
+#include <interfaces/ILifecycleManagerState.h>
 #include <plugins/plugins.h>
 #include "UtilsLogging.h"
 
 namespace WPEFramework
 {
+
     namespace Plugin
     {
         class AppGatewayAuthenticator : public Exchange::IAppGatewayAuthenticator
         {
+            struct AppLifeCycleContext
+            {
+                string appInstanceId;
+                Exchange::ILifecycleManager::LifecycleState oldState;
+                Exchange::ILifecycleManager::LifecycleState newState;
+                string navigationIntent;
+            };
 
         public:
-            class AppStateChangeNotificationHandler : public Exchange::ILifecycleManager::INotification
+            class AppStateChangeNotificationHandler : public Exchange::ILifecycleManagerState::INotification
             {
 
             public:
@@ -42,13 +50,17 @@ namespace WPEFramework
                 }
                 ~AppStateChangeNotificationHandler() override = default;
 
-                void OnAppStateChanged(const string &appId, Exchange::ILifecycleManager::LifecycleState state, const string &errorReason) override
+                void OnAppLifecycleStateChanged(const string &appId,
+                                                const string &appInstanceId,
+                                                const Exchange::ILifecycleManager::LifecycleState oldState,
+                                                const Exchange::ILifecycleManager::LifecycleState newState,
+                                                const string &navigationIntent) override
                 {
-                    mParent.OnAppStateChanged(appId, state, errorReason);
+                    mParent.OnAppLifecycleStateChanged(appId, appInstanceId, oldState, newState, navigationIntent);
                 }
 
                 BEGIN_INTERFACE_MAP(AppStateChangeNotificationHandler)
-                INTERFACE_ENTRY(Exchange::ILifecycleManager::INotification)
+                INTERFACE_ENTRY(Exchange::ILifecycleManagerState::INotification)
                 END_INTERFACE_MAP
 
             private:
@@ -71,12 +83,16 @@ namespace WPEFramework
         private:
             mutable Core::CriticalSection mAdminLock;
             mutable uint32_t mRefCount;
-            std::map<string, string> mAppIdToInstanceIDMap; // Map of appId to sessionId
+            std::map<string, AppLifeCycleContext> mAppLifeCycleContextMap;
             PluginHost::IShell *mCurrentservice;
             Core::Sink<AppStateChangeNotificationHandler> mAppStateChangeNotificationHandler;
-            Exchange::ILifecycleManager *mLifecycleManagerRemoteObject;
-            Core::hresult OnAppStateChanged(const string &appId, Exchange::ILifecycleManager::LifecycleState state, const string &errorReason);
-            Core::hresult createLifecycleManagerRemoteObject();
+            Exchange::ILifecycleManagerState *mLifecycleManagerStateRemoteObject;
+            void OnAppLifecycleStateChanged(const string &appId,
+                                            const string &appInstanceId,
+                                            const Exchange::ILifecycleManager::LifecycleState oldState,
+                                            const Exchange::ILifecycleManager::LifecycleState newState,
+                                            const string &navigationIntent);
+            Core::hresult createLifecycleManagerStateRemoteObject();
 
         public /*members*/:
             BEGIN_INTERFACE_MAP(AppGatewayAuthenticator)
@@ -99,5 +115,5 @@ namespace WPEFramework
             }
 
         }; // class AppGatewayAuthenticator
-    }
+    }   // namespace Plugin
 } /* namespace WPEFramework */

@@ -26,23 +26,22 @@ namespace WPEFramework
         AppGatewayAuthenticator::AppGatewayAuthenticator(PluginHost::IShell *service)
             : mCurrentservice(service),
               mAppStateChangeNotificationHandler(*this),
-              mLifecycleManagerRemoteObject(nullptr)
+              mLifecycleManagerStateRemoteObject(nullptr)
         {
             mCurrentservice->AddRef();
-            createLifecycleManagerRemoteObject();
-            if (mLifecycleManagerRemoteObject != nullptr)
+            if (createLifecycleManagerStateRemoteObject() == Core::ERROR_NONE)
             {
-                mLifecycleManagerRemoteObject->AddRef();
-                mLifecycleManagerRemoteObject->Register(&mAppStateChangeNotificationHandler);
+                mLifecycleManagerStateRemoteObject->AddRef();
+                mLifecycleManagerStateRemoteObject->Register(&mAppStateChangeNotificationHandler);
             }
         }
         AppGatewayAuthenticator::~AppGatewayAuthenticator()
         {
-            if (mLifecycleManagerRemoteObject != nullptr)
+            if (mLifecycleManagerStateRemoteObject != nullptr)
             {
-                mLifecycleManagerRemoteObject->Unregister(&mAppStateChangeNotificationHandler);
-                mLifecycleManagerRemoteObject->Release();
-                mLifecycleManagerRemoteObject = nullptr;
+                mLifecycleManagerStateRemoteObject->Unregister(&mAppStateChangeNotificationHandler);
+                mLifecycleManagerStateRemoteObject->Release();
+                mLifecycleManagerStateRemoteObject = nullptr;
             }
             if (mCurrentservice != nullptr)
             {
@@ -55,8 +54,8 @@ namespace WPEFramework
         {
             Core::hresult result = Core::ERROR_NOT_EXIST;
             mAdminLock.Lock();
-            std::map<string, string>::iterator it = mAppIdToInstanceIDMap.find(appId);
-            if (it != mAppIdToInstanceIDMap.end())
+            std::map<string, AppLifeCycleContext>::iterator it = mAppLifeCycleContextMap.find(appId);
+            if (it != mAppLifeCycleContextMap.end())
             {
                 appId = it->first;
                 result = Core::ERROR_NONE;
@@ -69,10 +68,10 @@ namespace WPEFramework
         {
             Core::hresult result = Core::ERROR_NOT_EXIST;
             mAdminLock.Lock();
-            std::map<string, string>::iterator it = mAppIdToInstanceIDMap.find(appId);
-            if (it != mAppIdToInstanceIDMap.end())
+            std::map<string, AppLifeCycleContext>::iterator it = mAppLifeCycleContextMap.find(appId);
+            if (it != mAppLifeCycleContextMap.end())
             {
-                sessionId = it->second;
+                sessionId = it->second.appInstanceId;
                 result = Core::ERROR_NONE;
             }
             mAdminLock.Unlock();
@@ -87,14 +86,14 @@ namespace WPEFramework
             return Core::ERROR_NONE;
         }
 
-        Core::hresult AppGatewayAuthenticator::createLifecycleManagerRemoteObject()
+        Core::hresult AppGatewayAuthenticator::createLifecycleManagerStateRemoteObject()
         {
             Core::hresult status = Core::ERROR_GENERAL;
             if (mCurrentservice != nullptr)
             {
                 // TODO: This should be using the callsign of the LifecycleManager plugin instead of hardcoding it here.
-                mLifecycleManagerRemoteObject = mCurrentservice->QueryInterfaceByCallsign<Exchange::ILifecycleManager>("org.rdk.LifecycleManager");
-                if (mLifecycleManagerRemoteObject != nullptr)
+                mLifecycleManagerStateRemoteObject = mCurrentservice->QueryInterfaceByCallsign<Exchange::ILifecycleManagerState>("org.rdk.LifecycleManager");
+                if (mLifecycleManagerStateRemoteObject != nullptr)
                 {
                     status = Core::ERROR_NONE;
                 }
@@ -109,26 +108,33 @@ namespace WPEFramework
             }
             return status;
         }
-        Core::hresult AppGatewayAuthenticator::OnAppStateChanged(const string &appId, Exchange::ILifecycleManager::LifecycleState state, const string &errorReason)
+        void AppGatewayAuthenticator::OnAppLifecycleStateChanged(const string &appId,
+                                                                 const string &appInstanceId,
+                                                                 const Exchange::ILifecycleManager::LifecycleState oldState,
+                                                                 const Exchange::ILifecycleManager::LifecycleState newState,
+                                                                 const string &navigationIntent)
         {
-            Core::hresult result = Core::ERROR_NONE;
+            LOGINFO("AppLifecycleStateChanged: AppId=%s, AppInstanceId=%s, OldState=%d, NewState=%d, NavigationIntent=%s",
+                    appId.c_str(), appInstanceId.c_str(), oldState, newState, navigationIntent.c_str());
             mAdminLock.Lock();
-            if (state == Exchange::ILifecycleManager::LifecycleState::LOADING || state == Exchange::ILifecycleManager::LifecycleState::INITIALIZING)
+            // If the app is in terminating state, remove it from the map
+            if (newState == Exchange::ILifecycleManager::TERMINATING)
             {
-                mAppIdToInstanceIDMap[appId] = appId; // Assuming sessionId is same as appId for simplicity
-                LOGINFO("App '%s' loaded with sessionId '%s'", appId.c_str(), appId.c_str());
+                std::map<string, AppLifeCycleContext>::iterator it = mAppLifeCycleContextMap.find(appId);
+                if (it != mAppLifeCycleContextMap.end())
+                {
+                    mAppLifeCycleContextMap.erase(it);
+                }
+                mAdminLock.Unlock();
+                return;
             }
-            else if (state == Exchange::ILifecycleManager::LifecycleState::UNLOADED || state == Exchange::ILifecycleManager::LifecycleState::TERMINATING)
-            {
-                mAppIdToInstanceIDMap.erase(appId);
-                LOGINFO("App '%s' unloading", appId.c_str());
-            }
-            else
-            {
-                LOGINFO("App '%s' changed state to %d with error reason: %s", appId.c_str(), state, errorReason.c_str());
-            }
+            AppLifeCycleContext context;
+            context.appInstanceId = appInstanceId;
+            context.oldState = oldState;
+            context.newState = newState;
+            context.navigationIntent = navigationIntent;
+            mAppLifeCycleContextMap[appId] = context;
             mAdminLock.Unlock();
-            return result;
         }
     }
 }
