@@ -31,9 +31,8 @@
 #include <plugins/System.h>
 
 #include <interfaces/ILifecycleManager.h>
-
-#include "UtilsString.h"
 #include "AppManagerImplementation.h"
+#include "UtilsString.h"
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
 #include "AppManagerTelemetryReporting.h"
 #endif
@@ -77,6 +76,9 @@ namespace WPEFramework
                mCurrentservice = nullptr;
             }
             LifecycleInterfaceConnector::_instance = nullptr;
+
+	    //clear action list
+	    mAppCurrentActionList.clear();
         }
 
         Core::hresult LifecycleInterfaceConnector::createLifecycleManagerRemoteObject()
@@ -354,8 +356,6 @@ namespace WPEFramework
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
             std::string appIntent = "";
-            bool success = false;
-            std::string errorReason = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
@@ -379,6 +379,8 @@ namespace WPEFramework
                         if(nullptr != mLifecycleManagerRemoteObject)
                         {
                             appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_CLOSE);
+
+			    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
 
                             status = mLifecycleManagerRemoteObject->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::PAUSED, appIntent);
 
@@ -428,19 +430,7 @@ namespace WPEFramework
                                         }
                                         else
                                         {
-                                            LOGINFO("App with AppId: %s is non suspendable. Proceeding to unload the app", appId.c_str());
-                                            status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
-                                            if (status != Core::ERROR_NONE)
-                                            {
-                                                LOGERR("UnloadApp failed with error reason: %s", errorReason.c_str());
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_UNLOAD_APP);
-#endif
-                                            }
-                                            else
-                                            {
-                                                LOGINFO("UnloadApp succeeded for appId: %s", appId.c_str());
-                                            }
+                                            LOGINFO("App with AppId: %s is non suspendable. Keeping app in Paused state", appId.c_str());
                                         }
                                     }
                                     else
@@ -527,6 +517,7 @@ namespace WPEFramework
                         if (nullptr != mLifecycleManagerRemoteObject)
                         {
                             appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_TERMINATE);
+			    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                             status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
                             if (status != Core::ERROR_NONE)
                             {
@@ -600,6 +591,7 @@ namespace WPEFramework
                     bool success{};
 
                     appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_KILL);
+		    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                     result = mLifecycleManagerRemoteObject->KillApp(appInstanceId, errorReason, success);
 
                     if (!(result == Core::ERROR_NONE && success))
@@ -732,7 +724,7 @@ namespace WPEFramework
                     loadedAppInfo.targetLifecycleState = appInfo.targetAppState;
                     appInfo.appNewState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
-                            getIntJsonField(loadedAppsObject, "currentLifecycleState")));
+                            getIntJsonField(loadedAppsObject, "lifecycleState")));
                     loadedAppInfo.currentLifecycleState = appInfo.appNewState;
 
                     //Add loaded info
@@ -867,7 +859,26 @@ End:
 
                 if(shouldNotify)
                 {
-                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+                    if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
+		    {
+                        if (mAppCurrentActionList[appId] == Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING)
+			{
+			    //Normal close: Unlode event from App manager
+			    LOGINFO("Terminate event from plugin");
+			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+			}
+			else
+			{
+			    //Upnormal close: No unload event from app manager
+			    LOGINFO("Terminate event due to app crash");
+			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_ABORT);
+			}
+			mAppCurrentActionList.erase(appId);
+		    }
+		    else
+		    {
+                        appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+		    }
                 }
 
                 if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
