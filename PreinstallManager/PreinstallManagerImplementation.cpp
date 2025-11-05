@@ -21,7 +21,12 @@
 
 #include "PreinstallManagerImplementation.h"
 
-#define AI_PREINSTALL_DIRECTORY "/opt/preinstall" //temporary directory for preinstall packages
+// Conditional compilation for unit test
+#ifdef UNIT_TESTING
+    #define AI_PREINSTALL_DIRECTORY "entservices-infra/Tests/L1Tests/tests/testPackage" // Test directory for unit test
+#else
+    #define AI_PREINSTALL_DIRECTORY "/opt/preinstall" //temporary directory for preinstall packages
+#endif
 
 namespace WPEFramework
 {

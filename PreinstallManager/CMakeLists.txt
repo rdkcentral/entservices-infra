@@ -71,6 +71,7 @@ separate_arguments(PREINSTALL_MANAGER_INCLUDES)
 include_directories(BEFORE ${PREINSTALL_MANAGER_INCLUDES})
 if (RDK_SERVICES_L1_TEST)
 	target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
+	target_compile_definitions(${PLUGIN_IMPLEMENTATION} PRIVATE UNIT_TESTING)
 endif (RDK_SERVICES_L1_TEST)
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
     CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  ${PLUGIN_PREINSTALL_MANAGER_EXTRA_LIBRARIES})
