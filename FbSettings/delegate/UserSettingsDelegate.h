@@ -41,7 +41,7 @@ static const std::set<string> VALID_USER_SETTINGS_EVENT = {
 
 class UserSettingsDelegate : public BaseEventDelegate{
     public:
-        UserSettingsDelegate(PluginHost::IShell* shell,Exchange::IAppNotifications* appNotifications):
+        UserSettingsDelegate(PluginHost::IShell* shell):
             BaseEventDelegate(), mUserSettings(nullptr), mShell(shell), mNotificationHandler(*this) {}
 
         ~UserSettingsDelegate() {
@@ -51,7 +51,7 @@ class UserSettingsDelegate : public BaseEventDelegate{
             }
         }
 
-        bool HandleSubscription(Exchange::IAppNotificationHandler::IEmitter *cb,const string &event, const bool listen) {
+        bool HandleSubscription(Exchange::IAppNotificationHandler::IEmitter *cb, const string &event, const bool listen) {
             if (listen) {
                 Exchange::IUserSettings* userSettings = GetUserSettingsInterface();
                 if (userSettings == nullptr) {

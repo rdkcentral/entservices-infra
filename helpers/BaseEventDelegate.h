@@ -79,7 +79,7 @@ public:
         mRegisteredNotifications.clear();
     }
 
-    virtual bool HandleEvent(Exchange::IAppNotificationHandler::IEmitter *cb, const string &event, const bool listen, bool &registrationError) { return false; };
+    virtual bool HandleEvent(Exchange::IAppNotificationHandler::IEmitter *cb, const string &event, const bool listen, bool &registrationError) = 0;
 
     bool Dispatch(const string &event, const string &payload)
     {

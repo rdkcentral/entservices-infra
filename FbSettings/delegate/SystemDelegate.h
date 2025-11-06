@@ -730,7 +730,7 @@ public:
 
     // ---- AppNotifications registration hook ----
     // Called by SettingsDelegate when app subscribes/unsubscribes to events.
-    bool HandleEvent(const std::string &event, const bool listen, bool &registrationError)
+    bool HandleEvent(Exchange::IAppNotificationHandler::IEmitter *cb, const std::string &event, const bool listen, bool &registrationError)
     {
         registrationError = false;
 
@@ -746,7 +746,7 @@ public:
         {
             LOGINFO("[FbSettings|EventRegistration] event=%s listen=%s", event.c_str(), listen ? "true" : "false");
             if (listen) {
-                AddNotification(event);
+                AddNotification(event, cb);
                 // Ensure underlying Thunder subscriptions are active
                 SetupDisplaySettingsSubscription();
                 SetupHdcpProfileSubscription();
@@ -754,7 +754,7 @@ public:
                 registrationError = false; // no error - successfully handled
                 return true;
             } else {
-                RemoveNotification(event);
+                RemoveNotification(event, cb);
                 registrationError = false; // no error - successfully handled
                 return true;
             }
