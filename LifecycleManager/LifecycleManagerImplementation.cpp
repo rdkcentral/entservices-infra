@@ -50,15 +50,6 @@ namespace WPEFramework
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             LifecycleManagerTelemetryReporting::getInstance().initialize(service);
 #endif
-            if (ret)
-            {
-                mService = service;
-                mService->AddRef();
-            }
-            else
-            {
-                LOGERR("Failed to initialize RequestHandler");
-            }
 	    return ret;
         }
 
