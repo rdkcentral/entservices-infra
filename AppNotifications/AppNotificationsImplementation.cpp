@@ -21,9 +21,17 @@
 
 namespace WPEFramework
 {
+    namespace Exchange {
+        bool operator==(const IAppNotifications::AppNotificationContext& lhs,
+                        const IAppNotifications::AppNotificationContext& rhs) {
+            return lhs.requestId == rhs.requestId &&
+                lhs.connectionId == rhs.connectionId &&
+                lhs.appId == rhs.appId &&
+                lhs.origin == rhs.origin;
+        }
+    }
     namespace Plugin
     {
-
         SERVICE_REGISTRATION(AppNotificationsImplementation, 1, 0);
 
         AppNotificationsImplementation::AppNotificationsImplementation() : 
@@ -115,36 +123,17 @@ namespace WPEFramework
             std::lock_guard<std::mutex> lock(mSubscriberMutex);
             mSubscribers[lowerKey].push_back(context);
         }
-
-        void AppNotificationsImplementation::SubscriberMap::Remove(const std::string &key, const Exchange::IAppNotifications::AppNotificationContext &context)
-        {
+        
+        void AppNotificationsImplementation::SubscriberMap::Remove(const string& key, const Exchange::IAppNotifications::AppNotificationContext& context) {
             std::lock_guard<std::mutex> lock(mSubscriberMutex);
-
-            const std::string lowerKey = StringUtils::toLower(key);
+            string lowerKey = StringUtils::toLower(key);
             auto it = mSubscribers.find(lowerKey);
-            if (it == mSubscribers.end())
-            {
-                return;
-            }
-
-            auto &vec = it->second;
-
-            // Capture the target fields once (avoids repeatedly touching context in the lambda)
-            const uint32_t reqId = context.requestId;
-            const uint32_t connId = context.connectionId;
-            const std::string &app = context.appId;
-            const std::string &org = context.origin;
-
-            vec.erase(std::remove_if(vec.begin(), vec.end(),
-                                     [&](const Exchange::IAppNotifications::AppNotificationContext &x)
-                                     {
-                                         return x.requestId == reqId && x.connectionId == connId && x.appId == app && x.origin == org;
-                                     }),
-                      vec.end());
-
-            if (vec.empty())
-            {
+            if (it != mSubscribers.end()) {
+                auto& vec = it->second;
+                vec.erase(std::remove(vec.begin(), vec.end(), context), vec.end());
+                if (vec.empty()) {
                 mSubscribers.erase(it);
+                }
             }
         }
 

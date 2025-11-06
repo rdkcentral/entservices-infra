@@ -147,6 +147,8 @@ namespace WPEFramework {
             Core::hresult GetFirmwareVersion(string &result /* @out */);
             Core::hresult GetScreenResolution(string &result /* out */);
             Core::hresult GetVideoResolution(string &result /* out */);
+            Core::hresult GetHdcp(string &result /* @out */);
+            Core::hresult GetHdr(string &result /* @out */);
 
         private:
             PluginHost::IShell* mShell;

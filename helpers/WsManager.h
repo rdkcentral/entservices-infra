@@ -231,7 +231,7 @@ public:
 
                     int requestId = message->Id.Value();
 
-                    if (_id==0) {
+                    if (_id == 0) {
                         string jsonMessage;
                         message->ToString(jsonMessage);
                         LOGERR("Connection ID Not set adding request to Pending queue %s", jsonMessage.c_str());
