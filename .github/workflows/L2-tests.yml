@@ -501,7 +501,7 @@ jobs:
           -DPLUGIN_USB_MASS_STORAGE=ON
           -DPLUGIN_LIFECYCLEMANAGER=OFF
           -DPLUGIN_APPMANAGER=OFF
-          -DPLUGIN_MIGRATION=ON
+          -DPLUGIN_MIGRATION=OFF
           -DPLUGIN_ANALYTICS=ON
           -DPLUGIN_ANALYTICS_BACKEND_LIBRARY_NAME="libWPEFrameworkAnalyticsBackendMock.so"
           -DPLUGIN_ANALYTICS_EVENTS_MAP="/tmp/AnalyticsEventsMap.json"
@@ -509,7 +509,7 @@ jobs:
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
           -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_OCICONTAINER=OFF
+          -DPLUGIN_OCICONTAINER=ON
           -DDS_FOUND=ON
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           &&
@@ -591,7 +591,7 @@ jobs:
           -DPLUGIN_ANALYTICS_EVENTS_MAP="/tmp/AnalyticsEventsMap.json"
           -DPLUGIN_LIFECYCLEMANAGER=OFF
           -DPLUGIN_APPMANAGER=OFF
-          -DPLUGIN_MIGRATION=ON
+          -DPLUGIN_MIGRATION=OFF
           -DPLUGIN_AVINPUT=OFF
           -DPLUGIN_AVOUTPUT=OFF
           -DAVOUTPUT_TV=OFF
