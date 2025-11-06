@@ -549,7 +549,6 @@ namespace WPEFramework
                 printf("unable to configure lifecyclemanager \n");
 		fflush(stdout);
 	    }
-
             return result;
         }
 
