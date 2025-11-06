@@ -255,6 +255,10 @@
         "lifecycle2.onstatechanged": {
             "alias": "org.rdk.AppGateway",
             "event": "Lifecycle2.onStateChanged"
+        },
+        "lifecycle2test.settargetstate": {
+            "alias": "org.rdk.AppGateway",
+            "useComRpc": true
         }
     }
 }

@@ -19,6 +19,9 @@
 #include "Module.h"
 #include "AppGatewayAuthenticator.h"
 #include "UtilsCallsign.h"
+#include "StringUtils.h"
+#include "UtilsLogging.h"
+#include "UtilsFirebolt.h"
 
 namespace WPEFramework
 {
@@ -36,10 +39,20 @@ namespace WPEFramework
     
     namespace Plugin
     {
-         const std::string LifecycleStateToString(Exchange::ILifecycleManager::LifecycleState state)
+        const std::string LifecycleStateToString(Exchange::ILifecycleManager::LifecycleState state)
         {
             WPEFramework::Core::EnumerateType<Exchange::ILifecycleManager::LifecycleState> type(state);
             return type.Data();
+        }
+
+        const bool StringToLifecycleState(const std::string& state, Exchange::ILifecycleManager::LifecycleState& value)
+        {
+            WPEFramework::Core::EnumerateType<Exchange::ILifecycleManager::LifecycleState> type(state.c_str(), false);
+            if (type.IsSet()) {
+                value = type.Value();
+                return true;
+            }
+            return false;
         }
 
         AppGatewayAuthenticator::AppGatewayAuthenticator(PluginHost::IShell *service)
@@ -210,7 +223,35 @@ namespace WPEFramework
             string& result /*@out @opaque */)
         {
             // Implementation of app gateway request handling
-            result = "{}";
+            std::string lowerMethod = StringUtils::toLower(method);
+            // Route System/Device methods
+            if (lowerMethod == "lifecycle2test.settargetstate")
+            {
+                Exchange::ILifecycleManager* lifecycleManager = mCurrentservice->QueryInterfaceByCallsign<Exchange::ILifecycleManager>("org.rdk.LifecycleManager");
+                if (lifecycleManager != nullptr) {
+                    // Handle the set target state request here
+                    JsonObject params;
+                    if (params.FromString(payload)) {
+                        // Process params and call lifecycleManager methods as needed
+                        std::string state = params["state"].String();
+                        std::string appInstanceId = params["appInstanceId"].String();
+                        std::string intent = params["intent"].String();
+                        Exchange::ILifecycleManager::LifecycleState targetState;
+                        if (!StringToLifecycleState(state, targetState)) {
+                            ErrorUtils::CustomInternal("Invalid target state", result);
+                            return Core::ERROR_GENERAL;
+                        }
+                        if (Core::ERROR_NONE != lifecycleManager->SetTargetAppState(appInstanceId, targetState, intent)) {
+                            ErrorUtils::CustomInternal("Couldnt set target state", result);
+                            return Core::ERROR_GENERAL;
+                        }
+                    }
+                    else {
+                        LOGERR("Failed to parse payload for set target state");
+                    }
+                }
+            }
+            result = "null";
             return Core::ERROR_NONE;
         }
 
