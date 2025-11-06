@@ -42,21 +42,10 @@ using ::WPEFramework::Exchange::IMigration;
  */
 class MigrationL2Test : public L2TestMocks {
 protected:
-    /**
-     * @brief Constructor for Migration L2 test class
-     */
-    MigrationL2Test();
-    
-    /**
-     * @brief Destructor for Migration L2 test class
-     */
     virtual ~MigrationL2Test() override;
 
 public:
-    /**
-     * @brief Creates Migration interface object using COM-RPC connection
-     * @return Core::ERROR_NONE on success, error code otherwise
-     */
+    MigrationL2Test();
     uint32_t CreateMigrationInterfaceObjectUsingComRPCConnection();
 
     /**
@@ -66,6 +55,9 @@ public:
     bool IsMigrationOperationsAvailable();
 
 protected:
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> migrationEngine;
+    Core::ProxyType<RPC::CommunicatorClient> migrationClient;
+
     /** @brief Pointer to the IShell interface */
     PluginHost::IShell *mControllerMigration;
 
@@ -81,10 +73,6 @@ MigrationL2Test::MigrationL2Test() : L2TestMocks()
     uint32_t status = Core::ERROR_GENERAL;
 
     TEST_LOG("Migration L2 test constructor");
-
-    // Initialize pointers
-    mControllerMigration = nullptr;
-    mMigrationPlugin = nullptr;
 
     /* Try to activate Migration plugin - if it fails, tests will be skipped */
     status = ActivateService("org.rdk.Migration");
