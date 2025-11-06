@@ -178,12 +178,6 @@ namespace Plugin {
             mTelemetryMetricsObject = nullptr;
         }
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
-         const std::string markerFile = "/tmp/package_manager_ready"; // or your actual file path
-    if (std::remove(markerFile.c_str()) == 0) {
-        LOGINFO("Deleted marker file: %s", markerFile.c_str());
-    } else {
-        LOGERR("Failed to delete marker file: %s (errno=%d)", markerFile.c_str(), errno);
-    }
 
         mCurrentservice->Release();
         mCurrentservice = nullptr;
@@ -956,15 +950,6 @@ namespace Plugin {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
         cacheInitialized = true;
-        const std::string markerFile = "/tmp/package_manager_ready";
-            std::ofstream file(markerFile);
-            if (file.is_open()) {
-               file << "PackageManager initialized successfully\n";
-               file.close();
-               LOGINFO("Marker file created: %s", markerFile.c_str());
-            } else {
-               LOGERR("Failed to create marker file: %s", markerFile.c_str());
-            }
         LOGDBG("exit");
     }
 
