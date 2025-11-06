@@ -244,13 +244,17 @@
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.resolutionChanged"
         },
-	"device.ondevicenamechanged": {
+	    "device.ondevicenamechanged": {
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.onFriendlyNameChanged"
         },
         "device.onnamechanged": {
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.onFriendlyNameChanged"
+        },
+        "lifecycle2.onstatechanged": {
+            "alias": "org.rdk.AppGateway",
+            "event": "Lifecycle2.onStateChanged"
         }
     }
 }

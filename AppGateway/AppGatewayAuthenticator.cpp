@@ -18,11 +18,30 @@
  **/
 #include "Module.h"
 #include "AppGatewayAuthenticator.h"
+#include "UtilsCallsign.h"
 
 namespace WPEFramework
 {
+        
+    ENUM_CONVERSION_BEGIN(Exchange::ILifecycleManager::LifecycleState)
+    {Exchange::ILifecycleManager::LifecycleState::UNLOADED, _TXT("unloaded")},
+    {Exchange::ILifecycleManager::LifecycleState::LOADING, _TXT("loading")},
+    {Exchange::ILifecycleManager::LifecycleState::INITIALIZING, _TXT("initializing")},
+    {Exchange::ILifecycleManager::LifecycleState::PAUSED, _TXT("paused")},
+    {Exchange::ILifecycleManager::LifecycleState::ACTIVE, _TXT("active")},
+    {Exchange::ILifecycleManager::LifecycleState::SUSPENDED, _TXT("suspended")},
+    {Exchange::ILifecycleManager::LifecycleState::HIBERNATED, _TXT("hibernated")},
+    {Exchange::ILifecycleManager::LifecycleState::TERMINATING, _TXT("terminating")},
+    ENUM_CONVERSION_END(Exchange::ILifecycleManager::LifecycleState)
+    
     namespace Plugin
     {
+         const std::string LifecycleStateToString(Exchange::ILifecycleManager::LifecycleState state)
+        {
+            WPEFramework::Core::EnumerateType<Exchange::ILifecycleManager::LifecycleState> type(state);
+            return type.Data();
+        }
+
         AppGatewayAuthenticator::AppGatewayAuthenticator(PluginHost::IShell *service)
             : mCurrentservice(service),
               mAppStateChangeNotificationHandler(*this),
@@ -165,6 +184,7 @@ namespace WPEFramework
                 mAdminLock.Unlock();
                 return;
             }
+            mAppIdInstanceMap[appId] = appInstanceId;
             AppLifeCycleContext context;
             context.appInstanceId = appInstanceId;
             context.oldState = oldState;
@@ -195,10 +215,122 @@ namespace WPEFramework
         }
 
         void AppGatewayAuthenticator::WindowManagerNotification::OnFocus(const std::string& appInstanceId) {
-
+            _parent.mAdminLock.Lock();
+            _parent.mAppFocusMap[appInstanceId] = true;
+            _parent.mAdminLock.Unlock();
+            _parent.HandleActivePassive(appInstanceId, true);
         }
         void AppGatewayAuthenticator::WindowManagerNotification::OnBlur(const std::string& appInstanceId) {
+            _parent.mAdminLock.Lock();
+            _parent.mAppFocusMap[appInstanceId] = false;
+            _parent.mAdminLock.Unlock();
+            _parent.HandleActivePassive(appInstanceId, false);
+        }
 
+        Core::hresult AppGatewayAuthenticator::IsAppInstanceFocused(const string& appInstanceId, bool& focussed) const
+        {
+            Core::hresult status = Core::ERROR_GENERAL;
+            mAdminLock.Lock();
+            auto it = mAppFocusMap.find(appInstanceId);
+            if (it != mAppFocusMap.end() && it->second)
+            {
+                focussed = true;
+                status = Core::ERROR_NONE;
+            } else {
+                focussed = false;
+            }
+            mAdminLock.Unlock();
+            return status;
+        }
+
+        void AppGatewayAuthenticator::DispatchAppLifecycleEvent(const string& appId, const string& appInstanceId)
+        {
+            // Implementation of dispatching app lifecycle event
+            // Get AppLifecycleContext from the map
+            JsonArray eventPayload;
+            Exchange::ILifecycleManager::LifecycleState oldState;
+            Exchange::ILifecycleManager::LifecycleState newState;
+            mAdminLock.Lock();
+            auto it = mAppLifeCycleContextMap.find(appId);
+            if (it != mAppLifeCycleContextMap.end()) {
+                const AppLifeCycleContext& context = it->second;
+                oldState = context.oldState;
+                newState = context.newState;
+                mAdminLock.Unlock();
+
+                bool focussed;
+                IsAppInstanceFocused(appInstanceId, focussed);
+
+                if (focussed && oldState == Exchange::ILifecycleManager::LifecycleState::ACTIVE && newState == Exchange::ILifecycleManager::LifecycleState::PAUSED) {
+                    // Handle specific state transition if needed
+                    JsonObject passiveState;
+                    passiveState["oldState"] = LifecycleStateToString(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
+                    passiveState["newState"] = LifecycleStateToString(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
+                    passiveState["focused"] = false;
+                    eventPayload.Add(passiveState);
+                }
+
+                JsonObject stateChange;
+                stateChange["oldState"] = LifecycleStateToString(oldState);
+                stateChange["newState"] = LifecycleStateToString(newState);
+                stateChange["focused"] = focussed;
+                // Further event dispatch logic here
+                eventPayload.Add(stateChange);
+
+                string payload;
+                eventPayload.ToString(payload);
+                Core::IWorkerPool::Instance().Submit(DispatchLifeycleJob::Create(this, appId, payload));
+                
+            } else {
+                mAdminLock.Unlock();
+                LOGERR("AppLifeCycleContext not found for appId: %s and appInstanceId %s", appId.c_str(), appInstanceId.c_str());
+            }
+        }
+
+        Core::hresult AppGatewayAuthenticator::IsAppActive(const string& appInstanceId, string& appId, bool& active) const
+            {
+                Core::hresult status = Core::ERROR_GENERAL;
+                mAdminLock.Lock();
+                for (const auto& pair : mAppLifeCycleContextMap) {
+                    const AppLifeCycleContext& context = pair.second;
+                    if (context.appInstanceId == appInstanceId) {
+                        appId = pair.first;
+                        active = (context.newState == Exchange::ILifecycleManager::LifecycleState::ACTIVE);
+                        status = Core::ERROR_NONE;
+                        break;
+                    }
+                }
+                mAdminLock.Unlock();
+                return status;
+            }
+
+        void AppGatewayAuthenticator::HandleActivePassive(const string& appInstanceId, bool focussed)
+        {
+            bool active;
+            string appId;
+            if (IsAppActive(appInstanceId, appId, active) == Core::ERROR_NONE) {
+                if (active) {
+                    JsonArray eventPayload;
+                    JsonObject passiveState;
+                    passiveState["oldState"] = LifecycleStateToString(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
+                    passiveState["newState"] = LifecycleStateToString(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
+                    passiveState["focused"] = focussed;
+                    eventPayload.Add(passiveState);
+                    string payload;
+                    eventPayload.ToString(payload);
+                    Core::IWorkerPool::Instance().Submit(DispatchLifeycleJob::Create(this, appId, payload));
+                }
+            }
+        }
+        void AppGatewayAuthenticator::DispatchLifecycleNotification(const string& appId, const string& payload)
+        {
+            Exchange::IAppNotifications* appNotifications = mCurrentservice->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
+            if (appNotifications != nullptr) {
+                appNotifications->Emit("Lifecycle2.onStateChanged", payload, appId);
+                appNotifications->Release();
+            } else {
+                LOGERR("Failed to get IAppNotifications interface for appId: %s", appId.c_str());
+            }
         }
     }
 }

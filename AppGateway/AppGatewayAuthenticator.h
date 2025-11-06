@@ -93,6 +93,42 @@ namespace WPEFramework
                     AppGatewayAuthenticator& _parent;
             };
 
+            class EXTERNAL DispatchLifeycleJob : public Core::IDispatch
+            {
+            protected:
+                DispatchLifeycleJob(AppGatewayAuthenticator *parent, 
+                const std::string& appId,
+                const std::string& payload
+                )
+                    : mParent(*parent), mAppId(appId), mPayload(payload)
+                {
+                }
+
+            public:
+                DispatchLifeycleJob() = delete;
+            DispatchLifeycleJob(const DispatchLifeycleJob &) = delete;
+                DispatchLifeycleJob &operator=(const DispatchLifeycleJob &) = delete;
+                ~DispatchLifeycleJob()
+                {
+                }
+
+            public:
+                static Core::ProxyType<Core::IDispatch> Create(AppGatewayAuthenticator *parent,
+                    const std::string& payload, const std::string& appid)
+                {
+                    return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<DispatchLifeycleJob>::Create(parent, payload, appid)));
+                }
+                virtual void Dispatch()
+                {
+                    mParent.DispatchLifecycleNotification(mAppId, mPayload);
+                }
+
+            private:
+                AppGatewayAuthenticator &mParent;
+                const std::string mAppId;
+                const std::string mPayload;
+            };
+
             
 
             AppGatewayAuthenticator(PluginHost::IShell *service);
@@ -130,7 +166,7 @@ namespace WPEFramework
             std::map<string, bool> mAppFocusMap;
             Core::Sink<WindowManagerNotification> mWindowManagerNotification;
             Exchange::IRDKWindowManager *mWindowManagerRemoteObject;
-            
+            std::map<string, string> mAppIdInstanceMap;
             
             void OnAppLifecycleStateChanged(const string &appId,
                                             const string &appInstanceId,
@@ -139,6 +175,11 @@ namespace WPEFramework
                                             const string &navigationIntent);
             Core::hresult createLifecycleManagerStateRemoteObject();
             Core::hresult createWindowManagerRemoteObject();
+            Core::hresult IsAppInstanceFocused(const string& appInstanceId, bool& focussed) const;
+            void DispatchAppLifecycleEvent(const string& appId, const string& appInstanceId);
+            Core::hresult IsAppActive(const string& appInstanceId, string& appId, bool& active) const;
+            void HandleActivePassive(const string& appInstanceId, bool focussed);
+            void DispatchLifecycleNotification(const string& appId, const string& payload);
 
         public /*members*/:
             BEGIN_INTERFACE_MAP(AppGatewayAuthenticator)
