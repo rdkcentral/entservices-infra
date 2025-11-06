@@ -26,13 +26,20 @@ namespace WPEFramework
         AppGatewayAuthenticator::AppGatewayAuthenticator(PluginHost::IShell *service)
             : mCurrentservice(service),
               mAppStateChangeNotificationHandler(*this),
-              mLifecycleManagerStateRemoteObject(nullptr)
+              mLifecycleManagerStateRemoteObject(nullptr),
+              mWindowManagerNotification(*this),
+              mWindowManagerRemoteObject(nullptr)
         {
             mCurrentservice->AddRef();
             if (createLifecycleManagerStateRemoteObject() == Core::ERROR_NONE)
             {
                 mLifecycleManagerStateRemoteObject->AddRef();
                 mLifecycleManagerStateRemoteObject->Register(&mAppStateChangeNotificationHandler);
+            }
+            if (createWindowManagerRemoteObject() == Core::ERROR_NONE)
+            {
+                mWindowManagerRemoteObject->AddRef();
+                mWindowManagerRemoteObject->Register(&mWindowManagerNotification);
             }
         }
         AppGatewayAuthenticator::~AppGatewayAuthenticator()
@@ -42,6 +49,12 @@ namespace WPEFramework
                 mLifecycleManagerStateRemoteObject->Unregister(&mAppStateChangeNotificationHandler);
                 mLifecycleManagerStateRemoteObject->Release();
                 mLifecycleManagerStateRemoteObject = nullptr;
+            }
+            if (mWindowManagerRemoteObject != nullptr)
+            {
+                mWindowManagerRemoteObject->Unregister(&mWindowManagerNotification);
+                mWindowManagerRemoteObject->Release();
+                mWindowManagerRemoteObject = nullptr;
             }
             if (mCurrentservice != nullptr)
             {
@@ -108,6 +121,30 @@ namespace WPEFramework
             }
             return status;
         }
+
+        Core::hresult AppGatewayAuthenticator::createWindowManagerRemoteObject()
+        {
+            Core::hresult status = Core::ERROR_GENERAL;
+            if (mCurrentservice != nullptr)
+            {
+                mWindowManagerRemoteObject = mCurrentservice->QueryInterfaceByCallsign<Exchange::IRDKWindowManager>("org.rdk.RDKWindowManager");
+                if (mWindowManagerRemoteObject != nullptr)
+                {
+                    status = Core::ERROR_NONE;
+                }
+                else
+                {
+                    LOGERR("Failed to create WindowManager Remote Object");
+                }
+            }
+            else
+            {
+                LOGERR("Current service is null");
+            }
+            return status;
+        }
+
+
         void AppGatewayAuthenticator::OnAppLifecycleStateChanged(const string &appId,
                                                                  const string &appInstanceId,
                                                                  const Exchange::ILifecycleManager::LifecycleState oldState,
@@ -135,6 +172,33 @@ namespace WPEFramework
             context.navigationIntent = navigationIntent;
             mAppLifeCycleContextMap[appId] = context;
             mAdminLock.Unlock();
+            
+        }
+
+        Core::hresult AppGatewayAuthenticator::HandleAppEventNotifier(const string& event /* @in */, 
+            const bool& listen /* @in */, 
+            bool& status /* @out */)
+        {
+            // Implementation of event notifier handling
+            status = true;
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult AppGatewayAuthenticator::HandleAppGatewayRequest(const Exchange::GatewayContext &context /* @in */,
+            const string& method /* @in */,
+            const string &payload /* @in @opaque */,
+            string& result /*@out @opaque */)
+        {
+            // Implementation of app gateway request handling
+            result = "{}";
+            return Core::ERROR_NONE;
+        }
+
+        void AppGatewayAuthenticator::WindowManagerNotification::OnFocus(const std::string& appInstanceId) {
+
+        }
+        void AppGatewayAuthenticator::WindowManagerNotification::OnBlur(const std::string& appInstanceId) {
+
         }
     }
 }

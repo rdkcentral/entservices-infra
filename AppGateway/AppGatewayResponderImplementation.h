@@ -27,6 +27,8 @@
 #include <com/com.h>
 #include <core/core.h>
 #include <map>
+#include "AppGatewayAuthenticator.h"
+
 
 
 namespace WPEFramework {
@@ -312,6 +314,7 @@ namespace Plugin {
         uint32_t InitializeWebsocket();
         mutable Core::CriticalSection mConnectionStatusImplLock;
         std::list<Exchange::IAppGatewayResponder::INotification*> mConnectionStatusNotification;
+        AppGatewayAuthenticator* mAppGatewayAuthenticator;
     };
 } // namespace Plugin
 } // namespace WPEFramework

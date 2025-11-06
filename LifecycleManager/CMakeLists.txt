@@ -45,7 +45,6 @@ set(PLUGIN_LIFECYCLE_MANAGER_SOURCES
 	State.cpp
 	StateHandler.cpp
 	StateTransitionHandler.cpp
-	AppGatewayAuthenticator.cpp
 )
 
 if (AIMANAGERS_TELEMETRY_METRICS_SUPPORT)

@@ -41,6 +41,7 @@ add_library(${MODULE_NAME} SHARED
         AppGateway.cpp
         AppGatewayImplementation.cpp
         AppGatewayResponderImplementation.cpp
+        AppGatewayAuthenticator.cpp
         Resolver.cpp
 	Module.cpp)
 

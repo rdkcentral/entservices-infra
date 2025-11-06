@@ -40,7 +40,8 @@ namespace WPEFramework
             mWsManager(),
             mAuthenticator(nullptr),
             mResolver(nullptr),
-            mConnectionStatusImplLock()
+            mConnectionStatusImplLock(),
+            mAppGatewayAuthenticator(nullptr)
         {
             LOGINFO("AppGatewayResponderImplementation constructor");
         }
@@ -66,6 +67,12 @@ namespace WPEFramework
                 mAuthenticator = nullptr;
             }
 
+            if (mAppGatewayAuthenticator != nullptr)
+            {
+                delete mAppGatewayAuthenticator;
+                mAppGatewayAuthenticator = nullptr;
+            }
+
         }
 
         uint32_t AppGatewayResponderImplementation::Configure(PluginHost::IShell *shell)
@@ -76,7 +83,11 @@ namespace WPEFramework
             mService = shell;
             mService->AddRef();
             result = InitializeWebsocket();
-
+            mAppGatewayAuthenticator = new AppGatewayAuthenticator(mService);
+            if (mAppGatewayAuthenticator == nullptr)
+            {
+                LOGWARN("LifecycleManager not enabled");
+            }
             return result;
         }
 
@@ -110,24 +121,31 @@ namespace WPEFramework
                         LOGERR("No session token provided");
                         return false;
                     }
-
-                    if ( mAuthenticator==nullptr ) {
-                        mAuthenticator = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayAuthenticator>(GATEWAY_AUTHENTICATOR_CALLSIGN);
-                        if (mAuthenticator == nullptr) {
-                            LOGERR("Authenticator Not available");
-                            return false;
+                    string appId;
+                    if (mAppGatewayAuthenticator != nullptr) {
+                        if ( Core::ERROR_NONE == mAppGatewayAuthenticator->Authenticate(sessionId, appId)) {
+                            mAppIdRegistry.Add(connectionId, appId);
+                            Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
+                            return true;
                         }
                     }
+                    else {
+                        if ( mAuthenticator==nullptr ) {
+                            mAuthenticator = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayAuthenticator>(GATEWAY_AUTHENTICATOR_CALLSIGN);
+                            if (mAuthenticator == nullptr) {
+                                LOGERR("Authenticator Not available");
+                                return false;
+                            }
+                        }
 
-                    string appId;
-                    if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
-                        LOGINFO("APP ID %s", appId.c_str());
-                        mAppIdRegistry.Add(connectionId, appId);
-                        Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
+                        if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
+                            LOGINFO("APP ID %s", appId.c_str());
+                            mAppIdRegistry.Add(connectionId, appId);
+                            Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
 
-                        return true;
+                            return true;
+                        }
                     }
-
                     return false;
                 });
 

@@ -33,7 +33,7 @@ namespace WPEFramework
     {
         SERVICE_REGISTRATION(LifecycleManagerImplementation, 1, 0);
 
-        LifecycleManagerImplementation::LifecycleManagerImplementation(): mLifecycleManagerNotification(), mLifecycleManagerStateNotification(), mLoadedApplications(), mService(nullptr), mAppGatewayAuthenticator(nullptr)
+        LifecycleManagerImplementation::LifecycleManagerImplementation(): mLifecycleManagerNotification(), mLifecycleManagerStateNotification(), mLoadedApplications(), mService(nullptr)
         {
             LOGINFO("Create LifecycleManagerImplementation Instance");
         }
@@ -54,12 +54,6 @@ namespace WPEFramework
             {
                 mService = service;
                 mService->AddRef();
-                mAppGatewayAuthenticator = new AppGatewayAuthenticator(service);
-                if (mAppGatewayAuthenticator == nullptr)
-                {
-                    LOGERR("Failed to create AppGatewayAuthenticator");
-                    ret = false;
-                }
             }
             else
             {
@@ -82,11 +76,6 @@ namespace WPEFramework
             {
                mService->Release();
                mService = nullptr;
-            }
-            if (mAppGatewayAuthenticator != nullptr)
-            {
-                delete mAppGatewayAuthenticator;
-                mAppGatewayAuthenticator = nullptr;
             }
         }
 
