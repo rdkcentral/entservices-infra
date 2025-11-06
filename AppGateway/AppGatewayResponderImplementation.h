@@ -61,7 +61,7 @@ namespace Plugin {
         virtual Core::hresult Register(Exchange::IAppGatewayResponder::INotification *notification) override;
         virtual Core::hresult Unregister(Exchange::IAppGatewayResponder::INotification *notification) override;
 
-        virtual void OnConnectionStatusChanged(const string& appId, const uint32_t& connectionId, const bool& connected);
+        virtual void OnConnectionStatusChanged(const string& appId, const uint32_t connectionId, const bool connected);
         
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -297,6 +297,9 @@ namespace Plugin {
 
 
         void ReturnMessageInSocket(const uint32_t connectionId, const int requestId, const string payload ) {
+             LOGDBG("<--[[a-%d-%d]] payload=%s",
+                    connectionId, requestId, payload.c_str());
+
             // Send response back to client
             mWsManager.SendMessageToConnection(connectionId, payload, requestId);
         }

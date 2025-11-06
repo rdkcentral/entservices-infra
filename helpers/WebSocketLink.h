@@ -462,7 +462,7 @@ POP_WARNING()
                                             TRACE_L1("Ping acknowledged by a pong in %d (uS)", static_cast<uint32_t>(static_cast<uint64_t>(Core::Time::Now().Ticks() - _pingFireTime)));
                                             _pingFireTime = 0;
                                         } else {
-                                            TRACE_L1("Pong received but nu ping requested ??? [%d] ", __LINE__);
+                                            TRACE_L1("Pong received but no ping requested ??? [%d] ", __LINE__);
                                         }
                                     } else {
                                         // Unknown control command, log an error.
@@ -475,18 +475,18 @@ POP_WARNING()
                                 payloadSizeInControlFrame = 0;
                                 // skip payload bytes for control frames:
                                 if (headerSize > 1) {
-                                   payloadSizeInControlFrame = dataFrame[result+1] & 0x7F;
+                                   payloadSizeInControlFrame = dataFrame[result + 1] & 0x7F;
                                    if (payloadSizeInControlFrame == 126) {
 				       if (headerSize > 3) {
-                                         payloadSizeInControlFrame = ((dataFrame[result+2] << 8) + dataFrame[result+3]);
+                                         payloadSizeInControlFrame = ((dataFrame[result + 2] << 8) + dataFrame[result + 3]);
 				       } else {
                                          TRACE_L1("Header too small for 16-bit extended payload size");
                                          payloadSizeInControlFrame = 0;
                                       }
                                    } else if (payloadSizeInControlFrame == 127) {
                                       if (headerSize > 9) {
-                                         payloadSizeInControlFrame = dataFrame[result+9];
-                                         for (int i=8; i>=2; i--) payloadSizeInControlFrame = (payloadSizeInControlFrame << 8) + dataFrame[result+i];
+                                         payloadSizeInControlFrame = dataFrame[result + 9];
+                                         for (int i = 8; i >= 2; i--) payloadSizeInControlFrame = (payloadSizeInControlFrame << 8) + dataFrame[result + i];
                                       } else {
                                          TRACE_L1("Header too small for 64-bit jumbo payload size ");
                                          payloadSizeInControlFrame = 0;
