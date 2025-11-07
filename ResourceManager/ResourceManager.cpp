@@ -71,6 +71,7 @@ namespace WPEFramework {
             {
                 mDisableBlacklist =  ((param.type == WDMP_BOOLEAN) && (strncasecmp(param.value, "false", 5) == 0));
             }
+			RFC_ParamData_t param;
             if (true == Utils::getRFCConfig("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Resourcemanager.ReserveTTS.Enable", param))
             {
                 mDisableReserveTTS = ((param.type == WDMP_BOOLEAN) && (strncasecmp(param.value, "false", 5) == 0));
