@@ -42,10 +42,10 @@ using ::WPEFramework::Exchange::IMigration;
  */
 class MigrationL2Test : public L2TestMocks {
 protected:
+    MigrationL2Test();
     virtual ~MigrationL2Test() override;
 
 public:
-    MigrationL2Test();
     uint32_t CreateMigrationInterfaceObjectUsingComRPCConnection();
 
     /**
@@ -55,8 +55,9 @@ public:
     bool IsMigrationOperationsAvailable();
 
 protected:
-    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> migrationEngine;
-    Core::ProxyType<RPC::CommunicatorClient> migrationClient;
+    /** @brief ProxyType objects for proper cleanup */
+    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mMigrationEngine;
+    Core::ProxyType<RPC::CommunicatorClient> mMigrationClient;
 
     /** @brief Pointer to the IShell interface */
     PluginHost::IShell *mControllerMigration;
@@ -73,6 +74,11 @@ MigrationL2Test::MigrationL2Test() : L2TestMocks()
     uint32_t status = Core::ERROR_GENERAL;
 
     TEST_LOG("Migration L2 test constructor");
+    // Initialize pointers
+    mControllerMigration = nullptr;
+    mMigrationPlugin = nullptr;
+    mMigrationEngine = nullptr;
+    mMigrationClient = nullptr;
 
     /* Try to activate Migration plugin - if it fails, tests will be skipped */
     status = ActivateService("org.rdk.Migration");
@@ -104,11 +110,26 @@ MigrationL2Test::~MigrationL2Test()
         mControllerMigration = nullptr;
     }
 
+    // Clean up COM-RPC objects to close background threads
+    if (mMigrationClient.IsValid()) {
+        mMigrationClient.Release();
+        mMigrationClient = nullptr;
+        TEST_LOG("Released migration client");
+    }
+
+    if (mMigrationEngine.IsValid()) {
+        mMigrationEngine.Release();
+        mMigrationEngine = nullptr;
+        TEST_LOG("Released migration engine");
+    }
+
     // Try to deactivate service - may fail if activation failed
     status = DeactivateService("org.rdk.Migration");
     if (status != Core::ERROR_NONE) {
         TEST_LOG("Migration service deactivation failed with error: %d", status);
     }
+    // Allow some time for background threads to clean up
+    usleep(300000); // 300ms
 }
 
 /**
@@ -124,20 +145,20 @@ uint32_t MigrationL2Test::CreateMigrationInterfaceObjectUsingComRPCConnection()
     TEST_LOG("Creating Migration COM-RPC connection");
 
     // Create the migration engine
-    migrationEngine = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
-    migrationClient = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(migrationEngine));
+    mMigrationEngine = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+    mMigrationClient = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mMigrationEngine));
 
     TEST_LOG("Creating migrationEngine Announcements");
 #if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
-    migrationEngine->Announcements(mmigrationClient->Announcement());
+    mMmigrationEngine->Announcements(mMigrationClient->Announcement());
 #endif
     
-    if (!migrationClient.IsValid()) {
+    if (!mMigrationClient.IsValid()) {
         TEST_LOG("Invalid migrationClient");
     }
     else
     {
-        mControllerMigration = migrationClient->Open<PluginHost::IShell>(_T("org.rdk.Migration"), ~0, 3000);
+        mControllerMigration = mMigrationClient->Open<PluginHost::IShell>(_T("org.rdk.Migration"), ~0, 3000);
         if (mControllerMigration) 
         {
         mMigrationPlugin = mControllerMigration->QueryInterface<Exchange::IMigration>();
