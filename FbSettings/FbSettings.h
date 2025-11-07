@@ -149,6 +149,7 @@ namespace WPEFramework {
             Core::hresult GetVideoResolution(string &result /* out */);
             Core::hresult GetHdcp(string &result /* @out */);
             Core::hresult GetHdr(string &result /* @out */);
+            Core::hresult GetAudio(string &result /* @out */);
 
         private:
             PluginHost::IShell* mShell;
@@ -157,3 +158,4 @@ namespace WPEFramework {
         };
 	} // namespace Plugin
 } // namespace WPEFramework
+
