@@ -78,7 +78,7 @@ jobs:
             exit 1
           fi
           IFS='.' read -r major minor patch <<< "$TOP_TAG"
-          VERSION_TYPE=$(echo "$PR_DESC" | grep -oiP 'version\s*:\s*\K(major|minor|patch)' | tr '[:upper:]' '[:lower:]')
+          VERSION_TYPE=$(echo "$PR_DESC" | grep -qiE 'version\s*:\s*\K(major|minor|patch)' | tr '[:upper:]' '[:lower:]')
           if [[ -z "$VERSION_TYPE" ]]; then
             echo "ERROR: No version type found in PR description. Please specify 'version: major|minor|patch'"
             exit 1
