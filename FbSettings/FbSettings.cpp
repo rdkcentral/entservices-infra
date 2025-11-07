@@ -369,6 +369,10 @@ namespace Plugin {
             {
                 return GetHdr(result);
             }
+            else if (method == "device.audio")
+            {
+                return GetAudio(result);
+            }
 
             // If method not found, return error
             ErrorUtils::NotSupported(result);
@@ -1062,6 +1066,22 @@ namespace Plugin {
             return systemDelegate->GetHdr(result);
         }
 
+        Core::hresult FbSettings::GetAudio(string &result)
+        {
+            LOGINFO("GetAudio FbSettings");
+            if (!mDelegate) {
+                result = "{\"stereo\":true,\"dolbyDigital5.1\":false,\"dolbyDigital5.1+\":false,\"dolbyAtmos\":false}";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            auto systemDelegate = mDelegate->getSystemDelegate();
+            if (!systemDelegate) {
+                result = "{\"stereo\":true,\"dolbyDigital5.1\":false,\"dolbyDigital5.1+\":false,\"dolbyAtmos\":false}";
+                return Core::ERROR_UNAVAILABLE;
+            }
+            return systemDelegate->GetAudio(result);
+        }
+
 
 } // namespace Plugin
 } // namespace WPEFramework
+

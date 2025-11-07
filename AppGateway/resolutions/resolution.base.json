@@ -240,6 +240,10 @@
             "alias": "org.rdk.FbSettings",
             "useComRpc": true
         },
+        "device.audio": {
+            "alias": "org.rdk.FbSettings",
+            "useComRpc": true
+        },
         "device.onhdrchanged": {
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.onDisplayConnectionChanged"
@@ -256,7 +260,11 @@
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.resolutionChanged"
         },
-	    "device.ondevicenamechanged": {
+        "device.onaudiochanged": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.audioFormatChanged"
+        },
+        "device.ondevicenamechanged": {
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.onFriendlyNameChanged"
         },
@@ -266,4 +274,5 @@
         }
     }
 }
+
 
