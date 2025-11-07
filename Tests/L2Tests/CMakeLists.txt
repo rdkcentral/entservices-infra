@@ -58,6 +58,10 @@ if(PLUGIN_SHAREDSTORAGE)
     set(SRC_FILES ${SRC_FILES} tests/SharedStorage_L2Test.cpp)
 endif()
 
+if(PLUGIN_PREINSTALL_MANAGER)
+    set(SRC_FILES ${SRC_FILES} tests/PreinstallManager_L2Test.cpp)
+endif()
+
 if(PLUGIN_RESOURCEMANAGER)
     set(SRC_FILES ${SRC_FILES} tests/ResourceManager_L2Test.cpp)
 endif()
