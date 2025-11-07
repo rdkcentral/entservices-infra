@@ -77,8 +77,6 @@ MigrationL2Test::MigrationL2Test() : L2TestMocks()
     // Initialize pointers
     mControllerMigration = nullptr;
     mMigrationPlugin = nullptr;
-    mMigrationEngine = nullptr;
-    mMigrationClient = nullptr;
 
     /* Try to activate Migration plugin - if it fails, tests will be skipped */
     status = ActivateService("org.rdk.Migration");
@@ -113,13 +111,11 @@ MigrationL2Test::~MigrationL2Test()
     // Clean up COM-RPC objects to close background threads
     if (mMigrationClient.IsValid()) {
         mMigrationClient.Release();
-        mMigrationClient = nullptr;
         TEST_LOG("Released migration client");
     }
 
     if (mMigrationEngine.IsValid()) {
         mMigrationEngine.Release();
-        mMigrationEngine = nullptr;
         TEST_LOG("Released migration engine");
     }
 
