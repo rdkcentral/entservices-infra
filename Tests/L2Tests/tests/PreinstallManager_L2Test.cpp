@@ -282,7 +282,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallUsingComRpcSuccess)
         });
 
     // Register notification handler
-    status = mPreinstallManagerPlugin->Register(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Register(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     // Reset notification handler before test
@@ -303,7 +303,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallUsingComRpcSuccess)
     }
 
     // Unregister notification handler
-    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     // Cleanup
@@ -356,7 +356,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallForceInstallUsingComRpcSuccess)
         });
 
     // Register notification handler
-    status = mPreinstallManagerPlugin->Register(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Register(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     mNotificationHandler->Reset();
@@ -376,7 +376,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallForceInstallUsingComRpcSuccess)
     }
 
     // Unregister notification handler
-    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     // Cleanup
@@ -423,7 +423,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallEmptyDirectoryUsingComRpc)
         });
 
     // Register notification handler
-    status = mPreinstallManagerPlugin->Register(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Register(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     mNotificationHandler->Reset();
@@ -440,7 +440,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallEmptyDirectoryUsingComRpc)
     TEST_LOG("Empty directory test - notification received: %s", unexpectedNotification ? "true" : "false");
 
     // Unregister notification handler
-    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     // Cleanup
@@ -471,19 +471,19 @@ TEST_F(PreinstallManagerTest, NotificationRegisterUnregisterUsingComRpc)
     EXPECT_EQ(status, Core::ERROR_NONE);
 
     // Test successful registration
-    status = mPreinstallManagerPlugin->Register(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Register(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     // Test duplicate registration (should handle gracefully)
-    status = mPreinstallManagerPlugin->Register(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Register(mNotificationHandler.operator->());
     // Implementation may handle this differently, but should not crash
 
     // Test successful unregistration
-    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     // Test unregistering non-registered handler (should handle gracefully)
-    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler.operator->());
     // Should handle gracefully, might return error or success
 
     // Test null pointer handling
@@ -525,7 +525,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallDirectoryAccessErrorUsingComRpc)
         });
 
     // Register notification handler to catch any error notifications
-    status = mPreinstallManagerPlugin->Register(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Register(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     mNotificationHandler->Reset();
@@ -542,7 +542,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallDirectoryAccessErrorUsingComRpc)
     }
 
     // Unregister notification handler
-    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler);
+    status = mPreinstallManagerPlugin->Unregister(mNotificationHandler.operator->());
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     if (Core::ERROR_NONE == status) {
