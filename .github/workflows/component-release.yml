@@ -21,7 +21,7 @@ jobs:
             echo "ERROR: PR description is empty. Please include a description with 'version: major|minor|patch'."
             exit 1
           fi
-          if ! printf '%s\n' "$PR_DESC" | grep -qiE 'version[[:space:]]*:[[:space:]]*(major|minor|patch)'; then
+          if ! printf '%s\n' "$PR_DESC" | grep -qiE 'version\s*:\s*(major|minor|patch)'; then
             echo "ERROR: PR description must include 'version: major|minor|patch'."
             exit 1
           fi
@@ -81,7 +81,7 @@ jobs:
           VERSION_TYPE=$(echo "$PR_DESC" | grep -oiP 'version\s*:\s*\K(major|minor|patch)' | tr '[:upper:]' '[:lower:]')
           if [[ -z "$VERSION_TYPE" ]]; then
             echo "No version type found in PR description, defaulting to PATCH increment."
-            patch=$((patch + 1))
+            exit 1
           elif [[ "$VERSION_TYPE" == "major" ]]; then
             major=$((major + 1))
             minor=0
