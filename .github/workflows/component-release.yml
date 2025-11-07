@@ -21,12 +21,13 @@ jobs:
             echo "ERROR: PR description is empty. Please include a description with 'version: major|minor|patch'."
             exit 1
           fi
-          if ! printf '%s\n' "$PR_DESC" | grep -qiE 'version\s*:\s*(major|minor|patch)'; then
-            echo "ERROR: PR description must include 'version: major|minor|patch'."
+          if ! printf '%s\n' "$PR_DESC" | grep -oiP 'version\s*:\s*(major|minor|patch)'; then
+            echo "ERROR: PR description is missing the required field. Please include a description with 'version: major|minor|patch'."
             exit 1
           fi
           echo "Validation passed: version field found."
   release:
+    needs: validate-version
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
@@ -78,9 +79,9 @@ jobs:
             exit 1
           fi
           IFS='.' read -r major minor patch <<< "$TOP_TAG"
-          VERSION_TYPE=$(echo "$PR_DESC" | grep -qiE 'version\s*:\s*\K(major|minor|patch)' | tr '[:upper:]' '[:lower:]')
+          VERSION_TYPE=$(echo "$PR_DESC" | grep -oiP 'version\s*:\s*\K(major|minor|patch)' | tr '[:upper:]' '[:lower:]')
           if [[ -z "$VERSION_TYPE" ]]; then
-            echo "ERROR: No version type found in PR description. Please specify 'version: major|minor|patch'"
+            echo "ERROR: PR description must include 'version: major|minor|patch'."
             exit 1
           elif [[ "$VERSION_TYPE" == "major" ]]; then
             major=$((major + 1))
