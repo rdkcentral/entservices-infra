@@ -24,7 +24,7 @@
 #include <mutex>
 #include <map>
 #include "UtilsLogging.h"
-#include "ThunderUtils.h"
+#include "UtilsController.h"
 #include "delegate/SettingsDelegate.h"
 
 namespace WPEFramework {

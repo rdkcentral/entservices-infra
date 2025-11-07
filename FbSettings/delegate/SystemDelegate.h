@@ -27,7 +27,7 @@
 #include <core/JSON.h>
 #include "UtilsLogging.h"
 #include "UtilsJsonrpcDirectLink.h"
-#include "ThunderUtils.h"
+#include "UtilsController.h"
 #include "BaseEventDelegate.h"
 
 using namespace WPEFramework;
@@ -968,7 +968,7 @@ private:
         if (_displaySubscribed) return;
         try {
             if (!_displayRpc) {
-                _displayRpc = ThunderUtils::getThunderControllerClient(DISPLAYSETTINGS_CALLSIGN);
+                _displayRpc = ::Utils::getThunderControllerClient(DISPLAYSETTINGS_CALLSIGN);
             }
             if (_displayRpc) {
                 const uint32_t status = _displayRpc->Subscribe<WPEFramework::Core::JSON::VariantContainer>(
@@ -990,7 +990,7 @@ private:
         if (_displayAudioSubscribed) return;
         try {
             if (!_displayRpc) {
-                _displayRpc = ThunderUtils::getThunderControllerClient(DISPLAYSETTINGS_CALLSIGN);
+                _displayRpc = ::Utils::getThunderControllerClient(DISPLAYSETTINGS_CALLSIGN);
             }
             if (_displayRpc) {
                 const uint32_t status = _displayRpc->Subscribe<WPEFramework::Core::JSON::VariantContainer>(
@@ -1012,7 +1012,7 @@ private:
         if (_hdcpSubscribed) return;
         try {
             if (!_hdcpRpc) {
-                _hdcpRpc = ThunderUtils::getThunderControllerClient(HDCPPROFILE_CALLSIGN);
+                _hdcpRpc = ::Utils::getThunderControllerClient(HDCPPROFILE_CALLSIGN);
             }
             if (_hdcpRpc) {
                 const uint32_t status = _hdcpRpc->Subscribe<WPEFramework::Core::JSON::VariantContainer>(
@@ -1034,7 +1034,7 @@ private:
         if (_systemSubscribed) return;
         try {
             if (!_systemRpc) {
-                _systemRpc = ThunderUtils::getThunderControllerClient(SYSTEM_CALLSIGN);
+                _systemRpc = ::Utils::getThunderControllerClient(SYSTEM_CALLSIGN);
             }
             if (_systemRpc) {
                 const uint32_t status = _systemRpc->Subscribe<WPEFramework::Core::JSON::VariantContainer>(
