@@ -11,7 +11,7 @@ on:
 
 jobs:
   validate-version:
-    if: github.event.action == 'opened' || github.event.action == 'edited' || github.event.action == 'ready_for_review'
+    if: contains(fromJSON('["opened", "edited", "ready_for_review"]'), github.event.action)
     runs-on: ubuntu-latest
     steps:
       - name: Validate PR description for version field
