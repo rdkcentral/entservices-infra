@@ -26,7 +26,7 @@
 #include "UtilsCallsign.h"
 #include <interfaces/IAppNotifications.h>
 
-#define APPGATEWAY_SOCKET_ADDRESS "0.0.0.0:3473"
+#define APPGATEWAY_SOCKET_ADDRESS "127.0.0.1:3473"
 #define DEFAULT_CONFIG_PATH "/etc/app-gateway/resolution.base.json"
 
 namespace WPEFramework

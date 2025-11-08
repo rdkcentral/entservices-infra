@@ -23,11 +23,20 @@
 
 #define LOGINFOMETHOD() { std::string json; parameters.ToString(json); LOGINFO( "params=%s", json.c_str() ); }
 #define LOGTRACEMETHODFIN() { std::string json; response.ToString(json); LOGINFO( "response=%s", json.c_str() ); }
-#define returnResponse(success) \
+
+/**
+ * DO NOT USE THIS.
+ *
+ * "success" parameter was added for legacy reasons.
+ * Newer APIs should return only error code to match the spec
+ */
+
+#define returnResponse(expression) \
     { \
-        response["success"] = success; \
+        bool successBoolean = expression; \
+        response["success"] = successBoolean; \
         LOGTRACEMETHODFIN(); \
-        return (WPEFramework::Core::ERROR_NONE); \
+        return (successBoolean ? WPEFramework::Core::ERROR_NONE : WPEFramework::Core::ERROR_GENERAL); \
     }
 #define returnIfParamNotFound(param, name) \
     if (!param.HasLabel(name)) \
