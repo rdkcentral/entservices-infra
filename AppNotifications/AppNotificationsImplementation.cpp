@@ -214,7 +214,7 @@ namespace WPEFramework
 
         AppNotificationsImplementation::ThunderSubscriptionManager::~ThunderSubscriptionManager() {
             // Copy notifications to avoid holding the lock during external calls
-            std::vector<NotificationInfo> notificationsCopy;
+            std::vector<NotificationKey> notificationsCopy;
             {
                 std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
                 notificationsCopy = mRegisteredNotifications;
