@@ -29,6 +29,7 @@
 #include "UtilsJsonrpcDirectLink.h"
 #include "UtilsController.h"
 #include "BaseEventDelegate.h"
+#include <algorithm>
 
 using namespace WPEFramework;
 
@@ -713,8 +714,7 @@ public:
             stereo = true;
             dd51 = true;
             dd51plus = true;
-            atmos = true;  // EAC3 can carry Atmos
-            LOGDBG("[FbSettings|GetAudio] Detected EAC3 format -> DD5.1, DD5.1+, and Atmos capable");
+            LOGDBG("[FbSettings|GetAudio] Detected EAC3 format -> DD5.1 and DD5.1+ enabled, Atmos capable (if present)");
         }
         // Check for AC3 (Dolby Digital 5.1)
         else if (formatUpper.find("AC3") != std::string::npos || formatUpper.find("AC-3") != std::string::npos) {

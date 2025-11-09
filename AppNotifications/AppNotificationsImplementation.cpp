@@ -213,13 +213,17 @@ namespace WPEFramework
         }
 
         AppNotificationsImplementation::ThunderSubscriptionManager::~ThunderSubscriptionManager() {
-            std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-            // Unsubscribe from all registered notifications
-            for (const auto& notification : mRegisteredNotifications) {
+            // Copy notifications to avoid holding the lock during external calls
+            std::vector<NotificationInfo> notificationsCopy;
+            {
+                std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
+                notificationsCopy = mRegisteredNotifications;
+                mRegisteredNotifications.clear();
+            }
+            // Unsubscribe from all registered notifications outside the lock
+            for (const auto& notification : notificationsCopy) {
                 HandleNotifier(notification.module, notification.event, false);
             }
-
-            mRegisteredNotifications.clear();
         }
 
         void AppNotificationsImplementation::ThunderSubscriptionManager::Subscribe(const string& module, const string& event) {
