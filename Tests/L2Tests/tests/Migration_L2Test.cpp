@@ -125,7 +125,7 @@ MigrationL2Test::~MigrationL2Test()
         TEST_LOG("Migration service deactivation failed with error: %d", status);
     }
     // Allow some time for background threads to clean up
-    usleep(300000); // 300ms
+    sleep(2);
 }
 
 /**
