@@ -144,11 +144,6 @@ uint32_t MigrationL2Test::CreateMigrationInterfaceObjectUsingComRPCConnection()
     mMigrationEngine = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
     mMigrationClient = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mMigrationEngine));
 
-    TEST_LOG("Creating migrationEngine Announcements");
-#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
-    mMmigrationEngine->Announcements(mMigrationClient->Announcement());
-#endif
-    
     if (!mMigrationClient.IsValid()) {
         TEST_LOG("Invalid migrationClient");
     }
