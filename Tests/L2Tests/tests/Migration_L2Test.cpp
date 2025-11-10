@@ -119,9 +119,7 @@ MigrationL2Test::~MigrationL2Test()
         TEST_LOG("Released migration engine in destructor");
     }
 
-    // Critical: Wait for COM-RPC background threads to terminate
-    TEST_LOG("Waiting for COM-RPC background threads to cleanup");
-    sleep(3); // Increased from 2 to 3 seconds for 20 test cycles
+    usleep(500000);
 
     // Try to deactivate service - may fail if activation failed
     status = DeactivateService("org.rdk.Migration");
@@ -130,10 +128,6 @@ MigrationL2Test::~MigrationL2Test()
     } else {
         TEST_LOG("Migration service deactivated successfully");
     }
-    
-    // Final delay after service deactivation for plugin cleanup
-    TEST_LOG("Waiting after service deactivation");
-    sleep(2); // Additional 2 seconds after deactivation
 }
 
 /**
@@ -151,11 +145,6 @@ uint32_t MigrationL2Test::CreateMigrationInterfaceObjectUsingComRPCConnection()
     if (mMigrationEngine.IsValid()) {
         mMigrationEngine.Release();
         TEST_LOG("Released migration engine");
-    }
-
-    // Allow time for background threads to terminate before creating new ones
-    if (mMigrationClient.IsValid() || mMigrationEngine.IsValid()) {
-        usleep(200000); // 200ms delay for thread cleanup
     }
 
     uint32_t returnValue = Core::ERROR_GENERAL;
