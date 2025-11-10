@@ -285,6 +285,11 @@ TEST_F(USBDeviceTest, RegisteredMethods)
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("unbindDriver")));
 }
 
+TEST_F(USBDeviceTest, Information_ReturnsEmptyString)
+{
+    EXPECT_EQ(plugin->Information(), string(""));
+}
+
 /*******************************************************************************************************************
 *Test function for Event:onDevicePluggedIn
 *Event : onDevicePluggedIn
@@ -1301,86 +1306,6 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetDescriptorFailure)
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
-// TEST_F(USBDeviceTest, GetDeviceInfo_OpenDeviceFailure)
-// {
-//     Mock_SetSerialNumberInUSBDevicePath();
-//     Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-//     ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-//         .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-//             struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-//             ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-//             ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-//             ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-//             ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-//             *list = ret;
-//             return (ssize_t)1;
-//         });
-
-//     ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-//         .WillByDefault([](libusb_device **list, int unref_devices) {
-//             free(list[0]);
-//             free(list);
-//         });
-
-//     EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-//         .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-//             desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-//             desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-//             desc->idVendor = 0x1234;
-//             desc->idProduct = 0x5678;
-//             desc->iManufacturer = 1;
-//             desc->iProduct = 2;
-//             desc->iSerialNumber = 3;
-//             return LIBUSB_SUCCESS;
-//         });
-
-//     EXPECT_CALL(*p_libUSBImplMock, libusb_open(::testing::_, ::testing::_))
-//         .WillOnce(::testing::Return(LIBUSB_ERROR_ACCESS));
-
-//     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
-// }
-
-// TEST_F(USBDeviceTest, GetDeviceInfo_GetActiveConfigDescriptorFailure)
-// {
-//     Mock_SetSerialNumberInUSBDevicePath();
-//     Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-//     ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-//         .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-//             struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-//             ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-//             ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-//             ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-//             ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-//             *list = ret;
-//             return (ssize_t)1;
-//         });
-
-//     ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-//         .WillByDefault([](libusb_device **list, int unref_devices) {
-//             free(list[0]);
-//             free(list);
-//         });
-
-//     EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-//         .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-//             desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-//             desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-//             desc->idVendor = 0x1234;
-//             desc->idProduct = 0x5678;
-//             desc->iManufacturer = 1;
-//             desc->iProduct = 2;
-//             desc->iSerialNumber = 3;
-//             return LIBUSB_SUCCESS;
-//         });
-
-//     ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-//         .WillByDefault(::testing::Return(LIBUSB_ERROR_NOT_FOUND));
-
-//     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
-// }
-
 TEST_F(USBDeviceTest, BindDriver_Success)
 {
     Mock_SetSerialNumberInUSBDevicePath();
@@ -1795,88 +1720,248 @@ TEST_F(USBDeviceTest, UnbindDriver_NoDevicesAvailable)
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("unbindDriver"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
-TEST_F(USBDeviceTest, Information_ReturnsEmptyString)
-{
-    EXPECT_EQ(plugin->Information(), string(""));
-}
-
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_Success_AllDescriptors)
-{
+class USBDeviceInfoTestFixture : public USBDeviceTest {
+protected:
     struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
 
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
+    enum class StringDescriptorBehavior {
+        SUCCESS_ALL_DESCRIPTORS,
+        NO_MANUFACTURER,
+        NO_PRODUCT,
+        NO_SERIAL_NUMBER,
+        NEGATIVE_RETURN_WITH_ASCII_FALLBACK,
+        NEGATIVE_RETURN_ASCII_ALSO_FAILS,
+        WRONG_DESCRIPTOR_TYPE,
+        INVALID_DESCRIPTOR_LENGTH,
+        EMPTY_STRING_DESCRIPTOR,
+        ASCII_ZERO_LENGTH
+    };
 
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
+    void SetupBasicDeviceForInfo() {
+        Mock_SetSerialNumberInUSBDevicePath();
+        Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
 
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
+        ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
+            .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
+                struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
+                ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
+                ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
+                ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
+                ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
+                *list = ret;
+                return (ssize_t)1;
+            });
 
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
+        ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
+            .WillByDefault([](libusb_device **list, int unref_devices) {
+                free(list[0]);
+                free(list);
+            });
 
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-            data[1] = LIBUSB_DT_STRING;
-            if (desc_index == 0) {
-                data[0] = 4;
-                data[3] = 0x04;
-                data[2] = 0x09;
-            } else if (desc_index == 1) {
-                const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+            .WillRepeatedly([](libusb_device *dev) {
+                return dev->device_address;
+            });
+
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+            .WillRepeatedly([](libusb_device *dev) {
+                return dev->bus_number;
+            });
+
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+            .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+                if((nullptr != dev) && (nullptr != port_numbers)) {
+                    port_numbers[0] = dev->port_number;
+                    return 1;
                 }
-                data[0] = buffer_len + 2;
-            } else if (desc_index == 2) {
-                const char *buf = MOCK_USB_DEVICE_PRODUCT;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
-                }
-                data[0] = buffer_len + 2;
-            } else if (desc_index == 3) {
-                const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
-                }
-                data[0] = buffer_len + 2;
-            }
-            return (int)data[0];
-        });
+                return 0;
+            });
+    }
+
+    void SetupDeviceDescriptor(bool includeManufacturer = true, bool includeProduct = true, bool includeSerialNumber = true) {
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
+            .WillRepeatedly([includeManufacturer, includeProduct, includeSerialNumber](libusb_device *dev, struct libusb_device_descriptor *desc) {
+                desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->idVendor = 0x1234;
+                desc->idProduct = 0x5678;
+                desc->iManufacturer = includeManufacturer ? 1 : 0;
+                desc->iProduct = includeProduct ? 2 : 0;
+                desc->iSerialNumber = includeSerialNumber ? 3 : 0;
+                return LIBUSB_SUCCESS;
+            });
+    }
+
+    void SetupConfigDescriptor() {
+        ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
+            .WillByDefault([this](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
+                *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
+                temp_config_desc = *config_desc;
+                (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
+                return (int)LIBUSB_SUCCESS;
+            });
+    }
+
+    void SetupStringDescriptorBehavior(StringDescriptorBehavior behavior) {
+        switch (behavior) {
+            case StringDescriptorBehavior::SUCCESS_ALL_DESCRIPTORS:
+                ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+                        data[1] = LIBUSB_DT_STRING;
+                        if (desc_index == 0) {
+                            data[0] = 4;
+                            data[3] = 0x04;
+                            data[2] = 0x09;
+                        } else if (desc_index == 1) {
+                            const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
+                            int buffer_len = strlen(buf) * 2, j = 0, index = 2;
+                            memset(&data[2], 0, length - 2);
+                            while((data[index] = buf[j++]) != '\0') {
+                                index += 2;
+                            }
+                            data[0] = buffer_len + 2;
+                        } else if (desc_index == 2) {
+                            const char *buf = MOCK_USB_DEVICE_PRODUCT;
+                            int buffer_len = strlen(buf) * 2, j = 0, index = 2;
+                            memset(&data[2], 0, length - 2);
+                            while((data[index] = buf[j++]) != '\0') {
+                                index += 2;
+                            }
+                            data[0] = buffer_len + 2;
+                        } else if (desc_index == 3) {
+                            const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
+                            int buffer_len = strlen(buf) * 2, j = 0, index = 2;
+                            memset(&data[2], 0, length - 2);
+                            while((data[index] = buf[j++]) != '\0') {
+                                index += 2;
+                            }
+                            data[0] = buffer_len + 2;
+                        }
+                        return (int)data[0];
+                    });
+                break;
+
+            case StringDescriptorBehavior::NO_MANUFACTURER:
+            case StringDescriptorBehavior::NO_PRODUCT:
+            case StringDescriptorBehavior::NO_SERIAL_NUMBER:
+                ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillByDefault([behavior](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+                        data[1] = LIBUSB_DT_STRING;
+                        if (desc_index == 0) {
+                            data[0] = 4;
+                            data[3] = 0x04;
+                            data[2] = 0x09;
+                        } else if (desc_index == 2 && behavior != StringDescriptorBehavior::NO_PRODUCT) {
+                            const char *buf = MOCK_USB_DEVICE_PRODUCT;
+                            int buffer_len = strlen(buf) * 2, j = 0, index = 2;
+                            memset(&data[2], 0, length - 2);
+                            while((data[index] = buf[j++]) != '\0') {
+                                index += 2;
+                            }
+                            data[0] = buffer_len + 2;
+                        } else if (desc_index == 3 && behavior != StringDescriptorBehavior::NO_SERIAL_NUMBER) {
+                            const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
+                            int buffer_len = strlen(buf) * 2, j = 0, index = 2;
+                            memset(&data[2], 0, length - 2);
+                            while((data[index] = buf[j++]) != '\0') {
+                                index += 2;
+                            }
+                            data[0] = buffer_len + 2;
+                        } else if (desc_index == 1 && behavior != StringDescriptorBehavior::NO_MANUFACTURER) {
+                            const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
+                            int buffer_len = strlen(buf) * 2, j = 0, index = 2;
+                            memset(&data[2], 0, length - 2);
+                            while((data[index] = buf[j++]) != '\0') {
+                                index += 2;
+                            }
+                            data[0] = buffer_len + 2;
+                        }
+                        return (int)data[0];
+                    });
+                break;
+
+            case StringDescriptorBehavior::NEGATIVE_RETURN_WITH_ASCII_FALLBACK:
+                EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Return(LIBUSB_ERROR_PIPE));
+
+                EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) {
+                        if (desc_index == 1) {
+                            strcpy((char*)data, MOCK_USB_DEVICE_MANUFACTURER);
+                        } else if (desc_index == 2) {
+                            strcpy((char*)data, MOCK_USB_DEVICE_PRODUCT);
+                        } else if (desc_index == 3) {
+                            strcpy((char*)data, MOCK_USB_DEVICE_SERIAL_NO);
+                        }
+                        return strlen((char*)data);
+                    });
+                break;
+
+            case StringDescriptorBehavior::NEGATIVE_RETURN_ASCII_ALSO_FAILS:
+                EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Return(LIBUSB_ERROR_PIPE));
+
+                EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
+                break;
+
+            case StringDescriptorBehavior::WRONG_DESCRIPTOR_TYPE:
+                EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+                        data[0] = 10;
+                        data[1] = LIBUSB_DT_DEVICE;
+                        return (int)data[0];
+                    });
+                break;
+
+            case StringDescriptorBehavior::INVALID_DESCRIPTOR_LENGTH:
+                EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+                        data[0] = 20;
+                        data[1] = LIBUSB_DT_STRING;
+                        return 10;
+                    });
+                break;
+
+            case StringDescriptorBehavior::EMPTY_STRING_DESCRIPTOR:
+                ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+                        data[1] = LIBUSB_DT_STRING;
+                        if (desc_index == 0) {
+                            data[0] = 4;
+                            data[3] = 0x04;
+                            data[2] = 0x09;
+                        } else {
+                            data[0] = 2;
+                        }
+                        return (int)data[0];
+                    });
+                break;
+
+            case StringDescriptorBehavior::ASCII_ZERO_LENGTH:
+                EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Return(LIBUSB_ERROR_PIPE));
+
+                EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+                    .WillRepeatedly(::testing::Return(0));
+                break;
+        }
+    }
+
+    void SetupGetDeviceInfoTest(StringDescriptorBehavior behavior, 
+                                bool includeManufacturer = true, 
+                                bool includeProduct = true, 
+                                bool includeSerialNumber = true) {
+        SetupBasicDeviceForInfo();
+        SetupDeviceDescriptor(includeManufacturer, includeProduct, includeSerialNumber);
+        SetupConfigDescriptor();
+        SetupStringDescriptorBehavior(behavior);
+    }
+};
+
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_Success_AllDescriptors)
+{
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::SUCCESS_ALL_DESCRIPTORS);
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find(MOCK_USB_DEVICE_MANUFACTURER) != string::npos);
@@ -1884,357 +1969,41 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_Success_AllDescriptors)
     EXPECT_TRUE(response.find(MOCK_USB_DEVICE_SERIAL_NO) != string::npos);
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_NoManufacturerDescriptor)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_NoManufacturerDescriptor)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 0;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-            data[1] = LIBUSB_DT_STRING;
-            if (desc_index == 0) {
-                data[0] = 4;
-                data[3] = 0x04;
-                data[2] = 0x09;
-            } else if (desc_index == 2) {
-                const char *buf = MOCK_USB_DEVICE_PRODUCT;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
-                }
-                data[0] = buffer_len + 2;
-            } else if (desc_index == 3) {
-                const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
-                }
-                data[0] = buffer_len + 2;
-            }
-            return (int)data[0];
-        });
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::NO_MANUFACTURER, false, true, true);
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find("\"manufacturer\":\"\"") != string::npos);
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_NoProductDescriptor)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_NoProductDescriptor)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 0;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-            data[1] = LIBUSB_DT_STRING;
-            if (desc_index == 0) {
-                data[0] = 4;
-                data[3] = 0x04;
-                data[2] = 0x09;
-            } else if (desc_index == 1) {
-                const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
-                }
-                data[0] = buffer_len + 2;
-            } else if (desc_index == 3) {
-                const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
-                }
-                data[0] = buffer_len + 2;
-            }
-            return (int)data[0];
-        });
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::NO_PRODUCT, true, false, true);
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find("\"product\":\"\"") != string::npos);
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_NoSerialNumberDescriptor)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_NoSerialNumberDescriptor)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 0;
-            return LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-            data[1] = LIBUSB_DT_STRING;
-            if (desc_index == 0) {
-                data[0] = 4;
-                data[3] = 0x04;
-                data[2] = 0x09;
-            } else if (desc_index == 1) {
-                const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
-                }
-                data[0] = buffer_len + 2;
-            } else if (desc_index == 2) {
-                const char *buf = MOCK_USB_DEVICE_PRODUCT;
-                int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-                memset(&data[2], 0, length - 2);
-                while((data[index] = buf[j++]) != '\0') {
-                    index += 2;
-                }
-                data[0] = buffer_len + 2;
-            }
-            return (int)data[0];
-        });
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::NO_SERIAL_NUMBER, true, true, false);
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find("\"serialNumber\":\"\"") != string::npos);
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorNegativeReturn)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorNegativeReturn)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(LIBUSB_ERROR_PIPE));
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) {
-            if (desc_index == 1) {
-                strcpy((char*)data, MOCK_USB_DEVICE_MANUFACTURER);
-            } else if (desc_index == 2) {
-                strcpy((char*)data, MOCK_USB_DEVICE_PRODUCT);
-            } else if (desc_index == 3) {
-                strcpy((char*)data, MOCK_USB_DEVICE_SERIAL_NO);
-            }
-            return strlen((char*)data);
-        });
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::NEGATIVE_RETURN_WITH_ASCII_FALLBACK);
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find(MOCK_USB_DEVICE_MANUFACTURER) != string::npos);
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorAsciiAlsoFails)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorAsciiAlsoFails)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
-        .WillRepeatedly([](libusb_device *dev) {
-            return dev->device_address;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
-        .WillRepeatedly([](libusb_device *dev) {
-            return dev->bus_number;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
-            if((nullptr != dev) && (nullptr != port_numbers)) {
-                port_numbers[0] = dev->port_number;
-                return 1;
-            }
-            return 0;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(LIBUSB_ERROR_PIPE));
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::NEGATIVE_RETURN_ASCII_ALSO_FAILS);
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find("\"manufacturer\":\"\"") != string::npos);
@@ -2242,167 +2011,23 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_GetStringDescriptorAscii
     EXPECT_TRUE(response.find("\"serialNumber\":\"\"") != string::npos);
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_WrongDescriptorType)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_WrongDescriptorType)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-            data[0] = 10;
-            data[1] = LIBUSB_DT_DEVICE;
-            return (int)data[0];
-        });
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::WRONG_DESCRIPTOR_TYPE);
 
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_InvalidDescriptorLength)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_InvalidDescriptorLength)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-            data[0] = 20;
-            data[1] = LIBUSB_DT_STRING;
-            return 10;
-        });
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::INVALID_DESCRIPTOR_LENGTH);
 
     EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_EmptyStringDescriptor)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_EmptyStringDescriptor)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-            data[1] = LIBUSB_DT_STRING;
-            if (desc_index == 0) {
-                data[0] = 4;
-                data[3] = 0x04;
-                data[2] = 0x09;
-            } else {
-                data[0] = 2;
-            }
-            return (int)data[0];
-        });
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::EMPTY_STRING_DESCRIPTOR);
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find("\"manufacturer\":\"\"") != string::npos);
@@ -2410,73 +2035,9 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_EmptyStringDescriptor)
     EXPECT_TRUE(response.find("\"serialNumber\":\"\"") != string::npos);
 }
 
-TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStruct_AsciiDescriptorZeroLength)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_AsciiDescriptorZeroLength)
 {
-    struct libusb_config_descriptor *temp_config_desc = nullptr;
-    Mock_SetSerialNumberInUSBDevicePath();
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-            struct libusb_device **ret = (struct libusb_device **)malloc(1 * sizeof(struct libusb_device *));
-            ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
-            ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-            ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-            ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-            *list = ret;
-            return (ssize_t)1;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-        .WillByDefault([](libusb_device **list, int unref_devices) {
-            free(list[0]);
-            free(list);
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
-            desc->idVendor = 0x1234;
-            desc->idProduct = 0x5678;
-            desc->iManufacturer = 1;
-            desc->iProduct = 2;
-            desc->iSerialNumber = 3;
-            return LIBUSB_SUCCESS;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
-        .WillRepeatedly([](libusb_device *dev) {
-            return dev->device_address;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
-        .WillRepeatedly([](libusb_device *dev) {
-            return dev->bus_number;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
-            if((nullptr != dev) && (nullptr != port_numbers)) {
-                port_numbers[0] = dev->port_number;
-                return 1;
-            }
-            return 0;
-        });
-
-    ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-        .WillByDefault([&temp_config_desc](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
-            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-            temp_config_desc = *config_desc;
-            (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-            return (int)LIBUSB_SUCCESS;
-        });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(LIBUSB_ERROR_PIPE));
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillRepeatedly(::testing::Return(0));
+    SetupGetDeviceInfoTest(StringDescriptorBehavior::ASCII_ZERO_LENGTH);
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_TRUE(response.find("\"manufacturer\":\"\"") != string::npos);
