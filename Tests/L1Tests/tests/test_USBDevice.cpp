@@ -1738,6 +1738,7 @@ TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_ParentIdCalculation_Success)
 {
     Mock_SetSerialNumberInUSBDevicePath();
 
+    system("mkdir -p /tmp/bus/usb/devices/100-2.3");
     std::string serialNumFileName = "/tmp/bus/usb/devices/100-2.3/serial";
     std::ofstream serialNumOutFile(serialNumFileName);
     if (!serialNumOutFile) {
