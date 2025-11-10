@@ -108,17 +108,6 @@ MigrationL2Test::~MigrationL2Test()
         mControllerMigration = nullptr;
     }
 
-    // Clean up COM-RPC objects to close background threads
-    if (mMigrationClient.IsValid()) {
-        mMigrationClient.Release();
-        TEST_LOG("Released migration client");
-    }
-
-    if (mMigrationEngine.IsValid()) {
-        mMigrationEngine.Release();
-        TEST_LOG("Released migration engine");
-    }
-
     // Try to deactivate service - may fail if activation failed
     status = DeactivateService("org.rdk.Migration");
     if (status != Core::ERROR_NONE) {
@@ -134,6 +123,17 @@ MigrationL2Test::~MigrationL2Test()
  */
 uint32_t MigrationL2Test::CreateMigrationInterfaceObjectUsingComRPCConnection()
 {
+    // Clean up COM-RPC objects to close previous background threads
+    if (mMigrationClient.IsValid()) {
+        mMigrationClient.Release();
+        TEST_LOG("Released migration client");
+    }
+
+    if (mMigrationEngine.IsValid()) {
+        mMigrationEngine.Release();
+        TEST_LOG("Released migration engine");
+    }
+
     uint32_t returnValue = Core::ERROR_GENERAL;
     Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> migrationEngine;
     Core::ProxyType<RPC::CommunicatorClient> migrationClient;
