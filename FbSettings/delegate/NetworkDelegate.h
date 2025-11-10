@@ -42,8 +42,8 @@ static const std::set<string> VALID_NETWORK_EVENT = {
 class NetworkDelegate : public BaseEventDelegate
 {
 public:
-    NetworkDelegate(PluginHost::IShell *shell, Exchange::IAppNotifications *appNotifications)
-        : BaseEventDelegate(appNotifications), mNetworkManager(nullptr), mShell(shell), mNotificationHandler(*this)
+    NetworkDelegate(PluginHost::IShell *shell)
+        : BaseEventDelegate(), mNetworkManager(nullptr), mShell(shell), mNotificationHandler(*this)
     {
     }
 
@@ -56,7 +56,7 @@ public:
         }
     }
 
-    bool HandleSubscription(const string &event, const bool listen)
+    bool HandleSubscription(Exchange::IAppNotificationHandler::IEmitter *cb, const string &event, const bool listen)
     {
         if (listen)
         {
@@ -67,7 +67,7 @@ public:
                 return false;
             }
 
-            AddNotification(event);
+            AddNotification(event, cb);
 
             if (!mNotificationHandler.GetRegistered())
             {
@@ -84,19 +84,19 @@ public:
         else
         {
             // Not removing the notification subscription for cases where only one event is removed
-            RemoveNotification(event);
+            RemoveNotification(event, cb);
         }
         return false;
     }
 
-    bool HandleEvent(const string &event, const bool listen, bool &registrationError)
+    bool HandleEvent(Exchange::IAppNotificationHandler::IEmitter *cb, const string &event, const bool listen, bool &registrationError)
     {
         LOGDBG("Checking for handle event");
         // Check if event is present in VALID_NETWORK_EVENT make check case insensitive
         if (VALID_NETWORK_EVENT.find(StringUtils::toLower(event)) != VALID_NETWORK_EVENT.end())
         {
             // Handle NetworkManager event
-            registrationError = HandleSubscription(event, listen);
+            registrationError = HandleSubscription(cb, event, listen);
             return true;
         }
         return false;

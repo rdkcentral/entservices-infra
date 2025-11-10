@@ -41,8 +41,8 @@ static const std::set<string> VALID_USER_SETTINGS_EVENT = {
 
 class UserSettingsDelegate : public BaseEventDelegate{
     public:
-        UserSettingsDelegate(PluginHost::IShell* shell,Exchange::IAppNotifications* appNotifications):
-            BaseEventDelegate(appNotifications), mUserSettings(nullptr), mShell(shell), mNotificationHandler(*this) {}
+        UserSettingsDelegate(PluginHost::IShell* shell):
+            BaseEventDelegate(), mUserSettings(nullptr), mShell(shell), mNotificationHandler(*this) {}
 
         ~UserSettingsDelegate() {
             if (mUserSettings != nullptr) {
@@ -51,7 +51,7 @@ class UserSettingsDelegate : public BaseEventDelegate{
             }
         }
 
-        bool HandleSubscription(const string &event, const bool listen) {
+        bool HandleSubscription(Exchange::IAppNotificationHandler::IEmitter *cb, const string &event, const bool listen) {
             if (listen) {
                 Exchange::IUserSettings* userSettings = GetUserSettingsInterface();
                 if (userSettings == nullptr) {
@@ -59,7 +59,7 @@ class UserSettingsDelegate : public BaseEventDelegate{
                     return false;
                 }
 	
-                AddNotification(event);
+                AddNotification(event, cb);
 
                 if (!mNotificationHandler.GetRegistered()) {
                     LOGINFO("Registering for UserSettings notifications");
@@ -74,17 +74,17 @@ class UserSettingsDelegate : public BaseEventDelegate{
                 // Not removing the notification subscription for cases where only one event is removed 
                 // Registration is lazy one but we need to evaluate if there is any value in unregistering
                 // given these API calls are always made
-                RemoveNotification(event);
+                RemoveNotification(event, cb);
             }
             return false;
         }
 
-        bool HandleEvent(const string &event, const bool listen, bool &registrationError) {
+        bool HandleEvent(Exchange::IAppNotificationHandler::IEmitter *cb, const string &event, const bool listen, bool &registrationError) {
             LOGDBG("Checking for handle event");
             // Check if event is present in VALID_USER_SETTINGS_EVENT make check case insensitive
             if (VALID_USER_SETTINGS_EVENT.find(StringUtils::toLower(event)) != VALID_USER_SETTINGS_EVENT.end()) {
                 // Handle TextToSpeech event
-                registrationError = HandleSubscription(event, listen);
+                registrationError = HandleSubscription(cb, event, listen);
                 return true;
             }
             return false;
