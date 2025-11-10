@@ -257,7 +257,7 @@ void cleanupPreinstallDirectory(const std::string& dirPath)
     TEST_LOG("Cleaned up directory: %s", dirPath.c_str());
 }
 
-/* Test Case for StartPreinstallUsingComRpcSuccess
+/* Test case for StartPreinstallUsingComRpcSuccess
  * Creating PreinstallManager Plugin using COM-RPC connection
  * Setting up mock preinstall directory structure with test packages
  * Setting mocks for filesystem operations (access, stat, opendir, readdir)
