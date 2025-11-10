@@ -31,19 +31,15 @@ using namespace WPEFramework;
 
 class SettingsDelegate {
     public:
-        SettingsDelegate(): userSettings(nullptr), systemDelegate(nullptr), networkDelegate(nullptr), mAppNotifications(nullptr) {}
+        SettingsDelegate(): userSettings(nullptr), systemDelegate(nullptr), networkDelegate(nullptr) {}
 
         ~SettingsDelegate() {
             userSettings = nullptr;
             systemDelegate = nullptr;
             networkDelegate = nullptr;
-            if (mAppNotifications != nullptr) {
-                mAppNotifications->Release();
-                mAppNotifications = nullptr;
-            }
         }
 
-        void HandleAppEventNotifier(const string event,
+        void HandleAppEventNotifier(Exchange::IAppNotificationHandler::IEmitter *cb, const string event,
                                     const bool listen) {
             LOGDBG("Passing on HandleAppEventNotifier");
             bool registrationError;
@@ -59,7 +55,7 @@ class SettingsDelegate {
                 if (delegate==nullptr) {
                     continue;
                 }
-                if (delegate->HandleEvent(event, listen, registrationError)) {
+                if (delegate->HandleEvent(cb, event, listen, registrationError)) {
                     handled = true;
                     break;
                 }
@@ -79,23 +75,16 @@ class SettingsDelegate {
             ASSERT(shell != nullptr);
             LOGDBG("SettingsDelegate::setShell");
 
-            mAppNotifications = shell->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
-            
-            if (mAppNotifications==nullptr) {
-                LOGERR("No App Notifications plugin available");
-                return;
-            }
-
             if (userSettings == nullptr) {
-                userSettings = std::make_shared<UserSettingsDelegate>(shell, mAppNotifications);
+                userSettings = std::make_shared<UserSettingsDelegate>(shell);
             }
 
             if (systemDelegate == nullptr) {
-                systemDelegate = std::make_shared<SystemDelegate>(shell, mAppNotifications);
+                systemDelegate = std::make_shared<SystemDelegate>(shell);
             }
 
             if (networkDelegate == nullptr) {
-                networkDelegate = std::make_shared<NetworkDelegate>(shell, mAppNotifications);
+                networkDelegate = std::make_shared<NetworkDelegate>(shell);
             }
         }
 
@@ -120,7 +109,6 @@ class SettingsDelegate {
         std::shared_ptr<UserSettingsDelegate> userSettings;
         std::shared_ptr<SystemDelegate> systemDelegate;
         std::shared_ptr<NetworkDelegate> networkDelegate;
-	Exchange::IAppNotifications *mAppNotifications;
 };
 
 #endif

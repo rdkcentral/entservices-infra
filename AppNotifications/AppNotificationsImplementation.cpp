@@ -37,7 +37,8 @@ namespace WPEFramework
         AppNotificationsImplementation::AppNotificationsImplementation() : 
         mShell(nullptr),
         mSubMap(*this),
-        mThunderManager(*this)
+        mThunderManager(*this),
+        mEmitter(*this)
         {
         }
 
@@ -211,11 +212,25 @@ namespace WPEFramework
             mInternalGatewayNotifier->Respond(gatewayContext, payload);
         }
 
+        AppNotificationsImplementation::ThunderSubscriptionManager::~ThunderSubscriptionManager() {
+            // Copy notifications to avoid holding the lock during external calls
+            std::vector<NotificationKey> notificationsCopy;
+            {
+                std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
+                notificationsCopy = mRegisteredNotifications;
+                mRegisteredNotifications.clear();
+            }
+            // Unsubscribe from all registered notifications outside the lock
+            for (const auto& notification : notificationsCopy) {
+                HandleNotifier(notification.module, notification.event, false);
+            }
+        }
+
         void AppNotificationsImplementation::ThunderSubscriptionManager::Subscribe(const string& module, const string& event) {
             // Subscribe to Thunder notifications
 
             // check if the notification is already registered
-            if (IsNotificationRegistered(event)) {
+            if (IsNotificationRegistered(module, event)) {
                 // log a debug message that the notification is not registered
                 LOGDBG("Notification is already registered: %s", event.c_str());
             } else {
@@ -228,7 +243,7 @@ namespace WPEFramework
             // Unsubscribe from Thunder notifications
             
             // check if the notification is already registered
-            if (IsNotificationRegistered(event)) {
+            if (IsNotificationRegistered(module, event)) {
                 // trigger UnregisterNotification
                 UnregisterNotification(module, event);
             } else {
@@ -242,7 +257,7 @@ namespace WPEFramework
             bool status = false;
             Exchange::IAppNotificationHandler *internalNotifier = mParent.mShell->QueryInterfaceByCallsign<Exchange::IAppNotificationHandler>(module);
             if (internalNotifier != nullptr) {
-                if (Core::ERROR_NONE == internalNotifier->HandleAppEventNotifier(event, listen, status)) {
+                if (Core::ERROR_NONE == internalNotifier->HandleAppEventNotifier(&mParent.mEmitter, event, listen, status)) {
                     LOGTRACE("Notifier status for %s:%s is %s", module.c_str(), event.c_str(), status ? "true" : "false");
                 } else {
                     LOGERR("Notification subscription failure");
@@ -259,7 +274,7 @@ namespace WPEFramework
             // call notifier and start listening
             if (HandleNotifier(module, event, true)) {
                 std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-                mRegisteredNotifications.push_back(std::move(lowerEvent));
+                mRegisteredNotifications.push_back({module, std::move(lowerEvent)});
             }
         }
 
@@ -267,14 +282,14 @@ namespace WPEFramework
             string lowerEvent = StringUtils::toLower(event);
             if (HandleNotifier(module, lowerEvent, false)) {
                 std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-                mRegisteredNotifications.erase(std::remove(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), lowerEvent), mRegisteredNotifications.end());
+                mRegisteredNotifications.erase(std::remove(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), NotificationKey{module, lowerEvent}), mRegisteredNotifications.end());
             }
         }
 
-        bool AppNotificationsImplementation::ThunderSubscriptionManager::IsNotificationRegistered(const string& notification) const {
+        bool AppNotificationsImplementation::ThunderSubscriptionManager::IsNotificationRegistered(const string& module, const string& notification) const {
             string lowerEvent = StringUtils::toLower(notification);
             std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-            return std::find(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), lowerEvent) != mRegisteredNotifications.end();
+            return std::find(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), NotificationKey{module, lowerEvent}) != mRegisteredNotifications.end();
         }
 
     }
