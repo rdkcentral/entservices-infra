@@ -1747,6 +1747,15 @@ TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_ParentIdCalculation_Success)
     serialNumOutFile << "PARENTTEST" << std::endl;
     serialNumOutFile.close();
 
+    system("mkdir -p /tmp/bus/usb/devices/100-2");
+    std::string parentSerialNumFileName = "/tmp/bus/usb/devices/100-2/serial";
+    std::ofstream parentSerialNumOutFile(parentSerialNumFileName);
+    if (!parentSerialNumOutFile) {
+        TEST_LOG("Error opening file for writing!");
+    }
+    parentSerialNumOutFile << "PARENT5" << std::endl;
+    parentSerialNumOutFile.close();
+
     ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
         .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
             libusb_device **ret = (libusb_device **)malloc(3 * sizeof(libusb_device *));
@@ -1812,6 +1821,9 @@ TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_ParentIdCalculation_Success)
                 port_numbers[0] = 2;
                 port_numbers[1] = 3;
                 return 2;
+            } else if (dev->device_address == 5) {
+                port_numbers[0] = 2;
+                return 1;
             } else {
                 if (port_numbers != nullptr) {
                     port_numbers[0] = dev->port_number;
