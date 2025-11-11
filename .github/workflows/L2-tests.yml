@@ -500,8 +500,8 @@ jobs:
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
           -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DPLUGIN_OCICONTAINER=OFF
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DDS_FOUND=ON
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           &&
