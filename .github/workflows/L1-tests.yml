@@ -595,6 +595,7 @@ jobs:
           /opt/secure/persistent
           /opt/secure/persistent/System
           /opt/persistent/storageManager
+          /opt/preinstall
           /opt/logs
           /lib/rdk
           /run/media/sda1/logs/PreviousLogs
