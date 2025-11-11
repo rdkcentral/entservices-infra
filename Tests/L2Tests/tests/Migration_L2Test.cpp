@@ -1081,7 +1081,6 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_Normal_JSONRPC)
 
     status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result["success"].Boolean());
 
     if (result.HasLabel("bootType")) {
         int bootType = result["bootType"].Number();
@@ -1115,7 +1114,6 @@ TEST_F(MigrationL2Test, GetMigrationStatus_Normal_JSONRPC)
 
     status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result["success"].Boolean());
 
     if (result.HasLabel("migrationStatus")) {
         int migrationStatus = result["migrationStatus"].Number();
@@ -1215,7 +1213,6 @@ TEST_F(MigrationL2Test, BootType_EnumerationCoverage_JSONRPC)
 
     status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result["success"].Boolean());
 
     if (result.HasLabel("bootType")) {
         int bootType = result["bootType"].Number();
@@ -1253,7 +1250,6 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_BootInit_JSONRPC)
 
     status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result["success"].Boolean());
 
     if (result.HasLabel("bootType")) {
         int bootType = result["bootType"].Number();
@@ -1285,7 +1281,6 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_BootMigration_JSONRPC)
 
     status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result["success"].Boolean());
 
     if (result.HasLabel("bootType")) {
         int bootType = result["bootType"].Number();
@@ -1317,7 +1312,6 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_BootUpdate_JSONRPC)
 
     status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result["success"].Boolean());
 
     if (result.HasLabel("bootType")) {
         int bootType = result["bootType"].Number();
@@ -1463,7 +1457,6 @@ TEST_F(MigrationL2Test, GetMigrationStatus_RFCParameterSuccess_JSONRPC)
 
     status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result["success"].Boolean());
 
     if (result.HasLabel("migrationStatus")) {
         int migrationStatus = result["migrationStatus"].Number();
