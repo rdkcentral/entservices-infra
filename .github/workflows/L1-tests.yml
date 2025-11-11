@@ -498,6 +498,7 @@ jobs:
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
           -DPLUGIN_MIGRATION=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
@@ -583,6 +584,7 @@ jobs:
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
           -DPLUGIN_MIGRATION=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
@@ -599,6 +601,7 @@ jobs:
           /opt/secure/persistent
           /opt/secure/persistent/System
           /opt/persistent/storageManager
+          /opt/preinstall
           /opt/logs
           /lib/rdk
           /run/media/sda1/logs/PreviousLogs
