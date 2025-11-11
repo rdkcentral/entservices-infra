@@ -1076,32 +1076,19 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_Normal_JSONRPC)
         TEST_LOG("Created boot type file: %s", bootTypeFile.c_str());
     }
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetBootTypeInfo response: %s", result.c_str());
-
-                // Parse and verify the boot type value
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                if (resultObj.HasLabel("bootType")) {
-                    int bootType = resultObj["bootType"].Number();
-                    TEST_LOG("Boot type from JSONRPC: %d", bootType);
-                    EXPECT_GE(bootType, 0);
-                    EXPECT_LE(bootType, 3); // Valid range: 0-3 for boot types
-                }
-
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result["success"].Boolean());
+
+    if (result.HasLabel("bootType")) {
+        int bootType = result["bootType"].Number();
+        TEST_LOG("Boot type from JSONRPC: %d", bootType);
+        EXPECT_GE(bootType, 0);
+        EXPECT_LE(bootType, 3); // Valid range: 0-3 for boot types
+    }
 
     // Clean up test file
     std::remove(bootTypeFile.c_str());
@@ -1123,31 +1110,19 @@ TEST_F(MigrationL2Test, GetMigrationStatus_Normal_JSONRPC)
                 return WDMP_SUCCESS;
             }));
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetMigrationStatus response: %s", result.c_str());
-
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                if (resultObj.HasLabel("migrationStatus")) {
-                    int migrationStatus = resultObj["migrationStatus"].Number();
-                    TEST_LOG("Migration status from JSONRPC: %d", migrationStatus);
-                    EXPECT_GE(migrationStatus, 0);
-                    EXPECT_LE(migrationStatus, 7); // Valid range: 0-7 for migration statuses
-                }
-
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result["success"].Boolean());
+
+    if (result.HasLabel("migrationStatus")) {
+        int migrationStatus = result["migrationStatus"].Number();
+        TEST_LOG("Migration status from JSONRPC: %d", migrationStatus);
+        EXPECT_GE(migrationStatus, 0);
+        EXPECT_LE(migrationStatus, 7); // Valid range: 0-7 for migration statuses
+    }
 }
 
 /**
@@ -1155,32 +1130,16 @@ TEST_F(MigrationL2Test, GetMigrationStatus_Normal_JSONRPC)
  */
 TEST_F(MigrationL2Test, SetMigrationStatus_Normal_JSONRPC)
 {
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
-
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC SetMigrationStatus response: %s", result.c_str());
-
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                if (resultObj.HasLabel("success")) {
-                    bool success = resultObj["success"].Boolean();
-                    TEST_LOG("SetMigrationStatus success: %s", success ? "true" : "false");
-                    EXPECT_TRUE(success);
-                }
-
-                status = Core::ERROR_NONE;
-            }));
+    JsonObject params, result;
 
     // Set migration status to STARTED (value: 2)
-    string params = "{\"migrationStatus\":2}";
-    status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, async_handler);
+    params["migrationStatus"] = 2;
+
+    status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result["success"].Boolean());
+    TEST_LOG("SetMigrationStatus success: %s", result["success"].Boolean() ? "true" : "false");
 }
 
 /**
@@ -1188,36 +1147,51 @@ TEST_F(MigrationL2Test, SetMigrationStatus_Normal_JSONRPC)
  */
 TEST_F(MigrationL2Test, SetMigrationStatus_Sequence_JSONRPC)
 {
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
+    // Setup RFC mock to read from the file that SetMigrationStatus writes to
+    // Since SetMigrationStatus writes to file and GetMigrationStatus reads from RFC,
+    // we need to mock the RFC to return whatever was last written
+    std::string lastWrittenStatus = "NOT_STARTED";
+
+    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(testing::_, testing::StrEq("Device.DeviceInfo.Migration.MigrationStatus"), testing::_))
+        .WillRepeatedly(testing::Invoke(
+            [&lastWrittenStatus](const char* arg1, const char* arg2, RFC_ParamData_t* arg3) -> WDMP_STATUS {
+                if (arg3 != nullptr) {
+                    strcpy(arg3->value, lastWrittenStatus.c_str());
+                    arg3->type = WDMP_STRING;
+                }
+                return WDMP_SUCCESS;
+            }));
+
+    // Map of status value to string for updating the mock
+    static const std::unordered_map<int, std::string> statusToString = {
+        { 0, "NOT_STARTED" },
+        { 2, "STARTED" },
+        { 3, "PRIORITY_SETTINGS_MIGRATED" },
+        { 4, "DEVICE_SETTINGS_MIGRATED" },
+        { 5, "CLOUD_SETTINGS_MIGRATED" },
+        { 6, "APP_DATA_MIGRATED" },
+        { 7, "MIGRATION_COMPLETED" }
+    };
 
     // Test sequence of migration status updates
     std::vector<int> testSequence = {0, 2, 3, 4, 5, 6, 7}; // NOT_STARTED through MIGRATION_COMPLETED
 
     for (auto statusValue : testSequence) {
-        StrictMock<AsyncHandlerMock_Migration> async_handler;
+        // Update the mock to return the status we're about to set
+        auto it = statusToString.find(statusValue);
+        if (it != statusToString.end()) {
+            lastWrittenStatus = it->second;
+        }
+
         uint32_t status = Core::ERROR_GENERAL;
+        JsonObject params, result;
 
-        EXPECT_CALL(async_handler, onResponse(::testing::_))
-            .WillOnce(::testing::Invoke(
-                [&](const Core::JSONRPC::Message& message) {
-                    const string result = message.Result.Value();
-                    TEST_LOG("JSONRPC SetMigrationStatus sequence response for status %d: %s", statusValue, result.c_str());
+        params["migrationStatus"] = statusValue;
 
-                    JsonObject resultObj;
-                    resultObj.FromString(result);
-
-                    if (resultObj.HasLabel("success")) {
-                        bool success = resultObj["success"].Boolean();
-                        EXPECT_TRUE(success) << "SetMigrationStatus failed for status: " << statusValue;
-                        TEST_LOG("Migration status %d set successfully", statusValue);
-                    }
-
-                    status = Core::ERROR_NONE;
-                }));
-
-        string params = "{\"migrationStatus\":" + std::to_string(statusValue) + "}";
-        status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, async_handler);
+        status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, result);
         EXPECT_EQ(status, Core::ERROR_NONE);
+        EXPECT_TRUE(result["success"].Boolean()) << "SetMigrationStatus failed for status: " << statusValue;
+        TEST_LOG("Migration status %d set successfully", statusValue);
     }
 }
 
@@ -1236,37 +1210,25 @@ TEST_F(MigrationL2Test, BootType_EnumerationCoverage_JSONRPC)
         TEST_LOG("Created bootType file with BOOT_NORMAL content");
     }
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC BootType enumeration response: %s", result.c_str());
-
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                if (resultObj.HasLabel("bootType")) {
-                    int bootType = resultObj["bootType"].Number();
-
-                    // Verify it's one of the valid enumeration values
-                    bool isValidBootType = (bootType >= 0 && bootType <= 3);
-                    EXPECT_TRUE(isValidBootType) << "Invalid boot type: " << bootType;
-
-                    const char* bootTypeNames[] = {"BOOT_TYPE_INIT", "BOOT_TYPE_NORMAL", "BOOT_TYPE_MIGRATION", "BOOT_TYPE_UPDATE"};
-                    if (isValidBootType) {
-                        TEST_LOG("Boot type is %s (%d)", bootTypeNames[bootType], bootType);
-                    }
-                }
-
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result["success"].Boolean());
+
+    if (result.HasLabel("bootType")) {
+        int bootType = result["bootType"].Number();
+
+        // Verify it's one of the valid enumeration values
+        bool isValidBootType = (bootType >= 0 && bootType <= 3);
+        EXPECT_TRUE(isValidBootType) << "Invalid boot type: " << bootType;
+
+        const char* bootTypeNames[] = {"BOOT_TYPE_INIT", "BOOT_TYPE_NORMAL", "BOOT_TYPE_MIGRATION", "BOOT_TYPE_UPDATE"};
+        if (isValidBootType) {
+            TEST_LOG("Boot type is %s (%d)", bootTypeNames[bootType], bootType);
+        }
+    }
 
     std::remove(bootTypeFile.c_str());
 }
@@ -1286,31 +1248,19 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_BootInit_JSONRPC)
         TEST_LOG("Created bootType file with BOOT_INIT content");
     }
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetBootTypeInfo BOOT_INIT response: %s", result.c_str());
-
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                if (resultObj.HasLabel("bootType")) {
-                    int bootType = resultObj["bootType"].Number();
-                    EXPECT_GE(bootType, 0);
-                    EXPECT_LE(bootType, 3);
-                    TEST_LOG("Boot type: %d", bootType);
-                }
-
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result["success"].Boolean());
+
+    if (result.HasLabel("bootType")) {
+        int bootType = result["bootType"].Number();
+        EXPECT_GE(bootType, 0);
+        EXPECT_LE(bootType, 3);
+        TEST_LOG("Boot type: %d", bootType);
+    }
 
     std::remove(bootTypeFile.c_str());
 }
@@ -1330,31 +1280,19 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_BootMigration_JSONRPC)
         TEST_LOG("Created bootType file with BOOT_MIGRATION content");
     }
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetBootTypeInfo BOOT_MIGRATION response: %s", result.c_str());
-
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                if (resultObj.HasLabel("bootType")) {
-                    int bootType = resultObj["bootType"].Number();
-                    EXPECT_GE(bootType, 0);
-                    EXPECT_LE(bootType, 3);
-                    TEST_LOG("Boot type: %d", bootType);
-                }
-
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result["success"].Boolean());
+
+    if (result.HasLabel("bootType")) {
+        int bootType = result["bootType"].Number();
+        EXPECT_GE(bootType, 0);
+        EXPECT_LE(bootType, 3);
+        TEST_LOG("Boot type: %d", bootType);
+    }
 
     std::remove(bootTypeFile.c_str());
 }
@@ -1374,31 +1312,19 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_BootUpdate_JSONRPC)
         TEST_LOG("Created bootType file with BOOT_UPDATE content");
     }
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetBootTypeInfo BOOT_UPDATE response: %s", result.c_str());
-
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                if (resultObj.HasLabel("bootType")) {
-                    int bootType = resultObj["bootType"].Number();
-                    EXPECT_GE(bootType, 0);
-                    EXPECT_LE(bootType, 3);
-                    TEST_LOG("Boot type: %d", bootType);
-                }
-
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result["success"].Boolean());
+
+    if (result.HasLabel("bootType")) {
+        int bootType = result["bootType"].Number();
+        EXPECT_GE(bootType, 0);
+        EXPECT_LE(bootType, 3);
+        TEST_LOG("Boot type: %d", bootType);
+    }
 
     std::remove(bootTypeFile.c_str());
 }
@@ -1418,20 +1344,10 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_InvalidBootType_JSONRPC)
         TEST_LOG("Created bootType file with invalid boot type content");
     }
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                // May return error or fallback value
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetBootTypeInfo invalid type response: %s", result.c_str());
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     // Accept both success (with fallback) or error
     TEST_LOG("JSONRPC GetBootTypeInfo with invalid type completed with status: %d", status);
 
@@ -1446,19 +1362,10 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_MissingFile_JSONRPC)
     const std::string bootTypeFile = "/tmp/bootType";
     std::remove(bootTypeFile.c_str());
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetBootTypeInfo missing file response: %s", result.c_str());
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
     TEST_LOG("JSONRPC GetBootTypeInfo with missing file completed with status: %d", status);
 }
 
@@ -1467,35 +1374,50 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_MissingFile_JSONRPC)
  */
 TEST_F(MigrationL2Test, MigrationStatus_EnumerationCoverage_JSONRPC)
 {
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
+    // Setup RFC mock to read from the file that SetMigrationStatus writes to
+    std::string lastWrittenStatus = "NOT_STARTED";
+
+    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(testing::_, testing::StrEq("Device.DeviceInfo.Migration.MigrationStatus"), testing::_))
+        .WillRepeatedly(testing::Invoke(
+            [&lastWrittenStatus](const char* arg1, const char* arg2, RFC_ParamData_t* arg3) -> WDMP_STATUS {
+                if (arg3 != nullptr) {
+                    strcpy(arg3->value, lastWrittenStatus.c_str());
+                    arg3->type = WDMP_STRING;
+                }
+                return WDMP_SUCCESS;
+            }));
+
+    // Map of status value to string for updating the mock
+    static const std::unordered_map<int, std::string> statusToString = {
+        { 0, "NOT_STARTED" },
+        { 1, "NOT_NEEDED" },
+        { 2, "STARTED" },
+        { 3, "PRIORITY_SETTINGS_MIGRATED" },
+        { 4, "DEVICE_SETTINGS_MIGRATED" },
+        { 5, "CLOUD_SETTINGS_MIGRATED" },
+        { 6, "APP_DATA_MIGRATED" },
+        { 7, "MIGRATION_COMPLETED" }
+    };
 
     // Test all valid migration status enumeration values
     std::vector<int> allStatuses = {0, 1, 2, 3, 4, 5, 6, 7};
 
     for (auto statusValue : allStatuses) {
-        StrictMock<AsyncHandlerMock_Migration> async_handler;
+        // Update the mock to return the status we're about to set
+        auto it = statusToString.find(statusValue);
+        if (it != statusToString.end()) {
+            lastWrittenStatus = it->second;
+        }
+
         uint32_t status = Core::ERROR_GENERAL;
+        JsonObject params, result;
 
-        EXPECT_CALL(async_handler, onResponse(::testing::_))
-            .WillOnce(::testing::Invoke(
-                [&](const Core::JSONRPC::Message& message) {
-                    const string result = message.Result.Value();
+        params["migrationStatus"] = statusValue;
 
-                    JsonObject resultObj;
-                    resultObj.FromString(result);
-
-                    if (resultObj.HasLabel("success")) {
-                        bool success = resultObj["success"].Boolean();
-                        EXPECT_TRUE(success) << "SetMigrationStatus failed for status: " << statusValue;
-                        TEST_LOG("Migration status enumeration test passed for status %d", statusValue);
-                    }
-
-                    status = Core::ERROR_NONE;
-                }));
-
-        string params = "{\"migrationStatus\":" + std::to_string(statusValue) + "}";
-        status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, async_handler);
+        status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, result);
         EXPECT_EQ(status, Core::ERROR_NONE);
+        EXPECT_TRUE(result["success"].Boolean()) << "SetMigrationStatus failed for status: " << statusValue;
+        TEST_LOG("Migration status enumeration test passed for status %d", statusValue);
     }
 }
 
@@ -1504,32 +1426,20 @@ TEST_F(MigrationL2Test, MigrationStatus_EnumerationCoverage_JSONRPC)
  */
 TEST_F(MigrationL2Test, SetMigrationStatus_InvalidParameter_JSONRPC)
 {
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
-
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC SetMigrationStatus invalid parameter response: %s", result.c_str());
-
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                // Should return error or success:false for invalid status
-                if (resultObj.HasLabel("success")) {
-                    bool success = resultObj["success"].Boolean();
-                    TEST_LOG("SetMigrationStatus with invalid parameter returned success: %s", success ? "true" : "false");
-                }
-
-                status = Core::ERROR_NONE;
-            }));
+    JsonObject params, result;
 
     // Test with invalid migration status value
-    string params = "{\"migrationStatus\":9999}";
-    status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, async_handler);
+    params["migrationStatus"] = 9999;
+
+    status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, result);
     TEST_LOG("JSONRPC SetMigrationStatus with invalid parameter completed with status: %d", status);
+
+    // Should return error or success:false for invalid status
+    if (result.HasLabel("success")) {
+        bool success = result["success"].Boolean();
+        TEST_LOG("SetMigrationStatus with invalid parameter returned success: %s", success ? "true" : "false");
+    }
 }
 
 /**
@@ -1548,31 +1458,19 @@ TEST_F(MigrationL2Test, GetMigrationStatus_RFCParameterSuccess_JSONRPC)
                 return WDMP_SUCCESS;
             }));
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetMigrationStatus RFC success response: %s", result.c_str());
-
-                JsonObject resultObj;
-                resultObj.FromString(result);
-
-                if (resultObj.HasLabel("migrationStatus")) {
-                    int migrationStatus = resultObj["migrationStatus"].Number();
-                    EXPECT_GE(migrationStatus, 0);
-                    EXPECT_LE(migrationStatus, 7);
-                    TEST_LOG("Migration status from RFC: %d", migrationStatus);
-                }
-
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", params, result);
     EXPECT_EQ(status, Core::ERROR_NONE);
+    EXPECT_TRUE(result["success"].Boolean());
+
+    if (result.HasLabel("migrationStatus")) {
+        int migrationStatus = result["migrationStatus"].Number();
+        EXPECT_GE(migrationStatus, 0);
+        EXPECT_LE(migrationStatus, 7);
+        TEST_LOG("Migration status from RFC: %d", migrationStatus);
+    }
 }
 
 /**
@@ -1584,18 +1482,9 @@ TEST_F(MigrationL2Test, GetMigrationStatus_RFCParameterFailure_JSONRPC)
     EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(testing::_, testing::StrEq("Device.DeviceInfo.Migration.MigrationStatus"), testing::_))
         .WillOnce(testing::Return(WDMP_FAILURE));
 
-    JSONRPC::LinkType<Core::JSON::IElement> jsonrpc("", "", false, "");
-    StrictMock<AsyncHandlerMock_Migration> async_handler;
     uint32_t status = Core::ERROR_GENERAL;
+    JsonObject params, result;
 
-    EXPECT_CALL(async_handler, onResponse(::testing::_))
-        .WillOnce(::testing::Invoke(
-            [&](const Core::JSONRPC::Message& message) {
-                const string result = message.Result.Value();
-                TEST_LOG("JSONRPC GetMigrationStatus RFC failure response: %s", result.c_str());
-                status = Core::ERROR_NONE;
-            }));
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", "{}", async_handler);
+    status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", params, result);
     TEST_LOG("JSONRPC GetMigrationStatus with RFC failure completed with status: %d", status);
 }
