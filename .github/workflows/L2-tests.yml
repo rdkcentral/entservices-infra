@@ -476,7 +476,6 @@ jobs:
           -DPLUGIN_PERSISTENTSTORE_PATH="/tmp/secure/persistent/rdkservicestore"
           -DPLUGIN_PERSISTENTSTORE_LEGACYPATH="/tmp/persistent/rdkservicestore"
           -DPLUGIN_STORAGE_MANAGER_PATH="/tmp/persistent/storageManager"
-          -DPLUGIN_PREINSTALL_MANAGER_PATH="/opt/preinstall"
           -DCOMCAST_CONFIG=OFF
           -DCMAKE_DISABLE_FIND_PACKAGE_DS=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_IARMBus=ON
@@ -500,7 +499,7 @@ jobs:
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
           -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_OCICONTAINER=OFF
+          -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_PREINSTALL_MANAGER=ON
           -DDS_FOUND=ON
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
