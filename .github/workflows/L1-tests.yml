@@ -1,15 +1,8 @@
 name: L1-tests
 
 on:
-  workflow_call:
-    inputs:
-      caller_source:
-        description: "Specifies the source type (e.g., local or test framework) for the workflow."
-        required: true
-        type: string
-    secrets:
-      RDKCM_RDKE:
-        required: true
+   push:
+     branches: ['topic/RDKEMW-8857_New']
 
 env:
   BUILD_TYPE: Debug
@@ -81,6 +74,13 @@ jobs:
         with:
           cmake-version: '3.16.x'
 
+      - name: Set Thunder version flags
+        run: |
+          if [ "${{ env.THUNDER_REF }}" = "R4.4.3" ]; then
+          echo "THUNDER_R443=ON" >> $GITHUB_ENV
+          else
+          echo "THUNDER_R443=OFF" >> $GITHUB_ENV
+          fi
       - name: Install packages
         run: >
           sudo apt update
@@ -127,7 +127,7 @@ jobs:
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-infra
-        if: ${{ inputs.caller_source == 'local' }}
+        #if: ${{ inputs.caller_source == 'local' }}
         uses: actions/checkout@v3
         with:
           path: entservices-infra
@@ -492,11 +492,12 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
+          -DPLUGIN_APPMANAGER=OFF
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
+          -DPLUGIN_DOWNLOADMANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
@@ -576,11 +577,12 @@ jobs:
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_RESOURCEMANAGER=ON
-          -DPLUGIN_APPMANAGER=ON
+          -DPLUGIN_APPMANAGER=OFF
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
+          -DPLUGIN_DOWNLOADMANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
