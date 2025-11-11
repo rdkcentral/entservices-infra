@@ -159,7 +159,7 @@ add_plugin_test_ex(PLUGIN_MESSAGECONTROL tests/test_MessageControl.cpp "${MESSAG
 #PLUGIN_DOWNLOAD_MANAGER
 set (DOWNLOADMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/DownloadManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (DOWNLOADMANAGER_LIBS ${NAMESPACE}DownloadManager ${NAMESPACE}DownloadManagerImplementation)
-add_plugin_test_ex(PLUGIN_DOWNLOAD_MANAGER tests/test_DownloadManager.cpp "${DOWNLOADMANAGER_INC}" "${DOWNLOADMANAGER_LIBS}")
+add_plugin_test_ex(PLUGIN_DOWNLOADMANAGER tests/test_DownloadManager.cpp "${DOWNLOADMANAGER_INC}" "${DOWNLOADMANAGER_LIBS}")
 
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
