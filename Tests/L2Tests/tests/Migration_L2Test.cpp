@@ -48,12 +48,6 @@ protected:
 public:
     uint32_t CreateMigrationInterfaceObjectUsingComRPCConnection();
 
-    /**
-     * @brief Checks if migration operations are available/configured
-     * @return true if migration operations work, false otherwise
-     */
-    bool IsMigrationOperationsAvailable();
-
 protected:
     /** @brief ProxyType objects for proper cleanup */
     Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mMigrationEngine;
@@ -74,9 +68,6 @@ MigrationL2Test::MigrationL2Test() : L2TestMocks()
     uint32_t status = Core::ERROR_GENERAL;
 
     TEST_LOG("Migration L2 test constructor");
-    // Initialize pointers
-    mControllerMigration = nullptr;
-    mMigrationPlugin = nullptr;
 
     /* Try to activate Migration plugin - if it fails, tests will be skipped */
     status = ActivateService("org.rdk.Migration");
@@ -108,17 +99,6 @@ MigrationL2Test::~MigrationL2Test()
         mControllerMigration = nullptr;
     }
 
-    // Clean up COM-RPC objects to close background threads
-    if (mMigrationClient.IsValid()) {
-        mMigrationClient.Release();
-        TEST_LOG("Released migration client in destructor");
-    }
-
-    if (mMigrationEngine.IsValid()) {
-        mMigrationEngine.Release();
-        TEST_LOG("Released migration engine in destructor");
-    }
-
     usleep(500000);
 
     // Try to deactivate service - may fail if activation failed
@@ -136,17 +116,6 @@ MigrationL2Test::~MigrationL2Test()
  */
 uint32_t MigrationL2Test::CreateMigrationInterfaceObjectUsingComRPCConnection()
 {
-    // Clean up COM-RPC objects to close previous background threads
-    if (mMigrationClient.IsValid()) {
-        mMigrationClient.Release();
-        TEST_LOG("Released migration client");
-    }
-
-    if (mMigrationEngine.IsValid()) {
-        mMigrationEngine.Release();
-        TEST_LOG("Released migration engine");
-    }
-
     uint32_t returnValue = Core::ERROR_GENERAL;
     Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> migrationEngine;
     Core::ProxyType<RPC::CommunicatorClient> migrationClient;
@@ -170,23 +139,6 @@ uint32_t MigrationL2Test::CreateMigrationInterfaceObjectUsingComRPCConnection()
         }
     }
     return returnValue;
-}
-
-/**
- * @brief Checks if migration operations are available/configured
- * @return true if migration operations work, false otherwise
- */
-bool MigrationL2Test::IsMigrationOperationsAvailable()
-{
-    if (!mMigrationPlugin) {
-        return false;
-    }
-    
-    // Try a simple GetMigrationStatus operation to check if migration is configured
-    Exchange::IMigration::MigrationStatusInfo migrationStatusInfo;
-    Core::hresult result = mMigrationPlugin->GetMigrationStatus(migrationStatusInfo);
-    
-    return (result == Core::ERROR_NONE);
 }
 
 /**************************************************/
