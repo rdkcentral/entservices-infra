@@ -14,7 +14,8 @@
         },
         "device.setName": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "device.sku": {
             "alias": "org.rdk.FbSettings",
@@ -26,7 +27,8 @@
         },
         "localization.setCountryCode": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "localization.timeZone": {
             "alias": "org.rdk.FbSettings",
@@ -34,7 +36,8 @@
         },
         "localization.setTimeZone": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "secondscreen.friendlyName": {
             "alias": "org.rdk.FbSettings",
@@ -50,7 +53,8 @@
         },
         "localization.setLocale": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "localization.preferredAudioLanguages": {
             "alias": "org.rdk.FbSettings",
@@ -58,15 +62,18 @@
         },
         "localization.setPreferredAudioLanguages": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "voiceguidance.setEnabled": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "voiceguidance.setSpeed": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "accessibility.audioDescriptionSettings": {
             "alias": "org.rdk.FbSettings",
@@ -86,7 +93,8 @@
         },
         "audiodescriptions.setEnabled": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "accessibility.highContrastUI": {
             "alias": "org.rdk.FbSettings",
@@ -98,7 +106,8 @@
         },
         "closedcaptions.setEnabled": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "closedcaptions.preferredLanguages": {
             "alias": "org.rdk.FbSettings",
@@ -106,7 +115,8 @@
         },
         "closedcaptions.setPreferredLanguages": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "voiceguidance.navigationHints": {
             "alias": "org.rdk.FbSettings",
@@ -114,7 +124,8 @@
         },
         "voiceguidance.setNavigationHints": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "voiceguidance.rate": {
             "alias": "org.rdk.FbSettings",
@@ -122,7 +133,8 @@
         },
         "voiceguidance.setRate": {
             "alias": "org.rdk.FbSettings",
-            "useComRpc": true
+            "useComRpc": true,
+            "permissionGroup": "org.rdk.permission.group.enhanced"
         },
         "voiceguidance.enabled": {
             "alias": "org.rdk.FbSettings",
@@ -228,6 +240,10 @@
             "alias": "org.rdk.FbSettings",
             "useComRpc": true
         },
+        "device.audio": {
+            "alias": "org.rdk.FbSettings",
+            "useComRpc": true
+        },
         "device.onhdrchanged": {
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.onDisplayConnectionChanged"
@@ -244,7 +260,11 @@
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.resolutionChanged"
         },
-	"device.ondevicenamechanged": {
+        "device.onaudiochanged": {
+            "alias": "org.rdk.FbSettings",
+            "event": "org.rdk.FbSettings.audioFormatChanged"
+        },
+        "device.ondevicenamechanged": {
             "alias": "org.rdk.FbSettings",
             "event": "org.rdk.FbSettings.onFriendlyNameChanged"
         },
@@ -254,4 +274,5 @@
         }
     }
 }
+
 
