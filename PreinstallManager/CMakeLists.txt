@@ -70,6 +70,7 @@ set(PREINSTALL_MANAGER_INCLUDES $ENV{PREINSTALL_MANAGER_INCLUDES})
 separate_arguments(PREINSTALL_MANAGER_INCLUDES)
 include_directories(BEFORE ${PREINSTALL_MANAGER_INCLUDES})
 if (RDK_SERVICES_L1_TEST)
+	target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,opendir -Wl,--wrap,readdir -Wl,--wrap,stat -Wl,--wrap,closedir)
 	target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
 endif (RDK_SERVICES_L1_TEST)
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
