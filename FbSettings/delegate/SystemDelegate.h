@@ -663,7 +663,7 @@ public:
           * Retrieve supported audio formats from DisplaySettings.getAudioFormat(audioPort: "HDMI0") and
           * compute flags from supportedAudioFormat array only. Multiple true values are allowed.
           * Flags:
-          *  - stereo: true if a token contains "PCM"
+          *  - stereo: true if a token contains "PCM" or "STEREO"
           *  - dolbyDigital5.1: true if a token contains "AC3" or "DOLBY AC3"
           *  - dolbyDigital5.1+: true if a token contains any of "EAC3", "DD+", or "AC4"
           *  - dolbyAtmos: true if a token contains "ATMOS"
@@ -675,6 +675,7 @@ public:
 
          auto link = AcquireLink(DISPLAYSETTINGS_CALLSIGN);
          if (!link) {
+             LOGERR("[FbSettings|GetAudio] DisplaySettings link unavailable, returning default audio flags");
              jsonObject = "{\"stereo\":false,\"dolbyDigital5.1\":false,\"dolbyDigital5.1+\":false,\"dolbyAtmos\":false}";
              return Core::ERROR_UNAVAILABLE;
          }
@@ -740,7 +741,16 @@ public:
                      stereo = true; anyRecognized = true;
                  }
                  // Dolby Digital (AC3)
-                 if (u.find("AC3") != std::string::npos || u.find("DOLBY AC3") != std::string::npos || u.find("DOLBY DIGITAL") != std::string::npos) {
+                 // Only match "AC3" if not preceded by 'E' (i.e., not "EAC3")
+                 bool isAC3 = false;
+                 // Check for "AC3" not preceded by 'E'
+                 size_t ac3_pos = u.find("AC3");
+                 if (ac3_pos != std::string::npos) {
+                     if (ac3_pos == 0 || u[ac3_pos - 1] != 'E') {
+                         isAC3 = true;
+                     }
+                 }
+                 if (isAC3 || u.find("DOLBY AC3") != std::string::npos || u.find("DOLBY DIGITAL") != std::string::npos) {
                      dd51 = true; anyRecognized = true;
                  }
                  // Dolby Digital Plus (EAC3/DD+/AC4)
