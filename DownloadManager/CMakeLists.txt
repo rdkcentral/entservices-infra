@@ -45,19 +45,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-if(RDK_SERVICES_L1_TEST)
-    find_package( Curl REQUIRED)
-    if (CURL_FOUND)
-    message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
-    endif()
-    find_package( JsonCpp REQUIRED)
-    if (JSONCPP_FOUND)
-    message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
-    endif()
-    target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
-    target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
-endif()
-
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
@@ -72,6 +59,24 @@ include_directories(
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
+
+set(DOWNLOAD_MANAGER_INCLUDES $ENV{DOWNLOAD_MANAGER_INCLUDES})
+separate_arguments(DOWNLOAD_MANAGER_INCLUDES)
+include_directories(BEFORE ${DOWNLOAD_MANAGER_INCLUDES})
+
+if(RDK_SERVICES_L1_TEST)
+    target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
+    find_package( Curl REQUIRED)
+    if (CURL_FOUND)
+    message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
+    endif()
+    find_package( JsonCpp REQUIRED)
+    if (JSONCPP_FOUND)
+    message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
+    endif()
+    target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
+    target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
+endif()
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION}
     PRIVATE
