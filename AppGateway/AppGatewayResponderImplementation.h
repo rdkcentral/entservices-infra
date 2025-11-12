@@ -312,6 +312,7 @@ namespace Plugin {
         uint32_t InitializeWebsocket();
         mutable Core::CriticalSection mConnectionStatusImplLock;
         std::list<Exchange::IAppGatewayResponder::INotification*> mConnectionStatusNotification;
+        void InitAppGatewayLogger();
     };
 } // namespace Plugin
 } // namespace WPEFramework

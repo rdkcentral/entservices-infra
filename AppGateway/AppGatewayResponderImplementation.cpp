@@ -45,6 +45,8 @@ namespace WPEFramework
             mConnectionStatusImplLock()
         {
             LOGINFO("AppGatewayResponderImplementation constructor");
+
+            InitAppGatewayLogger();
         }
 
         AppGatewayResponderImplementation::~AppGatewayResponderImplementation()
@@ -182,6 +184,21 @@ namespace WPEFramework
                  string& contextValue /* @out */) {
             // TODO add support for jsonrpc compliance in later versions
             return Core::ERROR_NONE;
+        }
+
+        void AppGatewayResponderImplementation::InitAppGatewayLogger() {
+            rdk_logger_ext_config_t config;
+            strncpy(config.fileName, "app-gateway.log", sizeof(config.fileName) - 1);
+            config.fileName[sizeof(config.fileName) - 1] = '\0';
+                
+            strncpy(config.logdir, "/opt/logs", sizeof(config.logdir) - 1);
+            config.logdir[sizeof(config.logdir) - 1] = '\0';
+                
+            config.maxSize = 1024 * 1024 * 2;  // 2MB max size
+            config.maxCount = 2;    // Keep 2 files
+                
+            rdk_Error ret = rdk_logger_ext_init(&config);
+            ASSERT_EQ(ret, RDK_SUCCESS);
         }
 
 
