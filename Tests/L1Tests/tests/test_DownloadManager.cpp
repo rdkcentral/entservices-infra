@@ -15,9 +15,10 @@
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
 * limitations under the License.
-**/
+*
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+*/
 #include <mntent.h>
 #include <fstream>
 #include <string>
@@ -36,6 +37,8 @@
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (500)
 
