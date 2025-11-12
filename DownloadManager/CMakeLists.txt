@@ -54,8 +54,8 @@ if(RDK_SERVICES_L1_TEST)
     if (JSONCPP_FOUND)
     message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
     endif()
-    target_include_directories(${PLUGIN_IMPLEMENTATION} PUBLIC ${JSONCPP_INCLUDE_DIR})
-    target_link_libraries(${PLUGIN_IMPLEMENTATION} PUBLIC ${JSONCPP_LIBRARY})
+    target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
+    target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
 endif()
 
 install(TARGETS ${MODULE_NAME}
