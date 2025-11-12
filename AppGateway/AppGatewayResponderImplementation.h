@@ -29,7 +29,7 @@
 #include <map>
 #include "rdk_logger.h"
 
-#define APP_GATEWAY_LOG(FMT, ...)    rdk_logger_msg_printf(RDK_LOG_INFO, FMT, ##__VA_ARGS__)
+#define APP_GATEWAY_LOG(FMT, ...)    rdk_logger_msg_printf(RDK_LOG_INFO, "org.rdk.AppGateway", FMT, ##__VA_ARGS__)
 
 namespace WPEFramework {
 namespace Plugin {
