@@ -27,7 +27,7 @@
 #include <com/com.h>
 #include <core/core.h>
 #include <map>
-
+#include "rdk_logger.h"
 
 namespace WPEFramework {
 namespace Plugin {
