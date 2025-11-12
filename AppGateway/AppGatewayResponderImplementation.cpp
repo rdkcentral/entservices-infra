@@ -198,7 +198,9 @@ namespace WPEFramework
             config.maxCount = 2;    // Keep 2 files
                 
             rdk_Error ret = rdk_logger_ext_init(&config);
-            ASSERT_EQ(ret, RDK_SUCCESS);
+            if (ret != RDK_SUCCESS) {
+                LOGERR("App gateway logger failure");
+            }
         }
 
 
