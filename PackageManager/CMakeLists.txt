@@ -29,7 +29,8 @@ if (LIB_PACKAGE)
     message("LIB_PACKAGE=${LIB_PACKAGE}")
     add_compile_options ( -DUSE_LIBPACKAGE )
     include_directories(${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/include/Package)
-    set(LIB_PACKAGE_LIBRARY "${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/lib/libPackage.so")
+    set(LIB_PACKAGE_LIBRARY "${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/lib/libralf.so")
+    #set(LIB_PACKAGE_LIBRARY "${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/lib/libPackage.so")
 endif()
 
 option(AIMANAGERS_TELEMETRY_METRICS_SUPPORT "AIMANAGERS_TELEMETRY_METRICS_SUPPORT" OFF)
@@ -45,7 +46,9 @@ add_library(${MODULE_NAME} SHARED
     PackageManager.cpp
     PackageManagerImplementation.cpp
     Module.cpp
-    HttpClient.cpp)
+    HttpClient.cpp
+    PackageImpl.cpp
+    )
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
