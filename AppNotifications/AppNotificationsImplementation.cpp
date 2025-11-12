@@ -231,7 +231,7 @@ namespace WPEFramework
 
             // check if the notification is already registered
             if (IsNotificationRegistered(module, event)) {
-                // log a trace message that the notification is not registered
+                // log a trace message that the notification is already registered
                 LOGTRACE("Notification is already registered: %s", event.c_str());
             } else {
                 // trigger RegisterNotification
