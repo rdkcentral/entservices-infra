@@ -29,6 +29,8 @@
 #include <map>
 #include "rdk_logger.h"
 
+#define APP_GATEWAY_LOG(FMT, ...)    rdk_logger_msg_printf(RDK_LOG_INFO, FMT, ##__VA_ARGS__)
+
 namespace WPEFramework {
 namespace Plugin {
     using Context = Exchange::GatewayContext;
@@ -297,7 +299,7 @@ namespace Plugin {
 
 
         void ReturnMessageInSocket(const uint32_t connectionId, const int requestId, const string payload ) {
-             LOGDBG("<--[[a-%d-%d]] payload=%s",
+             APP_GATEWAY_LOG("<--[[a-%d-%d]] payload=%s",
                     connectionId, requestId, payload.c_str());
 
             // Send response back to client
