@@ -84,6 +84,32 @@ protected:
             p_rfcApiImplMock = nullptr;
         }
     }
+
+    // Helper methods for plugin lifecycle tests
+    Core::ProxyType<Plugin::Migration> CreateTestPlugin()
+    {
+        return Core::ProxyType<Plugin::Migration>::Create();
+    }
+
+    void SetupPluginInstantiateMock(uint32_t connectionId = 0)
+    {
+        ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
+            .WillByDefault(::testing::Invoke(
+            [&, connectionId](const RPC::Object& object, const uint32_t waitTime, uint32_t& connId) {
+                MigrationImpl = Core::ProxyType<Plugin::MigrationImplementation>::Create();
+                if (connectionId != 0) {
+                    connId = connectionId;
+                }
+                return &MigrationImpl;
+                }));
+    }
+
+    void InitializeAndDeinitializePlugin(Core::ProxyType<Plugin::Migration>& testPlugin)
+    {
+        string result = testPlugin->Initialize(&service);
+        EXPECT_TRUE(result.empty());
+        testPlugin->Deinitialize(&service);
+    }
 };
 
 TEST_F(MigrationTest, RegisteredMethods)
@@ -93,61 +119,29 @@ TEST_F(MigrationTest, RegisteredMethods)
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("getMigrationStatus")));
 }
 
-TEST_F(MigrationTest, GetBootTypeInfo_Success_BOOT_INIT)
+// Parameterized test for different boot types
+class MigrationBootTypeTest : public MigrationTest, public ::testing::WithParamInterface<const char*> {};
+TEST_P(MigrationBootTypeTest, GetBootTypeInfo_Success)
 {
     // Create the expected boot type file
     const char* testFile = "/tmp/bootType";
     std::ofstream file(testFile);
-    file << "BOOT_TYPE=BOOT_INIT\n";
+    file << "BOOT_TYPE=" << GetParam() << "\n";
     file.close();
-
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getBootTypeInfo"), _T("{}"), response));
-    
     // Clean up
     std::remove(testFile);
 }
-
-TEST_F(MigrationTest, GetBootTypeInfo_Success_BOOT_NORMAL)
-{
-    // Create the expected boot type file
-    const char* testFile = "/tmp/bootType";
-    std::ofstream file(testFile);
-    file << "BOOT_TYPE=BOOT_NORMAL\n";
-    file.close();
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getBootTypeInfo"), _T("{}"), response));
-    
-    // Clean up
-    std::remove(testFile);
-}
-
-TEST_F(MigrationTest, GetBootTypeInfo_Success_BOOT_MIGRATION)
-{
-    // Create the expected boot type file
-    const char* testFile = "/tmp/bootType";
-    std::ofstream file(testFile);
-    file << "BOOT_TYPE=BOOT_MIGRATION\n";
-    file.close();
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getBootTypeInfo"), _T("{}"), response));
-    
-    // Clean up
-    std::remove(testFile);
-}
-
-TEST_F(MigrationTest, GetBootTypeInfo_Success_BOOT_UPDATE)
-{
-    // Create the expected boot type file
-    const char* testFile = "/tmp/bootType";
-    std::ofstream file(testFile);
-    file << "BOOT_TYPE=BOOT_UPDATE\n";
-    file.close();
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getBootTypeInfo"), _T("{}"), response));
-    
-    // Clean up
-    std::remove(testFile);
-}
+INSTANTIATE_TEST_SUITE_P(
+    BootTypes,
+    MigrationBootTypeTest,
+    ::testing::Values(
+        "BOOT_INIT",
+        "BOOT_NORMAL",
+        "BOOT_MIGRATION",
+        "BOOT_UPDATE"
+    )
+);
 
 TEST_F(MigrationTest, GetBootTypeInfo_Failure_InvalidBootType)
 {
@@ -189,30 +183,29 @@ TEST_F(MigrationTest, SetMigrationStatus_Success_PRIORITY_SETTINGS_MIGRATED)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setMigrationStatus"), _T("{\"status\":\"PRIORITY_SETTINGS_MIGRATED\"}"), response));
 }
 
-TEST_F(MigrationTest, SetMigrationStatus_Success_DEVICE_SETTINGS_MIGRATED)
+// Parameterized test for SetMigrationStatus with different status values
+class MigrationStatusTest : public MigrationTest, public ::testing::WithParamInterface<const char*> {};
+TEST_P(MigrationStatusTest, SetMigrationStatus_Success)
 {
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setMigrationStatus"), _T("{\"status\":\"DEVICE_SETTINGS_MIGRATED\"}"), response));
+    std::string request = std::string("{\"status\":\"") + GetParam() + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setMigrationStatus"), Core::ToString(request), response));
 }
+INSTANTIATE_TEST_SUITE_P(
+    SetMigrationStatusTests,
+    MigrationStatusTest,
+    ::testing::Values(
+        "DEVICE_SETTINGS_MIGRATED",
+        "CLOUD_SETTINGS_MIGRATED",
+        "APP_DATA_MIGRATED",
+        "MIGRATION_COMPLETED"
+    )
+);
 
-TEST_F(MigrationTest, SetMigrationStatus_Success_CLOUD_SETTINGS_MIGRATED)
-{
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setMigrationStatus"), _T("{\"status\":\"CLOUD_SETTINGS_MIGRATED\"}"), response));
-}
-
-TEST_F(MigrationTest, SetMigrationStatus_Success_APP_DATA_MIGRATED)
-{
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setMigrationStatus"), _T("{\"status\":\"APP_DATA_MIGRATED\"}"), response));
-}
-
-TEST_F(MigrationTest, SetMigrationStatus_Success_MIGRATION_COMPLETED)
-{
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("setMigrationStatus"), _T("{\"status\":\"MIGRATION_COMPLETED\"}"), response));
-}
-
-TEST_F(MigrationTest, GetMigrationStatus_Success_NOT_NEEDED)
+class GetMigrationStatusTest : public MigrationTest, public ::testing::WithParamInterface<const char*> {};
+TEST_P(GetMigrationStatusTest, GetMigrationStatus_Success)
 {
     RFC_ParamData_t rfcParam;
-    strcpy(rfcParam.value, "NOT_NEEDED");
+    strcpy(rfcParam.value, GetParam());
     
     EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(::testing::_, ::testing::_, ::testing::_))
         .WillOnce(::testing::DoAll(
@@ -221,86 +214,21 @@ TEST_F(MigrationTest, GetMigrationStatus_Success_NOT_NEEDED)
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStatus"), _T("{}"), response));
 }
+INSTANTIATE_TEST_SUITE_P(
+    GetMigrationStatusTests,
+    GetMigrationStatusTest,
+    ::testing::Values(
+        "NOT_NEEDED",
+        "STARTED",
+        "PRIORITY_SETTINGS_MIGRATED",
+        "DEVICE_SETTINGS_MIGRATED",
+        "CLOUD_SETTINGS_MIGRATED",
+        "APP_DATA_MIGRATED",
+        "MIGRATION_COMPLETED"
+    )
+);
 
-TEST_F(MigrationTest, GetMigrationStatus_Success_STARTED)
-{
-    RFC_ParamData_t rfcParam;
-    strcpy(rfcParam.value, "STARTED");
-    
-    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgPointee<2>(rfcParam),
-            ::testing::Return(WDMP_SUCCESS)));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStatus"), _T("{}"), response));
-}
-
-TEST_F(MigrationTest, GetMigrationStatus_Success_PRIORITY_SETTINGS_MIGRATED)
-{
-    RFC_ParamData_t rfcParam;
-    strcpy(rfcParam.value, "PRIORITY_SETTINGS_MIGRATED");
-    
-    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgPointee<2>(rfcParam),
-            ::testing::Return(WDMP_SUCCESS)));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStatus"), _T("{}"), response));
-}
-
-TEST_F(MigrationTest, GetMigrationStatus_Success_DEVICE_SETTINGS_MIGRATED)
-{
-    RFC_ParamData_t rfcParam;
-    strcpy(rfcParam.value, "DEVICE_SETTINGS_MIGRATED");
-    
-    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgPointee<2>(rfcParam),
-            ::testing::Return(WDMP_SUCCESS)));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStatus"), _T("{}"), response));
-}
-
-TEST_F(MigrationTest, GetMigrationStatus_Success_CLOUD_SETTINGS_MIGRATED)
-{
-    RFC_ParamData_t rfcParam;
-    strcpy(rfcParam.value, "CLOUD_SETTINGS_MIGRATED");
-    
-    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgPointee<2>(rfcParam),
-            ::testing::Return(WDMP_SUCCESS)));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStatus"), _T("{}"), response));
-}
-
-TEST_F(MigrationTest, GetMigrationStatus_Success_APP_DATA_MIGRATED)
-{
-    RFC_ParamData_t rfcParam;
-    strcpy(rfcParam.value, "APP_DATA_MIGRATED");
-    
-    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgPointee<2>(rfcParam),
-            ::testing::Return(WDMP_SUCCESS)));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStatus"), _T("{}"), response));
-}
-
-TEST_F(MigrationTest, GetMigrationStatus_Success_MIGRATION_COMPLETED)
-{
-    RFC_ParamData_t rfcParam;
-    strcpy(rfcParam.value, "MIGRATION_COMPLETED");
-    
-    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(::testing::DoAll(
-            ::testing::SetArgPointee<2>(rfcParam),
-            ::testing::Return(WDMP_SUCCESS)));
-
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getMigrationStatus"), _T("{}"), response));
-}
-
-//PLugin cases
+//Plugin cases
 TEST_F(MigrationTest, PluginInformation)
 {
     string info = plugin->Information();
@@ -309,31 +237,15 @@ TEST_F(MigrationTest, PluginInformation)
 
 TEST_F(MigrationTest, PluginInitialize_Success)
 {
-    Core::ProxyType<Plugin::Migration> testPlugin = Core::ProxyType<Plugin::Migration>::Create();
-    
-    ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke(
-        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-            MigrationImpl = Core::ProxyType<Plugin::MigrationImplementation>::Create();
-            return &MigrationImpl;
-            }));
-    
-    string result = testPlugin->Initialize(&service);
-    EXPECT_TRUE(result.empty());
-    
-    testPlugin->Deinitialize(&service);
+    auto testPlugin = CreateTestPlugin();
+    SetupPluginInstantiateMock();
+    InitializeAndDeinitializePlugin(testPlugin);
 }
 
 TEST_F(MigrationTest, PluginDeinitialize_WithValidMigration)
 {
-    Core::ProxyType<Plugin::Migration> testPlugin = Core::ProxyType<Plugin::Migration>::Create();
-    
-    ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke(
-        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-            MigrationImpl = Core::ProxyType<Plugin::MigrationImplementation>::Create();
-            return &MigrationImpl;
-            }));
+    auto testPlugin = CreateTestPlugin();
+    SetupPluginInstantiateMock();
     
     testPlugin->Initialize(&service);
     testPlugin->Deinitialize(&service);
@@ -341,17 +253,9 @@ TEST_F(MigrationTest, PluginDeinitialize_WithValidMigration)
 
 TEST_F(MigrationTest, PluginDeinitialize_ConnectionTerminateException)
 {
-    Core::ProxyType<Plugin::Migration> testPlugin = Core::ProxyType<Plugin::Migration>::Create();
-    
+    auto testPlugin = CreateTestPlugin();
     NiceMock<COMLinkMock> mockConnection;
-    
-    ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke(
-        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-            MigrationImpl = Core::ProxyType<Plugin::MigrationImplementation>::Create();
-            connectionId = 1;
-            return &MigrationImpl;
-            }));
+    SetupPluginInstantiateMock(1); // Set connection ID to 1
     
     testPlugin->Initialize(&service);
     testPlugin->Deinitialize(&service);
@@ -359,16 +263,9 @@ TEST_F(MigrationTest, PluginDeinitialize_ConnectionTerminateException)
 
 TEST_F(MigrationTest, PluginDeactivated_MatchingConnectionId)
 {
-    Core::ProxyType<Plugin::Migration> testPlugin = Core::ProxyType<Plugin::Migration>::Create();
+    auto testPlugin = CreateTestPlugin();
     NiceMock<COMLinkMock> mockConnection;
-    
-    ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke(
-        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-            MigrationImpl = Core::ProxyType<Plugin::MigrationImplementation>::Create();
-            connectionId = 123;
-            return &MigrationImpl;
-            }));
+    SetupPluginInstantiateMock(123); // Set connection ID to 123
     
     testPlugin->Initialize(&service);
     
@@ -381,18 +278,10 @@ TEST_F(MigrationTest, PluginDeactivated_MatchingConnectionId)
 
 TEST_F(MigrationTest, PluginDeactivated_NonMatchingConnectionId)
 {
-    Core::ProxyType<Plugin::Migration> testPlugin = Core::ProxyType<Plugin::Migration>::Create();
+    auto testPlugin = CreateTestPlugin();
     NiceMock<COMLinkMock> mockConnection;
-    
-    ON_CALL(comLinkMock, Instantiate(::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke(
-        [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
-            MigrationImpl = Core::ProxyType<Plugin::MigrationImplementation>::Create();
-            connectionId = 123;
-            return &MigrationImpl;
-            }));
+    SetupPluginInstantiateMock(123); // Set connection ID to 123
     
     testPlugin->Initialize(&service);
     testPlugin->Deinitialize(&service);
 }
-
