@@ -43,6 +43,9 @@ using ::testing::NiceMock;
 using namespace WPEFramework;
 using namespace std;
 
+using JsonObject = WPEFramework::Core::JSON::VariantContainer;
+using JsonArray = WPEFramework::Core::JSON::ArrayType<WPEFramework::Core::JSON::VariantContainer>;
+
 typedef enum : uint32_t {
     DownloadManager_invalidStatus = 0,
     DownloadManager_AppDownloadStatus
@@ -52,52 +55,6 @@ struct StatusParams {
     string downloadId;
     string fileLocator;
     Exchange::IDownloadManager::FailReason reason;
-};
-
-class ServiceMock : public WPEFramework::PluginHost::IShell {
-public:
-    ~ServiceMock() override = default;
-    MOCK_METHOD(string, Versions, (), (const, override));
-    MOCK_METHOD(string, Locator, (), (const, override));
-    MOCK_METHOD(string, ClassName, (), (const, override));
-    MOCK_METHOD(string, Callsign, (), (const, override));
-    MOCK_METHOD(string, WebPrefix, (), (const, override));
-    MOCK_METHOD(string, ConfigLine, (), (const, override));
-    MOCK_METHOD(string, PersistentPath, (), (const, override));
-    MOCK_METHOD(string, VolatilePath, (), (const, override));
-    MOCK_METHOD(string, DataPath, (), (const, override));
-    MOCK_METHOD(WPEFramework::PluginHost::IShell::state, State, (), (const, override));
-    MOCK_METHOD(bool, Resumed, (), (const, override));
-    MOCK_METHOD(bool, IsSupported, (const uint8_t), (const, override));
-    MOCK_METHOD(void, EnableWebServer, (const string&, const string&), (override));
-    MOCK_METHOD(void, DisableWebServer, (), (override));
-    MOCK_METHOD(WPEFramework::PluginHost::ISubSystem*, SubSystems, (), (override));
-    MOCK_METHOD(uint32_t, Submit, (const uint32_t, const WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>&), (override));
-    MOCK_METHOD(void, Notify, (const string&, const string&), (override));
-    MOCK_METHOD(void*, QueryInterfaceByCallsign, (const uint32_t, const string&), (override));
-    MOCK_METHOD(void, Register, (WPEFramework::PluginHost::IPlugin::INotification*), (override));
-    MOCK_METHOD(void, Unregister, (WPEFramework::PluginHost::IPlugin::INotification*), (override));
-    MOCK_METHOD(string, Model, (), (const, override));
-    MOCK_METHOD(bool, Background, (), (const, override));
-    MOCK_METHOD(string, Accessor, (), (const, override));
-
-    BEGIN_INTERFACE_MAP(ServiceMock)
-    INTERFACE_ENTRY(WPEFramework::PluginHost::IShell)
-    END_INTERFACE_MAP
-};
-
-class SubSystemMock : public WPEFramework::PluginHost::ISubSystem {
-public:
-    ~SubSystemMock() override = default;
-    MOCK_METHOD(void, Register, (WPEFramework::PluginHost::ISubSystem::INotification*), (override));
-    MOCK_METHOD(void, Unregister, (WPEFramework::PluginHost::ISubSystem::INotification*), (override));
-    MOCK_METHOD(string, BuildTreeHash, (), (const, override));
-    MOCK_METHOD(bool, IsActive, (const WPEFramework::PluginHost::ISubSystem::subsystem), (const, override));
-    MOCK_METHOD(void, Set, (const WPEFramework::PluginHost::ISubSystem::subsystem, WPEFramework::PluginHost::ISubSystem::INotification*), (override));
-
-    BEGIN_INTERFACE_MAP(SubSystemMock)
-    INTERFACE_ENTRY(WPEFramework::PluginHost::ISubSystem)
-    END_INTERFACE_MAP
 };
 
 namespace WPEFramework {
