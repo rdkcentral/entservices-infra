@@ -1,3 +1,5 @@
+
+
 /**
 * If not stated otherwise in this file or this component's LICENSE
 * file the following copyright and licenses apply:
@@ -24,6 +26,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <fstream>
+#include <filesystem>
 #include <interfaces/IMigration.h>
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
@@ -31,6 +34,9 @@
 #define JSON_TIMEOUT   (1000)
 #define MIGRATION_CALLSIGN  _T("org.rdk.Migration")
 #define MIGRATION_L2TEST_CALLSIGN _T("L2tests.1")
+
+// Sleep duration constants for test cleanup and synchronization (in microseconds)
+#define CLEANUP_DELAY_MICROSECONDS  500000  // 500ms - Cleanup delay after releasing interfaces
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
@@ -99,7 +105,7 @@ MigrationL2Test::~MigrationL2Test()
         mControllerMigration = nullptr;
     }
 
-    usleep(500000);
+    usleep(CLEANUP_DELAY_MICROSECONDS);
 
     // Try to deactivate service - may fail if activation failed
     status = DeactivateService("org.rdk.Migration");
@@ -117,8 +123,6 @@ MigrationL2Test::~MigrationL2Test()
 uint32_t MigrationL2Test::CreateMigrationInterfaceObjectUsingComRPCConnection()
 {
     uint32_t returnValue = Core::ERROR_GENERAL;
-    Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> migrationEngine;
-    Core::ProxyType<RPC::CommunicatorClient> migrationClient;
 
     TEST_LOG("Creating Migration COM-RPC connection");
 
@@ -140,6 +144,64 @@ uint32_t MigrationL2Test::CreateMigrationInterfaceObjectUsingComRPCConnection()
     }
     return returnValue;
 }
+
+/**
+ * @brief Parameterized test class for GetBootTypeInfo with different boot types
+ */
+class GetBootTypeInfoTest : public MigrationL2Test, public ::testing::WithParamInterface<const char*> {};
+
+/**
+ * @brief Parameterized test for GetBootTypeInfo with different boot type values
+ * @details Tests GetBootTypeInfo when boot type file contains different valid boot types
+ */
+TEST_P(GetBootTypeInfoTest, GetBootTypeInfo_BootTypes)
+{
+    // Create bootType file with parameterized content
+    const std::string bootTypeFile = "/tmp/bootType";
+    const std::string bootTypeContent = std::string("BOOT_TYPE=") + GetParam() + "\n";
+    
+    std::ofstream file(bootTypeFile);
+    if (file.is_open()) {
+        file << bootTypeContent;
+        file.close();
+        TEST_LOG("Created bootType file with %s content", GetParam());
+    } else {
+        TEST_LOG("Warning: Could not create bootType file - test may use existing configuration");
+    }
+
+    uint32_t status = CreateMigrationInterfaceObjectUsingComRPCConnection();
+    ASSERT_EQ(status, Core::ERROR_NONE) << "Failed to create Migration COM-RPC interface";
+    ASSERT_NE(mMigrationPlugin, nullptr) << "Migration plugin interface is null";
+
+    Exchange::IMigration::BootTypeInfo bootTypeInfo;
+    Core::hresult result = mMigrationPlugin->GetBootTypeInfo(bootTypeInfo);
+
+    if (result == Core::ERROR_NONE) {
+        TEST_LOG("Boot type returned: %d", static_cast<uint32_t>(bootTypeInfo.bootType));
+        // Note: We can't guarantee the exact value due to system configuration
+        // but we verify it's a valid enum value
+        EXPECT_TRUE(bootTypeInfo.bootType >= Exchange::IMigration::BootType::BOOT_TYPE_INIT &&
+                    bootTypeInfo.bootType <= Exchange::IMigration::BootType::BOOT_TYPE_UPDATE) 
+                    << "Invalid boot type returned: " << static_cast<uint32_t>(bootTypeInfo.bootType);
+        TEST_LOG("GetBootTypeInfo %s test PASSED", GetParam());
+    } else {
+        TEST_LOG("GetBootTypeInfo returned error: %d - BootType not available/configured", result);
+    }
+
+    // Clean up test file
+    std::remove(bootTypeFile.c_str());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    BootTypeTests,
+    GetBootTypeInfoTest,
+    ::testing::Values(
+        "BOOT_INIT",
+        "BOOT_NORMAL", 
+        "BOOT_MIGRATION",
+        "BOOT_UPDATE"
+    )
+);
 
 /**************************************************/
 // Test Cases
@@ -487,168 +549,6 @@ TEST_F(MigrationL2Test, BootType_EnumerationCoverage)
 }
 
 /**
- * @brief Test GetBootTypeInfo with BOOT_INIT scenario
- * @details Tests GetBootTypeInfo when boot type file contains BOOT_INIT
- */
-TEST_F(MigrationL2Test, GetBootTypeInfo_BootInit)
-{
-    // Create bootType file with BOOT_INIT content
-    const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_INIT\n";
-    
-    std::ofstream file(bootTypeFile);
-    if (file.is_open()) {
-        file << bootTypeContent;
-        file.close();
-        TEST_LOG("Created bootType file with BOOT_INIT content");
-    } else {
-        TEST_LOG("Warning: Could not create bootType file - test may use existing configuration");
-    }
-
-    uint32_t status = CreateMigrationInterfaceObjectUsingComRPCConnection();
-    ASSERT_EQ(status, Core::ERROR_NONE) << "Failed to create Migration COM-RPC interface";
-    ASSERT_NE(mMigrationPlugin, nullptr) << "Migration plugin interface is null";
-
-    Exchange::IMigration::BootTypeInfo bootTypeInfo;
-    Core::hresult result = mMigrationPlugin->GetBootTypeInfo(bootTypeInfo);
-
-    if (result == Core::ERROR_NONE) {
-        TEST_LOG("Boot type returned: %d", static_cast<uint32_t>(bootTypeInfo.bootType));
-        // Note: We can't guarantee the exact value due to system configuration
-        // but we verify it's a valid enum value
-        EXPECT_TRUE(bootTypeInfo.bootType >= Exchange::IMigration::BootType::BOOT_TYPE_INIT &&
-                    bootTypeInfo.bootType <= Exchange::IMigration::BootType::BOOT_TYPE_UPDATE) 
-                    << "Invalid boot type returned: " << static_cast<uint32_t>(bootTypeInfo.bootType);
-        TEST_LOG("GetBootTypeInfo BOOT_INIT test PASSED");
-    } else {
-        TEST_LOG("GetBootTypeInfo returned error: %d - BootType not available/configured", result);
-    }
-
-    // Clean up test file
-    std::remove(bootTypeFile.c_str());
-}
-
-/**
- * @brief Test GetBootTypeInfo with BOOT_NORMAL scenario
- * @details Tests GetBootTypeInfo when boot type file contains BOOT_NORMAL
- */
-TEST_F(MigrationL2Test, GetBootTypeInfo_BootNormal)
-{
-    // Create bootType file with BOOT_NORMAL content
-    const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_NORMAL\n";
-    
-    std::ofstream file(bootTypeFile);
-    if (file.is_open()) {
-        file << bootTypeContent;
-        file.close();
-        TEST_LOG("Created bootType file with BOOT_NORMAL content");
-    } else {
-        TEST_LOG("Warning: Could not create bootType file - test may use existing configuration");
-    }
-
-    uint32_t status = CreateMigrationInterfaceObjectUsingComRPCConnection();
-    ASSERT_EQ(status, Core::ERROR_NONE) << "Failed to create Migration COM-RPC interface";
-    ASSERT_NE(mMigrationPlugin, nullptr) << "Migration plugin interface is null";
-
-    Exchange::IMigration::BootTypeInfo bootTypeInfo;
-    Core::hresult result = mMigrationPlugin->GetBootTypeInfo(bootTypeInfo);
-
-    if (result == Core::ERROR_NONE) {
-        TEST_LOG("Boot type returned: %d", static_cast<uint32_t>(bootTypeInfo.bootType));
-        EXPECT_TRUE(bootTypeInfo.bootType >= Exchange::IMigration::BootType::BOOT_TYPE_INIT &&
-                    bootTypeInfo.bootType <= Exchange::IMigration::BootType::BOOT_TYPE_UPDATE) 
-                    << "Invalid boot type returned: " << static_cast<uint32_t>(bootTypeInfo.bootType);
-        TEST_LOG("GetBootTypeInfo BOOT_NORMAL test PASSED");
-    } else {
-        TEST_LOG("GetBootTypeInfo returned error: %d - BootType not available/configured", result);
-    }
-
-    // Clean up test file
-    std::remove(bootTypeFile.c_str());
-}
-
-/**
- * @brief Test GetBootTypeInfo with BOOT_MIGRATION scenario
- * @details Tests GetBootTypeInfo when boot type file contains BOOT_MIGRATION
- */
-TEST_F(MigrationL2Test, GetBootTypeInfo_BootMigration)
-{
-    // Create bootType file with BOOT_MIGRATION content
-    const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_MIGRATION\n";
-    
-    std::ofstream file(bootTypeFile);
-    if (file.is_open()) {
-        file << bootTypeContent;
-        file.close();
-        TEST_LOG("Created bootType file with BOOT_MIGRATION content");
-    } else {
-        TEST_LOG("Warning: Could not create bootType file - test may use existing configuration");
-    }
-
-    uint32_t status = CreateMigrationInterfaceObjectUsingComRPCConnection();
-    ASSERT_EQ(status, Core::ERROR_NONE) << "Failed to create Migration COM-RPC interface";
-    ASSERT_NE(mMigrationPlugin, nullptr) << "Migration plugin interface is null";
-
-    Exchange::IMigration::BootTypeInfo bootTypeInfo;
-    Core::hresult result = mMigrationPlugin->GetBootTypeInfo(bootTypeInfo);
-
-    if (result == Core::ERROR_NONE) {
-        TEST_LOG("Boot type returned: %d", static_cast<uint32_t>(bootTypeInfo.bootType));
-        EXPECT_TRUE(bootTypeInfo.bootType >= Exchange::IMigration::BootType::BOOT_TYPE_INIT &&
-                    bootTypeInfo.bootType <= Exchange::IMigration::BootType::BOOT_TYPE_UPDATE) 
-                    << "Invalid boot type returned: " << static_cast<uint32_t>(bootTypeInfo.bootType);
-        TEST_LOG("GetBootTypeInfo BOOT_MIGRATION test PASSED");
-    } else {
-        TEST_LOG("GetBootTypeInfo returned error: %d - BootType not available/configured", result);
-    }
-
-    // Clean up test file
-    std::remove(bootTypeFile.c_str());
-}
-
-/**
- * @brief Test GetBootTypeInfo with BOOT_UPDATE scenario
- * @details Tests GetBootTypeInfo when boot type file contains BOOT_UPDATE
- */
-TEST_F(MigrationL2Test, GetBootTypeInfo_BootUpdate)
-{
-    // Create bootType file with BOOT_UPDATE content
-    const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_UPDATE\n";
-    
-    std::ofstream file(bootTypeFile);
-    if (file.is_open()) {
-        file << bootTypeContent;
-        file.close();
-        TEST_LOG("Created bootType file with BOOT_UPDATE content");
-    } else {
-        TEST_LOG("Warning: Could not create bootType file - test may use existing configuration");
-    }
-
-    uint32_t status = CreateMigrationInterfaceObjectUsingComRPCConnection();
-    ASSERT_EQ(status, Core::ERROR_NONE) << "Failed to create Migration COM-RPC interface";
-    ASSERT_NE(mMigrationPlugin, nullptr) << "Migration plugin interface is null";
-
-    Exchange::IMigration::BootTypeInfo bootTypeInfo;
-    Core::hresult result = mMigrationPlugin->GetBootTypeInfo(bootTypeInfo);
-
-    if (result == Core::ERROR_NONE) {
-        TEST_LOG("Boot type returned: %d", static_cast<uint32_t>(bootTypeInfo.bootType));
-        EXPECT_TRUE(bootTypeInfo.bootType >= Exchange::IMigration::BootType::BOOT_TYPE_INIT &&
-                    bootTypeInfo.bootType <= Exchange::IMigration::BootType::BOOT_TYPE_UPDATE) 
-                    << "Invalid boot type returned: " << static_cast<uint32_t>(bootTypeInfo.bootType);
-        TEST_LOG("GetBootTypeInfo BOOT_UPDATE test PASSED");
-    } else {
-        TEST_LOG("GetBootTypeInfo returned error: %d - BootType not available/configured", result);
-    }
-
-    // Clean up test file
-    std::remove(bootTypeFile.c_str());
-}
-
-/**
  * @brief Test GetBootTypeInfo with invalid boot type value
  * @details Tests GetBootTypeInfo when boot type file contains invalid/unknown value
  */
@@ -795,15 +695,29 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
     const std::string migrationDir = "/opt/secure/persistent";
     const std::string migrationFile = "/opt/secure/persistent/MigrationStatus";
     
-    // Create directory structure if it doesn't exist
-    std::string createDirCmd = "mkdir -p " + migrationDir;
-    system(createDirCmd.c_str());
+    // Create directory structure if it doesn't exist using std::filesystem
+    std::error_code ec;
+    std::filesystem::create_directories(migrationDir, ec);
+    if (ec) {
+        TEST_LOG("Warning: Could not create directory: %s", ec.message().c_str());
+    } else {
+        TEST_LOG("Successfully created directory structure");
+    }
     
     // Try to make directory read-only (this may not work in all test environments)
-    std::string chmodCmd = "chmod 444 " + migrationDir;
-    int chmodResult = system(chmodCmd.c_str());
+    bool chmodSuccess = false;
+    try {
+        std::filesystem::permissions(migrationDir, 
+                                   std::filesystem::perms::owner_read | 
+                                   std::filesystem::perms::group_read | 
+                                   std::filesystem::perms::others_read,
+                                   std::filesystem::perm_options::replace, ec);
+        chmodSuccess = !ec;
+    } catch (const std::exception& e) {
+        TEST_LOG("Exception setting permissions: %s", e.what());
+    }
     
-    if (chmodResult == 0) {
+    if (chmodSuccess) {
         TEST_LOG("Made directory read-only to test file I/O error scenario");
     } else {
         TEST_LOG("Could not make directory read-only - file I/O error test may not be effective");
@@ -821,10 +735,21 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
         TEST_LOG("SetMigrationStatus succeeded despite potential file I/O constraints");
     }
 
-    // Restore directory permissions
-    std::string restoreCmd = "chmod 755 " + migrationDir;
-    system(restoreCmd.c_str());
-    TEST_LOG("Restored directory permissions");
+    // Restore directory permissions using std::filesystem
+    try {
+        std::filesystem::permissions(migrationDir, 
+                                   std::filesystem::perms::owner_all | 
+                                   std::filesystem::perms::group_read | std::filesystem::perms::group_exec |
+                                   std::filesystem::perms::others_read | std::filesystem::perms::others_exec,
+                                   std::filesystem::perm_options::replace, ec);
+        if (ec) {
+            TEST_LOG("Warning: Could not restore directory permissions: %s", ec.message().c_str());
+        } else {
+            TEST_LOG("Restored directory permissions");
+        }
+    } catch (const std::exception& e) {
+        TEST_LOG("Exception restoring permissions: %s", e.what());
+    }
 }
 
 /**
@@ -1062,187 +987,24 @@ TEST_F(MigrationL2Test, GetMigrationStatus_StringMappingCompleteness)
 /**************************************************/
 
 /**
- * @brief Test Migration GetBootTypeInfo API via JSONRPC - Normal operation
+ * @brief Parameterized test class for GetBootTypeInfo JSONRPC tests with different boot types
  */
-TEST_F(MigrationL2Test, GetBootTypeInfo_Normal_JSONRPC)
+class GetBootTypeInfoJSONRPCTest : public MigrationL2Test, public ::testing::WithParamInterface<const char*> {};
+
+/**
+ * @brief Parameterized test for GetBootTypeInfo via JSONRPC with different boot type values
+ * @details Tests GetBootTypeInfo JSONRPC method when boot type file contains different valid boot types
+ */
+TEST_P(GetBootTypeInfoJSONRPCTest, GetBootTypeInfo_BootTypes_JSONRPC)
 {
     const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_NORMAL\n";
+    const std::string bootTypeContent = std::string("BOOT_TYPE=") + GetParam() + "\n";
 
     std::ofstream file(bootTypeFile);
     if (file.is_open()) {
         file << bootTypeContent;
         file.close();
-        TEST_LOG("Created boot type file: %s", bootTypeFile.c_str());
-    }
-
-    uint32_t status = Core::ERROR_GENERAL;
-    JsonObject params, result;
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-
-    if (result.HasLabel("bootType")) {
-        int bootType = result["bootType"].Number();
-        TEST_LOG("Boot type from JSONRPC: %d", bootType);
-        EXPECT_GE(bootType, 0);
-        EXPECT_LE(bootType, 3); // Valid range: 0-3 for boot types
-    }
-
-    // Clean up test file
-    std::remove(bootTypeFile.c_str());
-}
-
-/**
- * @brief Test Migration GetMigrationStatus API via JSONRPC - Normal operation
- */
-TEST_F(MigrationL2Test, GetMigrationStatus_Normal_JSONRPC)
-{
-    // Setup RFC mock
-    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(testing::_, testing::StrEq("Device.DeviceInfo.Migration.MigrationStatus"), testing::_))
-        .WillOnce(testing::Invoke(
-            [](const char* arg1, const char* arg2, RFC_ParamData_t* arg3) -> WDMP_STATUS {
-                if (arg3 != nullptr) {
-                    strcpy(arg3->value, "NOT_STARTED");
-                    arg3->type = WDMP_STRING;
-                }
-                return WDMP_SUCCESS;
-            }));
-
-    uint32_t status = Core::ERROR_GENERAL;
-    JsonObject params, result;
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getMigrationStatus", params, result);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-
-    if (result.HasLabel("migrationStatus")) {
-        int migrationStatus = result["migrationStatus"].Number();
-        TEST_LOG("Migration status from JSONRPC: %d", migrationStatus);
-        EXPECT_GE(migrationStatus, 0);
-        EXPECT_LE(migrationStatus, 7); // Valid range: 0-7 for migration statuses
-    }
-}
-
-/**
- * @brief Test Migration SetMigrationStatus API via JSONRPC - Normal operation
- */
-TEST_F(MigrationL2Test, SetMigrationStatus_Normal_JSONRPC)
-{
-    uint32_t status = Core::ERROR_GENERAL;
-    JsonObject params, result;
-
-    // Set migration status to STARTED (value: 2)
-    params["migrationStatus"] = 2;
-
-    status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, result);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-    EXPECT_TRUE(result["success"].Boolean());
-    TEST_LOG("SetMigrationStatus success: %s", result["success"].Boolean() ? "true" : "false");
-}
-
-/**
- * @brief Test Migration SetMigrationStatus sequence via JSONRPC
- */
-TEST_F(MigrationL2Test, SetMigrationStatus_Sequence_JSONRPC)
-{
-    // Setup RFC mock to read from the file that SetMigrationStatus writes to
-    // Since SetMigrationStatus writes to file and GetMigrationStatus reads from RFC,
-    // we need to mock the RFC to return whatever was last written
-    std::string lastWrittenStatus = "NOT_STARTED";
-
-    EXPECT_CALL(*p_rfcApiImplMock, getRFCParameter(testing::_, testing::StrEq("Device.DeviceInfo.Migration.MigrationStatus"), testing::_))
-        .WillRepeatedly(testing::Invoke(
-            [&lastWrittenStatus](const char* arg1, const char* arg2, RFC_ParamData_t* arg3) -> WDMP_STATUS {
-                if (arg3 != nullptr) {
-                    strcpy(arg3->value, lastWrittenStatus.c_str());
-                    arg3->type = WDMP_STRING;
-                }
-                return WDMP_SUCCESS;
-            }));
-
-    // Map of status value to string for updating the mock
-    static const std::unordered_map<int, std::string> statusToString = {
-        { 0, "NOT_STARTED" },
-        { 2, "STARTED" },
-        { 3, "PRIORITY_SETTINGS_MIGRATED" },
-        { 4, "DEVICE_SETTINGS_MIGRATED" },
-        { 5, "CLOUD_SETTINGS_MIGRATED" },
-        { 6, "APP_DATA_MIGRATED" },
-        { 7, "MIGRATION_COMPLETED" }
-    };
-
-    // Test sequence of migration status updates
-    std::vector<int> testSequence = {0, 2, 3, 4, 5, 6, 7}; // NOT_STARTED through MIGRATION_COMPLETED
-
-    for (auto statusValue : testSequence) {
-        // Update the mock to return the status we're about to set
-        auto it = statusToString.find(statusValue);
-        if (it != statusToString.end()) {
-            lastWrittenStatus = it->second;
-        }
-
-        uint32_t status = Core::ERROR_GENERAL;
-        JsonObject params, result;
-
-        params["migrationStatus"] = statusValue;
-
-        status = InvokeServiceMethod("org.rdk.Migration", "setMigrationStatus", params, result);
-        EXPECT_EQ(status, Core::ERROR_NONE);
-        EXPECT_TRUE(result["success"].Boolean()) << "SetMigrationStatus failed for status: " << statusValue;
-        TEST_LOG("Migration status %d set successfully", statusValue);
-    }
-}
-
-/**
- * @brief Test Migration boot type enumeration coverage via JSONRPC
- */
-TEST_F(MigrationL2Test, BootType_EnumerationCoverage_JSONRPC)
-{
-    const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_NORMAL\n";
-
-    std::ofstream file(bootTypeFile);
-    if (file.is_open()) {
-        file << bootTypeContent;
-        file.close();
-        TEST_LOG("Created bootType file with BOOT_NORMAL content");
-    }
-
-    uint32_t status = Core::ERROR_GENERAL;
-    JsonObject params, result;
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-
-    if (result.HasLabel("bootType")) {
-        int bootType = result["bootType"].Number();
-
-        // Verify it's one of the valid enumeration values
-        bool isValidBootType = (bootType >= 0 && bootType <= 3);
-        EXPECT_TRUE(isValidBootType) << "Invalid boot type: " << bootType;
-
-        const char* bootTypeNames[] = {"BOOT_TYPE_INIT", "BOOT_TYPE_NORMAL", "BOOT_TYPE_MIGRATION", "BOOT_TYPE_UPDATE"};
-        if (isValidBootType) {
-            TEST_LOG("Boot type is %s (%d)", bootTypeNames[bootType], bootType);
-        }
-    }
-
-    std::remove(bootTypeFile.c_str());
-}
-
-/**
- * @brief Test GetBootTypeInfo with BOOT_INIT via JSONRPC
- */
-TEST_F(MigrationL2Test, GetBootTypeInfo_BootInit_JSONRPC)
-{
-    const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_INIT\n";
-
-    std::ofstream file(bootTypeFile);
-    if (file.is_open()) {
-        file << bootTypeContent;
-        file.close();
-        TEST_LOG("Created bootType file with BOOT_INIT content");
+        TEST_LOG("Created bootType file with %s content", GetParam());
     }
 
     uint32_t status = Core::ERROR_GENERAL;
@@ -1261,67 +1023,15 @@ TEST_F(MigrationL2Test, GetBootTypeInfo_BootInit_JSONRPC)
     std::remove(bootTypeFile.c_str());
 }
 
-/**
- * @brief Test GetBootTypeInfo with BOOT_MIGRATION via JSONRPC
- */
-TEST_F(MigrationL2Test, GetBootTypeInfo_BootMigration_JSONRPC)
-{
-    const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_MIGRATION\n";
-
-    std::ofstream file(bootTypeFile);
-    if (file.is_open()) {
-        file << bootTypeContent;
-        file.close();
-        TEST_LOG("Created bootType file with BOOT_MIGRATION content");
-    }
-
-    uint32_t status = Core::ERROR_GENERAL;
-    JsonObject params, result;
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-
-    if (result.HasLabel("bootType")) {
-        int bootType = result["bootType"].Number();
-        EXPECT_GE(bootType, 0);
-        EXPECT_LE(bootType, 3);
-        TEST_LOG("Boot type: %d", bootType);
-    }
-
-    std::remove(bootTypeFile.c_str());
-}
-
-/**
- * @brief Test GetBootTypeInfo with BOOT_UPDATE via JSONRPC
- */
-TEST_F(MigrationL2Test, GetBootTypeInfo_BootUpdate_JSONRPC)
-{
-    const std::string bootTypeFile = "/tmp/bootType";
-    const std::string bootTypeContent = "BOOT_TYPE=BOOT_UPDATE\n";
-
-    std::ofstream file(bootTypeFile);
-    if (file.is_open()) {
-        file << bootTypeContent;
-        file.close();
-        TEST_LOG("Created bootType file with BOOT_UPDATE content");
-    }
-
-    uint32_t status = Core::ERROR_GENERAL;
-    JsonObject params, result;
-
-    status = InvokeServiceMethod("org.rdk.Migration", "getBootTypeInfo", params, result);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-
-    if (result.HasLabel("bootType")) {
-        int bootType = result["bootType"].Number();
-        EXPECT_GE(bootType, 0);
-        EXPECT_LE(bootType, 3);
-        TEST_LOG("Boot type: %d", bootType);
-    }
-
-    std::remove(bootTypeFile.c_str());
-}
+INSTANTIATE_TEST_SUITE_P(
+    BootTypeJSONRPCTests,
+    GetBootTypeInfoJSONRPCTest,
+    ::testing::Values(
+        "BOOT_INIT",
+        "BOOT_MIGRATION",
+        "BOOT_UPDATE"
+    )
+);
 
 /**
  * @brief Test GetBootTypeInfo with invalid boot type via JSONRPC
