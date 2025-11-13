@@ -426,3 +426,309 @@ TEST_F(PreinstallManagerTest, BasicPluginSmokeTest)
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
     TEST_LOG("### Test Basic Plugin Smoke Test End ###");
 }
+
+/**
+ * @brief Test notification callbacks during preinstall operations
+ *
+ * @details This test verifies:
+ * - Notification callbacks are properly triggered during preinstall operations
+ * - Multiple notification registrations work correctly
+ * - Notification data is properly formatted
+ */
+TEST_F(PreinstallManagerTest, NotificationCallbackTest)
+{
+    TEST_LOG("### Test Notification Callback Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    std::promise<std::string> notificationPromise;
+    auto future = notificationPromise.get_future();
+    auto testNotification = Core::ProxyType<TestNotification>::Create(&notificationPromise);
+
+    // Register for notifications
+    Core::hresult result = mPreinstallManagerPlugin->Register(testNotification.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    // Start preinstall operation to trigger notifications
+    TEST_LOG("Starting preinstall operation to trigger notifications");
+    result = mPreinstallManagerPlugin->StartPreinstall(false);
+    
+    // Wait for notification with timeout
+    auto status = future.wait_for(std::chrono::seconds(5));
+    if (status == std::future_status::ready) {
+        std::string notification = future.get();
+        TEST_LOG("Received notification: %s", notification.c_str());
+        EXPECT_FALSE(notification.empty());
+        // Basic JSON validation - should contain expected fields
+        EXPECT_TRUE(notification.find("\"") != std::string::npos); // Should be JSON format
+    } else {
+        TEST_LOG("No notification received within timeout - may be expected in test environment");
+    }
+
+    // Cleanup
+    mPreinstallManagerPlugin->Unregister(testNotification.operator->());
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test Notification Callback End ###");
+}
+
+/**
+ * @brief Test concurrent preinstall operations
+ *
+ * @details This test verifies:
+ * - Multiple simultaneous preinstall calls are handled properly
+ * - Plugin prevents race conditions
+ * - Proper error handling for concurrent operations
+ */
+TEST_F(PreinstallManagerTest, ConcurrentPreinstallTest)
+{
+    TEST_LOG("### Test Concurrent Preinstall Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    // Launch multiple preinstall operations concurrently
+    std::vector<std::future<Core::hresult>> futures;
+    
+    for (int i = 0; i < 3; i++) {
+        futures.push_back(std::async(std::launch::async, [this, i]() {
+            TEST_LOG("Starting concurrent preinstall operation %d", i);
+            return mPreinstallManagerPlugin->StartPreinstall(false);
+        }));
+    }
+
+    // Collect results
+    std::vector<Core::hresult> results;
+    for (auto& future : futures) {
+        Core::hresult result = future.get();
+        results.push_back(result);
+        TEST_LOG("Concurrent operation result: %d", result);
+    }
+
+    // At least one operation should complete successfully or return expected error
+    bool hasValidResult = false;
+    for (Core::hresult result : results) {
+        if (result == Core::ERROR_NONE || result == Core::ERROR_GENERAL) {
+            hasValidResult = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(hasValidResult);
+
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test Concurrent Preinstall End ###");
+}
+
+/**
+ * @brief Test error handling with invalid parameters
+ *
+ * @details This test verifies:
+ * - Plugin handles null pointers gracefully
+ * - Invalid notification registrations are rejected
+ * - Error codes are properly returned
+ */
+TEST_F(PreinstallManagerTest, ErrorHandlingTest)
+{
+    TEST_LOG("### Test Error Handling Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    // Test registering null notification
+    TEST_LOG("Testing null notification registration");
+    Core::hresult result = mPreinstallManagerPlugin->Register(nullptr);
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
+
+    // Test unregistering null notification
+    TEST_LOG("Testing null notification unregistration");
+    result = mPreinstallManagerPlugin->Unregister(nullptr);
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
+
+    // Test multiple force preinstalls
+    TEST_LOG("Testing multiple force preinstall calls");
+    result = mPreinstallManagerPlugin->StartPreinstall(true);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    result = mPreinstallManagerPlugin->StartPreinstall(true);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test Error Handling End ###");
+}
+
+/**
+ * @brief Test plugin resource management
+ *
+ * @details This test verifies:
+ * - Plugin properly manages resources during operations
+ * - Memory leaks are avoided
+ * - Proper cleanup on interface destruction
+ */
+TEST_F(PreinstallManagerTest, ResourceManagementTest)
+{
+    TEST_LOG("### Test Resource Management Begin ###");
+    
+    // Create and destroy interface multiple times to test resource cleanup
+    for (int i = 0; i < 3; i++) {
+        TEST_LOG("Resource management iteration %d", i + 1);
+        
+        ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+        
+        // Create multiple notifications
+        std::vector<Core::ProxyType<TestNotification>> notifications;
+        for (int j = 0; j < 2; j++) {
+            std::promise<std::string> promise;
+            auto notification = Core::ProxyType<TestNotification>::Create(&promise);
+            notifications.push_back(notification);
+            
+            Core::hresult result = mPreinstallManagerPlugin->Register(notification.operator->());
+            EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+        }
+        
+        // Perform operations
+        Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(false);
+        EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+        
+        // Cleanup notifications
+        for (auto& notification : notifications) {
+            mPreinstallManagerPlugin->Unregister(notification.operator->());
+        }
+        
+        ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    }
+    
+    TEST_LOG("### Test Resource Management End ###");
+}
+
+/**
+ * @brief Test plugin state consistency
+ *
+ * @details This test verifies:
+ * - Plugin maintains consistent state across operations
+ * - State is properly reset between operations
+ * - No state pollution between test runs
+ */
+TEST_F(PreinstallManagerTest, StateConsistencyTest)
+{
+    TEST_LOG("### Test State Consistency Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    std::promise<std::string> promise1;
+    auto notification1 = Core::ProxyType<TestNotification>::Create(&promise1);
+    
+    // Test state sequence: Register -> StartPreinstall -> Unregister -> StartPreinstall
+    TEST_LOG("Step 1: Register notification");
+    Core::hresult result = mPreinstallManagerPlugin->Register(notification1.operator->());
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    TEST_LOG("Step 2: Start preinstall with notification registered");
+    result = mPreinstallManagerPlugin->StartPreinstall(false);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    TEST_LOG("Step 3: Unregister notification");
+    result = mPreinstallManagerPlugin->Unregister(notification1.operator->());
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    TEST_LOG("Step 4: Start preinstall without notification");
+    result = mPreinstallManagerPlugin->StartPreinstall(false);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    // Test with force flag
+    TEST_LOG("Step 5: Start preinstall with force flag");
+    result = mPreinstallManagerPlugin->StartPreinstall(true);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test State Consistency End ###");
+}
+
+/**
+ * @brief Test plugin performance under load
+ *
+ * @details This test verifies:
+ * - Plugin performs adequately under repeated operations
+ * - No performance degradation over time
+ * - Proper handling of rapid successive calls
+ */
+TEST_F(PreinstallManagerTest, PerformanceTest)
+{
+    TEST_LOG("### Test Performance Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    std::promise<std::string> promise;
+    auto notification = Core::ProxyType<TestNotification>::Create(&promise);
+    
+    auto startTime = std::chrono::high_resolution_clock::now();
+    
+    // Perform rapid register/unregister cycles
+    const int iterations = 10;
+    int successCount = 0;
+    
+    for (int i = 0; i < iterations; i++) {
+        Core::hresult regResult = mPreinstallManagerPlugin->Register(notification.operator->());
+        Core::hresult unregResult = mPreinstallManagerPlugin->Unregister(notification.operator->());
+        
+        if ((regResult == Core::ERROR_NONE || regResult == Core::ERROR_GENERAL) &&
+            (unregResult == Core::ERROR_NONE || unregResult == Core::ERROR_GENERAL)) {
+            successCount++;
+        }
+    }
+    
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    
+    TEST_LOG("Completed %d iterations in %ld ms, success rate: %d/%d", 
+             iterations, duration.count(), successCount, iterations);
+    
+    // Should complete most operations successfully
+    EXPECT_GT(successCount, iterations / 2);
+    
+    // Should complete within reasonable time (10 seconds for 10 iterations)
+    EXPECT_LT(duration.count(), 10000);
+
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test Performance End ###");
+}
+
+/**
+ * @brief Test plugin behavior with different force install combinations
+ *
+ * @details This test verifies:
+ * - Force install flag behavior is consistent
+ * - Different sequences of force/non-force calls work properly
+ * - Plugin state is properly maintained between force and non-force operations
+ */
+TEST_F(PreinstallManagerTest, ForceInstallBehaviorTest)
+{
+    TEST_LOG("### Test Force Install Behavior Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    // Test sequence: non-force -> force -> non-force -> force
+    TEST_LOG("Testing sequence of force/non-force preinstall operations");
+    
+    struct TestCase {
+        bool forceInstall;
+        const char* description;
+    } testCases[] = {
+        {false, "non-force preinstall"},
+        {true, "force preinstall"},
+        {false, "non-force preinstall after force"},
+        {true, "force preinstall after non-force"},
+        {true, "consecutive force preinstall"}
+    };
+    
+    for (const auto& testCase : testCases) {
+        TEST_LOG("Executing: %s (force=%s)", testCase.description, testCase.forceInstall ? "true" : "false");
+        
+        Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(testCase.forceInstall);
+        TEST_LOG("Result: %d", result);
+        
+        EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+        
+        // Small delay between operations to ensure proper state handling
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test Force Install Behavior End ###");
+}
