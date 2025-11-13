@@ -24,8 +24,9 @@
 #include <mutex>
 #include <condition_variable>
 #include <fstream>
-#include <filesystem>
-#include <system_error>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <interfaces/IMigration.h>
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
@@ -41,9 +42,6 @@ using ::testing::NiceMock;
 using namespace WPEFramework;
 using testing::StrictMock;
 using ::WPEFramework::Exchange::IMigration;
-
-// Filesystem namespace alias for compatibility
-namespace fs = std::filesystem;
 
 /**
  * @brief Migration L2 test class declaration
@@ -697,11 +695,10 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
     const std::string migrationDir = "/opt/secure/persistent";
     const std::string migrationFile = "/opt/secure/persistent/MigrationStatus";
     
-    // Create directory structure if it doesn't exist using std::filesystem
-    std::error_code ec;
-    std::filesystem::create_directories(migrationDir, ec);
-    if (ec) {
-        TEST_LOG("Warning: Could not create directory: %s", ec.message().c_str());
+    // Create directory structure if it doesn't exist using mkdir -p equivalent
+    int mkdirResult = system(("mkdir -p " + migrationDir).c_str());
+    if (mkdirResult != 0) {
+        TEST_LOG("Warning: Could not create directory with mkdir");
     } else {
         TEST_LOG("Successfully created directory structure");
     }
