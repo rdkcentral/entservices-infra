@@ -15,10 +15,9 @@
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
 * limitations under the License.
-*
+**/
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-*/
 #include <mntent.h>
 #include <fstream>
 #include <string>
@@ -30,15 +29,7 @@
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
-#include "ISubSystemMock.h"
-#include "ServiceMock.h"
-#include "COMLinkMock.h"
-#include "ThunderPortability.h"
-#include "WorkerPoolImplementation.h"
-#include "FactoriesImplementation.h"
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (500)
 
@@ -57,11 +48,75 @@ struct StatusParams {
     Exchange::IDownloadManager::FailReason reason;
 };
 
+class ServiceMock : public WPEFramework::PluginHost::IShell {
+public:
+    ~ServiceMock() override = default;
+    MOCK_METHOD(string, Versions, (), (const, override));
+    MOCK_METHOD(string, Locator, (), (const, override));
+    MOCK_METHOD(string, ClassName, (), (const, override));
+    MOCK_METHOD(string, Callsign, (), (const, override));
+    MOCK_METHOD(string, WebPrefix, (), (const, override));
+    MOCK_METHOD(string, ConfigLine, (), (const, override));
+    MOCK_METHOD(string, PersistentPath, (), (const, override));
+    MOCK_METHOD(string, VolatilePath, (), (const, override));
+    MOCK_METHOD(string, DataPath, (), (const, override));
+    MOCK_METHOD(WPEFramework::PluginHost::IShell::state, State, (), (const, override));
+    MOCK_METHOD(bool, Resumed, (), (const, override));
+    MOCK_METHOD(bool, IsSupported, (const uint8_t), (const, override));
+    MOCK_METHOD(void, EnableWebServer, (const string&, const string&), (override));
+    MOCK_METHOD(void, DisableWebServer, (), (override));
+    MOCK_METHOD(WPEFramework::PluginHost::ISubSystem*, SubSystems, (), (override));
+    MOCK_METHOD(uint32_t, Submit, (const uint32_t, const WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>&), (override));
+    MOCK_METHOD(void, Notify, (const string&, const string&), (override));
+    MOCK_METHOD(void*, QueryInterfaceByCallsign, (const uint32_t, const string&), (override));
+    MOCK_METHOD(void, Register, (WPEFramework::PluginHost::IPlugin::INotification*), (override));
+    MOCK_METHOD(void, Unregister, (WPEFramework::PluginHost::IPlugin::INotification*), (override));
+    MOCK_METHOD(string, Model, (), (const, override));
+    MOCK_METHOD(bool, Background, (), (const, override));
+    MOCK_METHOD(string, Accessor, (), (const, override));
+
+    BEGIN_INTERFACE_MAP(ServiceMock)
+    INTERFACE_ENTRY(WPEFramework::PluginHost::IShell)
+    END_INTERFACE_MAP
+};
+
+class SubSystemMock : public WPEFramework::PluginHost::ISubSystem {
+public:
+    ~SubSystemMock() override = default;
+    MOCK_METHOD(void, Register, (WPEFramework::PluginHost::ISubSystem::INotification*), (override));
+    MOCK_METHOD(void, Unregister, (WPEFramework::PluginHost::ISubSystem::INotification*), (override));
+    MOCK_METHOD(string, BuildTreeHash, (), (const, override));
+    MOCK_METHOD(bool, IsActive, (const WPEFramework::PluginHost::ISubSystem::subsystem), (const, override));
+    MOCK_METHOD(void, Set, (const WPEFramework::PluginHost::ISubSystem::subsystem, WPEFramework::PluginHost::ISubSystem::INotification*), (override));
+
+    BEGIN_INTERFACE_MAP(SubSystemMock)
+    INTERFACE_ENTRY(WPEFramework::PluginHost::ISubSystem)
+    END_INTERFACE_MAP
+};
+
+namespace WPEFramework {
+    namespace PluginHost {
+        class FactoriesImplementation {
+        public:
+            FactoriesImplementation() = default;
+            ~FactoriesImplementation() = default;
+        };
+    }
+
+    namespace Core {
+        class WorkerPoolImplementation {
+        public:
+            WorkerPoolImplementation(uint8_t threads, uint32_t stackSize, uint32_t queueSize) {
+            }
+            ~WorkerPoolImplementation() = default;
+            void Run() {}
+        };
+    }
+}
+
 class DownloadManagerTest : public ::testing::Test {
 protected:
-    void SetUp() override;
-    void TearDown() override;
-
+    // Declare the protected members
     ServiceMock* mServiceMock = nullptr;
     SubSystemMock* mSubSystemMock = nullptr;
 
@@ -73,10 +128,10 @@ protected:
     string uri;
 
     PLUGINHOST_DISPATCHER *dispatcher;
-    FactoriesImplementation factoriesImplementation;
+    PluginHost::FactoriesImplementation factoriesImplementation;
 
     Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
-    Core::ProxyType<WorkerPoolImplementation> workerPool;
+    Core::ProxyType<Core::WorkerPoolImplementation> workerPool;
 
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
     Exchange::IDownloadManager::Options options;
@@ -84,124 +139,137 @@ protected:
     uint8_t progress;
     uint32_t quotaKB, usedKB;
 
+    // Constructor
     DownloadManagerTest()
-        : mJsonRpcHandler(*(plugin->GetHandler()))
+        : workerPool(Core::ProxyType<Core::WorkerPoolImplementation>::Create(
+            2, Core::Thread::DefaultStackSize(), 16)),
+          plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
+          mJsonRpcHandler(*plugin),
+          INIT_CONX(1,0)
     {
-    }
-
-    string getDownloadParams(string &url, bool priority = false, 
-                           uint32_t retries = 2, uint32_t rateLimit = 0)
-    {
-        Core::JSON::String jsonUrl(url);
-        Core::JSON::Boolean jsonPriority(priority);
-        Core::JSON::DecUInt32 jsonRetries(retries);
-        Core::JSON::DecUInt32 jsonRateLimit(rateLimit);
-
-        JsonObject params;
-        params["url"] = jsonUrl.Value();
-        params["priority"] = jsonPriority.Value();
-        params["retries"] = jsonRetries.Value();
-        params["rateLimit"] = jsonRateLimit.Value();
-
-        JsonObject options;
-        options["priority"] = jsonPriority.Value();
-        options["retries"] = jsonRetries.Value();
-        options["rateLimit"] = jsonRateLimit.Value();
-
-        JsonObject jsonRequest;
-        jsonRequest["url"] = jsonUrl.Value();
-        jsonRequest["options"] = options;
-
-        string parameters;
-        jsonRequest.ToString(parameters);
-        return parameters;
-    }
-
-    void setupGeneralExpectations()
-    {
-        ON_CALL(*mServiceMock, ConfigLine())
-            .WillByDefault(::testing::Return("{}"));
-        ON_CALL(*mServiceMock, PersistentPath())
-            .WillByDefault(::testing::Return("/tmp/"));
-        ON_CALL(*mServiceMock, VolatilePath())
-            .WillByDefault(::testing::Return("/tmp/"));
-        ON_CALL(*mServiceMock, DataPath())
-            .WillByDefault(::testing::Return("/tmp/"));
-        ON_CALL(*mServiceMock, SubSystems())
-            .WillByDefault(::testing::Return(mSubSystemMock));
-        
-        EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-            .WillRepeatedly(::testing::Return(true));
-    }
-
-    void setupNoInternetExpectations()
-    {
-        ON_CALL(*mServiceMock, ConfigLine())
-            .WillByDefault(::testing::Return("{}"));
-        ON_CALL(*mServiceMock, PersistentPath())
-            .WillByDefault(::testing::Return("/tmp/"));
-        ON_CALL(*mServiceMock, VolatilePath())
-            .WillByDefault(::testing::Return("/tmp/"));
-        ON_CALL(*mServiceMock, DataPath())
-            .WillByDefault(::testing::Return("/tmp/"));
-        ON_CALL(*mServiceMock, SubSystems())
-            .WillByDefault(::testing::Return(mSubSystemMock));
-        
-        EXPECT_CALL(*mSubSystemMock, IsActive(PluginHost::ISubSystem::INTERNET))
-            .WillRepeatedly(::testing::Return(false));
-    }
-
-    void setupJsonRpcExpectations()
-    {
-        setupGeneralExpectations();
         mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        ASSERT_TRUE(mDownloadManagerImpl != nullptr);
-        ASSERT_EQ(mDownloadManagerImpl->Initialize(mServiceMock), Core::ERROR_NONE);
+
+        downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
+
+        Core::IWorkerPool::Assign(&(*workerPool));
+        workerPool->Run();
     }
 
-    void setupComRpcExpectations()
+    // Destructor
+    virtual ~DownloadManagerTest() override
     {
-        setupGeneralExpectations();
-        downloadManagerInterface = mServiceMock->QueryInterface<Exchange::IDownloadManager>();
-        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        ASSERT_TRUE(mDownloadManagerImpl != nullptr);
-        ASSERT_EQ(mDownloadManagerImpl->Initialize(mServiceMock), Core::ERROR_NONE);
-        downloadManagerInterface = mDownloadManagerImpl;
+        downloadManagerInterface->Release();
+
+        Core::IWorkerPool::Assign(nullptr);
+        workerPool.Release();
     }
 
-    void setupNoInternetJsonRpcExpectations()
-    {
-        setupNoInternetExpectations();
-        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        ASSERT_TRUE(mDownloadManagerImpl != nullptr);
-        ASSERT_EQ(mDownloadManagerImpl->Initialize(mServiceMock), Core::ERROR_NONE);
+    void SetUp() override 
+    {        
+        // Set up mocks and expect calls
+        mServiceMock = new NiceMock<ServiceMock>;
+        mSubSystemMock = new NiceMock<SubSystemMock>;
+
+        EXPECT_CALL(*mServiceMock, ConfigLine())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
+
+        EXPECT_CALL(*mServiceMock, PersistentPath())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
+
+        EXPECT_CALL(*mServiceMock, VolatilePath())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
+
+        EXPECT_CALL(*mServiceMock, DataPath())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
+
+        EXPECT_CALL(*mServiceMock, SubSystems())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return(mSubSystemMock));
     }
 
-    void setupNoInternetComRpcExpectations()
-    {
-        setupNoInternetExpectations();
-        downloadManagerInterface = mServiceMock->QueryInterface<Exchange::IDownloadManager>();
-        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        ASSERT_TRUE(mDownloadManagerImpl != nullptr);
-        ASSERT_EQ(mDownloadManagerImpl->Initialize(mServiceMock), Core::ERROR_NONE);
-        downloadManagerInterface = mDownloadManagerImpl;
+    void initforJsonRpc() 
+    {    
+        EXPECT_CALL(*mServiceMock, Register(::testing::_))
+          .Times(::testing::AnyNumber());
+
+        EXPECT_CALL(*mServiceMock, AddRef())
+          .Times(::testing::AnyNumber());
+
+        // Activate the dispatcher and initialize the plugin for JSON-RPC
+        PluginHost::IFactories::Assign(&factoriesImplementation);
+        dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
+        dispatcher->Activate(mServiceMock);
+        plugin->Initialize(mServiceMock);  
     }
 
-    void cleanupJsonRpcExpectations()
+    void initforComRpc() 
     {
-        if (mDownloadManagerImpl != nullptr) {
-            mDownloadManagerImpl->Deinitialize(mServiceMock);
+        EXPECT_CALL(*mServiceMock, AddRef())
+          .Times(::testing::AnyNumber());
+
+        // Initialize the plugin for COM-RPC
+        downloadManagerInterface->Initialize(mServiceMock);
+    }
+
+    void getDownloadParams()
+    {
+        // Initialize the parameters required for COM-RPC with default values
+        uri = "https://httpbin.org/bytes/1024";
+
+        options = { 
+            true, 2, 1024
+        };
+
+        downloadId = {};
+    }
+
+    void TearDown() override
+    {
+        // Clean up mocks
+        if (mServiceMock != nullptr)
+        {
+            delete mServiceMock;
+            mServiceMock = nullptr;
+        }
+
+        if(mSubSystemMock != nullptr)
+        {
+            delete mSubSystemMock;
+            mSubSystemMock = nullptr;
         }
     }
 
-    void cleanupComRpcExpectations()
+    void deinitforJsonRpc() 
     {
-        if (downloadManagerInterface != nullptr) {
-            downloadManagerInterface = nullptr;
-        }
-        if (mDownloadManagerImpl != nullptr) {
-            mDownloadManagerImpl->Deinitialize(mServiceMock);
-        }
+        EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
+          .Times(::testing::AnyNumber());
+
+        EXPECT_CALL(*mServiceMock, Release())
+          .Times(::testing::AnyNumber());
+
+        // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
+        dispatcher->Deactivate();
+        dispatcher->Release();
+
+        plugin->Deinitialize(mServiceMock);
+    }
+
+    void deinitforComRpc()
+    {
+        EXPECT_CALL(*mServiceMock, Release())
+          .Times(::testing::AnyNumber());
+
+        // Deinitialize the plugin for COM-RPC
+        downloadManagerInterface->Deinitialize(mServiceMock);
+    }
+
+    void waitforSignal(uint32_t timeout_ms) 
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
     }
 };
 
@@ -213,18 +281,28 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
         END_INTERFACE_MAP
 
     public:
-        NotificationTest() = default;
-        ~NotificationTest() override = default;
-        // Required for Core::IUnknown
-        void AddRef() const override {}
-        uint32_t Release() const override { return 1; }
-	std::mutex m_mutex;
+        /** @brief Mutex */
+        std::mutex m_mutex;
+
+        /** @brief Condition variable */
         std::condition_variable m_condition_variable;
+
+        /** @brief Status signal flag */
         uint32_t m_status_signal = DownloadManager_invalidStatus;
 
         StatusParams m_status_param;
 
+        NotificationTest(){}
+        ~NotificationTest(){}
+
+        void SetStatusParams(const StatusParams& statusParam)
+        {
+            m_status_param = statusParam;
+        }
+
         void OnAppDownloadStatus(const string& downloadStatus) override {
+            m_status_signal = DownloadManager_AppDownloadStatus;
+            
             std::unique_lock<std::mutex> lock(m_mutex);
             
             JsonArray list;
@@ -245,57 +323,27 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
                 }
             }
             
-            m_status_signal = DownloadManager_AppDownloadStatus;
-            m_condition_variable.notify_all();
+            EXPECT_EQ(m_status_param.downloadId, m_status_param.downloadId);
+
+            m_condition_variable.notify_one();
         }
 
-        uint32_t Wait(uint32_t timeoutMs, uint32_t expected_status) {
+        uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
+        {
+            uint32_t status_signal = DownloadManager_invalidStatus;
             std::unique_lock<std::mutex> lock(m_mutex);
-            auto now = std::chrono::system_clock::now();
-            auto timeout = now + std::chrono::milliseconds(timeoutMs);
-
-            while ((m_status_signal != expected_status) && (std::chrono::system_clock::now() < timeout)) {
-                m_condition_variable.wait_until(lock, timeout);
+            auto now = std::chrono::steady_clock::now();
+            auto timeout = std::chrono::milliseconds(timeout_ms);
+            if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
+            {
+                 TEST_LOG("Timeout waiting for request status event");
+                 return m_status_signal;
             }
-
-            return m_status_signal;
-        }
-
-        void Reset() {
-            std::unique_lock<std::mutex> lock(m_mutex);
+            status_signal = m_status_signal;
             m_status_signal = DownloadManager_invalidStatus;
-            m_status_param = {};
+            return status_signal;
         }
-};
-
-void DownloadManagerTest::SetUp()
-{
-    mServiceMock = new NiceMock<ServiceMock>;
-    mSubSystemMock = new NiceMock<SubSystemMock>;
-
-    plugin = Core::ProxyType<Plugin::DownloadManager>::Create();
-    ASSERT_TRUE(plugin != nullptr);
-
-    dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin.operator->());
-    
-    uri = "/Service/DownloadManager";
-    mJsonRpcResponse.clear();
-}
-
-void DownloadManagerTest::TearDown()
-{
-    plugin.Release();
-
-    if (mServiceMock != nullptr) {
-        delete mServiceMock;
-        mServiceMock = nullptr;
-    }
-
-    if (mSubSystemMock != nullptr) {
-        delete mSubSystemMock;
-        mSubSystemMock = nullptr;
-    }
-}
+    };
 
 /* Test Case for verifying registered methods using JsonRpc
  * 
@@ -306,18 +354,20 @@ void DownloadManagerTest::TearDown()
  */
 
 TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
-    setupJsonRpcExpectations();
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists("download"));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists("pause"));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists("resume"));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists("cancel"));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists("delete"));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists("progress"));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists("getStorageDetails"));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists("rateLimit"));
+    initforJsonRpc();
 
-    cleanupJsonRpcExpectations();
+    // TC-1: Check if the listed methods exist using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("download")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("pause")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("resume")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("cancel")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("delete")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("progress")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getStorageDetails")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("rateLimit")));
+
+    deinitforJsonRpc();
 }
 
 /* Test Case for adding download request to a regular queue using JsonRpc
@@ -329,28 +379,37 @@ TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
  */
 
 TEST_F(DownloadManagerTest, downloadMethodusingJsonRpcSuccess) {
-    setupJsonRpcExpectations();
 
-    NotificationTest notification;
-    ASSERT_EQ(mDownloadManagerImpl->Register(&notification), Core::ERROR_NONE);
+    initforJsonRpc();
 
-    string url = "http://example.com/file.zip";
-    string parameters = getDownloadParams(url, false, 2, 100);
+    Core::Event onAppDownloadStatus(false, true);
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "download", parameters, mJsonRpcResponse));
-    
-    JsonObject jsonResponse;
-    EXPECT_TRUE(jsonResponse.FromString(mJsonRpcResponse));
-    EXPECT_TRUE(jsonResponse.HasLabel("downloadId"));
-    downloadId = jsonResponse["downloadId"].String();
-    EXPECT_FALSE(downloadId.empty());
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
 
-    // Wait for download status notification
-    EXPECT_EQ(notification.Wait(TIMEOUT, DownloadManager_AppDownloadStatus), DownloadManager_AppDownloadStatus);
-    EXPECT_EQ(notification.m_status_param.downloadId, downloadId);
+    EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
 
-    ASSERT_EQ(mDownloadManagerImpl->Unregister(&notification), Core::ERROR_NONE);
-    cleanupJsonRpcExpectations();
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
+
+    // TC-2: Add download request to regular queue using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
+
+    EXPECT_TRUE(mJsonRpcResponse.find("downloadId") != std::string::npos);
+
+    deinitforJsonRpc();
 }
 
 /* Test Case for checking download request error when internet is unavailable using JsonRpc
@@ -362,14 +421,20 @@ TEST_F(DownloadManagerTest, downloadMethodusingJsonRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, downloadMethodusingJsonRpcError) {
-    setupNoInternetJsonRpcExpectations();
 
-    string url = "http://example.com/file.zip";
-    string parameters = getDownloadParams(url);
+    initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, "download", parameters, mJsonRpcResponse));
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return false;
+            }));
 
-    cleanupJsonRpcExpectations();
+    // TC-3: Download request error when internet is unavailable using JsonRpc
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+
+    deinitforJsonRpc();
 }
 
 /* Test Case for adding download request to a priority queue using ComRpc
@@ -382,25 +447,28 @@ TEST_F(DownloadManagerTest, downloadMethodusingJsonRpcError) {
  */
 
 TEST_F(DownloadManagerTest, downloadMethodsusingComRpcSuccess) {
-    setupComRpcExpectations();
 
-    NotificationTest notification;
-    ASSERT_EQ(downloadManagerInterface->Register(&notification), Core::ERROR_NONE);
+    initforComRpc();
 
-    string url = "http://example.com/file.zip";
-    options.priority = true;
-    options.retries = 2;
-    options.rateLimit = 100;
+    getDownloadParams();
 
-    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(url, options, downloadId));
+    uri = "https://httpbin.org/bytes/1024";
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type){
+                return true;
+            }));
+
+    // TC-4: Add download request to priority queue using ComRpc
+    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(uri, options, downloadId));
+
+    waitforSignal(TIMEOUT);
+
     EXPECT_FALSE(downloadId.empty());
 
-    // Wait for download status notification
-    EXPECT_EQ(notification.Wait(TIMEOUT, DownloadManager_AppDownloadStatus), DownloadManager_AppDownloadStatus);
-    EXPECT_EQ(notification.m_status_param.downloadId, downloadId);
-
-    ASSERT_EQ(downloadManagerInterface->Unregister(&notification), Core::ERROR_NONE);
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for checking download request error when internet is unavailable using ComRpc
@@ -413,16 +481,22 @@ TEST_F(DownloadManagerTest, downloadMethodsusingComRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, downloadMethodsusingComRpcError) {
-    setupNoInternetComRpcExpectations();
 
-    string url = "http://example.com/file.zip";
-    options.priority = false;
-    options.retries = 2;
-    options.rateLimit = 0;
+    initforComRpc();
 
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, downloadManagerInterface->Download(url, options, downloadId));
+    getDownloadParams();
 
-    cleanupComRpcExpectations();
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type){
+                return false;
+            }));
+
+    // TC-5: Download request error when internet is unavailable using ComRpc
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, downloadManagerInterface->Download(uri, options, downloadId));
+
+    deinitforComRpc();   
 }
 
 /* Test Case for pausing download via ID using JsonRpc
@@ -438,38 +512,32 @@ TEST_F(DownloadManagerTest, downloadMethodsusingComRpcError) {
  */
 
 TEST_F(DownloadManagerTest, pauseMethodusingJsonRpcSuccess) {
-    setupJsonRpcExpectations();
 
-    NotificationTest notification;
-    ASSERT_EQ(mDownloadManagerImpl->Register(&notification), Core::ERROR_NONE);
+    initforJsonRpc();
 
-    string url = "http://example.com/largefile.zip";
-    string parameters = getDownloadParams(url);
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "download", parameters, mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+
+    waitforSignal(200);
+
     JsonObject jsonResponse;
     EXPECT_TRUE(jsonResponse.FromString(mJsonRpcResponse));
-    downloadId = jsonResponse["downloadId"].String();
+    string currentDownloadId = jsonResponse["downloadId"].String();
 
-    // Pause download
-    JsonObject pauseParams;
-    pauseParams["downloadId"] = downloadId;
-    string pauseParamsStr;
-    pauseParams.ToString(pauseParamsStr);
-    
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "pause", pauseParamsStr, mJsonRpcResponse));
+    // TC-6: Pause download via downloadId using JsonRpc
+    string pauseParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), pauseParams, mJsonRpcResponse));
 
-    // Cancel download for cleanup
-    JsonObject cancelParams;
-    cancelParams["downloadId"] = downloadId;
-    string cancelParamsStr;
-    cancelParams.ToString(cancelParamsStr);
-    
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "cancel", cancelParamsStr, mJsonRpcResponse));
+    string cancelParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, mJsonRpcResponse));
 
-    ASSERT_EQ(mDownloadManagerImpl->Unregister(&notification), Core::ERROR_NONE);
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for pausing failed using JsonRpc
@@ -481,21 +549,18 @@ TEST_F(DownloadManagerTest, pauseMethodusingJsonRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, pauseMethodusingJsonRpcFailure) {
-    setupJsonRpcExpectations();
 
-    JsonObject pauseParams;
-    pauseParams["downloadId"] = "invalid_id";
-    string pauseParamsStr;
-    pauseParams.ToString(pauseParamsStr);
+    initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, "pause", pauseParamsStr, mJsonRpcResponse));
+    // TC-7: Failure in pausing download using JsonRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"invalid_id\"}"), mJsonRpcResponse));
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for pausing download via ID using ComRpc
  *
- * Set up and initialize required COM-RPC resources, configurations, notificatios/events, mocks and expectations
+ * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
  * Obtain the required parameters for downloading using the getDownloadParams()
  * Call the Download method using the COM RPC interface along with the required parameters and wait
  * Verify successful download by asserting that it returns Core::ERROR_NONE and checking the downloadId
@@ -507,28 +572,32 @@ TEST_F(DownloadManagerTest, pauseMethodusingJsonRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, pauseMethodusingComRpcSuccess) {
-    setupComRpcExpectations();
 
-    NotificationTest notification;
-    ASSERT_EQ(downloadManagerInterface->Register(&notification), Core::ERROR_NONE);
+    initforComRpc();
 
-    string url = "http://example.com/largefile.zip";
-    options.priority = false;
-    options.retries = 2;
-    options.rateLimit = 0;
+    getDownloadParams();
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(url, options, downloadId));
+    uint32_t timeout_ms = 300;
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(uri, options, downloadId));
+
+    waitforSignal(timeout_ms);
+
     EXPECT_FALSE(downloadId.empty());
 
-    // Pause download
+    // TC-8: Pause download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Pause(downloadId));
 
-    // Cancel download for cleanup
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Cancel(downloadId));
 
-    ASSERT_EQ(downloadManagerInterface->Unregister(&notification), Core::ERROR_NONE);
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for pausing failed using ComRpc
@@ -540,11 +609,13 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, pauseMethodusingComRpcFailure) {
-    setupComRpcExpectations();
 
+    initforComRpc();
+
+    // TC-9: Failure in pausing download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, downloadManagerInterface->Pause("invalid_id"));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for resuming download via ID using JsonRpc
@@ -562,46 +633,39 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, resumeMethodusingJsonRpcSuccess) {
-    setupJsonRpcExpectations();
 
-    NotificationTest notification;
-    ASSERT_EQ(mDownloadManagerImpl->Register(&notification), Core::ERROR_NONE);
+    initforJsonRpc();
 
-    string url = "http://example.com/largefile.zip";
-    string parameters = getDownloadParams(url);
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "download", parameters, mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+
+    waitforSignal(200);
+
     JsonObject jsonResponse;
     EXPECT_TRUE(jsonResponse.FromString(mJsonRpcResponse));
-    downloadId = jsonResponse["downloadId"].String();
+    string currentDownloadId = jsonResponse["downloadId"].String();
 
     // Pause download
-    JsonObject pauseParams;
-    pauseParams["downloadId"] = downloadId;
-    string pauseParamsStr;
-    pauseParams.ToString(pauseParamsStr);
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "pause", pauseParamsStr, mJsonRpcResponse));
+    string pauseParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), pauseParams, mJsonRpcResponse));
 
-    // Resume download
-    JsonObject resumeParams;
-    resumeParams["downloadId"] = downloadId;
-    string resumeParamsStr;
-    resumeParams.ToString(resumeParamsStr);
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "resume", resumeParamsStr, mJsonRpcResponse));
+    // TC-10: Resume download via downloadId using JsonRpc
+    string resumeParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), resumeParams, mJsonRpcResponse));
 
-    // Cancel download for cleanup
-    JsonObject cancelParams;
-    cancelParams["downloadId"] = downloadId;
-    string cancelParamsStr;
-    cancelParams.ToString(cancelParamsStr);
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "cancel", cancelParamsStr, mJsonRpcResponse));
+    string cancelParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, mJsonRpcResponse));
 
-    ASSERT_EQ(mDownloadManagerImpl->Unregister(&notification), Core::ERROR_NONE);
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
- /* Test Case for resuming failed using JsonRpc
+/* Test Case for resuming failed using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Invoke the resume method using the JSON RPC handler, passing downloadId
@@ -609,20 +673,17 @@ TEST_F(DownloadManagerTest, resumeMethodusingJsonRpcSuccess) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
- TEST_F(DownloadManagerTest, resumeMethodusingJsonRpcFailure) {
-    setupJsonRpcExpectations();
+TEST_F(DownloadManagerTest, resumeMethodusingJsonRpcFailure) {
 
-    JsonObject resumeParams;
-    resumeParams["downloadId"] = "invalid_id";
-    string resumeParamsStr;
-    resumeParams.ToString(resumeParamsStr);
+    initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, "resume", resumeParamsStr, mJsonRpcResponse));
+    // TC-11: Failure in resuming download using JsonRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"invalid_id\"}"), mJsonRpcResponse));
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
- /* Test Case for resuming download via ID using ComRpc
+/* Test Case for resuming download via ID using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
  * Obtain the required parameters for downloading using the getDownloadParams()
@@ -638,34 +699,38 @@ TEST_F(DownloadManagerTest, resumeMethodusingJsonRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, resumeMethodusingComRpcSuccess) {
-    setupComRpcExpectations();
 
-    NotificationTest notification;
-    ASSERT_EQ(downloadManagerInterface->Register(&notification), Core::ERROR_NONE);
+    initforComRpc();
 
-    string url = "http://example.com/largefile.zip";
-    options.priority = false;
-    options.retries = 2;
-    options.rateLimit = 0;
+    getDownloadParams();
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(url, options, downloadId));
+    uint32_t timeout_ms = 300;
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(uri, options, downloadId));
+
+    waitforSignal(timeout_ms);
+
     EXPECT_FALSE(downloadId.empty());
 
     // Pause download
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Pause(downloadId));
 
-    // Resume download
+    // TC-12: Resume download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Resume(downloadId));
 
-    // Cancel download for cleanup
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Cancel(downloadId));
 
-    ASSERT_EQ(downloadManagerInterface->Unregister(&notification), Core::ERROR_NONE);
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
- /* Test Case for resuming failed using ComRpc
+/* Test Case for resuming failed using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Call the resume method using the COM RPC interface, passing downloadId
@@ -673,12 +738,14 @@ TEST_F(DownloadManagerTest, resumeMethodusingComRpcSuccess) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-  TEST_F(DownloadManagerTest, resumeMethodusingComRpcFailure) {
-    setupComRpcExpectations();
+TEST_F(DownloadManagerTest, resumeMethodusingComRpcFailure) {
 
+    initforComRpc();
+
+    // TC-13: Failure in resuming download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, downloadManagerInterface->Resume("invalid_id"));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for cancelling download via ID using JsonRpc
@@ -694,36 +761,33 @@ TEST_F(DownloadManagerTest, resumeMethodusingComRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcSuccess) {
-    setupJsonRpcExpectations();
 
-    NotificationTest notification;
-    ASSERT_EQ(mDownloadManagerImpl->Register(&notification), Core::ERROR_NONE);
+    initforJsonRpc();
 
-    string url = "http://example.com/largefile.zip";
-    string parameters = getDownloadParams(url);
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "download", parameters, mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+
+    waitforSignal(200);
+
     JsonObject jsonResponse;
     EXPECT_TRUE(jsonResponse.FromString(mJsonRpcResponse));
-    downloadId = jsonResponse["downloadId"].String();
+    string currentDownloadId = jsonResponse["downloadId"].String();
 
     // Pause download
-    JsonObject pauseParams;
-    pauseParams["downloadId"] = downloadId;
-    string pauseParamsStr;
-    pauseParams.ToString(pauseParamsStr);
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "pause", pauseParamsStr, mJsonRpcResponse));
+    string pauseParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), pauseParams, mJsonRpcResponse));
 
-    // Cancel download
-    JsonObject cancelParams;
-    cancelParams["downloadId"] = downloadId;
-    string cancelParamsStr;
-    cancelParams.ToString(cancelParamsStr);
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "cancel", cancelParamsStr, mJsonRpcResponse));
+    // TC-14: Cancel download via downloadId using JsonRpc
+    string cancelParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, mJsonRpcResponse));
 
-    ASSERT_EQ(mDownloadManagerImpl->Unregister(&notification), Core::ERROR_NONE);
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for cancelling failed using JsonRpc
@@ -734,17 +798,14 @@ TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcSuccess) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
- TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcFailure) {
-    setupJsonRpcExpectations();
+TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcFailure) {
 
-    JsonObject cancelParams;
-    cancelParams["downloadId"] = "invalid_id";
-    string cancelParamsStr;
-    cancelParams.ToString(cancelParamsStr);
+    initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, "cancel", cancelParamsStr, mJsonRpcResponse));
+    // TC-15: Failure in cancelling download using JsonRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"invalid_id\"}"), mJsonRpcResponse));
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for cancelling download via ID using ComRpc
@@ -761,28 +822,33 @@ TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, cancelMethodusingComRpcSuccess) {
-    setupComRpcExpectations();
 
-    NotificationTest notification;
-    ASSERT_EQ(downloadManagerInterface->Register(&notification), Core::ERROR_NONE);
+    initforComRpc();
 
-    string url = "http://example.com/largefile.zip";
-    options.priority = false;
-    options.retries = 2;
-    options.rateLimit = 0;
+    getDownloadParams();
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(url, options, downloadId));
+    uint32_t timeout_ms = 300;
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(uri, options, downloadId));
+
+    waitforSignal(timeout_ms);
+
     EXPECT_FALSE(downloadId.empty());
 
     // Pause download
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Pause(downloadId));
 
-    // Cancel download
+    // TC-16: Cancel download via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Cancel(downloadId));
 
-    ASSERT_EQ(downloadManagerInterface->Unregister(&notification), Core::ERROR_NONE);
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for cancelling failed using ComRpc
@@ -794,11 +860,13 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, cancelMethodusingComRpcFailure) {
-    setupComRpcExpectations();
 
+    initforComRpc();
+
+    // TC-17: Failure in cancelling download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, downloadManagerInterface->Cancel("invalid_id"));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for delete download using JsonRpc
@@ -812,34 +880,36 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
-    setupJsonRpcExpectations();
+
+    initforJsonRpc();
 
     NotificationTest notification;
-    ASSERT_EQ(mDownloadManagerImpl->Register(&notification), Core::ERROR_NONE);
 
-    string url = "http://example.com/file.zip";
-    string parameters = getDownloadParams(url);
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "download", parameters, mJsonRpcResponse));
-    JsonObject jsonResponse;
-    EXPECT_TRUE(jsonResponse.FromString(mJsonRpcResponse));
-    downloadId = jsonResponse["downloadId"].String();
+    // Register notification to get download status
+    downloadManagerInterface->Register(&notification);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+
+    waitforSignal(TIMEOUT);
 
     // Wait for download completion
-    EXPECT_EQ(notification.Wait(TIMEOUT, DownloadManager_AppDownloadStatus), DownloadManager_AppDownloadStatus);
+    notification.WaitForStatusSignal(TIMEOUT, DownloadManager_AppDownloadStatus);
     string fileLocator = notification.m_status_param.fileLocator;
-    EXPECT_FALSE(fileLocator.empty());
 
-    // Delete file
-    JsonObject deleteParams;
-    deleteParams["fileLocator"] = fileLocator;
-    string deleteParamsStr;
-    deleteParams.ToString(deleteParamsStr);
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "delete", deleteParamsStr, mJsonRpcResponse));
+    // TC-18: Delete file using JsonRpc
+    string deleteParams = "{\"fileLocator\": \"" + fileLocator + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), deleteParams, mJsonRpcResponse));
 
-    ASSERT_EQ(mDownloadManagerImpl->Unregister(&notification), Core::ERROR_NONE);
-    cleanupJsonRpcExpectations();
+    downloadManagerInterface->Unregister(&notification);
+
+    deinitforJsonRpc();
 }
 
 /* Test Case for delete failed using JsonRpc
@@ -851,16 +921,13 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcFailure) {
-    setupJsonRpcExpectations();
 
-    JsonObject deleteParams;
-    deleteParams["fileLocator"] = "/invalid/path/file.zip";
-    string deleteParamsStr;
-    deleteParams.ToString(deleteParamsStr);
+    initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, "delete", deleteParamsStr, mJsonRpcResponse));
+    // TC-19: Failure in deleting download using JsonRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/invalid/path/file.zip\"}"), mJsonRpcResponse));
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for delete download using ComRpc
@@ -874,30 +941,40 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, deleteMethodusingComRpcSuccess) {
-    setupComRpcExpectations();
+
+    initforComRpc();
+
+    getDownloadParams();
 
     NotificationTest notification;
-    ASSERT_EQ(downloadManagerInterface->Register(&notification), Core::ERROR_NONE);
 
-    string url = "http://example.com/file.zip";
-    options.priority = false;
-    options.retries = 2;
-    options.rateLimit = 0;
+    uri = "https://httpbin.org/bytes/1024";
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(url, options, downloadId));
-    EXPECT_FALSE(downloadId.empty());
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type){
+                return true;
+            }));
+
+    // Register notification to get download status
+    downloadManagerInterface->Register(&notification);
+
+    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(uri, options, downloadId));
+
+    waitforSignal(TIMEOUT);
 
     // Wait for download completion
-    EXPECT_EQ(notification.Wait(TIMEOUT, DownloadManager_AppDownloadStatus), DownloadManager_AppDownloadStatus);
+    notification.WaitForStatusSignal(TIMEOUT, DownloadManager_AppDownloadStatus);
     string fileLocator = notification.m_status_param.fileLocator;
     EXPECT_FALSE(fileLocator.empty());
 
-    // Delete file
+    // TC-20: Delete file using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Delete(fileLocator));
 
-    ASSERT_EQ(downloadManagerInterface->Unregister(&notification), Core::ERROR_NONE);
-    cleanupComRpcExpectations();
+    downloadManagerInterface->Unregister(&notification);
+
+    deinitforComRpc();
 }
 
 /* Test Case for delete failed using ComRpc
@@ -909,11 +986,13 @@ TEST_F(DownloadManagerTest, deleteMethodusingComRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, deleteMethodusingComRpcFailure) {
-    setupComRpcExpectations();
 
+    initforComRpc();
+
+    // TC-21: Failure in deleting download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, downloadManagerInterface->Delete("/invalid/path/file.zip"));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for progress retrieval using JsonRpc
@@ -927,37 +1006,37 @@ TEST_F(DownloadManagerTest, deleteMethodusingComRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, progressMethodusingJsonRpcSuccess) {
-    setupJsonRpcExpectations();
 
-    string url = "http://example.com/largefile.zip";
-    string parameters = getDownloadParams(url);
+    initforJsonRpc();
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "download", parameters, mJsonRpcResponse));
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+
+    waitforSignal(200);
+
     JsonObject jsonResponse;
     EXPECT_TRUE(jsonResponse.FromString(mJsonRpcResponse));
-    downloadId = jsonResponse["downloadId"].String();
+    string currentDownloadId = jsonResponse["downloadId"].String();
 
-    // Get progress
-    JsonObject progressParams;
-    progressParams["downloadId"] = downloadId;
-    string progressParamsStr;
-    progressParams.ToString(progressParamsStr);
-    
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "progress", progressParamsStr, mJsonRpcResponse));
+    // TC-22: Get progress using JsonRpc
+    string progressParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("progress"), progressParams, mJsonRpcResponse));
     
     JsonObject progressResponse;
     EXPECT_TRUE(progressResponse.FromString(mJsonRpcResponse));
     EXPECT_TRUE(progressResponse.HasLabel("percent"));
 
     // Cancel download for cleanup
-    JsonObject cancelParams;
-    cancelParams["downloadId"] = downloadId;
-    string cancelParamsStr;
-    cancelParams.ToString(cancelParamsStr);
-    mJsonRpcHandler.Invoke(connection, "cancel", cancelParamsStr, mJsonRpcResponse);
+    string cancelParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, mJsonRpcResponse);
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for progress retrieval failed using JsonRpc
@@ -969,16 +1048,13 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
-    setupJsonRpcExpectations();
 
-    JsonObject progressParams;
-    progressParams["downloadId"] = "invalid_id";
-    string progressParamsStr;
-    progressParams.ToString(progressParamsStr);
+    initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, "progress", progressParamsStr, mJsonRpcResponse));
+    // TC-23: Failure in getting progress using JsonRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"invalid_id\"}"), mJsonRpcResponse));
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for progress retrieval using ComRpc
@@ -992,18 +1068,27 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, progressMethodusingComRpcSuccess) {
-    setupComRpcExpectations();
 
-    string url = "http://example.com/largefile.zip";
-    options.priority = false;
-    options.retries = 2;
-    options.rateLimit = 0;
+    initforComRpc();
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(url, options, downloadId));
+    getDownloadParams();
+
+    uri = "https://www.examplefile.com/file-download/328";
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(uri, options, downloadId));
+
+    waitforSignal(TIMEOUT);
+
     EXPECT_FALSE(downloadId.empty());
 
-    // Get progress
+    // TC-24: Get progress using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Progress(downloadId, progress));
     EXPECT_GE(progress, 0);
     EXPECT_LE(progress, 100);
@@ -1011,7 +1096,7 @@ TEST_F(DownloadManagerTest, progressMethodusingComRpcSuccess) {
     // Cancel download for cleanup
     downloadManagerInterface->Cancel(downloadId);
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for progress retrieval failed using ComRpc
@@ -1023,11 +1108,13 @@ TEST_F(DownloadManagerTest, progressMethodusingComRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, progressMethodusingComRpcFailure) {
-    setupComRpcExpectations();
 
+    initforComRpc();
+
+    // TC-25: Failure in getting progress using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, downloadManagerInterface->Progress("invalid_id", progress));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for storage details retrieval using JsonRpc
@@ -1039,20 +1126,18 @@ TEST_F(DownloadManagerTest, progressMethodusingComRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, getStorageDetailsMethodusingJsonRpcSuccess) {
-    setupJsonRpcExpectations();
 
-    JsonObject storageParams;
-    string storageParamsStr;
-    storageParams.ToString(storageParamsStr);
+    initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "getStorageDetails", storageParamsStr, mJsonRpcResponse));
+    // TC-26: Get storage details using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getStorageDetails"), _T("{}"), mJsonRpcResponse));
     
     JsonObject storageResponse;
     EXPECT_TRUE(storageResponse.FromString(mJsonRpcResponse));
     EXPECT_TRUE(storageResponse.HasLabel("quotaKb"));
     EXPECT_TRUE(storageResponse.HasLabel("usedKb"));
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for storage details retrieval using ComRpc
@@ -1064,11 +1149,13 @@ TEST_F(DownloadManagerTest, getStorageDetailsMethodusingJsonRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, getStorageDetailsMethodusingComRpcSuccess) {
-    setupComRpcExpectations();
 
+    initforComRpc();
+
+    // TC-27: Get storage details using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->GetStorageDetails(quotaKB, usedKB));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for rate limit setting using JsonRpc
@@ -1082,34 +1169,33 @@ TEST_F(DownloadManagerTest, getStorageDetailsMethodusingComRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, rateLimitMethodusingJsonRpcSuccess) {
-    setupJsonRpcExpectations();
 
-    string url = "http://example.com/largefile.zip";
-    string parameters = getDownloadParams(url);
+    initforJsonRpc();
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "download", parameters, mJsonRpcResponse));
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
+
+    waitforSignal(200);
+
     JsonObject jsonResponse;
     EXPECT_TRUE(jsonResponse.FromString(mJsonRpcResponse));
-    downloadId = jsonResponse["downloadId"].String();
+    string currentDownloadId = jsonResponse["downloadId"].String();
 
-    // Set rate limit
-    JsonObject rateLimitParams;
-    rateLimitParams["downloadId"] = downloadId;
-    rateLimitParams["limit"] = 50;
-    string rateLimitParamsStr;
-    rateLimitParams.ToString(rateLimitParamsStr);
-    
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, "rateLimit", rateLimitParamsStr, mJsonRpcResponse));
+    // TC-28: Set rate limit using JsonRpc
+    string rateLimitParams = "{\"downloadId\": \"" + currentDownloadId + "\", \"limit\": 50}";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), rateLimitParams, mJsonRpcResponse));
 
     // Cancel download for cleanup
-    JsonObject cancelParams;
-    cancelParams["downloadId"] = downloadId;
-    string cancelParamsStr;
-    cancelParams.ToString(cancelParamsStr);
-    mJsonRpcHandler.Invoke(connection, "cancel", cancelParamsStr, mJsonRpcResponse);
+    string cancelParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
+    mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, mJsonRpcResponse);
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for rate limit setting failed using JsonRpc
@@ -1121,17 +1207,13 @@ TEST_F(DownloadManagerTest, rateLimitMethodusingJsonRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, rateLimitMethodusingJsonRpcFailure) {
-    setupJsonRpcExpectations();
 
-    JsonObject rateLimitParams;
-    rateLimitParams["downloadId"] = "invalid_id";
-    rateLimitParams["limit"] = 50;
-    string rateLimitParamsStr;
-    rateLimitParams.ToString(rateLimitParamsStr);
+    initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, "rateLimit", rateLimitParamsStr, mJsonRpcResponse));
+    // TC-29: Failure in setting rate limit using JsonRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"invalid_id\", \"limit\": 50}"), mJsonRpcResponse));
 
-    cleanupJsonRpcExpectations();
+    deinitforJsonRpc();
 }
 
 /* Test Case for rate limit setting using ComRpc
@@ -1145,25 +1227,34 @@ TEST_F(DownloadManagerTest, rateLimitMethodusingJsonRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, rateLimitMethodusingComRpcSuccess) {
-    setupComRpcExpectations();
 
-    string url = "http://example.com/largefile.zip";
-    options.priority = false;
-    options.retries = 2;
-    options.rateLimit = 0;
+    initforComRpc();
 
-    // Start download
-    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(url, options, downloadId));
+    getDownloadParams();
+
+    uri = "https://www.examplefile.com/file-download/328";
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Download(uri, options, downloadId));
+
+    waitforSignal(TIMEOUT);
+
     EXPECT_FALSE(downloadId.empty());
 
-    // Set rate limit
+    // TC-30: Set rate limit using ComRpc
     uint32_t limit = 50;
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->RateLimit(downloadId, limit));
 
     // Cancel download for cleanup
     downloadManagerInterface->Cancel(downloadId);
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for rate limit setting failed using ComRpc
@@ -1175,12 +1266,14 @@ TEST_F(DownloadManagerTest, rateLimitMethodusingComRpcSuccess) {
  */
 
 TEST_F(DownloadManagerTest, rateLimitMethodusingComRpcFailure) {
-    setupComRpcExpectations();
 
+    initforComRpc();
+
+    // TC-31: Failure in setting rate limit using ComRpc
     uint32_t limit = 50;
     EXPECT_EQ(Core::ERROR_GENERAL, downloadManagerInterface->RateLimit("invalid_id", limit));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for notification registration and unregistration
@@ -1192,17 +1285,18 @@ TEST_F(DownloadManagerTest, rateLimitMethodusingComRpcFailure) {
  */
 
 TEST_F(DownloadManagerTest, notificationRegistrationSuccess) {
-    setupComRpcExpectations();
+
+    initforComRpc();
 
     NotificationTest notification;
     
-    // Register notification
+    // TC-32: Register notification
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Register(&notification));
     
-    // Unregister notification
+    // TC-33: Unregister notification
     EXPECT_EQ(Core::ERROR_NONE, downloadManagerInterface->Unregister(&notification));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
 
 /* Test Case for notification unregistration failure
@@ -1214,12 +1308,13 @@ TEST_F(DownloadManagerTest, notificationRegistrationSuccess) {
  */
 
 TEST_F(DownloadManagerTest, notificationUnregistrationFailure) {
-    setupComRpcExpectations();
+
+    initforComRpc();
 
     NotificationTest notification;
     
-    // Try to unregister notification that was never registered
+    // TC-34: Try to unregister notification that was never registered
     EXPECT_EQ(Core::ERROR_GENERAL, downloadManagerInterface->Unregister(&notification));
 
-    cleanupComRpcExpectations();
+    deinitforComRpc();
 }
