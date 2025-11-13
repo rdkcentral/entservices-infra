@@ -215,7 +215,10 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
     public:
         NotificationTest() = default;
         ~NotificationTest() override = default;
-        std::mutex m_mutex;
+        // Required for Core::IUnknown
+        void AddRef() const override {}
+        uint32_t Release() const override { return 1; }
+	std::mutex m_mutex;
         std::condition_variable m_condition_variable;
         uint32_t m_status_signal = DownloadManager_invalidStatus;
 
