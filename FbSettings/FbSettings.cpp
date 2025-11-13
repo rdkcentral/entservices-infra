@@ -361,15 +361,15 @@ namespace Plugin {
             {
                 return GetVideoResolution(result);
             }            
-            else if (method == "device.hdcp")
+            else if (lowerMethod == "device.hdcp")
             {
                 return GetHdcp(result);
             }
-            else if (method == "device.hdr")
+            else if (lowerMethod == "device.hdr")
             {
                 return GetHdr(result);
             }
-            else if (method == "device.audio")
+            else if (lowerMethod == "device.audio")
             {
                 return GetAudio(result);
             }
