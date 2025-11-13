@@ -33,6 +33,23 @@
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (500)
 
+// JSON-RPC connection macros
+#define DECL_CORE_JSONRPC_CONX Core::JSONRPC::Connection connection
+#define INIT_CONX(a,b) connection(a, b)
+#define PLUGINHOST_DISPATCHER WPEFramework::PluginHost::IDispatcher
+#define PLUGINHOST_DISPATCHER_ID WPEFramework::PluginHost::IDispatcher::ID
+
+// Event subscription macros
+#define EVENT_SUBSCRIBE(id, eventName, callsign, message) \
+    message.Id = id; \
+    message.Designator = eventName; \
+    message.Parameters = "{}";
+
+#define EVENT_UNSUBSCRIBE(id, eventName, callsign, message) \
+    message.Id = id; \
+    message.Designator = eventName; \
+    message.Parameters = "{}";
+
 using ::testing::NiceMock;
 using namespace WPEFramework;
 using namespace std;
