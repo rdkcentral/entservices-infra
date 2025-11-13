@@ -29,6 +29,8 @@
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
+using namespace WPEFramework;
+
 #include "ISubSystemMock.h"
 #include "ServiceMock.h"
 #include "COMLinkMock.h"
@@ -40,7 +42,7 @@
 #define TIMEOUT   (500)
 
 using ::testing::NiceMock;
-using namespace WPEFramework;
+//using namespace WPEFramework;
 using namespace std;
 
 typedef enum : uint32_t {
@@ -93,7 +95,7 @@ protected:
 
         downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
 
-        Core::IWorkerPool::Assign(&(*workerPool));
+        Core::IWorkerPool::Assign(workerPool);
         workerPool->Run();
     }
 
