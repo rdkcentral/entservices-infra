@@ -1,5 +1,3 @@
-
-
 /**
 * If not stated otherwise in this file or this component's LICENSE
 * file the following copyright and licenses apply:
@@ -27,6 +25,7 @@
 #include <condition_variable>
 #include <fstream>
 #include <filesystem>
+#include <system_error>
 #include <interfaces/IMigration.h>
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
@@ -42,6 +41,9 @@ using ::testing::NiceMock;
 using namespace WPEFramework;
 using testing::StrictMock;
 using ::WPEFramework::Exchange::IMigration;
+
+// Filesystem namespace alias for compatibility
+namespace fs = std::filesystem;
 
 /**
  * @brief Migration L2 test class declaration
@@ -697,7 +699,7 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
     
     // Create directory structure if it doesn't exist using std::filesystem
     std::error_code ec;
-    std::filesystem::create_directories(migrationDir, ec);
+    fs::create_directories(migrationDir, ec);
     if (ec) {
         TEST_LOG("Warning: Could not create directory: %s", ec.message().c_str());
     } else {
@@ -707,11 +709,11 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
     // Try to make directory read-only (this may not work in all test environments)
     bool chmodSuccess = false;
     try {
-        std::filesystem::permissions(migrationDir, 
-                                   std::filesystem::perms::owner_read | 
-                                   std::filesystem::perms::group_read | 
-                                   std::filesystem::perms::others_read,
-                                   std::filesystem::perm_options::replace, ec);
+        fs::permissions(migrationDir, 
+                       fs::perms::owner_read | 
+                       fs::perms::group_read | 
+                       fs::perms::others_read,
+                       fs::perm_options::replace, ec);
         chmodSuccess = !ec;
     } catch (const std::exception& e) {
         TEST_LOG("Exception setting permissions: %s", e.what());
@@ -737,11 +739,11 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
 
     // Restore directory permissions using std::filesystem
     try {
-        std::filesystem::permissions(migrationDir, 
-                                   std::filesystem::perms::owner_all | 
-                                   std::filesystem::perms::group_read | std::filesystem::perms::group_exec |
-                                   std::filesystem::perms::others_read | std::filesystem::perms::others_exec,
-                                   std::filesystem::perm_options::replace, ec);
+        fs::permissions(migrationDir, 
+                       fs::perms::owner_all | 
+                       fs::perms::group_read | fs::perms::group_exec |
+                       fs::perms::others_read | fs::perms::others_exec,
+                       fs::perm_options::replace, ec);
         if (ec) {
             TEST_LOG("Warning: Could not restore directory permissions: %s", ec.message().c_str());
         } else {
