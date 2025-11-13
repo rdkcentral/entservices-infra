@@ -65,7 +65,8 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
 #include_directories(BEFORE ${DOWNLOAD_MANAGER_INCLUDES})
 
 if(RDK_SERVICES_L1_TEST)
-    target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
+	#target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
+    target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,opendir -Wl,--wrap,readdir -Wl,--wrap,stat -Wl,--wrap,closedir)
     #   find_package( Curl REQUIRED)
     # if (CURL_FOUND)
     #message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
@@ -78,7 +79,7 @@ if(RDK_SERVICES_L1_TEST)
     #endif()
     target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
     #target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
-endif()
+endif(RDK_SERVICES_L1_TEST)
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION}
     PRIVATE
