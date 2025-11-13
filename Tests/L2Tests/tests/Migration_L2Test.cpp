@@ -699,7 +699,7 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
     
     // Create directory structure if it doesn't exist using std::filesystem
     std::error_code ec;
-    fs::create_directories(migrationDir, ec);
+    std::filesystem::create_directories(migrationDir, ec);
     if (ec) {
         TEST_LOG("Warning: Could not create directory: %s", ec.message().c_str());
     } else {
@@ -709,11 +709,11 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
     // Try to make directory read-only (this may not work in all test environments)
     bool chmodSuccess = false;
     try {
-        fs::permissions(migrationDir, 
-                       fs::perms::owner_read | 
-                       fs::perms::group_read | 
-                       fs::perms::others_read,
-                       fs::perm_options::replace, ec);
+        std::filesystem::permissions(migrationDir, 
+                       std::filesystem::perms::owner_read | 
+                       std::filesystem::perms::group_read | 
+                       std::filesystem::perms::others_read,
+                       std::filesystem::perm_options::replace, ec);
         chmodSuccess = !ec;
     } catch (const std::exception& e) {
         TEST_LOG("Exception setting permissions: %s", e.what());
@@ -739,11 +739,11 @@ TEST_F(MigrationL2Test, SetMigrationStatus_FileIOError)
 
     // Restore directory permissions using std::filesystem
     try {
-        fs::permissions(migrationDir, 
-                       fs::perms::owner_all | 
-                       fs::perms::group_read | fs::perms::group_exec |
-                       fs::perms::others_read | fs::perms::others_exec,
-                       fs::perm_options::replace, ec);
+        std::filesystem::permissions(migrationDir, 
+                       std::filesystem::perms::owner_all | 
+                       std::filesystem::perms::group_read | std::filesystem::perms::group_exec |
+                       std::filesystem::perms::others_read | std::filesystem::perms::others_exec,
+                       std::filesystem::perm_options::replace, ec);
         if (ec) {
             TEST_LOG("Warning: Could not restore directory permissions: %s", ec.message().c_str());
         } else {
