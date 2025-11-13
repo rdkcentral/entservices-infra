@@ -64,7 +64,7 @@ protected:
     ServiceMock* mServiceMock = nullptr;
     SubSystemMock* mSubSystemMock = nullptr;
 
-    Core::ProxyType<Core::WorkerPoolImplementation> workerPool; 
+    Core::ProxyType<WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
     Core::JSONRPC::Handler& mJsonRpcHandler;
     Core::JSONRPC::Message message;
@@ -73,7 +73,7 @@ protected:
     string uri;
 
     PLUGINHOST_DISPATCHER *dispatcher;
-    PluginHost::FactoriesImplementation factoriesImplementation;
+    FactoriesImplementation factoriesImplementation;
 
     Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
 
@@ -85,7 +85,7 @@ protected:
 
     // Constructor
     DownloadManagerTest()
-        : workerPool(Core::ProxyType<Core::WorkerPoolImplementation>::Create(
+        : workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
             2, Core::Thread::DefaultStackSize(), 16)),
           plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
           mJsonRpcHandler(*plugin),
@@ -95,7 +95,7 @@ protected:
 
         downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
 
-        Core::IWorkerPool::Assign(workerPool);
+        Core::IWorkerPool::Assign(&(*workerPool));
         workerPool->Run();
     }
 
@@ -238,9 +238,24 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
         virtual ~NotificationTest() override = default;
 
         // Required for reference counting
-        virtual uint32_t AddRef() const override { return 1; }
+        virtual void AddRef() const override {  }
         virtual uint32_t Release() const override { return 1; }
 
+        uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
+        {
+            uint32_t status_signal = DownloadManager_invalidStatus;
+            std::unique_lock<std::mutex> lock(m_mutex);
+            auto now = std::chrono::steady_clock::now();
+            auto timeout = std::chrono::milliseconds(timeout_ms);
+            if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
+            {
+                 TEST_LOG("Timeout waiting for request status event");
+                 return m_status_signal;
+            }
+            status_signal = m_status_signal;
+            m_status_signal = DownloadManager_invalidStatus;
+	    return status_signal;
+        }
     private:
         BEGIN_INTERFACE_MAP(NotificationTest)
         INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
@@ -277,22 +292,6 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
             EXPECT_EQ(m_status_param.downloadId, m_status_param.downloadId);
 
             m_condition_variable.notify_one();
-        }
-
-        uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
-        {
-            uint32_t status_signal = DownloadManager_invalidStatus;
-            std::unique_lock<std::mutex> lock(m_mutex);
-            auto now = std::chrono::steady_clock::now();
-            auto timeout = std::chrono::milliseconds(timeout_ms);
-            if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
-            {
-                 TEST_LOG("Timeout waiting for request status event");
-                 return m_status_signal;
-            }
-            status_signal = m_status_signal;
-            m_status_signal = DownloadManager_invalidStatus;
-            return status_signal;
         }
     };
 
