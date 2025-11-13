@@ -75,7 +75,7 @@ protected:
     PLUGINHOST_DISPATCHER *dispatcher;
     FactoriesImplementation factoriesImplementation;
 
-    Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
+    Plugin::DownloadManagerImplementation *mDownloadManagerImpl;
 
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
     Exchange::IDownloadManager::Options options;
@@ -85,16 +85,12 @@ protected:
 
     // Constructor
     DownloadManagerTest()
-        : workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
-            2, Core::Thread::DefaultStackSize(), 16)),
-          plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
-          mJsonRpcHandler(*plugin),
-          INIT_CONX(1,0)
+     : plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
+	 workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
+         2, Core::Thread::DefaultStackSize(), 16)),
+       mJsonRpcHandler(*plugin),
+        INIT_CONX(1,0)
     {
-        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-
-        downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
-
         Core::IWorkerPool::Assign(&(*workerPool));
         workerPool->Run();
     }
@@ -102,14 +98,27 @@ protected:
     // Destructor
     virtual ~DownloadManagerTest() override
     {
-        downloadManagerInterface->Release();
 
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
 
-    void SetUp() override 
+   /* void SetUp() override 
+    {
+        // Create resources similar to PreinstallManager pattern
+        Core::hresult status = createResources();
+        EXPECT_EQ(status, Core::ERROR_NONE);
+    }
+
+    void TearDown() override
+    {
+        releaseResources();
+    }*/
+
+    Core::hresult createResources()
     {        
+        Core::hresult status = Core::ERROR_GENERAL;
+        
         // Set up mocks and expect calls
         mServiceMock = new NiceMock<ServiceMock>;
         mSubSystemMock = new NiceMock<SubSystemMock>;
@@ -133,7 +142,64 @@ protected:
         EXPECT_CALL(*mServiceMock, SubSystems())
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Return(mSubSystemMock));
+
+        // Initialize plugin following PreinstallManager pattern
+        PluginHost::IFactories::Assign(&factoriesImplementation);
+        dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
+            plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
+        dispatcher->Activate(mServiceMock);
+        TEST_LOG("In createResources!");
+
+        EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+        mDownloadManagerImpl = Plugin::DownloadManagerImplementation::getInstance();
+        downloadManagerInterface = mDownloadManagerImpl->QueryInterface<Exchange::IDownloadManager>();
+        
+        // Ensure downloadManagerInterface is valid before proceeding
+        EXPECT_NE(downloadManagerInterface, nullptr);
+        TEST_LOG("createResources - All done!");
+        status = Core::ERROR_NONE;
+
+        return status;
     }
+
+    void releaseResources()
+    {
+        TEST_LOG("In releaseResources!");
+
+        if (downloadManagerInterface) {
+            downloadManagerInterface->Release();
+            downloadManagerInterface = nullptr;
+        }
+
+        dispatcher->Deactivate();
+        dispatcher->Release();
+
+        plugin->Deinitialize(mServiceMock);
+        
+        if (mServiceMock) {
+            delete mServiceMock;
+            mServiceMock = nullptr;
+        }
+
+        if (mSubSystemMock) {
+            delete mSubSystemMock;
+            mSubSystemMock = nullptr;
+        }
+        
+        mDownloadManagerImpl = nullptr;
+    }
+      
+    void SetUp() override
+    {
+        Core::hresult status = createResources();
+        EXPECT_EQ(status, Core::ERROR_NONE);
+    }
+
+    void TearDown() override
+    {
+        releaseResources();
+    }
+
 
     void initforJsonRpc() 
     {    
@@ -169,22 +235,6 @@ protected:
         };
 
         downloadId = {};
-    }
-
-    void TearDown() override
-    {
-        // Clean up mocks
-        if (mServiceMock != nullptr)
-        {
-            delete mServiceMock;
-            mServiceMock = nullptr;
-        }
-
-        if(mSubSystemMock != nullptr)
-        {
-            delete mSubSystemMock;
-            mSubSystemMock = nullptr;
-        }
     }
 
     void deinitforJsonRpc() 
