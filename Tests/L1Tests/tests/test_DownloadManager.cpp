@@ -43,9 +43,6 @@ using ::testing::NiceMock;
 using namespace WPEFramework;
 using namespace std;
 
-using JsonObject = WPEFramework::Core::JSON::VariantContainer;
-using JsonArray = WPEFramework::Core::JSON::ArrayType<WPEFramework::Core::JSON::VariantContainer>;
-
 typedef enum : uint32_t {
     DownloadManager_invalidStatus = 0,
     DownloadManager_AppDownloadStatus
