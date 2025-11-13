@@ -44,7 +44,7 @@ namespace WPEFramework
             mResolver(nullptr),
             mConnectionStatusImplLock()
         {
-            LOGINFO("AppGatewayResponderImplementation constructor");
+            LOGINFO("AppGatewayResponderImplementation constructor 1");
 
             InitAppGatewayLogger();
         }
@@ -214,7 +214,7 @@ namespace WPEFramework
 
             if (mAppIdRegistry.Get(connectionId, appId)) {
 
-                APP_GATEWAY_LOG("%s-->[[a-%d-%d]] method=%s, params=%s",
+                RDK_LOG(RDK_LOG_INFO,"LOG.RDK.APPGATEWAY","%s-->[[a-%d-%d]] method=%s, params=%s",
                     appId.c_str(),connectionId, requestId, method.c_str(), params.c_str());
 
                 // App Id is available

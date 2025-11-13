@@ -28,6 +28,7 @@
 #include <core/core.h>
 #include <map>
 #include "rdk_logger.h"
+#include "rdk_debug.h"
 
 #define APP_GATEWAY_LOG(FMT, ...)    rdk_logger_msg_printf(RDK_LOG_INFO, "org.rdk.AppGateway", FMT, ##__VA_ARGS__)
 
@@ -299,7 +300,7 @@ namespace Plugin {
 
 
         void ReturnMessageInSocket(const uint32_t connectionId, const int requestId, const string payload ) {
-             APP_GATEWAY_LOG("<--[[a-%d-%d]] payload=%s",
+             RDK_LOG(RDK_LOG_INFO,"LOG.RDK.APPGATEWAY","<--[[a-%d-%d]] payload=%s",
                     connectionId, requestId, payload.c_str());
 
             // Send response back to client
