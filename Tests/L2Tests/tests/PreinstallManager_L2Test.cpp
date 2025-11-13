@@ -32,6 +32,18 @@
 #include <future>
 #include <chrono>
 
+#ifndef THUNDER_VERSION_MAJOR
+#define THUNDER_VERSION_MAJOR 4
+#endif
+
+#ifndef THUNDER_VERSION_MINOR  
+#define THUNDER_VERSION_MINOR 4
+#endif
+
+#ifndef THUNDER_VERSION
+#define THUNDER_VERSION 4
+#endif
+
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define DEFAULT_PREINSTALL_PATH    "/opt/preinstall"
 
@@ -127,47 +139,30 @@ PreinstallManagerTest::~PreinstallManagerTest()
  */
 uint32_t PreinstallManagerTest::CreatePreinstallManagerInterfaceObjectUsingComRPCConnection()
 {
-    uint32_t status = Core::ERROR_GENERAL;
+    uint32_t return_value = Core::ERROR_GENERAL;
 
-    if (nullptr == mEnginePreinstallManager) {
-        TEST_LOG("Creating mEnginePreinstallManager");
-        mEnginePreinstallManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
-        mEnginePreinstallManager->Announcements(mEnginePreinstallManager->Announcement());
+    TEST_LOG("Creating mEnginePreinstallManager");
+    mEnginePreinstallManager = Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create();
+    mClientPreinstallManager = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId("/tmp/communicator"), Core::ProxyType<Core::IIPCServer>(mEnginePreinstallManager));
+
+    TEST_LOG("Creating mEnginePreinstallManager Announcements");
+#if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
+    mEnginePreinstallManager->Announcements(mClientPreinstallManager->Announcement());
+#endif
+    if (!mClientPreinstallManager.IsValid())
+    {
+        TEST_LOG("Invalid mClientPreinstallManager");
     }
-
-    if (nullptr == mClientPreinstallManager) {
-        TEST_LOG("Creating mClientPreinstallManager");
-        mClientPreinstallManager = Core::ProxyType<RPC::CommunicatorClient>::Create(
-            Core::NodeId("/tmp/communicator"),
-            Core::ProxyType<Core::IIPCServer>(mEnginePreinstallManager)
-        );
-
-        status = mClientPreinstallManager->Open(RPC::CommunicationTimeOut);
-        if (Core::ERROR_NONE != status) {
-            TEST_LOG("Failed to open RPC communication, status: %d", status);
-            return status;
+    else
+    {
+        mControllerPreinstallManager = mClientPreinstallManager->Open<PluginHost::IShell>(_T(PREINSTALLMANAGER_CALLSIGN), ~0, 3000);
+        if (mControllerPreinstallManager)
+        {
+            mPreinstallManagerPlugin = mControllerPreinstallManager->QueryInterface<Exchange::IPreinstallManager>();
+            return_value = Core::ERROR_NONE;
         }
     }
-
-    if (nullptr == mControllerPreinstallManager) {
-        TEST_LOG("Creating controller");
-        mControllerPreinstallManager = mClientPreinstallManager->Open<PluginHost::IShell>(PREINSTALLMANAGERL2TEST_CALLSIGN, ~0, 3000);
-        if (nullptr == mControllerPreinstallManager) {
-            TEST_LOG("Failed to get controller");
-            return Core::ERROR_GENERAL;
-        }
-    }
-
-    if (nullptr == mPreinstallManagerPlugin) {
-        TEST_LOG("Getting PreinstallManager plugin interface");
-        mPreinstallManagerPlugin = mControllerPreinstallManager->QueryInterface<Exchange::IPreinstallManager>();
-        if (nullptr == mPreinstallManagerPlugin) {
-            TEST_LOG("Failed to get PreinstallManager interface");
-            return Core::ERROR_GENERAL;
-        }
-    }
-
-    return Core::ERROR_NONE;
+    return return_value;
 }
 
 /**
@@ -187,13 +182,13 @@ void PreinstallManagerTest::ReleasePreinstallManagerInterfaceObjectUsingComRPCCo
         mControllerPreinstallManager = nullptr;
     }
 
-    if (mClientPreinstallManager) {
+    if (mClientPreinstallManager.IsValid()) {
         TEST_LOG("Releasing client");
-        mClientPreinstallManager->Close(Core::infinite);
+        mClientPreinstallManager->Close(RPC::CommunicationTimeOut);
         mClientPreinstallManager.Release();
     }
 
-    if (mEnginePreinstallManager) {
+    if (mEnginePreinstallManager.IsValid()) {
         TEST_LOG("Releasing engine");
         mEnginePreinstallManager.Release();
     }
@@ -253,22 +248,22 @@ TEST_F(PreinstallManagerTest, NotificationRegisterUnregisterTest)
 
     // Test registration
     TEST_LOG("Registering notification callback");
-    Core::hresult result = mPreinstallManagerPlugin->Register(testNotification);
+    Core::hresult result = mPreinstallManagerPlugin->Register(testNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, result);
 
     // Test multiple registration (should handle gracefully)
     TEST_LOG("Registering same notification callback again");
-    result = mPreinstallManagerPlugin->Register(testNotification);
+    result = mPreinstallManagerPlugin->Register(testNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, result); // Should handle duplicate registration
 
     // Test unregistration
     TEST_LOG("Unregistering notification callback");
-    result = mPreinstallManagerPlugin->Unregister(testNotification);
+    result = mPreinstallManagerPlugin->Unregister(testNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, result);
 
     // Test unregistration of non-registered callback (should handle gracefully)
     TEST_LOG("Unregistering already unregistered callback");
-    result = mPreinstallManagerPlugin->Unregister(testNotification);
+    result = mPreinstallManagerPlugin->Unregister(testNotification.operator->());
     EXPECT_EQ(Core::ERROR_NONE, result); // Should handle gracefully
 
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
@@ -332,13 +327,13 @@ TEST_F(PreinstallManagerTest, InterfaceQueryTest)
     auto testNotification = Core::ProxyType<TestNotification>::Create(&notificationPromise);
 
     // Test all interface methods are callable
-    Core::hresult result = mPreinstallManagerPlugin->Register(testNotification);
+    Core::hresult result = mPreinstallManagerPlugin->Register(testNotification.operator->());
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
 
     result = mPreinstallManagerPlugin->StartPreinstall(false);
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
 
-    result = mPreinstallManagerPlugin->Unregister(testNotification);
+    result = mPreinstallManagerPlugin->Unregister(testNotification.operator->());
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
 
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
