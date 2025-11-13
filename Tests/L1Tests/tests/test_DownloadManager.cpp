@@ -37,12 +37,10 @@
 #include "FactoriesImplementation.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
-
-using namespace WPEFramework;
-
 #define TIMEOUT   (500)
 
 using ::testing::NiceMock;
+using namespace WPEFramework;
 using namespace std;
 
 typedef enum : uint32_t {
@@ -56,25 +54,7 @@ struct StatusParams {
     Exchange::IDownloadManager::FailReason reason;
 };
 
-namespace WPEFramework {
-    namespace PluginHost {
-        class FactoriesImplementation {
-        public:
-            FactoriesImplementation() = default;
-            ~FactoriesImplementation() = default;
-        };
-    }
-
-    namespace Core {
-        class WorkerPoolImplementation {
-        public:
-            WorkerPoolImplementation(uint8_t threads, uint32_t stackSize, uint32_t queueSize) {
-            }
-            ~WorkerPoolImplementation() = default;
-            void Run() {}
-        };
-    }
-}
+           
 
 class DownloadManagerTest : public ::testing::Test {
 protected:
@@ -82,6 +62,7 @@ protected:
     ServiceMock* mServiceMock = nullptr;
     SubSystemMock* mSubSystemMock = nullptr;
 
+    Core::ProxyType<Core::WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
     Core::JSONRPC::Handler& mJsonRpcHandler;
     Core::JSONRPC::Message message;
@@ -93,7 +74,6 @@ protected:
     PluginHost::FactoriesImplementation factoriesImplementation;
 
     Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
-    Core::ProxyType<Core::WorkerPoolImplementation> workerPool;
 
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
     Exchange::IDownloadManager::Options options;
