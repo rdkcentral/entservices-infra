@@ -275,11 +275,6 @@ protected:
 
 class NotificationTest : public Exchange::IDownloadManager::INotification
 {
-    private:
-        BEGIN_INTERFACE_MAP(NotificationTest)
-        INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
-        END_INTERFACE_MAP
-
     public:
         /** @brief Mutex */
         std::mutex m_mutex;
@@ -292,8 +287,20 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
 
         StatusParams m_status_param;
 
-        NotificationTest(){}
-        ~NotificationTest(){}
+        NotificationTest()
+        {
+        }
+        
+        virtual ~NotificationTest() override = default;
+
+        // Required for reference counting
+        virtual uint32_t AddRef() const override { return 1; }
+        virtual uint32_t Release() const override { return 1; }
+
+    private:
+        BEGIN_INTERFACE_MAP(NotificationTest)
+        INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
+        END_INTERFACE_MAP
 
         void SetStatusParams(const StatusParams& statusParam)
         {
