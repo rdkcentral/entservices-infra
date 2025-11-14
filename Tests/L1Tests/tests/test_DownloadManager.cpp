@@ -150,11 +150,13 @@ protected:
 
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
        
-     // Get the interface directly from the plugin
-        downloadManagerInterface = plugin->QueryInterface<Exchange::IDownloadManager>();
+        // Get the interface directly from the plugin using interface ID
+        downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(
+            plugin->QueryInterface(Exchange::IDownloadManager::ID));
         
         // Ensure downloadManagerInterface is valid before proceeding
         EXPECT_NE(downloadManagerInterface, nullptr);
+         
         TEST_LOG("createResources - All done!");
         status = Core::ERROR_NONE;
 
