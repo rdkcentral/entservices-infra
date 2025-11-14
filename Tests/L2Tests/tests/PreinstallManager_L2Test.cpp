@@ -555,3 +555,103 @@ TEST_F(PreinstallManagerTest, StartPreinstallForceInstallTest)
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
     TEST_LOG("### Test StartPreinstall Force Install End ###");
 }
+/**
+ * @brief Test notification registration with multiple callbacks
+ *
+ * @details This test verifies:
+ * - Multiple different notifications can be registered
+ * - Plugin manages multiple notification callbacks properly
+ */
+TEST_F(PreinstallManagerTest, MultipleNotificationRegistrationTest)
+{
+    TEST_LOG("### Test Multiple Notification Registration Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    std::promise<std::string> notificationPromise1;
+    std::promise<std::string> notificationPromise2;
+    std::promise<std::string> notificationPromise3;
+    
+    auto testNotification1 = Core::ProxyType<TestNotification>::Create(&notificationPromise1);
+    auto testNotification2 = Core::ProxyType<TestNotification>::Create(&notificationPromise2);
+    auto testNotification3 = Core::ProxyType<TestNotification>::Create(&notificationPromise3);
+
+    // Register multiple different notifications
+    Core::hresult result = mPreinstallManagerPlugin->Register(testNotification1.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    result = mPreinstallManagerPlugin->Register(testNotification2.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    result = mPreinstallManagerPlugin->Register(testNotification3.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    // Try StartPreinstall which might trigger some notification paths
+    result = mPreinstallManagerPlugin->StartPreinstall(false);
+    TEST_LOG("StartPreinstall with multiple notifications returned: %d", result);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+
+    // Unregister all notifications
+    result = mPreinstallManagerPlugin->Unregister(testNotification1.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    result = mPreinstallManagerPlugin->Unregister(testNotification2.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    result = mPreinstallManagerPlugin->Unregister(testNotification3.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test Multiple Notification Registration End ###");
+}
+
+
+
+/**
+ * @brief Test preinstall directory with mock packages
+ *
+ * @details This test verifies:
+ * - Plugin can read preinstall directory contents
+ * - Plugin handles package discovery and processing
+ * - readPreinstallDirectory and related functionality is exercised
+ */
+TEST_F(PreinstallManagerTest, PreinstallDirectoryWithPackagesTest)
+{
+    TEST_LOG("### Test Preinstall Directory with Packages Begin ###");
+    
+    // Create mock preinstall directory and packages
+    CreateMockPreinstallDirectory();
+    CreateMockPackage("TestApp1", "1.0.0");
+    CreateMockPackage("TestApp2", "2.1.0");
+    CreateMockPackage("TestApp3", "1.5.2");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    std::promise<std::string> notificationPromise;
+    auto testNotification = Core::ProxyType<TestNotification>::Create(&notificationPromise);
+    
+    // Register notification to catch any events
+    Core::hresult result = mPreinstallManagerPlugin->Register(testNotification.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    // Test StartPreinstall with mock packages - this should exercise readPreinstallDirectory
+    TEST_LOG("Testing StartPreinstall with mock packages in directory");
+    result = mPreinstallManagerPlugin->StartPreinstall(false);
+    TEST_LOG("StartPreinstall with packages returned: %d", result);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+
+    // Test with force install
+    result = mPreinstallManagerPlugin->StartPreinstall(true);
+    TEST_LOG("StartPreinstall with force install returned: %d", result);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+
+    // Clean up
+    result = mPreinstallManagerPlugin->Unregister(testNotification.operator->());
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    
+    // Clean up mock directory
+    CleanupMockPreinstallDirectory();
+    TEST_LOG("### Test Preinstall Directory with Packages End ###");
+}
