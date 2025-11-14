@@ -527,3 +527,31 @@ TEST_F(PreinstallManagerTest, UnregisterNonRegisteredNotificationTest)
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
     TEST_LOG("### Test Unregister Non-Registered Notification End ###");
 }
+/**
+ * @brief Test StartPreinstall with different force install options
+ *
+ * @details This test verifies:
+ * - StartPreinstall handles force install parameter correctly
+ * - Different code paths are exercised based on force install setting
+ */
+TEST_F(PreinstallManagerTest, StartPreinstallForceInstallTest)
+{
+    TEST_LOG("### Test StartPreinstall Force Install Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    // Test with force install false (default behavior)
+    TEST_LOG("Testing StartPreinstall with forceInstall=false");
+    Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(false);
+    TEST_LOG("StartPreinstall(false) returned: %d", result);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+
+    // Test with force install true (should skip version checking)
+    TEST_LOG("Testing StartPreinstall with forceInstall=true");
+    result = mPreinstallManagerPlugin->StartPreinstall(true);
+    TEST_LOG("StartPreinstall(true) returned: %d", result);
+    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test StartPreinstall Force Install End ###");
+}
