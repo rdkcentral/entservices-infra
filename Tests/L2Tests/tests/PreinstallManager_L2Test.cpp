@@ -486,3 +486,44 @@ TEST_F(PreinstallManagerTest, RegisterDuplicateNotificationTest)
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
     TEST_LOG("### Test Register Duplicate Notification End ###");
 }
+/**
+ * @brief Test unregister method with non-registered notification
+ *
+ * @details This test verifies:
+ * - Unregister method handles non-registered notifications
+ * - Proper error codes are returned for edge cases
+ */
+TEST_F(PreinstallManagerTest, UnregisterNonRegisteredNotificationTest)
+{
+    TEST_LOG("### Test Unregister Non-Registered Notification Begin ###");
+    
+    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
+
+    std::promise<std::string> notificationPromise1;
+    std::promise<std::string> notificationPromise2;
+    auto testNotification1 = Core::ProxyType<TestNotification>::Create(&notificationPromise1);
+    auto testNotification2 = Core::ProxyType<TestNotification>::Create(&notificationPromise2);
+
+    // Try to unregister a notification that was never registered
+    Core::hresult result = mPreinstallManagerPlugin->Unregister(testNotification1.operator->());
+    EXPECT_EQ(Core::ERROR_GENERAL, result); // Should return error
+
+    // Register one notification
+    result = mPreinstallManagerPlugin->Register(testNotification1.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    // Try to unregister a different notification that was never registered
+    result = mPreinstallManagerPlugin->Unregister(testNotification2.operator->());
+    EXPECT_EQ(Core::ERROR_GENERAL, result); // Should return error
+
+    // Unregister the registered notification
+    result = mPreinstallManagerPlugin->Unregister(testNotification1.operator->());
+    EXPECT_EQ(Core::ERROR_NONE, result);
+
+    // Try to unregister again - should fail
+    result = mPreinstallManagerPlugin->Unregister(testNotification1.operator->());
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
+
+    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
+    TEST_LOG("### Test Unregister Non-Registered Notification End ###");
+}
