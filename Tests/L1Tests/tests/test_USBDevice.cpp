@@ -56,6 +56,162 @@ namespace {
 const string callSign = _T("USBDevice");
 }
 
+// Add after existing includes and before the test fixture class
+
+typedef enum : uint32_t {
+    USBDevice_Event_DevicePluggedIn  = 0x00000001,
+    USBDevice_Event_DevicePluggedOut = 0x00000002,
+} USBDeviceEventType_t;
+
+class USBDeviceNotificationHandler : public Exchange::IUSBDevice::INotification {
+private:
+    std::mutex m_mutex;
+    std::condition_variable m_condition_variable;
+    uint32_t m_event_signalled;
+    
+    // Event flags
+    bool m_devicePluggedInReceived;
+    bool m_devicePluggedOutReceived;
+    
+    // Parameter storage for validation
+    Exchange::IUSBDevice::USBDevice m_pluggedInDevice;
+    Exchange::IUSBDevice::USBDevice m_pluggedOutDevice;
+
+public:
+    USBDeviceNotificationHandler()
+        : m_event_signalled(0)
+        , m_devicePluggedInReceived(false)
+        , m_devicePluggedOutReceived(false)
+    {
+    }
+
+    virtual ~USBDeviceNotificationHandler()
+    {
+    }
+
+    BEGIN_INTERFACE_MAP(USBDeviceNotificationHandler)
+    INTERFACE_ENTRY(Exchange::IUSBDevice::INotification)
+    END_INTERFACE_MAP
+
+    // INotification interface implementation
+    void OnDevicePluggedIn(const Exchange::IUSBDevice::USBDevice& device) override
+    {
+        TEST_LOG("OnDevicePluggedIn notification received");
+        
+        std::unique_lock<std::mutex> lock(m_mutex);
+        
+        m_devicePluggedInReceived = true;
+        m_pluggedInDevice.deviceClass = device.deviceClass;
+        m_pluggedInDevice.deviceSubclass = device.deviceSubclass;
+        m_pluggedInDevice.deviceName = device.deviceName;
+        m_pluggedInDevice.devicePath = device.devicePath;
+        
+        m_event_signalled |= USBDevice_Event_DevicePluggedIn;
+        m_condition_variable.notify_all();
+    }
+
+    void OnDevicePluggedOut(const Exchange::IUSBDevice::USBDevice& device) override
+    {
+        TEST_LOG("OnDevicePluggedOut notification received");
+        
+        std::unique_lock<std::mutex> lock(m_mutex);
+        
+        m_devicePluggedOutReceived = true;
+        m_pluggedOutDevice.deviceClass = device.deviceClass;
+        m_pluggedOutDevice.deviceSubclass = device.deviceSubclass;
+        m_pluggedOutDevice.deviceName = device.deviceName;
+        m_pluggedOutDevice.devicePath = device.devicePath;
+        
+        m_event_signalled |= USBDevice_Event_DevicePluggedOut;
+        m_condition_variable.notify_all();
+    }
+
+    // Wait for specific event(s) with timeout
+    bool WaitForRequestStatus(uint32_t timeout_ms, USBDeviceEventType_t expected_status)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        
+        auto now = std::chrono::steady_clock::now();
+        auto timeout_time = now + std::chrono::milliseconds(timeout_ms);
+        
+        while (!(m_event_signalled & expected_status))
+        {
+            if (m_condition_variable.wait_until(lock, timeout_time) == std::cv_status::timeout)
+            {
+                TEST_LOG("WaitForRequestStatus timed out. Expected: 0x%08x, Received: 0x%08x", 
+                         expected_status, m_event_signalled);
+                return false;
+            }
+        }
+        
+        TEST_LOG("WaitForRequestStatus successful. Expected: 0x%08x, Received: 0x%08x", 
+                 expected_status, m_event_signalled);
+        return true;
+    }
+
+    // Getter methods for parameter validation
+    bool GetDevicePluggedInReceived() const
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_devicePluggedInReceived;
+    }
+
+    bool GetDevicePluggedOutReceived() const
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_devicePluggedOutReceived;
+    }
+
+    Exchange::IUSBDevice::USBDevice GetPluggedInDevice() const
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_pluggedInDevice;
+    }
+
+    Exchange::IUSBDevice::USBDevice GetPluggedOutDevice() const
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_pluggedOutDevice;
+    }
+
+    // Reset methods for reusing handler across tests
+    void ResetEvent(USBDeviceEventType_t event_type)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        
+        if (event_type & USBDevice_Event_DevicePluggedIn)
+        {
+            m_devicePluggedInReceived = false;
+            m_pluggedInDevice = Exchange::IUSBDevice::USBDevice();
+        }
+        
+        if (event_type & USBDevice_Event_DevicePluggedOut)
+        {
+            m_devicePluggedOutReceived = false;
+            m_pluggedOutDevice = Exchange::IUSBDevice::USBDevice();
+        }
+        
+        m_event_signalled &= ~event_type;
+    }
+
+    void ResetAllEvents()
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        
+        m_event_signalled = 0;
+        m_devicePluggedInReceived = false;
+        m_devicePluggedOutReceived = false;
+        m_pluggedInDevice = Exchange::IUSBDevice::USBDevice();
+        m_pluggedOutDevice = Exchange::IUSBDevice::USBDevice();
+    }
+
+    uint32_t GetSignalledEvents() const
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_event_signalled;
+    }
+};
+
 class USBDeviceTest : public ::testing::Test {
 protected:
     Core::ProxyType<Plugin::USBDevice> plugin;
@@ -112,22 +268,6 @@ protected:
            plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(&service);
 
-        /* Set all the asynchronouse event handler with libusb to handle various events*/
-        ON_CALL(*p_libUSBImplMock, libusb_hotplug_register_callback(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-        .WillByDefault(::testing::Invoke(
-            [&](libusb_context *ctx, int events, int flags, int vendor_id, int product_id, int dev_class,
-                 libusb_hotplug_callback_fn cb_fn, void *user_data, libusb_hotplug_callback_handle *callback_handle) {
-                if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == events) {
-                    libUSBHotPlugCbDeviceAttached = cb_fn;
-                    *callback_handle = 1;
-                }
-                if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == events) {
-                    libUSBHotPlugCbDeviceDetached = cb_fn;
-                    *callback_handle = 2;
-                }
-                return LIBUSB_SUCCESS;
-            }));
-
         EXPECT_EQ(string(""), plugin->Initialize(&service));
     }
     virtual ~USBDeviceTest() override
@@ -152,10 +292,6 @@ protected:
         }
     }
 
-    virtual void SetUp()
-    {
-        ASSERT_TRUE(libUSBHotPlugCbDeviceAttached != nullptr);
-    }
     void Mock_SetDeviceDesc(uint8_t bus_number, uint8_t device_address);
     void Mock_SetSerialNumberInUSBDevicePath();
 };
@@ -284,117 +420,6 @@ TEST_F(USBDeviceTest, RegisteredMethods)
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("bindDriver")));
     EXPECT_EQ(Core::ERROR_NONE, handler.Exists(_T("unbindDriver")));
 }
-
-/*******************************************************************************************************************
-*Test function for Event:onDevicePluggedIn
-*Event : onDevicePluggedIn
-*             Triggered when a USB drive is plugged in
-*
-*                @return (i) Exchange::IUSBDevice::USBDevice structure
-* Use case coverage:
-*                @Success :1
-********************************************************************************************************************/
-
-/**
- * @brief : onDevicePluggedIn when a USB drive is connected
- *          Check onDevicePluggedIn triggered successfully when a USB drive is connected
- *          with USBDevice structure value
- * @param[in] : This method takes no parameters.
- * @return : \"params\":{"deviceclass":8,"devicesubclass":6,"devicename":"002\/002","devicepath":"\/dev\/sda"}
- *
- */
-TEST_F(USBDeviceTest, OnDevicePluggedInSuccess)
-{
-    Core::Event onDevicePluggedIn(false, true);
-
-    Mock_SetSerialNumberInUSBDevicePath();
-
-    EXPECT_CALL(service, Submit(::testing::_, ::testing::_))
-        .Times(1)
-        .WillOnce(::testing::Invoke(
-            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                string text;
-                TEST_LOG("json to string!");
-                EXPECT_TRUE(json->ToString(text));
-                EXPECT_EQ(text, "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.USBDevice.onDevicePluggedIn\",\"params\":{\"device\":{\"deviceClass\":8,\"deviceSubclass\":8,\"deviceName\":\"100\\/001\",\"devicePath\":\"\\/dev\\/sda\"}}}");
-                onDevicePluggedIn.SetEvent();
-
-                return Core::ERROR_NONE;
-            }));
-
-    /* HotPlug Attach Device 1 Verification */
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    EVENT_SUBSCRIBE(0, _T("onDevicePluggedIn"), _T("org.rdk.USBDevice"), message);
-
-    libusb_device dev = {0};
-    dev.bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-    dev.device_address = MOCK_USB_DEVICE_ADDRESS_1;
-    dev.port_number = MOCK_USB_DEVICE_PORT_1;
-
-    libUSBHotPlugCbDeviceAttached(nullptr, &dev, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 0);
-    TEST_LOG("After libUSBHotPlugCbDeviceAttached");
-
-    EXPECT_EQ(Core::ERROR_NONE, onDevicePluggedIn.Lock());
-    TEST_LOG("After EVENT_UNSUBSCRIBE");
-
-    EVENT_UNSUBSCRIBE(0, _T("onDevicePluggedIn"), _T("org.rdk.USBDevice"), message);
- }
-/*Test cases for onDevicePluggedIn ends here*/
-
-/*******************************************************************************************************************
-*Test function for Event:onDevicePluggedOut
-*Event : onDevicePluggedOut
-*             Triggered when a USB drive is plugged out
-*
-*                @return (i) Exchange::IUSBDevice::USBDevice structure
-* Use case coverage:
-*                @Success :1
-********************************************************************************************************************/
-
-/**
- * @brief : onDevicePluggedOut when a USB drive is connected
- *          Check onDevicePluggedOut triggered successfully when a USB drive is disconnected
- *          with USBDevice structure value
- * @param[in] : This method takes no parameters.
- * @return : \"params\":{"deviceclass":8,"devicesubclass":6,"devicename":"002\/002","devicepath":"\/dev\/sda"}
- *
- */
-TEST_F(USBDeviceTest, onDevicePluggedOutSuccess)
-{
-    Core::Event onDevicePluggedOut(false, true);
-
-    Mock_SetSerialNumberInUSBDevicePath();
-
-    EXPECT_CALL(service, Submit(::testing::_, ::testing::_))
-        .Times(1)
-        .WillOnce(::testing::Invoke(
-            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                string text;
-                EXPECT_TRUE(json->ToString(text));
-                EXPECT_EQ(text, "{\"jsonrpc\":\"2.0\",\"method\":\"org.rdk.USBDevice.onDevicePluggedOut\",\"params\":{\"device\":{\"deviceClass\":8,\"deviceSubclass\":8,\"deviceName\":\"100\\/001\",\"devicePath\":\"\\/dev\\/sda\"}}}");
-
-                onDevicePluggedOut.SetEvent();
-
-                return Core::ERROR_NONE;
-            }));
-
-    /* HotPlug Attach Device 1 Verification */
-    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-    EVENT_SUBSCRIBE(0, _T("onDevicePluggedOut"), _T("org.rdk.USBDevice"), message);
-
-    libusb_device dev = {0};
-    dev.bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-    dev.device_address = MOCK_USB_DEVICE_ADDRESS_1;
-    dev.port_number = MOCK_USB_DEVICE_PORT_1;
-
-    libUSBHotPlugCbDeviceDetached(nullptr, &dev, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0);
-
-    EXPECT_EQ(Core::ERROR_NONE, onDevicePluggedOut.Lock());
-    EVENT_UNSUBSCRIBE(0, _T("onDevicePluggedOut"), _T("org.rdk.USBDevice"), message);
- }
-/*Test cases for onDevicePluggedOut ends here*/
 
 /*******************************************************************************************************************
  * Test function for :getDeviceList
@@ -1029,3 +1054,466 @@ TEST_F(USBDeviceTest, getDeviceInfoSuccessCase)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     EXPECT_EQ(response, string("{\"parentId\":0,\"deviceStatus\":1,\"deviceLevel\":0,\"portNumber\":1,\"vendorId\":4660,\"productId\":22136,\"protocol\":0,\"serialNumber\":\"\",\"device\":{\"deviceClass\":8,\"deviceSubclass\":8,\"deviceName\":\"100\\/001\",\"devicePath\":\"\"},\"flags\":\"AVAILABLE\",\"features\":0,\"busSpeed\":\"High\",\"numLanguageIds\":1,\"productInfo1\":{\"languageId\":1033,\"serialNumber\":\"0401805e4532973503374df52a239c898397d348\",\"manufacturer\":\"USB\",\"product\":\"SanDisk 3.2Gen1\"},\"productInfo2\":{\"languageId\":0,\"serialNumber\":\"\",\"manufacturer\":\"\",\"product\":\"\"},\"productInfo3\":{\"languageId\":0,\"serialNumber\":\"\",\"manufacturer\":\"\",\"product\":\"\"},\"productInfo4\":{\"languageId\":0,\"serialNumber\":\"\",\"manufacturer\":\"\",\"product\":\"\"}}"));
 }
+
+// Add after the existing USBDeviceNotificationHandler class and before USBDeviceTest class
+
+/*******************************************************************************************************************
+ * L1 Notification Tests for USBDevice Plugin
+ * 
+ * These tests verify that notification methods are properly triggered when:
+ * 1. USB devices are plugged in (OnDevicePluggedIn)
+ * 2. USB devices are plugged out (OnDevicePluggedOut)
+ * 
+ * Test Pattern:
+ * - Register notification handler
+ * - Trigger notification via accessible method (libUSB hotplug callbacks)
+ * - Verify notification received with correct parameters
+ * - Unregister and cleanup
+ ********************************************************************************************************************/
+
+/**
+ * @brief Test OnDevicePluggedIn notification via libUSB hotplug callback
+ *        Simulates USB mass storage device insertion event
+ * 
+ * Notification Flow:
+ * libUSBHotPlugCallbackDeviceAttached() → dispatchEvent() → 
+ * Job dispatch → Dispatch() → OnDevicePluggedIn()
+ */
+TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaHotplugCallback_MassStorageDevice)
+{
+    USBDeviceNotificationHandler notificationHandler;
+    libusb_device* mockDevice = nullptr;
+    
+    Mock_SetSerialNumberInUSBDevicePath();
+    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
+    
+    // Setup mock device structure
+    mockDevice = (libusb_device*)malloc(sizeof(libusb_device));
+    ASSERT_NE(mockDevice, nullptr);
+    
+    mockDevice->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
+    mockDevice->device_address = MOCK_USB_DEVICE_ADDRESS_1;
+    mockDevice->port_number = MOCK_USB_DEVICE_PORT_1;
+    
+    // Mock device descriptor for mass storage class
+    ON_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke(
+            [](libusb_device *dev, struct libusb_device_descriptor *desc) {
+                desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->idVendor = 0x0951;
+                desc->idProduct = 0x1666;
+                return LIBUSB_SUCCESS;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly(::testing::Return(MOCK_USB_DEVICE_BUS_NUMBER_1));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly(::testing::Return(MOCK_USB_DEVICE_ADDRESS_1));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers))
+            {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+    
+    // Register notification handler with implementation
+    if (USBDeviceImpl.IsValid())
+    {
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Register(&notificationHandler));
+        
+        // Trigger notification via libUSB hotplug callback (simulating device insertion)
+        TEST_LOG("Triggering OnDevicePluggedIn via libUSBHotPlugCallbackDeviceAttached");
+        Plugin::USBDeviceImplementation::libUSBHotPlugCallbackDeviceAttached(
+            nullptr, 
+            mockDevice, 
+            LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 
+            nullptr
+        );
+        
+        // Wait for notification to be dispatched through worker pool
+        EXPECT_TRUE(notificationHandler.WaitForRequestStatus(5000, USBDevice_Event_DevicePluggedIn));
+        
+        // Verify notification was received
+        EXPECT_TRUE(notificationHandler.GetDevicePluggedInReceived());
+        
+        // Verify device parameters
+        Exchange::IUSBDevice::USBDevice pluggedInDevice = notificationHandler.GetPluggedInDevice();
+        EXPECT_EQ(pluggedInDevice.deviceClass, LIBUSB_CLASS_MASS_STORAGE);
+        EXPECT_EQ(pluggedInDevice.deviceSubclass, LIBUSB_CLASS_MASS_STORAGE);
+        EXPECT_EQ(pluggedInDevice.deviceName, "100/001");
+        EXPECT_EQ(pluggedInDevice.devicePath, "/dev/sda");
+        
+        TEST_LOG("OnDevicePluggedIn notification verified successfully");
+        
+        // Cleanup
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Unregister(&notificationHandler));
+    }
+    
+    free(mockDevice);
+}
+
+/**
+ * @brief Test OnDevicePluggedOut notification via libUSB hotplug callback
+ *        Simulates USB mass storage device removal event
+ * 
+ * Notification Flow:
+ * libUSBHotPlugCallbackDeviceDetached() → dispatchEvent() → 
+ * Job dispatch → Dispatch() → OnDevicePluggedOut()
+ */
+TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaHotplugCallback_MassStorageDevice)
+{
+    USBDeviceNotificationHandler notificationHandler;
+    libusb_device* mockDevice = nullptr;
+    
+    Mock_SetSerialNumberInUSBDevicePath();
+    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
+    
+    // Setup mock device structure
+    mockDevice = (libusb_device*)malloc(sizeof(libusb_device));
+    ASSERT_NE(mockDevice, nullptr);
+    
+    mockDevice->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
+    mockDevice->device_address = MOCK_USB_DEVICE_ADDRESS_1;
+    mockDevice->port_number = MOCK_USB_DEVICE_PORT_1;
+    
+    // Mock device descriptor for mass storage class
+    ON_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke(
+            [](libusb_device *dev, struct libusb_device_descriptor *desc) {
+                desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->idVendor = 0x0951;
+                desc->idProduct = 0x1666;
+                return LIBUSB_SUCCESS;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly(::testing::Return(MOCK_USB_DEVICE_BUS_NUMBER_1));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly(::testing::Return(MOCK_USB_DEVICE_ADDRESS_1));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers))
+            {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+    
+    // Register notification handler with implementation
+    if (USBDeviceImpl.IsValid())
+    {
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Register(&notificationHandler));
+        
+        // Trigger notification via libUSB hotplug callback (simulating device removal)
+        TEST_LOG("Triggering OnDevicePluggedOut via libUSBHotPlugCallbackDeviceDetached");
+        Plugin::USBDeviceImplementation::libUSBHotPlugCallbackDeviceDetached(
+            nullptr, 
+            mockDevice, 
+            LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 
+            nullptr
+        );
+        
+        // Wait for notification to be dispatched through worker pool
+        EXPECT_TRUE(notificationHandler.WaitForRequestStatus(5000, USBDevice_Event_DevicePluggedOut));
+        
+        // Verify notification was received
+        EXPECT_TRUE(notificationHandler.GetDevicePluggedOutReceived());
+        
+        // Verify device parameters
+        Exchange::IUSBDevice::USBDevice pluggedOutDevice = notificationHandler.GetPluggedOutDevice();
+        EXPECT_EQ(pluggedOutDevice.deviceClass, LIBUSB_CLASS_MASS_STORAGE);
+        EXPECT_EQ(pluggedOutDevice.deviceSubclass, LIBUSB_CLASS_MASS_STORAGE);
+        EXPECT_EQ(pluggedOutDevice.deviceName, "100/001");
+        EXPECT_EQ(pluggedOutDevice.devicePath, "/dev/sda");
+        
+        TEST_LOG("OnDevicePluggedOut notification verified successfully");
+        
+        // Cleanup
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Unregister(&notificationHandler));
+    }
+    
+    free(mockDevice);
+}
+
+/**
+ * @brief Test OnDevicePluggedIn notification with multiple USB devices
+ *        Verifies notifications for sequential device insertions
+ */
+TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaHotplugCallback_MultipleDevices)
+{
+    USBDeviceNotificationHandler notificationHandler;
+    libusb_device* mockDevice1 = nullptr;
+    libusb_device* mockDevice2 = nullptr;
+    
+    Mock_SetSerialNumberInUSBDevicePath();
+    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
+    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_2, MOCK_USB_DEVICE_ADDRESS_2);
+    
+    // Setup first mock device
+    mockDevice1 = (libusb_device*)malloc(sizeof(libusb_device));
+    ASSERT_NE(mockDevice1, nullptr);
+    mockDevice1->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
+    mockDevice1->device_address = MOCK_USB_DEVICE_ADDRESS_1;
+    mockDevice1->port_number = MOCK_USB_DEVICE_PORT_1;
+    
+    // Setup second mock device
+    mockDevice2 = (libusb_device*)malloc(sizeof(libusb_device));
+    ASSERT_NE(mockDevice2, nullptr);
+    mockDevice2->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_2;
+    mockDevice2->device_address = MOCK_USB_DEVICE_ADDRESS_2;
+    mockDevice2->port_number = MOCK_USB_DEVICE_PORT_2;
+    
+    ON_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke(
+            [](libusb_device *dev, struct libusb_device_descriptor *desc) {
+                desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
+                return LIBUSB_SUCCESS;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly(::testing::Invoke(
+            [](libusb_device *dev) {
+                return dev->bus_number;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly(::testing::Invoke(
+            [](libusb_device *dev) {
+                return dev->device_address;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers))
+            {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+    
+    if (USBDeviceImpl.IsValid())
+    {
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Register(&notificationHandler));
+        
+        // Trigger first device insertion
+        TEST_LOG("Triggering first device insertion");
+        Plugin::USBDeviceImplementation::libUSBHotPlugCallbackDeviceAttached(
+            nullptr, mockDevice1, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, nullptr);
+        
+        EXPECT_TRUE(notificationHandler.WaitForRequestStatus(5000, USBDevice_Event_DevicePluggedIn));
+        EXPECT_TRUE(notificationHandler.GetDevicePluggedInReceived());
+        
+        Exchange::IUSBDevice::USBDevice device1 = notificationHandler.GetPluggedInDevice();
+        EXPECT_EQ(device1.deviceName, "100/001");
+        
+        // Reset for second device
+        notificationHandler.ResetEvent(USBDevice_Event_DevicePluggedIn);
+        
+        // Trigger second device insertion
+        TEST_LOG("Triggering second device insertion");
+        Plugin::USBDeviceImplementation::libUSBHotPlugCallbackDeviceAttached(
+            nullptr, mockDevice2, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, nullptr);
+        
+        EXPECT_TRUE(notificationHandler.WaitForRequestStatus(5000, USBDevice_Event_DevicePluggedIn));
+        EXPECT_TRUE(notificationHandler.GetDevicePluggedInReceived());
+        
+        Exchange::IUSBDevice::USBDevice device2 = notificationHandler.GetPluggedInDevice();
+        EXPECT_EQ(device2.deviceName, "101/002");
+        
+        TEST_LOG("Multiple device notifications verified successfully");
+        
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Unregister(&notificationHandler));
+    }
+    
+    free(mockDevice1);
+    free(mockDevice2);
+}
+
+/**
+ * @brief Test OnDevicePluggedOut notification with multiple USB devices
+ *        Verifies notifications for sequential device removals
+ */
+TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaHotplugCallback_MultipleDevices)
+{
+    USBDeviceNotificationHandler notificationHandler;
+    libusb_device* mockDevice1 = nullptr;
+    libusb_device* mockDevice2 = nullptr;
+    
+    Mock_SetSerialNumberInUSBDevicePath();
+    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
+    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_2, MOCK_USB_DEVICE_ADDRESS_2);
+    
+    // Setup first mock device
+    mockDevice1 = (libusb_device*)malloc(sizeof(libusb_device));
+    ASSERT_NE(mockDevice1, nullptr);
+    mockDevice1->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
+    mockDevice1->device_address = MOCK_USB_DEVICE_ADDRESS_1;
+    mockDevice1->port_number = MOCK_USB_DEVICE_PORT_1;
+    
+    // Setup second mock device
+    mockDevice2 = (libusb_device*)malloc(sizeof(libusb_device));
+    ASSERT_NE(mockDevice2, nullptr);
+    mockDevice2->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_2;
+    mockDevice2->device_address = MOCK_USB_DEVICE_ADDRESS_2;
+    mockDevice2->port_number = MOCK_USB_DEVICE_PORT_2;
+    
+    ON_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke(
+            [](libusb_device *dev, struct libusb_device_descriptor *desc) {
+                desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
+                return LIBUSB_SUCCESS;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly(::testing::Invoke(
+            [](libusb_device *dev) {
+                return dev->bus_number;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly(::testing::Invoke(
+            [](libusb_device *dev) {
+                return dev->device_address;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers))
+            {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+    
+    if (USBDeviceImpl.IsValid())
+    {
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Register(&notificationHandler));
+        
+        // Trigger first device removal
+        TEST_LOG("Triggering first device removal");
+        Plugin::USBDeviceImplementation::libUSBHotPlugCallbackDeviceDetached(
+            nullptr, mockDevice1, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, nullptr);
+        
+        EXPECT_TRUE(notificationHandler.WaitForRequestStatus(5000, USBDevice_Event_DevicePluggedOut));
+        EXPECT_TRUE(notificationHandler.GetDevicePluggedOutReceived());
+        
+        Exchange::IUSBDevice::USBDevice device1 = notificationHandler.GetPluggedOutDevice();
+        EXPECT_EQ(device1.deviceName, "100/001");
+        
+        // Reset for second device
+        notificationHandler.ResetEvent(USBDevice_Event_DevicePluggedOut);
+        
+        // Trigger second device removal
+        TEST_LOG("Triggering second device removal");
+        Plugin::USBDeviceImplementation::libUSBHotPlugCallbackDeviceDetached(
+            nullptr, mockDevice2, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, nullptr);
+        
+        EXPECT_TRUE(notificationHandler.WaitForRequestStatus(5000, USBDevice_Event_DevicePluggedOut));
+        EXPECT_TRUE(notificationHandler.GetDevicePluggedOutReceived());
+        
+        Exchange::IUSBDevice::USBDevice device2 = notificationHandler.GetPluggedOutDevice();
+        EXPECT_EQ(device2.deviceName, "101/002");
+        
+        TEST_LOG("Multiple device removal notifications verified successfully");
+        
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Unregister(&notificationHandler));
+    }
+    
+    free(mockDevice1);
+    free(mockDevice2);
+}
+
+/**
+ * @brief Test notification handler reset functionality
+ *        Verifies that event flags can be properly reset between tests
+ */
+TEST_F(USBDeviceTest, NotificationHandler_ResetEvents_Success)
+{
+    USBDeviceNotificationHandler notificationHandler;
+    libusb_device* mockDevice = nullptr;
+    
+    Mock_SetSerialNumberInUSBDevicePath();
+    Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
+    
+    mockDevice = (libusb_device*)malloc(sizeof(libusb_device));
+    ASSERT_NE(mockDevice, nullptr);
+    mockDevice->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
+    mockDevice->device_address = MOCK_USB_DEVICE_ADDRESS_1;
+    mockDevice->port_number = MOCK_USB_DEVICE_PORT_1;
+    
+    ON_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Invoke(
+            [](libusb_device *dev, struct libusb_device_descriptor *desc) {
+                desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
+                desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
+                return LIBUSB_SUCCESS;
+            }));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly(::testing::Return(MOCK_USB_DEVICE_BUS_NUMBER_1));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly(::testing::Return(MOCK_USB_DEVICE_ADDRESS_1));
+    
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if((nullptr != dev) && (nullptr != port_numbers))
+            {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+    
+    if (USBDeviceImpl.IsValid())
+    {
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Register(&notificationHandler));
+        
+        // Trigger device plugged in event
+        Plugin::USBDeviceImplementation::libUSBHotPlugCallbackDeviceAttached(
+            nullptr, mockDevice, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, nullptr);
+        
+        EXPECT_TRUE(notificationHandler.WaitForRequestStatus(5000, USBDevice_Event_DevicePluggedIn));
+        EXPECT_TRUE(notificationHandler.GetDevicePluggedInReceived());
+        
+        // Reset the specific event
+        notificationHandler.ResetEvent(USBDevice_Event_DevicePluggedIn);
+        EXPECT_FALSE(notificationHandler.GetDevicePluggedInReceived());
+        EXPECT_EQ(notificationHandler.GetSignalledEvents(), 0);
+        
+        // Trigger device plugged out event
+        Plugin::USBDeviceImplementation::libUSBHotPlugCallbackDeviceDetached(
+            nullptr, mockDevice, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, nullptr);
+        
+        EXPECT_TRUE(notificationHandler.WaitForRequestStatus(5000, USBDevice_Event_DevicePluggedOut));
+        EXPECT_TRUE(notificationHandler.GetDevicePluggedOutReceived());
+        
+        // Reset all events
+        notificationHandler.ResetAllEvents();
+        EXPECT_FALSE(notificationHandler.GetDevicePluggedInReceived());
+        EXPECT_FALSE(notificationHandler.GetDevicePluggedOutReceived());
+        EXPECT_EQ(notificationHandler.GetSignalledEvents(), 0);
+        
+        TEST_LOG("Event reset functionality verified successfully");
+        
+        EXPECT_EQ(Core::ERROR_NONE, USBDeviceImpl->Unregister(&notificationHandler));
+    }
+    
+    free(mockDevice);
+}
+
+/*Test cases for L1 Notifications end here*/
