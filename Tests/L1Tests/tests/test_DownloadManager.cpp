@@ -75,8 +75,6 @@ protected:
     PLUGINHOST_DISPATCHER *dispatcher;
     FactoriesImplementation factoriesImplementation;
 
-    Plugin::DownloadManagerImplementation *mDownloadManagerImpl;
-
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
     Exchange::IDownloadManager::Options options;
     string downloadId;
@@ -151,8 +149,9 @@ protected:
         TEST_LOG("In createResources!");
 
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
-        mDownloadManagerImpl = Plugin::DownloadManagerImplementation::getInstance();
-        downloadManagerInterface = mDownloadManagerImpl->QueryInterface<Exchange::IDownloadManager>();
+       
+     // Get the interface directly from the plugin
+        downloadManagerInterface = plugin->QueryInterface<Exchange::IDownloadManager>();
         
         // Ensure downloadManagerInterface is valid before proceeding
         EXPECT_NE(downloadManagerInterface, nullptr);
@@ -185,8 +184,7 @@ protected:
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
         }
-        
-        mDownloadManagerImpl = nullptr;
+         
     }
       
     void SetUp() override
