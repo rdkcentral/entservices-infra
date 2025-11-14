@@ -146,9 +146,7 @@ protected:
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
             plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(mServiceMock);
-        TEST_LOG("In createResources!");
-
-        EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+        TEST_LOG("In createResources!"); 
        
         // Get the interface directly from the plugin using interface ID
         downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(
@@ -209,11 +207,48 @@ protected:
         EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
 
-        // Activate the dispatcher and initialize the plugin for JSON-RPC
+        EXPECT_CALL(*mServiceMock, ConfigLine())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
+
+        EXPECT_CALL(*mServiceMock, PersistentPath())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
+
+        EXPECT_CALL(*mServiceMock, VolatilePath())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
+
+        EXPECT_CALL(*mServiceMock, DataPath())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
+
+        EXPECT_CALL(*mServiceMock, SubSystems())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return(mSubSystemMock));
+
+        // Mock the Root method to return a local DownloadManagerImplementation instance
+        EXPECT_CALL(*mServiceMock, Root(::testing::_, ::testing::_, ::testing::_))
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Invoke(
+            [&](const uint32_t& waitTime, const uint32_t& connectionId, const string& className) -> void* {
+                if (className == "DownloadManagerImplementation") {
+                    // Create and return a local DownloadManagerImplementation instance
+                    auto* impl = Core::ServiceType<Plugin::DownloadManagerImplementation>::Create<Exchange::IDownloadManager>();
+                    if (impl) {
+                        impl->AddRef();
+                    }
+                    return impl;
+                }
+                return nullptr;
+            }));
+	// Activate the dispatcher and initialize the plugin for JSON-RPC
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(mServiceMock);
-        plugin->Initialize(mServiceMock);  
+              // Initialize should now succeed
+        string result = plugin->Initialize(mServiceMock);
+        EXPECT_EQ(string(""), result); 
     }
 
     void initforComRpc() 
