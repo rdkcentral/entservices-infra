@@ -1,6 +1,6 @@
 /**
 * If not stated otherwise in this file or this component's LICENSE
-[2;2R[3;1R[>77;30708;0c]10;rgb:0000/0000/0000]11;rgb:ffff/ffff/ffff* file the following copyright and licenses apply:
+* file the following copyright and licenses apply:
 *
 * Copyright 2025 RDK Management
 *
@@ -39,92 +39,12 @@ using namespace WPEFramework;
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
 
-#define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
+#define TEST_LOG(x, ...) fprintf(stderr, "[%s:%d](%s)<PID:%d><TID:%d>" x "\n", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (500)
 
 using ::testing::NiceMock;
 //using namespace WPEFramework;
 using namespace std;
-
-// Mock implementation for testing
-class MockDownloadManagerImplementation : public Exchange::IDownloadManager {
-public:
-    MockDownloadManagerImplementation() = default;
-    virtual ~MockDownloadManagerImplementation() = default;
-
-    // IDownloadManager interface
-    Core::hresult Download(const string &url, const Exchange::IDownloadManager::Options &options, string &downloadId) override {
-        downloadId = "test_download_id_123";
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult Pause(const string &downloadId) override {
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult Resume(const string &downloadId) override {
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult Cancel(const string &downloadId) override {
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult Delete(const string &filelocator) override {
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult Progress(const string &downloadId, uint8_t &progress) override {
-        progress = 50; // Mock progress
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult GetStorageDetails(uint32_t &quotaKb, uint32_t &usedKb) override {
-        quotaKb = 1000000; // 1GB
-        usedKb = 500000;   // 500MB
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult RateLimit(const string &downloadId, uint32_t limit) override {
-        return Core::ERROR_NONE;
-    }
-
-    Core::hresult Initialize(PluginHost::IShell* service) override {
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult Deinitialize(PluginHost::IShell* service) override {
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult Register(Exchange::IDownloadManager::INotification* notification) override {
-        return Core::ERROR_NONE;
-    }
-    
-    Core::hresult Unregister(Exchange::IDownloadManager::INotification* notification) override {
-        return Core::ERROR_NONE;
-    }
-
-    // Reference counting
-    void AddRef() const override {
-        Core::InterlockedIncrement(mRefCount);
-    }
-    
-    uint32_t Release() const override {
-        if (Core::InterlockedDecrement(mRefCount) == 0) {
-            delete this;
-            return Core::ERROR_DESTRUCTION_SUCCEEDED;
-        }
-        return Core::ERROR_NONE;
-    }
-
-    BEGIN_INTERFACE_MAP(MockDownloadManagerImplementation)
-        INTERFACE_ENTRY(Exchange::IDownloadManager)
-    END_INTERFACE_MAP
-
-private:
-    mutable uint32_t mRefCount = 1;
-};
 
 typedef enum : uint32_t {
     DownloadManager_invalidStatus = 0,
@@ -157,7 +77,7 @@ protected:
     FactoriesImplementation factoriesImplementation;
 
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
-    MockDownloadManagerImplementation* mockImpl = nullptr;
+    Plugin::DownloadManagerImplementation* mockImpl = nullptr;
     Exchange::IDownloadManager::Options options;
     string downloadId;
     uint8_t progress;
@@ -240,10 +160,10 @@ protected:
         downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(
             plugin->QueryInterface(Exchange::IDownloadManager::ID));
         
-        // If interface is not available, use a mock for COM-RPC tests
+        // If interface is not available, use a real implementation for COM-RPC tests
         if (downloadManagerInterface == nullptr) {
-            TEST_LOG("DownloadManager interface not available - creating mock for COM-RPC tests");
-            downloadManagerInterface = new MockDownloadManagerImplementation();
+            TEST_LOG("DownloadManager interface not available - creating real implementation for COM-RPC tests");
+            downloadManagerInterface = new Plugin::DownloadManagerImplementation();
         }
          
         TEST_LOG("createResources - All done!");
@@ -318,8 +238,8 @@ protected:
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Return(mSubSystemMock));
 
-        // Create a mock implementation for JSON-RPC testing
-        mockImpl = new MockDownloadManagerImplementation();
+        // Create a real implementation for JSON-RPC testing
+        auto* mockImpl = new Plugin::DownloadManagerImplementation();
         
         // Activate the dispatcher and initialize the plugin for JSON-RPC
         PluginHost::IFactories::Assign(&factoriesImplementation);
@@ -332,10 +252,15 @@ protected:
             TEST_LOG("Plugin initialization failed: %s", result.c_str());
         }
         
-        // Manually register JSON-RPC methods with our mock implementation
+        // Initialize the real implementation
+        if (mockImpl) {
+            mockImpl->Initialize(mServiceMock);
+        }
+        
+        // Manually register JSON-RPC methods with our implementation
         try {
             Exchange::JDownloadManager::Register(*plugin, mockImpl);
-            TEST_LOG("Successfully registered JSON-RPC methods with mock implementation");
+            TEST_LOG("Successfully registered JSON-RPC methods with real implementation");
             
             // Verify that at least one method is now available
             auto testResult = mJsonRpcHandler.Exists(_T("download"));
@@ -345,7 +270,7 @@ protected:
                 TEST_LOG("JSON-RPC methods still not available after registration (error: %u)", testResult);
             }
         } catch (...) {
-[O            TEST_LOG("Failed to register JSON-RPC methods - may not be available in test environment");
+            TEST_LOG("Failed to register JSON-RPC methods - may not be available in test environment");
         }
     }
 
@@ -395,8 +320,9 @@ protected:
 
         plugin->Deinitialize(mServiceMock);
         
-        // Clean up mock implementation
+        // Clean up implementation
         if (mockImpl) {
+            mockImpl->Deinitialize(mServiceMock);
             mockImpl->Release();
             mockImpl = nullptr;
         }
@@ -699,7 +625,7 @@ TEST_F(DownloadManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     string cancelParams = "{\"downloadId\": \"" + currentDownloadId + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, mJsonRpcResponse));
-[I
+
     deinitforJsonRpc();
 }
 
