@@ -103,6 +103,18 @@ protected:
         workerPool.Release();
     }
 
+   /* void SetUp() override 
+    {
+        // Create resources similar to PreinstallManager pattern
+        Core::hresult status = createResources();
+        EXPECT_EQ(status, Core::ERROR_NONE);
+    }
+
+    void TearDown() override
+    {
+        releaseResources();
+    }*/
+
     Core::hresult createResources()
     {        
         Core::hresult status = Core::ERROR_GENERAL;
@@ -135,7 +147,7 @@ protected:
             // Initialize plugin following PreinstallManager pattern
             PluginHost::IFactories::Assign(&factoriesImplementation);
             
-            if (plugin == nullptr) {
+            if (!plugin.IsValid()) {
                 TEST_LOG("Plugin is null - cannot proceed");
                 return Core::ERROR_GENERAL;
             }
@@ -195,7 +207,7 @@ protected:
                 dispatcher = nullptr;
             }
 
-            if (plugin) {
+            if (plugin.IsValid()) {
                 plugin->Deinitialize(mServiceMock);
             }
             
@@ -324,7 +336,7 @@ protected:
     {
         // Initialize the parameters required for COM-RPC with default values
         uri = "https://httpbin.org/bytes/1024";
-
+[O
         options = { 
             true, 2, 1024
         };
@@ -480,7 +492,7 @@ TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
 
     // This test verifies that DownloadManager plugin can register JSON-RPC methods
     // In test environments, full plugin instantiation may not be possible
-    if (plugin == nullptr) {
+    if (!plugin.IsValid()) {
         TEST_LOG("Plugin not available - skipping JSON-RPC method registration test");
         GTEST_SKIP() << "Skipping test - Plugin not available in test environment";
         return;
@@ -526,7 +538,7 @@ TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
  * Check if the DownloadManager interface is available
  * Verify basic interface functionality if available
  * Clean up COM-RPC resources
- 
+ */
 TEST_F(DownloadManagerTest, downloadManagerInterfaceAvailability) {
 
     TEST_LOG("Starting COM-RPC interface availability test");
@@ -550,20 +562,20 @@ TEST_F(DownloadManagerTest, downloadManagerInterfaceAvailability) {
     deinitforComRpc();
 }
 
-* Test Case for basic plugin lifecycle
+/* Test Case for basic plugin lifecycle
  * 
  * Verify that the plugin can be created, initialized, and destroyed without crashing
  * This is a fundamental test that should always pass
- *
+ */
 TEST_F(DownloadManagerTest, pluginLifecycleTest) {
 
     TEST_LOG("Starting plugin lifecycle test");
 
     // Plugin is already created in the constructor and initialized in SetUp
     // Just verify it exists and basic operations don't crash
-    EXPECT_NE(plugin, nullptr) << "Plugin should be created successfully";
+    EXPECT_TRUE(plugin.IsValid()) << "Plugin should be created successfully";
     
-    if (plugin) {
+    if (plugin.IsValid()) {
         // Test basic plugin operations
         auto pluginInterface = plugin->QueryInterface(PluginHost::IPlugin::ID);
         if (pluginInterface) {
@@ -583,4 +595,4 @@ TEST_F(DownloadManagerTest, pluginLifecycleTest) {
     // Cleanup is handled by TearDown automatically
 }
 
-*/
+
