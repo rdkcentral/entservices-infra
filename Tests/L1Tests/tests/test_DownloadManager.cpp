@@ -106,7 +106,7 @@ protected:
     Core::hresult createResources()
     {        
         Core::hresult status = Core::ERROR_GENERAL;
-        
+[O        
         try {
             // Set up mocks and expect calls
             mServiceMock = new NiceMock<ServiceMock>;
@@ -320,7 +320,7 @@ protected:
         }
     }
 
-    void getDownloadParams()
+[I    void getDownloadParams()
     {
         // Initialize the parameters required for COM-RPC with default values
         uri = "https://httpbin.org/bytes/1024";
@@ -648,7 +648,7 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
                 return false; // Internet not available
             }));
 
-    string response;
+[O    string response;
     EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), 
         _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), response));
 
@@ -801,7 +801,7 @@ TEST_F(DownloadManagerTest, cancelMethodJsonRpcSuccess) {
     }
 
     deinitforJsonRpc();
-}
+[I}
 
 /* Test Case for progress method using JSON-RPC
  * 
@@ -1119,22 +1119,19 @@ TEST_F(DownloadManagerTest, errorScenariosJsonRpc) {
     string invalidResponse;
     
     if (mJsonRpcHandler.Exists(_T("pause")) == Core::ERROR_NONE) {
-[O        auto pauseResult = mJsonRpcHandler.Invoke(connection, _T("pause"), 
-            _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
+        auto pauseResult = mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
         EXPECT_NE(Core::ERROR_NONE, pauseResult);
         TEST_LOG("Pause with invalid ID returned error: %u (expected)", pauseResult);
     }
     
     if (mJsonRpcHandler.Exists(_T("resume")) == Core::ERROR_NONE) {
-        auto resumeResult = mJsonRpcHandler.Invoke(connection, _T("resume"), 
-            _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
+        auto resumeResult = mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
         EXPECT_NE(Core::ERROR_NONE, resumeResult);
         TEST_LOG("Resume with invalid ID returned error: %u (expected)", resumeResult);
     }
     
     if (mJsonRpcHandler.Exists(_T("cancel")) == Core::ERROR_NONE) {
-        auto cancelResult = mJsonRpcHandler.Invoke(connection, _T("cancel"), 
-            _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
+        auto cancelResult = mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
         EXPECT_NE(Core::ERROR_NONE, cancelResult);
         TEST_LOG("Cancel with invalid ID returned error: %u (expected)", cancelResult);
     }
