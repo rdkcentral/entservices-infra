@@ -336,10 +336,10 @@ protected:
     {
         // Initialize the parameters required for COM-RPC with default values
         uri = "https://httpbin.org/bytes/1024";
-[O
-        options = { 
-            true, 2, 1024
-        };
+
+        options.priority = true;
+        options.retries = 2; 
+        options.rateLimit = 1024;
 
         downloadId = {};
     }
@@ -577,13 +577,13 @@ TEST_F(DownloadManagerTest, pluginLifecycleTest) {
     
     if (plugin.IsValid()) {
         // Test basic plugin operations
-        auto pluginInterface = plugin->QueryInterface(PluginHost::IPlugin::ID);
+        auto pluginInterface = static_cast<PluginHost::IPlugin*>(plugin->QueryInterface(PluginHost::IPlugin::ID));
         if (pluginInterface) {
             TEST_LOG("Plugin supports IPlugin interface");
             pluginInterface->Release();
         }
         
-        auto dispatcherInterface = plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID);
+        auto dispatcherInterface = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         if (dispatcherInterface) {
             TEST_LOG("Plugin supports PLUGINHOST_DISPATCHER interface");
             dispatcherInterface->Release();
