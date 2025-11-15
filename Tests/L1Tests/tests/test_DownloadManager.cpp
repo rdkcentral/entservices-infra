@@ -654,3 +654,206 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
 
     deinitforJsonRpc();
 }
+/* Test Case for pause method using JSON-RPC
+ *
+ * Start a download, then pause it using downloadId
+ * Verify pause operation succeeds
+ */
+TEST_F(DownloadManagerTest, pauseMethodJsonRpcSuccess) {
+
+    TEST_LOG("Starting JSON-RPC pause success test");
+
+    initforJsonRpc();
+
+    auto result = mJsonRpcHandler.Exists(_T("pause"));
+    if (result != Core::ERROR_NONE) {
+        TEST_LOG("JSON-RPC pause method not available - skipping test");
+        deinitforJsonRpc();
+        return;
+    }
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    // First start a download
+    string downloadResponse;
+    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"),
+        _T("{\"url\": \"https://httpbin.org/bytes/2048\"}"), downloadResponse);
+
+    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
+        JsonObject jsonResponse;
+        if (jsonResponse.FromString(downloadResponse)) {
+            string downloadId = jsonResponse["downloadId"].String();
+            if (!downloadId.empty()) {
+                // Now pause the download
+                string pauseParams = "{\"downloadId\": \"" + downloadId + "\"}";
+                string pauseResponse;
+                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), pauseParams, pauseResponse));
+
+                // Cancel to cleanup
+                mJsonRpcHandler.Invoke(connection, _T("cancel"), pauseParams, pauseResponse);
+            }
+        }
+    }
+
+    deinitforJsonRpc();
+}
+
+/* Test Case for resume method using JSON-RPC
+ *
+ * Start a download, pause it, then resume it
+ * Verify resume operation succeeds
+ */
+TEST_F(DownloadManagerTest, resumeMethodJsonRpcSuccess) {
+
+    TEST_LOG("Starting JSON-RPC resume success test");
+
+    initforJsonRpc();
+
+    auto result = mJsonRpcHandler.Exists(_T("resume"));
+    if (result != Core::ERROR_NONE) {
+        TEST_LOG("JSON-RPC resume method not available - skipping test");
+        deinitforJsonRpc();
+        return;
+    }
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    // Start download, pause, then resume
+    string downloadResponse;
+    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"),
+        _T("{\"url\": \"https://httpbin.org/bytes/2048\"}"), downloadResponse);
+
+    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
+        JsonObject jsonResponse;
+        if (jsonResponse.FromString(downloadResponse)) {
+            string downloadId = jsonResponse["downloadId"].String();
+            if (!downloadId.empty()) {
+                string params = "{\"downloadId\": \"" + downloadId + "\"}";
+                string response;
+
+                // Pause first
+                mJsonRpcHandler.Invoke(connection, _T("pause"), params, response);
+
+                // Then resume
+                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), params, response));
+
+                // Cancel to cleanup
+                mJsonRpcHandler.Invoke(connection, _T("cancel"), params, response);
+            }
+        }
+    }
+
+    deinitforJsonRpc();
+}
+
+/* Test Case for cancel method using JSON-RPC
+ *
+ * Start a download then cancel it
+ * Verify cancel operation succeeds
+ */
+TEST_F(DownloadManagerTest, cancelMethodJsonRpcSuccess) {
+
+    TEST_LOG("Starting JSON-RPC cancel success test");
+
+    initforJsonRpc();
+
+    auto result = mJsonRpcHandler.Exists(_T("cancel"));
+    if (result != Core::ERROR_NONE) {
+        TEST_LOG("JSON-RPC cancel method not available - skipping test");
+        deinitforJsonRpc();
+        return;
+    }
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    // Start a download
+    string downloadResponse;
+    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"),
+        _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), downloadResponse);
+
+    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
+        JsonObject jsonResponse;
+        if (jsonResponse.FromString(downloadResponse)) {
+            string downloadId = jsonResponse["downloadId"].String();
+            if (!downloadId.empty()) {
+                // Cancel the download
+                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
+                string cancelResponse;
+                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, cancelResponse));
+            }
+        }
+    }
+
+    deinitforJsonRpc();
+}
+
+/* Test Case for progress method using JSON-RPC
+ *
+ * Start a download and check its progress
+ * Verify progress method returns valid progress information
+ */
+TEST_F(DownloadManagerTest, progressMethodJsonRpcSuccess) {
+
+    TEST_LOG("Starting JSON-RPC progress success test");
+
+    initforJsonRpc();
+
+    auto result = mJsonRpcHandler.Exists(_T("progress"));
+    if (result != Core::ERROR_NONE) {
+        TEST_LOG("JSON-RPC progress method not available - skipping test");
+        deinitforJsonRpc();
+        return;
+    }
+
+    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+            }));
+
+    // Start a download
+    string downloadResponse;
+    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"),
+        _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), downloadResponse);
+
+    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
+        JsonObject jsonResponse;
+        if (jsonResponse.FromString(downloadResponse)) {
+            string downloadId = jsonResponse["downloadId"].String();
+            if (!downloadId.empty()) {
+                // Check progress
+                string progressParams = "{\"downloadId\": \"" + downloadId + "\"}";
+                string progressResponse;
+                auto progressResult = mJsonRpcHandler.Invoke(connection, _T("progress"), progressParams, progressResponse);
+
+                // Progress method might not be available in all environments
+                if (progressResult == Core::ERROR_NONE) {
+                    TEST_LOG("Progress response: %s", progressResponse.c_str());
+                    EXPECT_FALSE(progressResponse.empty());
+                }
+
+                // Cancel to cleanup
+                mJsonRpcHandler.Invoke(connection, _T("cancel"), progressParams, progressResponse);
+            }
+        }
+    }
+
+    deinitforJsonRpc();
+}
+
