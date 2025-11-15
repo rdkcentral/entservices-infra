@@ -106,7 +106,7 @@ protected:
     Core::hresult createResources()
     {        
         Core::hresult status = Core::ERROR_GENERAL;
-[O        
+        
         try {
             // Set up mocks and expect calls
             mServiceMock = new NiceMock<ServiceMock>;
@@ -320,7 +320,7 @@ protected:
         }
     }
 
-[I    void getDownloadParams()
+    void getDownloadParams()
     {
         // Initialize the parameters required for COM-RPC with default values
         uri = "https://httpbin.org/bytes/1024";
@@ -648,9 +648,8 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
                 return false; // Internet not available
             }));
 
-[O    string response;
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), response));
+    string response;
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), response));
 
     deinitforJsonRpc();
 }
@@ -801,7 +800,7 @@ TEST_F(DownloadManagerTest, cancelMethodJsonRpcSuccess) {
     }
 
     deinitforJsonRpc();
-[I}
+}
 
 /* Test Case for progress method using JSON-RPC
  * 
