@@ -29,7 +29,6 @@
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
-#include <interfaces/json/JDownloadManager.h>
 using namespace WPEFramework;
 
 #include "ISubSystemMock.h"
@@ -39,7 +38,7 @@ using namespace WPEFramework;
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
 
-#define TEST_LOG(x, ...) fprintf(stderr, "[%s:%d](%s)<PID:%d><TID:%d>" x "\n", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
+#define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (500)
 
 using ::testing::NiceMock;
@@ -76,8 +75,9 @@ protected:
     PLUGINHOST_DISPATCHER *dispatcher;
     FactoriesImplementation factoriesImplementation;
 
+    Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
+
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
-    Exchange::IDownloadManager* mockImpl = nullptr;
     Exchange::IDownloadManager::Options options;
     string downloadId;
     uint8_t progress;
@@ -85,12 +85,16 @@ protected:
 
     // Constructor
     DownloadManagerTest()
-     : plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
-	 workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
-         2, Core::Thread::DefaultStackSize(), 16)),
-       mJsonRpcHandler(*plugin),
-        INIT_CONX(1,0)
+        : workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
+            2, Core::Thread::DefaultStackSize(), 16)),
+          plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
+          mJsonRpcHandler(*plugin),
+          INIT_CONX(1,0)
     {
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+
+        downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
+
         Core::IWorkerPool::Assign(&(*workerPool));
         workerPool->Run();
     }
@@ -98,154 +102,17 @@ protected:
     // Destructor
     virtual ~DownloadManagerTest() override
     {
+        downloadManagerInterface->Release();
 
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
 
-   /* void SetUp() override 
-    {
-        // Create resources similar to PreinstallManager pattern
-        Core::hresult status = createResources();
-        EXPECT_EQ(status, Core::ERROR_NONE);
-    }
-
-    void TearDown() override
-    {
-        releaseResources();
-    }*/
-
-    Core::hresult createResources()
+    void SetUp() override 
     {        
-        Core::hresult status = Core::ERROR_GENERAL;
-        
-        try {
-            // Set up mocks and expect calls
-            mServiceMock = new NiceMock<ServiceMock>;
-            mSubSystemMock = new NiceMock<SubSystemMock>;
-
-            EXPECT_CALL(*mServiceMock, ConfigLine())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
-
-            EXPECT_CALL(*mServiceMock, PersistentPath())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return("/tmp/"));
-
-            EXPECT_CALL(*mServiceMock, VolatilePath())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return("/tmp/"));
-
-            EXPECT_CALL(*mServiceMock, DataPath())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return("/tmp/"));
-
-            EXPECT_CALL(*mServiceMock, SubSystems())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return(mSubSystemMock));
-
-            // Initialize plugin following PreinstallManager pattern
-            PluginHost::IFactories::Assign(&factoriesImplementation);
-            
-            if (plugin == nullptr) {
-                TEST_LOG("Plugin is null - cannot proceed");
-                return Core::ERROR_GENERAL;
-            }
-            
-            dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
-                plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
-            
-            if (dispatcher == nullptr) {
-                TEST_LOG("Failed to get PLUGINHOST_DISPATCHER interface");
-                return Core::ERROR_GENERAL;
-            }
-            
-            dispatcher->Activate(mServiceMock);
-            TEST_LOG("In createResources!");
-
-            string initResult = plugin->Initialize(mServiceMock);
-            if (initResult != "") {
-                TEST_LOG("Plugin initialization failed: %s", initResult.c_str());
-                // Don't fail the test here - let individual tests handle this
-            }
-           
-            // Get the interface directly from the plugin using interface ID
-            downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(
-                plugin->QueryInterface(Exchange::IDownloadManager::ID));
-            
-            // If interface is not available, we'll handle it in individual tests
-            if (downloadManagerInterface == nullptr) {
-                TEST_LOG("DownloadManager interface not available from plugin - will handle in individual tests");
-            }
-             
-            TEST_LOG("createResources - All done!");
-            status = Core::ERROR_NONE;
-        } catch (const std::exception& e) {
-            TEST_LOG("Exception in createResources: %s", e.what());
-            status = Core::ERROR_GENERAL;
-        } catch (...) {
-            TEST_LOG("Unknown exception in createResources");
-            status = Core::ERROR_GENERAL;
-        }
-
-        return status;
-    }
-
-    void releaseResources()
-    {
-        TEST_LOG("In releaseResources!");
-
-        try {
-            if (downloadManagerInterface) {
-                downloadManagerInterface->Release();
-                downloadManagerInterface = nullptr;
-            }
-
-            if (dispatcher) {
-                dispatcher->Deactivate();
-                dispatcher->Release();
-                dispatcher = nullptr;
-            }
-
-            if (plugin) {
-                plugin->Deinitialize(mServiceMock);
-            }
-            
-            if (mServiceMock) {
-                delete mServiceMock;
-                mServiceMock = nullptr;
-            }
-
-            if (mSubSystemMock) {
-                delete mSubSystemMock;
-                mSubSystemMock = nullptr;
-            }
-        } catch (const std::exception& e) {
-            TEST_LOG("Exception in releaseResources: %s", e.what());
-        } catch (...) {
-            TEST_LOG("Unknown exception in releaseResources");
-        }
-    }
-      
-    void SetUp() override
-    {
-        Core::hresult status = createResources();
-        EXPECT_EQ(status, Core::ERROR_NONE);
-    }
-
-    void TearDown() override
-    {
-        releaseResources();
-    }
-
-
-    void initforJsonRpc() 
-    {    
-        EXPECT_CALL(*mServiceMock, Register(::testing::_))
-          .Times(::testing::AnyNumber());
-
-        EXPECT_CALL(*mServiceMock, AddRef())
-          .Times(::testing::AnyNumber());
+        // Set up mocks and expect calls
+        mServiceMock = new NiceMock<ServiceMock>;
+        mSubSystemMock = new NiceMock<SubSystemMock>;
 
         EXPECT_CALL(*mServiceMock, ConfigLine())
           .Times(::testing::AnyNumber())
@@ -266,69 +133,21 @@ protected:
         EXPECT_CALL(*mServiceMock, SubSystems())
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Return(mSubSystemMock));
+    }
 
-        // Activate the dispatcher and initialize the plugin first
+    void initforJsonRpc() 
+    {    
+        EXPECT_CALL(*mServiceMock, Register(::testing::_))
+          .Times(::testing::AnyNumber());
+
+        EXPECT_CALL(*mServiceMock, AddRef())
+          .Times(::testing::AnyNumber());
+
+        // Activate the dispatcher and initialize the plugin for JSON-RPC
         PluginHost::IFactories::Assign(&factoriesImplementation);
         dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
         dispatcher->Activate(mServiceMock);
-        
-        // Initialize the plugin 
-        string result = plugin->Initialize(mServiceMock);
-        if (result != "") {
-            TEST_LOG("Plugin initialization failed: %s", result.c_str());
-        }
-
-        // Try to get the implementation directly from the plugin first
-        mockImpl = static_cast<Exchange::IDownloadManager*>(
-            plugin->QueryInterface(Exchange::IDownloadManager::ID));
-        
-        if (mockImpl) {
-            TEST_LOG("Successfully obtained DownloadManager interface from plugin");
-            mockImpl->AddRef(); // Add reference since we're storing it
-            
-            // Try to register JSON-RPC methods
-            try {
-                Exchange::JDownloadManager::Register(*plugin, mockImpl);
-                TEST_LOG("Successfully registered JSON-RPC methods with plugin implementation");
-                
-                // Verify that at least one method is now available
-                auto testResult = mJsonRpcHandler.Exists(_T("download"));
-                if (testResult == Core::ERROR_NONE) {
-                    TEST_LOG("JSON-RPC methods are now available for testing");
-                } else {
-                    TEST_LOG("JSON-RPC methods still not available after registration (error: %u)", testResult);
-                }
-            } catch (...) {
-                TEST_LOG("Failed to register JSON-RPC methods with plugin implementation");
-            }
-        } else {
-            // Try to create implementation using Core::Service template as fallback
-            TEST_LOG("Plugin interface not available, trying Core::Service template");
-            mockImpl = Core::Service<Plugin::DownloadManagerImplementation>::Create<Exchange::IDownloadManager>();
-            
-            if (mockImpl) {
-                TEST_LOG("Successfully created DownloadManagerImplementation using Core::Service");
-                mockImpl->Initialize(mServiceMock);
-                
-                // Try to register JSON-RPC methods with our implementation
-                try {
-                    Exchange::JDownloadManager::Register(*plugin, mockImpl);
-                    TEST_LOG("Successfully registered JSON-RPC methods with Core::Service implementation");
-                    
-                    // Verify that at least one method is now available
-                    auto testResult = mJsonRpcHandler.Exists(_T("download"));
-                    if (testResult == Core::ERROR_NONE) {
-                        TEST_LOG("JSON-RPC methods are now available for testing");
-                    } else {
-                        TEST_LOG("JSON-RPC methods still not available after registration (error: %u)", testResult);
-                    }
-                } catch (...) {
-                    TEST_LOG("Failed to register JSON-RPC methods with Core::Service implementation");
-                }
-            } else {
-                TEST_LOG("Failed to create DownloadManagerImplementation - JSON-RPC methods may not be available");
-            }
-        }
+        plugin->Initialize(mServiceMock);  
     }
 
     void initforComRpc() 
@@ -337,26 +156,7 @@ protected:
           .Times(::testing::AnyNumber());
 
         // Initialize the plugin for COM-RPC
-        if (downloadManagerInterface) {
-            try {
-                downloadManagerInterface->Initialize(mServiceMock);
-            } catch (...) {
-                TEST_LOG("Failed to initialize downloadManagerInterface");
-            }
-        } else {
-            // Try to use the mock implementation if available
-            if (mockImpl) {
-                downloadManagerInterface = mockImpl;
-                downloadManagerInterface->AddRef(); // Add reference for COM-RPC usage
-                try {
-                    downloadManagerInterface->Initialize(mServiceMock);
-                } catch (...) {
-                    TEST_LOG("Failed to initialize mockImpl for COM-RPC usage");
-                }
-            } else {
-                TEST_LOG("No DownloadManager interface available for COM-RPC tests");
-            }
-        }
+        downloadManagerInterface->Initialize(mServiceMock);
     }
 
     void getDownloadParams()
@@ -371,6 +171,22 @@ protected:
         downloadId = {};
     }
 
+    void TearDown() override
+    {
+        // Clean up mocks
+        if (mServiceMock != nullptr)
+        {
+            delete mServiceMock;
+            mServiceMock = nullptr;
+        }
+
+        if(mSubSystemMock != nullptr)
+        {
+            delete mSubSystemMock;
+            mSubSystemMock = nullptr;
+        }
+    }
+
     void deinitforJsonRpc() 
     {
         EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
@@ -378,25 +194,6 @@ protected:
 
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
-
-        // Unregister JSON-RPC methods
-        try {
-            Exchange::JDownloadManager::Unregister(*plugin);
-            TEST_LOG("Successfully unregistered JSON-RPC methods");
-        } catch (...) {
-            TEST_LOG("Failed to unregister JSON-RPC methods");
-        }
-
-        // Clean up implementation first
-        if (mockImpl) {
-            try {
-                mockImpl->Deinitialize(mServiceMock);
-            } catch (...) {
-                TEST_LOG("Failed to deinitialize mockImpl");
-            }
-            mockImpl->Release();
-            mockImpl = nullptr;
-        }
 
         // Deactivate the dispatcher and deinitialize the plugin for JSON-RPC
         dispatcher->Deactivate();
@@ -411,19 +208,7 @@ protected:
           .Times(::testing::AnyNumber());
 
         // Deinitialize the plugin for COM-RPC
-        if (downloadManagerInterface) {
-            try {
-                downloadManagerInterface->Deinitialize(mServiceMock);
-            } catch (...) {
-                TEST_LOG("Failed to deinitialize downloadManagerInterface");
-            }
-            
-            // If this is not the same as mockImpl, release it
-            if (downloadManagerInterface != mockImpl) {
-                downloadManagerInterface->Release();
-                downloadManagerInterface = nullptr;
-            }
-        }
+        downloadManagerInterface->Deinitialize(mServiceMock);
     }
 
     void waitforSignal(uint32_t timeout_ms) 
@@ -522,34 +307,16 @@ TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
 
     initforJsonRpc();
 
-    // Check if we have a valid implementation first
-    if (mockImpl == nullptr) {
-        TEST_LOG("DownloadManager implementation not available - skipping JSON-RPC method registration test");
-        GTEST_SKIP() << "Skipping test - DownloadManager implementation not available in test environment";
-        deinitforJsonRpc();
-        return;
-    }
-
     // TC-1: Check if the listed methods exist using JsonRpc
-    // With our implementation, these should now be available
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC methods not registered properly - methods may not be available");
-        GTEST_SKIP() << "Skipping test - JSON-RPC methods not available in test environment";
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("download"))) << "download method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("pause"))) << "pause method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("resume"))) << "resume method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("cancel"))) << "cancel method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("delete"))) << "delete method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("progress"))) << "progress method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getStorageDetails"))) << "getStorageDetails method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("rateLimit"))) << "rateLimit method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("download")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("pause")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("resume")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("cancel")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("delete")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("progress")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getStorageDetails")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("rateLimit")));
 
     deinitforJsonRpc();
 }
-
 
