@@ -38,6 +38,7 @@ using namespace WPEFramework;
 #include "ISubSystemMock.h"
 #include "ServiceMock.h"
 #include "COMLinkMock.h"
+#include "WrapsMock.h"
 #include "ThunderPortability.h"
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
@@ -67,10 +68,11 @@ protected:
     // Declare the protected members
     ServiceMock* mServiceMock = nullptr;
     SubSystemMock* mSubSystemMock = nullptr;
+    WrapsImplMock* p_wrapsImplMock = nullptr;
 
     Core::ProxyType<WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
-    Core::JSONRPC::Handler& mJsonRpcHandler;
+    Core::JSONRPC::Handler* mJsonRpcHandler;
     Core::JSONRPC::Message message;
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
@@ -88,12 +90,30 @@ protected:
 
     // Constructor
     DownloadManagerTest()
-     : plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
-	 workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
-         2, Core::Thread::DefaultStackSize(), 16)),
-       mJsonRpcHandler(*plugin),
-        INIT_CONX(1,0)
     {
+        // Set up WrapsImplMock FIRST before anything else
+        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+        Wraps::setImpl(p_wrapsImplMock);
+        
+        // Add default mocks for common system calls that might be used during initialization
+        EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return(0));
+            
+        EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return(0));
+            
+        EXPECT_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return(0));
+        
+        // Now initialize other components
+        plugin = Core::ProxyType<Plugin::DownloadManager>::Create();
+        workerPool = Core::ProxyType<WorkerPoolImplementation>::Create(2, Core::Thread::DefaultStackSize(), 16);
+        mJsonRpcHandler = new Core::JSONRPC::Handler(*plugin);
+        INIT_CONX(1,0);
+        
         Core::IWorkerPool::Assign(&(*workerPool));
         workerPool->Run();
     }
@@ -101,7 +121,19 @@ protected:
     // Destructor
     virtual ~DownloadManagerTest() override
     {
-
+        // Clean up JSON RPC handler
+        if (mJsonRpcHandler) {
+            delete mJsonRpcHandler;
+            mJsonRpcHandler = nullptr;
+        }
+        
+        // Clean up WrapsImplMock
+        Wraps::setImpl(nullptr);
+        if (p_wrapsImplMock != nullptr) {
+            delete p_wrapsImplMock;
+            p_wrapsImplMock = nullptr;
+        }
+[O
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
@@ -114,6 +146,19 @@ protected:
             // Set up mocks and expect calls
             mServiceMock = new NiceMock<ServiceMock>;
             mSubSystemMock = new NiceMock<SubSystemMock>;
+
+            // Set up WrapsImplMock expectations for system calls
+            EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return(0)); // Simulate successful directory creation
+                
+            EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return(0));
+                
+            EXPECT_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return(0));
 
             EXPECT_CALL(*mServiceMock, ConfigLine())
                 .Times(::testing::AnyNumber())
@@ -1574,7 +1619,7 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationDownloadMethod) {
         }
 
         // Cleanup
-        implementation->Deinitialize(mServiceMock);
+[I        implementation->Deinitialize(mServiceMock);
     }
 }
 
@@ -1982,7 +2027,7 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationErrorConditions) {
     // Note: This would cause assertion failure in debug builds, so we skip it
     TEST_LOG("Skipping Unregister with null notification test (would cause assertion)");
 
-    // Test all methods before initialization
+[O    // Test all methods before initialization
     Exchange::IDownloadManager::Options options;
     options.priority = false;
     options.retries = 1;
