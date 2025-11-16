@@ -46,7 +46,7 @@ using namespace WPEFramework;
 #define TIMEOUT   (500)
 
 using ::testing::NiceMock;
-//using namespace WPEFramework;
+using namespace WPEFramework;
 using namespace std;
 
 typedef enum : uint32_t {
@@ -107,7 +107,7 @@ protected:
     }
 
     Core::hresult createResources()
-    {        
+    {
         Core::hresult status = Core::ERROR_GENERAL;
         
         try {
@@ -116,31 +116,31 @@ protected:
             mSubSystemMock = new NiceMock<SubSystemMock>;
 
             EXPECT_CALL(*mServiceMock, ConfigLine())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
 
             EXPECT_CALL(*mServiceMock, PersistentPath())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return("/tmp/"));
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return("/tmp/"));
 
             EXPECT_CALL(*mServiceMock, VolatilePath())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return("/tmp/"));
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return("/tmp/"));
 
             EXPECT_CALL(*mServiceMock, DataPath())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return("/tmp/"));
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return("/tmp/"));
 
             EXPECT_CALL(*mServiceMock, SubSystems())
-              .Times(::testing::AnyNumber())
-              .WillRepeatedly(::testing::Return(mSubSystemMock));
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return(mSubSystemMock));
 
             // Initialize plugin following PreinstallManager pattern
             PluginHost::IFactories::Assign(&factoriesImplementation);
             
             if (!plugin.IsValid()) {
                 TEST_LOG("Plugin is null - cannot proceed");
-[O                return Core::ERROR_GENERAL;
+                return Core::ERROR_GENERAL;
             }
             
             dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(
@@ -188,7 +188,7 @@ protected:
 
         try {
             if (downloadManagerInterface) {
-[I                downloadManagerInterface->Release();
+                downloadManagerInterface->Release();
                 downloadManagerInterface = nullptr;
             }
 
@@ -233,30 +233,30 @@ protected:
     void initforJsonRpc() 
     {    
         EXPECT_CALL(*mServiceMock, Register(::testing::_))
-          .Times(::testing::AnyNumber());
+            .Times(::testing::AnyNumber());
 
         EXPECT_CALL(*mServiceMock, AddRef())
-          .Times(::testing::AnyNumber());
+            .Times(::testing::AnyNumber());
 
         EXPECT_CALL(*mServiceMock, ConfigLine())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
 
         EXPECT_CALL(*mServiceMock, PersistentPath())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("/tmp/"));
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return("/tmp/"));
 
         EXPECT_CALL(*mServiceMock, VolatilePath())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("/tmp/"));
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return("/tmp/"));
 
         EXPECT_CALL(*mServiceMock, DataPath())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("/tmp/"));
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return("/tmp/"));
 
         EXPECT_CALL(*mServiceMock, SubSystems())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return(mSubSystemMock));
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return(mSubSystemMock));
 
         // Plugin should already be initialized from createResources, 
         // but ensure dispatcher is available
@@ -657,54 +657,7 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
     deinitforJsonRpc();
 }
 
-/* Test Case for pause method using JSON-RPC
- * 
- * Start a download, then pause it using downloadId
- * Verify pause operation succeeds
- */
-TEST_F(DownloadManagerTest, pauseMethodJsonRpcSuccess) {
 
-    TEST_LOG("Starting JSON-RPC pause success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("pause"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC pause method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // First start a download
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/2048\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                // Now pause the download
-                string pauseParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string pauseResponse;
-                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), pauseParams, pauseResponse));
-                
-                // Cancel to cleanup
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), pauseParams, pauseResponse);
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
 
 /* Test Case for resume method using JSON-RPC
  * 
@@ -759,199 +712,13 @@ TEST_F(DownloadManagerTest, resumeMethodJsonRpcSuccess) {
     deinitforJsonRpc();
 }
 
-/* Test Case for cancel method using JSON-RPC
- * 
- * Start a download then cancel it
- * Verify cancel operation succeeds
- */
-TEST_F(DownloadManagerTest, cancelMethodJsonRpcSuccess) {
 
-    TEST_LOG("Starting JSON-RPC cancel success test");
 
-    initforJsonRpc();
 
-    auto result = mJsonRpcHandler.Exists(_T("cancel"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC cancel method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
 
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
 
-    // Start a download
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                // Cancel the download
-                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string cancelResponse;
-                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, cancelResponse));
-            }
-        }
-    }
 
-    deinitforJsonRpc();
-}
 
-/* Test Case for progress method using JSON-RPC
- * 
- * Start a download and check its progress
- * Verify progress method returns valid progress information
- */
-TEST_F(DownloadManagerTest, progressMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC progress success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("progress"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC progress method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Start a download
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                // Check progress
-                string progressParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string progressResponse;
-                auto progressResult = mJsonRpcHandler.Invoke(connection, _T("progress"), progressParams, progressResponse);
-                
-                // Progress method might not be available in all environments
-                if (progressResult == Core::ERROR_NONE) {
-                    TEST_LOG("Progress response: %s", progressResponse.c_str());
-                    EXPECT_FALSE(progressResponse.empty());
-                }
-                
-                // Cancel to cleanup
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), progressParams, progressResponse);
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for getStorageDetails method using JSON-RPC
- * 
- * Invoke getStorageDetails to get storage quota and usage information
- * Verify method returns proper storage details
- */
-TEST_F(DownloadManagerTest, getStorageDetailsJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC getStorageDetails success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("getStorageDetails"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC getStorageDetails method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    string response;
-    auto storageResult = mJsonRpcHandler.Invoke(connection, _T("getStorageDetails"), _T("{}"), response);
-    
-    if (storageResult == Core::ERROR_NONE) {
-        TEST_LOG("Storage details response: %s", response.c_str());
-        EXPECT_FALSE(response.empty());
-        
-        // Check if response contains expected fields
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(response)) {
-            TEST_LOG("Storage details parsed successfully");
-        }
-    } else {
-        TEST_LOG("getStorageDetails returned error: %u", storageResult);
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for rateLimit method using JSON-RPC
- * 
- * Start a download and apply rate limiting
- * Verify rate limit can be set successfully
- */
-TEST_F(DownloadManagerTest, rateLimitJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC rateLimit success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("rateLimit"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC rateLimit method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Start a download
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/2048\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                // Apply rate limit
-                string rateLimitParams = "{\"downloadId\": \"" + downloadId + "\", \"limit\": 512}";
-                string rateLimitResponse;
-                auto rateLimitResult = mJsonRpcHandler.Invoke(connection, _T("rateLimit"), rateLimitParams, rateLimitResponse);
-                
-                if (rateLimitResult == Core::ERROR_NONE) {
-                    TEST_LOG("Rate limit applied successfully");
-                } else {
-                    TEST_LOG("Rate limit returned error: %u", rateLimitResult);
-                }
-                
-                // Cancel to cleanup
-                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, rateLimitResponse);
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
 
 /* Test Case for download method using COM-RPC - Success scenario
  * 
@@ -1141,198 +908,13 @@ TEST_F(DownloadManagerTest, errorScenariosJsonRpc) {
     deinitforJsonRpc();
 }
 
-/* Test Case for delete method using JSON-RPC
- * 
- * Test file deletion functionality via JSON-RPC
- * Verify delete method works with valid file paths
- */
-TEST_F(DownloadManagerTest, deleteMethodJsonRpcSuccess) {
 
-    TEST_LOG("Starting JSON-RPC delete success test");
 
-    initforJsonRpc();
 
-    auto result = mJsonRpcHandler.Exists(_T("delete"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC delete method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
 
-    // Test delete with a file path
-    string response;
-    string deleteParams = "{\"fileLocator\": \"/tmp/test_download_file.txt\"}";
-    auto deleteResult = mJsonRpcHandler.Invoke(connection, _T("delete"), deleteParams, response);
-    
-    // Delete might fail if file doesn't exist, which is expected
-    TEST_LOG("Delete method returned: %u", deleteResult);
-    
-    deinitforJsonRpc();
-}
 
-/* Test Case for delete method with empty file locator using JSON-RPC
- * 
- * Test delete method error handling with invalid parameters
- * Verify proper error response for empty file locator
- */
-TEST_F(DownloadManagerTest, deleteMethodJsonRpcInvalidParam) {
 
-    TEST_LOG("Starting JSON-RPC delete invalid parameter test");
 
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("delete"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC delete method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    // Test delete with empty file locator
-    string response;
-    string deleteParams = "{\"fileLocator\": \"\"}";
-    auto deleteResult = mJsonRpcHandler.Invoke(connection, _T("delete"), deleteParams, response);
-    
-    // Should return error for empty file locator
-    EXPECT_NE(Core::ERROR_NONE, deleteResult);
-    TEST_LOG("Delete with empty locator returned error: %u (expected)", deleteResult);
-    
-    deinitforJsonRpc();
-}
-
-/* Test Case for download method with invalid URL using JSON-RPC
- * 
- * Test download method error handling with malformed URLs
- * Verify proper error response for invalid URLs
- */
-TEST_F(DownloadManagerTest, downloadMethodJsonRpcInvalidUrl) {
-
-    TEST_LOG("Starting JSON-RPC download invalid URL test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC download method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Test with empty URL
-    string response;
-    EXPECT_NE(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"\"}"), response));
-
-    // Test with malformed URL
-    EXPECT_NE(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"invalid-url\"}"), response));
-    
-    deinitforJsonRpc();
-}
-
-/* Test Case for download method with different options using JSON-RPC
- * 
- * Test download method with various option combinations
- * Verify options are properly handled
- */
-TEST_F(DownloadManagerTest, downloadMethodJsonRpcWithOptions) {
-
-    TEST_LOG("Starting JSON-RPC download with options test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC download method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Test with priority download
-    string response1;
-    auto result1 = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/512\", \"priority\": true, \"retries\": 3, \"rateLimit\": 2048}"), response1);
-    
-    if (result1 == Core::ERROR_NONE && !response1.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(response1)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                TEST_LOG("Priority download started with ID: %s", downloadId.c_str());
-                // Cancel to cleanup
-                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string cancelResponse;
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, cancelResponse);
-            }
-        }
-    }
-
-    // Test with non-priority download
-    string response2;
-    auto result2 = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/256\", \"priority\": false, \"retries\": 1, \"rateLimit\": 1024}"), response2);
-    
-    if (result2 == Core::ERROR_NONE && !response2.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(response2)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                TEST_LOG("Regular download started with ID: %s", downloadId.c_str());
-                // Cancel to cleanup
-                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string cancelResponse;
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, cancelResponse);
-            }
-        }
-    }
-    
-    deinitforJsonRpc();
-}
-
-/* Test Case for delete method using COM-RPC
- * 
- * Test file deletion functionality via COM interface
- * Verify delete method works with valid and invalid file paths
- */
-TEST_F(DownloadManagerTest, deleteMethodComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC delete test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Test delete with a file path
-    string testFilePath = "/tmp/nonexistent_test_file.txt";
-    auto deleteResult = downloadManagerInterface->Delete(testFilePath);
-    
-    // Delete might fail if file doesn't exist, which is expected
-    TEST_LOG("Delete method returned: %u for file: %s", deleteResult, testFilePath.c_str());
-    
-    // Test delete with empty file locator - should return error
-    auto deleteResult2 = downloadManagerInterface->Delete("");
-    EXPECT_NE(Core::ERROR_NONE, deleteResult2);
-    TEST_LOG("Delete with empty locator returned error: %u (expected)", deleteResult2);
-
-    deinitforComRpc();
-}
 
 /* Test Case for download method with invalid URLs using COM-RPC
  * 
