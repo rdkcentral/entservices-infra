@@ -268,12 +268,20 @@ namespace WPEFramework
 
                 /* Create Window Manager Plugin Object */
                 mWindowManagerConnector = new WindowManagerConnector();
-                if (false == mWindowManagerConnector->initializePlugin(service))
+                if (mWindowManagerConnector == nullptr)
+                {
+                    LOGERR("Failed to allocate Window Manager Connector");
+                }
+                else if (false == mWindowManagerConnector->initializePlugin(service))
                 {
                     LOGERR("Failed to create Window Manager Connector Object");
                 }
 
                 mUserIdManager = new UserIdManager();
+                if (mUserIdManager == nullptr)
+                {
+                    LOGERR("Failed to allocate UserIdManager");
+                }
 
                 if (Core::ERROR_NONE != createOCIContainerPluginObject())
                 {

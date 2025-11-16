@@ -52,6 +52,12 @@ namespace WPEFramework
 	    bool ret = false;
 	    mEventHandler = eventHandler;	
             mRuntimeManagerHandler = new RuntimeManagerHandler();
+            if (mRuntimeManagerHandler == nullptr)
+            {
+                printf("Failed to allocate RuntimeManagerHandler\n");
+                fflush(stdout);
+                return false;
+            }
             ret = mRuntimeManagerHandler->initialize(service, eventHandler);
 	    if (!ret)
 	    {
@@ -60,6 +66,12 @@ namespace WPEFramework
 		return ret;
 	    }
             mWindowManagerHandler = new WindowManagerHandler();
+            if (mWindowManagerHandler == nullptr)
+            {
+                printf("Failed to allocate WindowManagerHandler\n");
+                fflush(stdout);
+                return false;
+            }
             ret = mWindowManagerHandler->initialize(service, eventHandler);
 	    if (!ret)
 	    {

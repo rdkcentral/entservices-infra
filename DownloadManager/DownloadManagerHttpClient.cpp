@@ -83,6 +83,8 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
             cc = curl_easy_perform(curl);
             /* Re-lock mutex after curl call */
             lock.lock();
+            fclose(fp);
+            
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpCode);
             if (cc == CURLE_OK)
             {
@@ -93,7 +95,6 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
                 LOGERR("Download %s Failed error: %s code: %ld", fileName.c_str(), curl_easy_strerror(cc), httpCode);
                 status = Status::HttpError;
             }
-            fclose(fp);
         }
         else
         {
