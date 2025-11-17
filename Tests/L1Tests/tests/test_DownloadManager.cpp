@@ -72,7 +72,7 @@ protected:
 
     Core::ProxyType<WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
-    Core::JSONRPC::Handler* mJsonRpcHandler;
+    Core::JSONRPC::Handler& mJsonRpcHandler;
     Core::JSONRPC::Message message;
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
@@ -90,10 +90,11 @@ protected:
 
     // Constructor
     DownloadManagerTest()
-     : plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
-	 workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
+     : workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
          2, Core::Thread::DefaultStackSize(), 16)),
-        INIT_CONX(1,0)
+       plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
+       mJsonRpcHandler(*plugin),
+       INIT_CONX(1,0)
     {
         // Set up WrapsImplMock FIRST before anything else
         p_wrapsImplMock = new NiceMock<WrapsImplMock>;
@@ -112,9 +113,6 @@ protected:
             .Times(::testing::AnyNumber())
             .WillRepeatedly(::testing::Return(0));
         
-        // Initialize JSON RPC handler after plugin creation
-        mJsonRpcHandler = new Core::JSONRPC::Handler(*plugin);
-        
         Core::IWorkerPool::Assign(&(*workerPool));
         workerPool->Run();
     }
@@ -122,12 +120,6 @@ protected:
     // Destructor
     virtual ~DownloadManagerTest() override
     {
-        // Clean up JSON RPC handler
-        if (mJsonRpcHandler != nullptr) {
-            delete mJsonRpcHandler;
-            mJsonRpcHandler = nullptr;
-        }
-        
         // Clean up WrapsImplMock
         Wraps::setImpl(nullptr);
         if (p_wrapsImplMock != nullptr) {
@@ -246,7 +238,7 @@ protected:
 
             if (plugin.IsValid()) {
                 plugin->Deinitialize(mServiceMock);
-            }
+[O            }
             
             if (mServiceMock) {
                 delete mServiceMock;
@@ -331,7 +323,7 @@ protected:
                 TEST_LOG("Successfully registered JSON-RPC methods with plugin implementation");
                 
                 // Verify that at least one method is now available
-                auto testResult = mJsonRpcHandler->Exists(_T("download"));
+                auto testResult = mJsonRpcHandler.Exists(_T("download"));
                 if (testResult == Core::ERROR_NONE) {
                     TEST_LOG("JSON-RPC methods are now available for testing");
                 } else {
@@ -547,7 +539,7 @@ TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
 
     // TC-1: Check if the listed methods exist using JsonRpc
     // With our implementation, these should now be available
-    auto result = mJsonRpcHandler->Exists(_T("download"));
+    auto result = mJsonRpcHandler.Exists(_T("download"));
     if (result != Core::ERROR_NONE) {
         TEST_LOG("JSON-RPC methods not registered - this may be expected in test environments");
         TEST_LOG("Test PASSED: Plugin initialization completed without crashing");
@@ -557,14 +549,14 @@ TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
 
     // If we get here, JSON-RPC methods are available and we can test them
     TEST_LOG("JSON-RPC methods are available - performing full verification");
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Exists(_T("download"))) << "download method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Exists(_T("pause"))) << "pause method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Exists(_T("resume"))) << "resume method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Exists(_T("cancel"))) << "cancel method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Exists(_T("delete"))) << "delete method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Exists(_T("progress"))) << "progress method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Exists(_T("getStorageDetails"))) << "getStorageDetails method should be available";
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Exists(_T("rateLimit"))) << "rateLimit method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("download"))) << "download method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("pause"))) << "pause method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("resume"))) << "resume method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("cancel"))) << "cancel method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("delete"))) << "delete method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("progress"))) << "progress method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getStorageDetails"))) << "getStorageDetails method should be available";
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("rateLimit"))) << "rateLimit method should be available";
 
     deinitforJsonRpc();
 }
@@ -644,7 +636,7 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcSuccess) {
     initforJsonRpc();
 
     // Check if JSON-RPC methods are available first
-    auto result = mJsonRpcHandler->Exists(_T("download"));
+    auto result = mJsonRpcHandler.Exists(_T("download"));
     if (result != Core::ERROR_NONE) {
         TEST_LOG("JSON-RPC download method not available - this is expected in test environments");
         TEST_LOG("Test PASSED: Plugin loads and initializes without crashing");
@@ -661,7 +653,7 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcSuccess) {
 
     // Test download method
     string response;
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler->Invoke(connection, _T("download"), 
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), 
         _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"priority\": true}"), response));
 
     if (!response.empty()) {
@@ -698,7 +690,7 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
             }));
 
     string response;
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler->Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), response));
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), response));
 
     deinitforJsonRpc();
 }
@@ -951,7 +943,7 @@ TEST_F(DownloadManagerTest, errorScenariosJsonRpc) {
         TEST_LOG("Cancel with invalid ID returned error: %u (expected)", cancelResult);
     }
 
-    deinitforJsonRpc();
+[I    deinitforJsonRpc();
 }
 
 
@@ -1070,7 +1062,7 @@ TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
         return;
     }
 
-    // Create notification callback
+[O    // Create notification callback
     NotificationTest notificationCallback;
     
     // Test registration
