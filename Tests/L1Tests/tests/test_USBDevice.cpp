@@ -1913,24 +1913,29 @@ protected:
 
         EXPECT_CALL(*p_libUSBImplMock, libusb_get_config_descriptor(::testing::_, ::testing::_, ::testing::_))
             .WillOnce([num_interfaces, interface_classes](libusb_device *dev, uint8_t config_index, libusb_config_descriptor **config) {
-                *config = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-                (*config)->bNumInterfaces = num_interfaces;
-                (*config)->interface = (libusb_interface *)malloc(num_interfaces * sizeof(libusb_interface));
+                libusb_config_descriptor *cfg = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
+                cfg->bNumInterfaces = num_interfaces;
+                
+                libusb_interface *interfaces = (libusb_interface *)malloc(num_interfaces * sizeof(libusb_interface));
                 
                 for (uint8_t i = 0; i < num_interfaces; i++) {
-                    libusb_interface *iface = const_cast<libusb_interface*>(&(*config)->interface[i]);
-                    *const_cast<int*>(&iface->num_altsetting) = 1;
-                    *const_cast<libusb_interface_descriptor**>(&iface->altsetting) = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
+                    interfaces[i].num_altsetting = 1;
                     
-                    libusb_interface_descriptor *altsetting = const_cast<libusb_interface_descriptor*>(&iface->altsetting[0]);
+                    libusb_interface_descriptor *altsetting = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
+                    
                     if (i < interface_classes.size()) {
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = interface_classes[i].first;
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = interface_classes[i].second;
+                        altsetting->bInterfaceClass = interface_classes[i].first;
+                        altsetting->bInterfaceSubClass = interface_classes[i].second;
                     } else {
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = LIBUSB_CLASS_HID;
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = 0;
+                        altsetting->bInterfaceClass = LIBUSB_CLASS_HID;
+                        altsetting->bInterfaceSubClass = 0;
                     }
+                    
+                    interfaces[i].altsetting = altsetting;
                 }
+                
+                cfg->interface = interfaces;
+                *config = cfg;
                 
                 return LIBUSB_SUCCESS;
             });
@@ -1941,10 +1946,10 @@ protected:
                     if (config->interface) {
                         for (uint8_t i = 0; i < num_interfaces; i++) {
                             if (config->interface[i].altsetting) {
-                                free(const_cast<libusb_interface_descriptor*>(config->interface[i].altsetting));
+                                free((void*)config->interface[i].altsetting);
                             }
                         }
-                        free(const_cast<libusb_interface*>(config->interface));
+                        free((void*)config->interface);
                     }
                     free(config);
                 }
