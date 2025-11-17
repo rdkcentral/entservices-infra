@@ -1726,112 +1726,42 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
 
 
 // L1 Test Cases for DownloadManagerImplementation methods
-
-/* Test Case for DownloadManagerImplementation Register method success
- *
- * Test the successful registration of notification interface in DownloadManagerImplementation
- * Verify that Register method returns ERROR_NONE and notification is properly added
+/* Test Case for DownloadManagerImplementation Initialize method success
+ * 
+ * Test the successful initialization of DownloadManagerImplementation with valid service
+ * Verify that Initialize method returns ERROR_NONE and sets up properly
  */
-TEST_F(DownloadManagerTest, downloadManagerImplementationRegisterSuccess) {
-    TEST_LOG("Starting DownloadManagerImplementation Register success test");
+TEST_F(DownloadManagerTest, downloadManagerImplementationInitializeSuccess) {
+    TEST_LOG("Starting DownloadManagerImplementation Initialize success test");
 
     auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-
+    
     if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping register test");
+        TEST_LOG("Failed to create DownloadManagerImplementation - skipping initialize test");
         return;
     }
 
-    // Create a notification test object
-    auto notification = std::make_unique<NotificationTest>();
+    // Ensure WrapsImplMock is properly set up
+    if (p_wrapsImplMock == nullptr) {
+        TEST_LOG("WrapsImplMock is null - test setup issue, skipping test");
+        return;
+    }
 
-    // Test successful registration
-    Core::hresult result = implementation->Register(notification.get());
-    EXPECT_EQ(Core::ERROR_NONE, result) << "Register should return ERROR_NONE";
+    // Mock mkdir to succeed for download directory creation
+    EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(0));
 
-    // Cleanup - unregister the notification
-    implementation->Unregister(notification.get());
+    // Initialize with valid service mock
+    Core::hresult result = implementation->Initialize(mServiceMock);
+    EXPECT_EQ(Core::ERROR_NONE, result) << "Initialize should return ERROR_NONE with valid service";
 
-    TEST_LOG("Register success test completed");
+    // Cleanup
+    implementation->Deinitialize(mServiceMock);
+    
+    TEST_LOG("Initialize success test completed");
 }
-
-/***************************************************************************************************
- * L1 TEST CASES FOR DOWNLOADMANAGERIMPLEMENTATION SPECIFIC METHODS
- * 
- * These test cases focus on testing the specific implementation methods in DownloadManagerImplementation
- * They complement the existing JSON-RPC and COM-RPC tests by providing direct access to implementation methods
- ***************************************************************************************************/
-
-/* Test Case for DownloadManagerImplementation Constructor and Destructor
- * 
- * Test proper initialization and cleanup of DownloadManagerImplementation object
- * Verify default values and HTTP client initialization
- */  
-/*TEST_F(DownloadManagerTest, downloadManagerImplementationConstructorDestructor) {
-
-    TEST_LOG("Starting DownloadManagerImplementation constructor/destructor test");
-
-    // Create implementation directly for testing
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
     
-    if (implementation.IsValid()) {
-        TEST_LOG("DownloadManagerImplementation created successfully");
-        
-        // Basic validation - object should be properly initialized
-        EXPECT_TRUE(implementation.IsValid());
-        
-        // Test AddRef/Release functionality
-        implementation->AddRef();
-        auto refCount = implementation->Release();
-        TEST_LOG("Reference counting works properly (refCount: %u)", refCount);
-        
-        TEST_LOG("DownloadManagerImplementation constructor/destructor test passed");
-    } else {
-        TEST_LOG("Failed to create DownloadManagerImplementation - this may be expected in test environments");
-    }
-}*/
 
-/* Test Case for DownloadManagerImplementation Initialize method
- * 
- * Test the Initialize method with various scenarios
- * Verify proper configuration parsing and download path setup
- */
-/*TEST_F(DownloadManagerTest, downloadManagerImplementationInitialize) {
+  
 
-    TEST_LOG("Starting DownloadManagerImplementation Initialize test");
 
-    // Create implementation directly
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test with null service - should return error
-    auto result1 = implementation->Initialize(nullptr);
-    EXPECT_EQ(Core::ERROR_GENERAL, result1);
-    TEST_LOG("Initialize with null service returned expected error: %u", result1);
-
-    // Test with valid service mock
-    if (mServiceMock) {
-        EXPECT_CALL(*mServiceMock, ConfigLine())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/test_downloads/\", \"downloadId\": 3000}"));
-
-        EXPECT_CALL(*mServiceMock, AddRef())
-            .Times(::testing::AnyNumber());
-
-        auto result2 = implementation->Initialize(mServiceMock);
-        if (result2 == Core::ERROR_NONE) {
-            TEST_LOG("Initialize with valid service succeeded");
-            
-            // Test deinitialization
-            auto deinitResult = implementation->Deinitialize(mServiceMock);
-            EXPECT_EQ(Core::ERROR_NONE, deinitResult);
-            TEST_LOG("Deinitialize succeeded with result: %u", deinitResult);
-        } else {
-            TEST_LOG("Initialize returned: %u - may be expected in test environment", result2);
-        }
-    }
-}*/
