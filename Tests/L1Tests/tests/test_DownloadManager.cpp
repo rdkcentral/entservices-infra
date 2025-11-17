@@ -698,8 +698,9 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
             }));
 
     string response;
-    auto result = mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/256\"}"), response);
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, result) << "Should return ERROR_UNAVAILABLE when internet is not active";
+
+    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/256\"}"), response);
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, downloadResult) << "Should return ERROR_UNAVAILABLE when internet is not active";
 
     deinitforJsonRpc();
 }
