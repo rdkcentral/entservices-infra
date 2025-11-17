@@ -1054,7 +1054,7 @@ TEST_F(USBDeviceTest, BindDriver_NoDevicesAvailable)
 
 /*******************************************************************************************************************
  * Test function for :unbindDriver
- * getDeviceList :
+ * unbindDriver :
  *                UnBinds the respective driver for the device.
  *
  *                @return Success status
