@@ -411,6 +411,9 @@ protected:
 
     void getDownloadParams()
     {
+        // Create a test file first
+        createTestFile();
+        
         // Initialize the parameters required for COM-RPC with test-friendly values
         // Use a mock URL for testing that won't cause network issues
         uri = "file:///tmp/test_mock_file.txt"; // Use local file instead of HTTP
@@ -420,6 +423,24 @@ protected:
         options.rateLimit = 1024;
 
         downloadId = {};
+    }
+    
+    void createTestFile()
+    {
+        try {
+            // Ensure directory exists
+            system("mkdir -p /tmp/test_downloads 2>/dev/null");
+            
+            std::ofstream testFile("/tmp/test_mock_file.txt");
+            if (testFile.is_open()) {
+                testFile << "This is a test file for download manager testing.\n";
+                testFile << "Content size: exactly 100 bytes of test data for validation and testing purposes.\n";
+                testFile.close();
+                TEST_LOG("Created test file for download testing");
+            }
+        } catch (...) {
+            TEST_LOG("Warning: Could not create test file - tests may use fallback URLs");
+        }
     }
 
     void deinitforJsonRpc() 
@@ -739,8 +760,8 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
             }));
 
     string response;
-    // Test network unavailable scenario - expect error regardless of specific error code
-    auto unavailableResult = mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), response);
+    // Test network unavailable scenario using unreachable host - expect error regardless of specific error code
+    auto unavailableResult = mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"http://unreachable.test.domain/file.txt\"}"), response);
     EXPECT_NE(Core::ERROR_NONE, unavailableResult);
     TEST_LOG("Network unavailable test returned error: %u (expected)", unavailableResult);
 
@@ -2142,7 +2163,7 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationErrorConditions) {
     options.rateLimit = 512;
     
     string testDownloadId;
-    auto downloadResult = implementation->Download("https://test.url/file.txt", options, testDownloadId);
+    auto downloadResult = implementation->Download("file:///tmp/nonexistent_test_file.txt", options, testDownloadId);
     TEST_LOG("Download before initialization returned: %u", downloadResult);
 
     uint8_t percent = 0;
@@ -2272,23 +2293,29 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationQueueManagement) {
 
     // Add regular download first
     string regularId;
-    auto regularResult = implementation->Download("https://test.url/regular.txt", regularOptions, regularId);
+    auto regularResult = implementation->Download("file:///tmp/test_mock_file.txt", regularOptions, regularId);
     if (regularResult == Core::ERROR_NONE) {
         TEST_LOG("Regular download queued with ID: %s", regularId.c_str());
+    } else {
+        TEST_LOG("Regular download returned error: %u (may be expected in test environment)", regularResult);
     }
 
     // Add priority download (should be processed first)
     string priorityId;
-    auto priorityResult = implementation->Download("https://test.url/priority.txt", priorityOptions, priorityId);
+    auto priorityResult = implementation->Download("file:///tmp/test_mock_file.txt", priorityOptions, priorityId);
     if (priorityResult == Core::ERROR_NONE) {
         TEST_LOG("Priority download queued with ID: %s", priorityId.c_str());
+    } else {
+        TEST_LOG("Priority download returned error: %u (may be expected in test environment)", priorityResult);
     }
 
     // Add another regular download
     string regularId2;
-    auto regularResult2 = implementation->Download("https://test.url/regular2.txt", regularOptions, regularId2);
+    auto regularResult2 = implementation->Download("file:///tmp/test_mock_file.txt", regularOptions, regularId2);
     if (regularResult2 == Core::ERROR_NONE) {
         TEST_LOG("Second regular download queued with ID: %s", regularId2.c_str());
+    } else {
+        TEST_LOG("Second regular download returned error: %u (may be expected in test environment)", regularResult2);
     }
 
     // Small delay to allow queue processing
@@ -2359,9 +2386,11 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationDownloadInfoClass) {
     options1.rateLimit = 4096;
 
     string downloadId1;
-    auto result1 = implementation->Download("https://test.url/file1.bin", options1, downloadId1);
+    auto result1 = implementation->Download("file:///tmp/test_mock_file.txt", options1, downloadId1);
     if (result1 == Core::ERROR_NONE) {
         TEST_LOG("DownloadInfo with priority=true, retries=5, rateLimit=4096 created with ID: %s", downloadId1.c_str());
+    } else {
+        TEST_LOG("DownloadInfo test 1 returned error: %u (may be expected in test environment)", result1);
     }
 
     // Test DownloadInfo with minimum retries (should use default MIN_RETRIES=2)
@@ -2371,9 +2400,11 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationDownloadInfoClass) {
     options2.rateLimit = 256;
 
     string downloadId2;
-    auto result2 = implementation->Download("https://test.url/file2.bin", options2, downloadId2);
+    auto result2 = implementation->Download("file:///tmp/test_mock_file.txt", options2, downloadId2);
     if (result2 == Core::ERROR_NONE) {
         TEST_LOG("DownloadInfo with retries=1 (should use MIN_RETRIES=2) created with ID: %s", downloadId2.c_str());
+    } else {
+        TEST_LOG("DownloadInfo test 2 returned error: %u (may be expected in test environment)", result2);
     }
 
     // Test DownloadInfo with zero retries (should use default MIN_RETRIES=2)
@@ -2383,9 +2414,11 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationDownloadInfoClass) {
     options3.rateLimit = 128;
 
     string downloadId3;
-    auto result3 = implementation->Download("https://test.url/file3.bin", options3, downloadId3);
+    auto result3 = implementation->Download("file:///tmp/test_mock_file.txt", options3, downloadId3);
     if (result3 == Core::ERROR_NONE) {
         TEST_LOG("DownloadInfo with retries=0 (should use MIN_RETRIES=2) created with ID: %s", downloadId3.c_str());
+    } else {
+        TEST_LOG("DownloadInfo test 3 returned error: %u (may be expected in test environment)", result3);
     }
 
     // Cleanup
@@ -2578,7 +2611,8 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationDownloadIdHandling) {
     // Generate multiple download IDs to verify uniqueness and sequence
     for (int i = 0; i < 5; ++i) {
         string downloadId;
-        string url = "https://test.url/file" + std::to_string(i) + ".txt";
+        // Use the same test file for all downloads - focus is on ID generation, not actual downloads
+        string url = "file:///tmp/test_mock_file.txt";
         auto result = implementation->Download(url, options, downloadId);
         
         if (result == Core::ERROR_NONE && !downloadId.empty()) {
@@ -2589,6 +2623,8 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationDownloadIdHandling) {
             for (size_t j = 0; j < generatedIds.size() - 1; ++j) {
                 EXPECT_NE(downloadId, generatedIds[j]) << "Download IDs should be unique";
             }
+        } else {
+            TEST_LOG("Download %d returned error: %u (may be expected in test environment)", i + 1, result);
         }
     }
 
