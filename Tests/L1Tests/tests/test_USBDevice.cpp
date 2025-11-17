@@ -64,7 +64,7 @@ typedef enum : uint32_t {
 
 class L1USBDeviceNotificationHandler : public Exchange::IUSBDevice::INotification {
     private:
-        std::mutex m_mutex;
+        mutable std::mutex m_mutex;
         std::condition_variable m_condition_variable;
         uint32_t m_event_signalled;
         
@@ -73,6 +73,9 @@ class L1USBDeviceNotificationHandler : public Exchange::IUSBDevice::INotificatio
         Exchange::IUSBDevice::USBDevice m_pluggedOutDevice;
         bool m_pluggedInDeviceReceived;
         bool m_pluggedOutDeviceReceived;
+        
+        mutable Core::CriticalSection m_refCountLock;
+        mutable uint32_t m_refCount;
 
         BEGIN_INTERFACE_MAP(L1USBDeviceNotificationHandler)
         INTERFACE_ENTRY(Exchange::IUSBDevice::INotification)
@@ -82,12 +85,34 @@ class L1USBDeviceNotificationHandler : public Exchange::IUSBDevice::INotificatio
         L1USBDeviceNotificationHandler() 
             : m_event_signalled(USBDevice_StateInvalid)
             , m_pluggedInDeviceReceived(false)
-            , m_pluggedOutDeviceReceived(false) {
-            memset(&m_pluggedInDevice, 0, sizeof(m_pluggedInDevice));
-            memset(&m_pluggedOutDevice, 0, sizeof(m_pluggedOutDevice));
+            , m_pluggedOutDeviceReceived(false)
+            , m_refCount(1) {
+            // Initialize devices using value initialization
+            m_pluggedInDevice = Exchange::IUSBDevice::USBDevice();
+            m_pluggedOutDevice = Exchange::IUSBDevice::USBDevice();
         }
         
         ~L1USBDeviceNotificationHandler() = default;
+
+        // IReferenceCounted interface implementation
+        void AddRef() const override {
+            m_refCountLock.Lock();
+            ++m_refCount;
+            m_refCountLock.Unlock();
+        }
+
+        uint32_t Release() const override {
+            m_refCountLock.Lock();
+            --m_refCount;
+            uint32_t refCount = m_refCount;
+            m_refCountLock.Unlock();
+            
+            if (refCount == 0) {
+                delete this;
+                return Core::ERROR_DESTRUCTION_SUCCEEDED;
+            }
+            return refCount;
+        }
 
         // IUSBDevice::INotification interface implementation
         void OnDevicePluggedIn(const Exchange::IUSBDevice::USBDevice &device) override {
@@ -190,23 +215,52 @@ class L1USBDeviceNotificationHandler : public Exchange::IUSBDevice::INotificatio
             m_event_signalled = USBDevice_StateInvalid;
             m_pluggedInDeviceReceived = false;
             m_pluggedOutDeviceReceived = false;
-            memset(&m_pluggedInDevice, 0, sizeof(m_pluggedInDevice));
-            memset(&m_pluggedOutDevice, 0, sizeof(m_pluggedOutDevice));
+            m_pluggedInDevice = Exchange::IUSBDevice::USBDevice();
+            m_pluggedOutDevice = Exchange::IUSBDevice::USBDevice();
         }
 
         void ResetPluggedInEvent() {
             std::unique_lock<std::mutex> lock(m_mutex);
             m_event_signalled &= ~USBDevice_OnDevicePluggedIn;
             m_pluggedInDeviceReceived = false;
-            memset(&m_pluggedInDevice, 0, sizeof(m_pluggedInDevice));
+            m_pluggedInDevice = Exchange::IUSBDevice::USBDevice();
         }
 
         void ResetPluggedOutEvent() {
             std::unique_lock<std::mutex> lock(m_mutex);
             m_event_signalled &= ~USBDevice_OnDevicePluggedOut;
             m_pluggedOutDeviceReceived = false;
-            memset(&m_pluggedOutDevice, 0, sizeof(m_pluggedOutDevice));
+            m_pluggedOutDevice = Exchange::IUSBDevice::USBDevice();
         }
+};
+
+// Test fixture for L1 notification tests
+class USBDeviceNotificationL1Test : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Create plugin instance
+        m_handler = Core::ProxyType<L1USBDeviceNotificationHandler>::Create();
+        ASSERT_TRUE(m_handler != nullptr);
+
+        // Create USBDevice plugin
+        m_controller = Core::ProxyType<Plugin::USBDevice>::Create();
+        ASSERT_TRUE(m_controller != nullptr);
+
+        // Register for notifications
+        EXPECT_EQ(Core::ERROR_NONE, m_controller->Register(m_handler.operator->()));
+    }
+
+    void TearDown() override {
+        if (m_controller && m_handler) {
+            m_controller->Unregister(m_handler.operator->());
+        }
+        m_handler.Release();
+        m_controller.Release();
+    }
+
+protected:
+    Core::ProxyType<L1USBDeviceNotificationHandler> m_handler;
+    Core::ProxyType<Plugin::USBDevice> m_controller;
 };
 
 namespace {
@@ -1400,6 +1454,177 @@ TEST_F(USBDeviceTest, L1Notification_ParametersValidation_ViaJobDispatch_Success
     }
     
     notificationHandler->Release();
+}
+
+/*Test cases for L1 Notifications using new test fixture*/
+
+/**
+ * @brief Test USB device plug-in notification using L1 test fixture
+ *        Validates notification handler receives correct device information
+ * @param[in] : None
+ * @return : Notification should be received with correct device parameters
+ */
+TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedIn_ValidDevice_Success)
+{
+    // Reset handler state
+    m_handler->ResetEvents();
+    
+    // Create test device with typical USB device parameters
+    Exchange::IUSBDevice::USBDevice testDevice;
+    testDevice.deviceClass = 8;              // Mass Storage class
+    testDevice.deviceSubclass = 6;           // SCSI subclass
+    testDevice.deviceName = "001/004";
+    testDevice.devicePath = "/dev/sdb";
+    
+    // Simulate device plug-in by calling notification directly
+    // This tests the notification interface itself
+    m_handler->OnDevicePluggedIn(testDevice);
+    
+    // Verify notification was received
+    EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
+    EXPECT_TRUE(m_handler->IsPluggedInDeviceReceived());
+    
+    // Validate device parameters
+    const Exchange::IUSBDevice::USBDevice& receivedDevice = m_handler->GetLastPluggedInDevice();
+    EXPECT_EQ(8, receivedDevice.deviceClass);
+    EXPECT_EQ(6, receivedDevice.deviceSubclass);
+    EXPECT_EQ("001/004", receivedDevice.deviceName);
+    EXPECT_EQ("/dev/sdb", receivedDevice.devicePath);
+}
+
+/**
+ * @brief Test USB device plug-out notification using L1 test fixture
+ *        Validates notification handler receives correct device removal information
+ * @param[in] : None
+ * @return : Notification should be received with correct device parameters
+ */
+TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedOut_ValidDevice_Success)
+{
+    // Reset handler state
+    m_handler->ResetEvents();
+    
+    // Create test device that will be "removed"
+    Exchange::IUSBDevice::USBDevice testDevice;
+    testDevice.deviceClass = 3;              // HID class
+    testDevice.deviceSubclass = 1;           // Boot subclass
+    testDevice.deviceName = "001/002";
+    testDevice.devicePath = "/dev/input/event0";
+    
+    // Simulate device plug-out by calling notification directly
+    m_handler->OnDevicePluggedOut(testDevice);
+    
+    // Verify notification was received
+    EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
+    EXPECT_TRUE(m_handler->IsPluggedOutDeviceReceived());
+    
+    // Validate device parameters
+    const Exchange::IUSBDevice::USBDevice& receivedDevice = m_handler->GetLastPluggedOutDevice();
+    EXPECT_EQ(3, receivedDevice.deviceClass);
+    EXPECT_EQ(1, receivedDevice.deviceSubclass);
+    EXPECT_EQ("001/002", receivedDevice.deviceName);
+    EXPECT_EQ("/dev/input/event0", receivedDevice.devicePath);
+}
+
+/**
+ * @brief Test multiple sequential notifications using L1 test fixture
+ *        Validates handler can receive multiple notifications correctly
+ * @param[in] : None
+ * @return : All notifications should be received in sequence
+ */
+TEST_F(USBDeviceNotificationL1Test, MultipleNotifications_Sequential_Success)
+{
+    // Reset handler state
+    m_handler->ResetEvents();
+    
+    // First device plug-in
+    Exchange::IUSBDevice::USBDevice device1;
+    device1.deviceClass = 9;
+    device1.deviceSubclass = 0;
+    device1.deviceName = "001/001";
+    device1.devicePath = "/dev/hub1";
+    
+    m_handler->OnDevicePluggedIn(device1);
+    EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
+    EXPECT_EQ("001/001", m_handler->GetLastPluggedInDeviceName());
+    
+    // Reset plug-in event, keep plug-out clear
+    m_handler->ResetPluggedInEvent();
+    
+    // Second device plug-out
+    Exchange::IUSBDevice::USBDevice device2;
+    device2.deviceClass = 8;
+    device2.deviceSubclass = 6;
+    device2.deviceName = "002/003";
+    device2.devicePath = "/dev/sdc";
+    
+    m_handler->OnDevicePluggedOut(device2);
+    EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
+    EXPECT_EQ("002/003", m_handler->GetLastPluggedOutDeviceName());
+    
+    // Verify both events were processed
+    EXPECT_TRUE(m_handler->IsPluggedOutDeviceReceived());
+}
+
+/**
+ * @brief Test notification parameter validation with comprehensive device data
+ *        Validates all device fields are correctly transmitted via notifications
+ * @param[in] : None
+ * @return : All device parameters should match expected values
+ */
+TEST_F(USBDeviceNotificationL1Test, NotificationParameters_ComprehensiveValidation_Success)
+{
+    m_handler->ResetEvents();
+    
+    // Create device with all possible parameter combinations
+    Exchange::IUSBDevice::USBDevice testDevice;
+    testDevice.deviceClass = 0xFF;           // Vendor specific
+    testDevice.deviceSubclass = 0xFF;        // Vendor specific
+    testDevice.deviceName = "003/007";
+    testDevice.devicePath = "/dev/custom_device";
+    
+    // Test plug-in notification
+    m_handler->OnDevicePluggedIn(testDevice);
+    EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
+    
+    // Validate using individual getter methods
+    EXPECT_EQ(0xFF, m_handler->GetLastPluggedInDeviceClass());
+    EXPECT_EQ(0xFF, m_handler->GetLastPluggedInDeviceSubclass());
+    EXPECT_EQ("003/007", m_handler->GetLastPluggedInDeviceName());
+    EXPECT_EQ("/dev/custom_device", m_handler->GetLastPluggedInDevicePath());
+    
+    // Reset and test plug-out with different device
+    m_handler->ResetEvents();
+    
+    testDevice.deviceClass = 0x00;           // Undefined class
+    testDevice.deviceSubclass = 0x00;        // Undefined subclass  
+    testDevice.deviceName = "004/008";
+    testDevice.devicePath = "/dev/undefined";
+    
+    m_handler->OnDevicePluggedOut(testDevice);
+    EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
+    
+    EXPECT_EQ(0x00, m_handler->GetLastPluggedOutDeviceClass());
+    EXPECT_EQ(0x00, m_handler->GetLastPluggedOutDeviceSubclass());
+    EXPECT_EQ("004/008", m_handler->GetLastPluggedOutDeviceName());
+    EXPECT_EQ("/dev/undefined", m_handler->GetLastPluggedOutDevicePath());
+}
+
+/**
+ * @brief Test notification timeout behavior
+ *        Validates timeout handling when no notification is received
+ * @param[in] : None  
+ * @return : Timeout should occur when no notification is sent
+ */
+TEST_F(USBDeviceNotificationL1Test, NotificationTimeout_NoEvent_ExpectedTimeout)
+{
+    m_handler->ResetEvents();
+    
+    // Wait for notification that will never come
+    EXPECT_FALSE(m_handler->WaitForRequestStatus(500, USBDevice_OnDevicePluggedIn));
+    EXPECT_FALSE(m_handler->IsPluggedInDeviceReceived());
+    
+    // Verify no events were signaled
+    EXPECT_EQ(USBDevice_StateInvalid, m_handler->GetSignalledEvents());
 }
 
 /*Test cases for L1 Notifications end here*/
