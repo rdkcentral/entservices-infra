@@ -716,7 +716,7 @@ TEST_F(USBDeviceTest, getDeviceListUsingWithMultipleMassStorageUSBSuccessCase)
 
 /*******************************************************************************************************************
  * Test function for :bindDriver
- * getDeviceList :
+ * bindDriver :
  *                Binds the respective driver for the device.
  *
  *                @return Success status
