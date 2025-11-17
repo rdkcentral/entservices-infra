@@ -309,8 +309,11 @@ protected:
     }
 
 
-    void initforJsonRpc() 
-    {    
+// ...existing code...
+
+// Remove the last 4 test cases (if present)
+
+// Test setup methods and test class definition
         EXPECT_CALL(*mServiceMock, Register(::testing::_))
             .Times(::testing::AnyNumber());
 
@@ -582,7 +585,7 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Check if the methods listed exist by using the Exists() from the JSON RPC handler
  * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
- * Deinitialize the JSON-RPC resources and clean-up related test resources
+[O * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
 TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
@@ -726,7 +729,9 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcSuccess) {
     // Test may fail due to network issues, so we check if it properly handles the call
     auto result = mJsonRpcHandler.Invoke(connection, _T("download"),
         _T("{\"url\": \"file:///tmp/test_mock_file.txt\", \"priority\": true}"), response);
-    TEST_LOG("Download JSON-RPC returned: %u", result);    if (!response.empty()) {
+    TEST_LOG("Download JSON-RPC returned: %u", result);
+    
+    if (!response.empty()) {
         TEST_LOG("Download response: %s", response.c_str());
         EXPECT_TRUE(response.find("downloadId") != std::string::npos);
     }
@@ -1188,7 +1193,7 @@ TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
             
             // Test unregistration
             auto unregisterResult = downloadManagerInterface->Unregister(notificationCallback);
-            if (unregisterResult == Core::ERROR_NONE) {
+[I            if (unregisterResult == Core::ERROR_NONE) {
                 TEST_LOG("Notification unregistration successful");
             } else {
                 TEST_LOG("Notification unregistration failed with error: %u", unregisterResult);
