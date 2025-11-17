@@ -234,40 +234,6 @@ class L1USBDeviceNotificationHandler : public Exchange::IUSBDevice::INotificatio
         }
 };
 
-// Test fixture for L1 notification tests
-class USBDeviceNotificationL1Test : public ::testing::Test {
-protected:
-    void SetUp() override {
-        // Create notification handler
-        m_handler = Core::ProxyType<L1USBDeviceNotificationHandler>::Create();
-        ASSERT_TRUE(m_handler.IsValid());
-
-        // Create USBDeviceImplementation for testing
-        m_usbDeviceImpl = Core::ProxyType<Plugin::USBDeviceImplementation>::Create();
-        ASSERT_TRUE(m_usbDeviceImpl.IsValid());
-
-        // Register notification handler with implementation
-        EXPECT_EQ(Core::ERROR_NONE, m_usbDeviceImpl->Register(m_handler.operator->()));
-        
-        TEST_LOG("USBDeviceNotificationL1Test SetUp completed");
-    }
-
-    void TearDown() override {
-        if (m_usbDeviceImpl.IsValid() && m_handler.IsValid()) {
-            m_usbDeviceImpl->Unregister(m_handler.operator->());
-        }
-        if (m_handler.IsValid()) {
-            m_handler.Release();
-        }
-        if (m_usbDeviceImpl.IsValid()) {
-            m_usbDeviceImpl.Release();
-        }
-    }
-
-protected:
-    Core::ProxyType<L1USBDeviceNotificationHandler> m_handler;
-    Core::ProxyType<Plugin::USBDeviceImplementation> m_usbDeviceImpl;
-};
 
 namespace {
 const string callSign = _T("USBDevice");
@@ -1470,7 +1436,7 @@ TEST_F(USBDeviceTest, L1Notification_ParametersValidation_ViaJobDispatch_Success
  * @param[in] : None
  * @return : Notification should be received with correct device parameters
  */
-TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedIn_ValidDevice_Success)
+TEST_F(USBDeviceTest, OnDevicePluggedIn_ValidDevice_Success)
 {
     // Reset handler state
     m_handler->ResetEvents();
@@ -1508,7 +1474,7 @@ TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedIn_ValidDevice_Success)
  * @param[in] : None
  * @return : Notification should be received with correct device parameters
  */
-TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedOut_ValidDevice_Success)
+TEST_F(USBDeviceTest, OnDevicePluggedOut_ValidDevice_Success)
 {
     // Reset handler state
     m_handler->ResetEvents();
@@ -1546,7 +1512,7 @@ TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedOut_ValidDevice_Success)
  * @param[in] : None
  * @return : All notifications should be received in sequence
  */
-TEST_F(USBDeviceNotificationL1Test, MultipleNotifications_Sequential_Success)
+TEST_F(USBDeviceTest, MultipleNotifications_Sequential_Success)
 {
     // Reset handler state
     m_handler->ResetEvents();
@@ -1598,7 +1564,7 @@ TEST_F(USBDeviceNotificationL1Test, MultipleNotifications_Sequential_Success)
  * @param[in] : None
  * @return : All device parameters should match expected values
  */
-TEST_F(USBDeviceNotificationL1Test, NotificationParameters_ComprehensiveValidation_Success)
+TEST_F(USBDeviceTest, NotificationParameters_ComprehensiveValidation_Success)
 {
     m_handler->ResetEvents();
     
@@ -1654,7 +1620,7 @@ TEST_F(USBDeviceNotificationL1Test, NotificationParameters_ComprehensiveValidati
  * @param[in] : None  
  * @return : Timeout should occur when no notification is sent
  */
-TEST_F(USBDeviceNotificationL1Test, NotificationTimeout_NoEvent_ExpectedTimeout)
+TEST_F(USBDeviceTest, NotificationTimeout_NoEvent_ExpectedTimeout)
 {
     m_handler->ResetEvents();
     
