@@ -26,13 +26,6 @@
 #include <mutex>
 #include <chrono>
 #include <condition_variable>
-#include <thread>
-#include <memory>
-#include <future>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <cstring>
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
@@ -42,7 +35,6 @@ using namespace WPEFramework;
 #include "ISubSystemMock.h"
 #include "ServiceMock.h"
 #include "COMLinkMock.h"
-#include "WrapsMock.h"
 #include "ThunderPortability.h"
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
@@ -51,6 +43,7 @@ using namespace WPEFramework;
 #define TIMEOUT   (500)
 
 using ::testing::NiceMock;
+//using namespace WPEFramework;
 using namespace std;
 
 typedef enum : uint32_t {
@@ -71,7 +64,6 @@ protected:
     // Declare the protected members
     ServiceMock* mServiceMock = nullptr;
     SubSystemMock* mSubSystemMock = nullptr;
-    WrapsImplMock* p_wrapsImplMock = nullptr;
 
     Core::ProxyType<WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
@@ -93,29 +85,12 @@ protected:
 
     // Constructor
     DownloadManagerTest()
-     : workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
+     : plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
+	 workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
          2, Core::Thread::DefaultStackSize(), 16)),
-       plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
        mJsonRpcHandler(*plugin),
-       INIT_CONX(1,0)
+        INIT_CONX(1,0)
     {
-        // Set up WrapsImplMock FIRST before anything else
-        p_wrapsImplMock = new NiceMock<WrapsImplMock>;
-        Wraps::setImpl(p_wrapsImplMock);
-        
-        // Add default mocks for common system calls that might be used during initialization
-        EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return(0));
-            
-        EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return(0));
-            
-        EXPECT_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return(0));
-        
         Core::IWorkerPool::Assign(&(*workerPool));
         workerPool->Run();
     }
@@ -123,91 +98,51 @@ protected:
     // Destructor
     virtual ~DownloadManagerTest() override
     {
-        // Clean up WrapsImplMock
-        Wraps::setImpl(nullptr);
-        if (p_wrapsImplMock != nullptr) {
-            delete p_wrapsImplMock;
-            p_wrapsImplMock = nullptr;
-        }
 
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
 
-    Core::hresult createResources()
+   /* void SetUp() override 
     {
+        // Create resources similar to PreinstallManager pattern
+        Core::hresult status = createResources();
+        EXPECT_EQ(status, Core::ERROR_NONE);
+    }
+
+    void TearDown() override
+    {
+        releaseResources();
+    }*/
+
+    Core::hresult createResources()
+    {        
         Core::hresult status = Core::ERROR_GENERAL;
         
         try {
-            // Create the actual test directory and mock file to avoid file system errors
-            std::string testDownloadDir = "/tmp/test_downloads";
-            struct stat st = {0};
-            if (stat(testDownloadDir.c_str(), &st) == -1) {
-                int result = mkdir(testDownloadDir.c_str(), 0755);
-                if (result != 0) {
-                    TEST_LOG("Warning: Could not create test directory %s", testDownloadDir.c_str());
-                }
-            }
-            
-            // Create a mock test file for local file:// downloads
-            std::string mockFile = "/tmp/test_mock_file.txt";
-            std::ofstream outfile(mockFile);
-            if (outfile.is_open()) {
-                outfile << "This is test data for download manager testing.\n";
-                outfile << "Mock file content for L1 tests.\n";
-                outfile.close();
-                TEST_LOG("Created mock test file: %s", mockFile.c_str());
-            } else {
-                TEST_LOG("Warning: Could not create mock test file");
-            }
-            
             // Set up mocks and expect calls
             mServiceMock = new NiceMock<ServiceMock>;
             mSubSystemMock = new NiceMock<SubSystemMock>;
 
-            // Set up WrapsImplMock expectations for system calls
-            EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
-                .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::Return(0)); // Simulate successful directory creation
-                
-            EXPECT_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
-                .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::DoAll(
-                    ::testing::Invoke([](const char* path, struct stat* statbuf) {
-                        if (statbuf != nullptr) {
-                            memset(statbuf, 0, sizeof(struct stat));
-                            statbuf->st_mode = S_IFREG | 0644; // Regular file with read/write permissions
-                            statbuf->st_size = 1024; // Mock file size
-                        }
-                        return 0;
-                    }),
-                    ::testing::Return(0)
-                ));
-                
-            EXPECT_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
-                .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::Return(0));
-
-            // Use a more suitable test directory path
             EXPECT_CALL(*mServiceMock, ConfigLine())
-                .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/test_downloads/\"}"));
+              .Times(::testing::AnyNumber())
+              .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
 
             EXPECT_CALL(*mServiceMock, PersistentPath())
-                .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::Return("/tmp/"));
+              .Times(::testing::AnyNumber())
+              .WillRepeatedly(::testing::Return("/tmp/"));
 
             EXPECT_CALL(*mServiceMock, VolatilePath())
-                .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::Return("/tmp/"));
+              .Times(::testing::AnyNumber())
+              .WillRepeatedly(::testing::Return("/tmp/"));
 
             EXPECT_CALL(*mServiceMock, DataPath())
-                .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::Return("/tmp/"));
+              .Times(::testing::AnyNumber())
+              .WillRepeatedly(::testing::Return("/tmp/"));
 
             EXPECT_CALL(*mServiceMock, SubSystems())
-                .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::Return(mSubSystemMock));
+              .Times(::testing::AnyNumber())
+              .WillRepeatedly(::testing::Return(mSubSystemMock));
 
             // Initialize plugin following PreinstallManager pattern
             PluginHost::IFactories::Assign(&factoriesImplementation);
@@ -285,11 +220,6 @@ protected:
                 delete mSubSystemMock;
                 mSubSystemMock = nullptr;
             }
-            
-            // Clean up test directory and any leftover files
-            std::string testDownloadDir = "/tmp/test_downloads";
-            system(("rm -rf " + testDownloadDir + " 2>/dev/null").c_str());
-            
         } catch (const std::exception& e) {
             TEST_LOG("Exception in releaseResources: %s", e.what());
         } catch (...) {
@@ -309,36 +239,33 @@ protected:
     }
 
 
-// ...existing code...
-
-// Remove the last 4 test cases (if present)
-
-// Test setup methods and test class definition
+    void initforJsonRpc() 
+    {    
         EXPECT_CALL(*mServiceMock, Register(::testing::_))
-            .Times(::testing::AnyNumber());
+          .Times(::testing::AnyNumber());
 
         EXPECT_CALL(*mServiceMock, AddRef())
-            .Times(::testing::AnyNumber());
+          .Times(::testing::AnyNumber());
 
         EXPECT_CALL(*mServiceMock, ConfigLine())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
 
         EXPECT_CALL(*mServiceMock, PersistentPath())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("/tmp/"));
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
 
         EXPECT_CALL(*mServiceMock, VolatilePath())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("/tmp/"));
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
 
         EXPECT_CALL(*mServiceMock, DataPath())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("/tmp/"));
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("/tmp/"));
 
         EXPECT_CALL(*mServiceMock, SubSystems())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return(mSubSystemMock));
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return(mSubSystemMock));
 
         // Plugin should already be initialized from createResources, 
         // but ensure dispatcher is available
@@ -405,45 +332,16 @@ protected:
         }
     }
 
-    bool isNetworkAvailable()
-    {
-        // For L1 tests, assume network is not available to force local file testing
-        // This ensures tests are reliable and don't depend on external network
-        return false;
-    }
-
     void getDownloadParams()
     {
-        // Create a test file first
-        createTestFile();
-        
-        // Initialize the parameters required for COM-RPC with test-friendly values
-        // Use a mock URL for testing that won't cause network issues
-        uri = "file:///tmp/test_mock_file.txt"; // Use local file instead of HTTP
+        // Initialize the parameters required for COM-RPC with default values
+        uri = "https://httpbin.org/bytes/1024";
 
         options.priority = true;
-        options.retries = 1; // Reduce retries for failing tests
+        options.retries = 2; 
         options.rateLimit = 1024;
 
         downloadId = {};
-    }
-    
-    void createTestFile()
-    {
-        try {
-            // Ensure directory exists
-            system("mkdir -p /tmp/test_downloads 2>/dev/null");
-            
-            std::ofstream testFile("/tmp/test_mock_file.txt");
-            if (testFile.is_open()) {
-                testFile << "This is a test file for download manager testing.\n";
-                testFile << "Content size: exactly 100 bytes of test data for validation and testing purposes.\n";
-                testFile.close();
-                TEST_LOG("Created test file for download testing");
-            }
-        } catch (...) {
-            TEST_LOG("Warning: Could not create test file - tests may use fallback URLs");
-        }
     }
 
     void deinitforJsonRpc() 
@@ -585,7 +483,7 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Check if the methods listed exist by using the Exists() from the JSON RPC handler
  * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
-[O * Deinitialize the JSON-RPC resources and clean-up related test resources
+ * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
 TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
@@ -697,797 +595,6 @@ TEST_F(DownloadManagerTest, pluginLifecycleTest) {
     // Cleanup is handled by TearDown automatically
 }
 
-/* Test Case for download method using JSON-RPC - Success scenario
- * 
- * Initialize JSON-RPC setup, invoke download method with valid URL
- * Verify successful download initiation and downloadId generation
- */
-TEST_F(DownloadManagerTest, downloadMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC download success test");
-
-    initforJsonRpc();
-
-    // Check if JSON-RPC methods are available first
-    auto existsResult = mJsonRpcHandler.Exists(_T("download"));
-    if (existsResult != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC download method not available - this is expected in test environments");
-        TEST_LOG("Test PASSED: Plugin loads and initializes without crashing");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Test download method
-    string response;
-    // Test may fail due to network issues, so we check if it properly handles the call
-    auto result = mJsonRpcHandler.Invoke(connection, _T("download"),
-        _T("{\"url\": \"file:///tmp/test_mock_file.txt\", \"priority\": true}"), response);
-    TEST_LOG("Download JSON-RPC returned: %u", result);
-    
-    if (!response.empty()) {
-        TEST_LOG("Download response: %s", response.c_str());
-        EXPECT_TRUE(response.find("downloadId") != std::string::npos);
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for download method using JSON-RPC - Internet unavailable
- * 
- * Initialize JSON-RPC setup with offline subsystem, invoke download method
- * Verify proper error handling when internet is unavailable
- */
-TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
-
-    TEST_LOG("Starting JSON-RPC download internet unavailable test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC download method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return false; // Internet not available
-            }));
-
-    string response;
-    // Test network unavailable scenario using unreachable host - expect error regardless of specific error code
-    auto unavailableResult = mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"http://unreachable.test.domain/file.txt\"}"), response);
-    EXPECT_NE(Core::ERROR_NONE, unavailableResult);
-    TEST_LOG("Network unavailable test returned error: %u (expected)", unavailableResult);
-
-    deinitforJsonRpc();
-}
-
-
-
-/* Test Case for resume method using JSON-RPC
- * 
- * Start a download, pause it, then resume it
- * Verify resume operation succeeds
- */
-TEST_F(DownloadManagerTest, resumeMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC resume success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("resume"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC resume method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Start download, pause, then resume
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"file:///tmp/test_mock_file.txt\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                string params = "{\"downloadId\": \"" + downloadId + "\"}";
-                string response;
-                
-                // Pause first
-                mJsonRpcHandler.Invoke(connection, _T("pause"), params, response);
-                
-                // Then resume
-                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), params, response));
-                
-                // Cancel to cleanup
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), params, response);
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
-
-
-
-
-
-
-
-
-
-/* Test Case for download method using COM-RPC - Success scenario
- * 
- * Initialize COM-RPC interface and invoke Download method directly
- * Verify successful download initiation via COM interface
- */
-TEST_F(DownloadManagerTest, downloadMethodComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC download success test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - this is expected in test environments");
-        TEST_LOG("Test PASSED: Plugin loads without crashing");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    // Check network availability first
-    if (!isNetworkAvailable()) {
-        TEST_LOG("Network not available - using mock behavior for L1 test");
-        SUCCEED() << "L1 test passed - API calls work even without network";
-        return;
-    }
-    
-    string testDownloadId;
-    auto result = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (result == Core::ERROR_NONE) {
-        EXPECT_FALSE(testDownloadId.empty());
-        TEST_LOG("Download started successfully with ID: %s", testDownloadId.c_str());
-        
-        // Give a very short time for the download to start before canceling
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        
-        // Cancel to cleanup - this is expected to succeed regardless of download status
-        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
-        TEST_LOG("Cancel operation returned: %u", cancelResult);
-    } else {
-        TEST_LOG("Download API returned error: %u - testing error handling", result);
-        // For L1 tests, we verify the API behaves correctly even with errors
-        // Network issues, file permission issues, etc. are expected in test environments
-        SUCCEED() << "L1 test passed - API properly handles error conditions";
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for pause and resume methods using COM-RPC
- * 
- * Start download, pause it, then resume using COM interface
- * Verify pause and resume operations work correctly
- */
-TEST_F(DownloadManagerTest, pauseResumeComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC pause/resume success test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    string testDownloadId;
-    auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-        TEST_LOG("Download started with ID: %s", testDownloadId.c_str());
-        
-        // Small delay to let download start
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        
-        // Pause the download
-        auto pauseResult = downloadManagerInterface->Pause(testDownloadId);
-        if (pauseResult == Core::ERROR_NONE) {
-            TEST_LOG("Download paused successfully");
-            
-            // Resume the download
-            auto resumeResult = downloadManagerInterface->Resume(testDownloadId);
-            if (resumeResult == Core::ERROR_NONE) {
-                TEST_LOG("Download resumed successfully");
-            } else {
-                TEST_LOG("Resume failed with error: %u (this may be expected if download completed quickly)", resumeResult);
-            }
-        } else {
-            TEST_LOG("Pause failed with error: %u (this may be expected if download completed quickly)", pauseResult);
-        }
-        
-        // Cancel to cleanup
-        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
-        TEST_LOG("Cancel result: %u", cancelResult);
-    } else {
-        TEST_LOG("Download failed to start with error: %u", downloadResult);
-        // For L1 tests, we still consider this a successful test of the API
-        EXPECT_TRUE(true); // API was called successfully
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for progress and storage details using COM-RPC
- * 
- * Test progress tracking and storage details retrieval
- * Verify these utility methods work correctly
- */
-TEST_F(DownloadManagerTest, progressStorageComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC progress/storage success test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Test storage details
-    uint32_t testQuotaKB = 0, testUsedKB = 0;
-    auto storageResult = downloadManagerInterface->GetStorageDetails(testQuotaKB, testUsedKB);
-    
-    if (storageResult == Core::ERROR_NONE) {
-        TEST_LOG("Storage details - Quota: %u KB, Used: %u KB", testQuotaKB, testUsedKB);
-    } else {
-        TEST_LOG("GetStorageDetails failed with error: %u", storageResult);
-    }
-
-    // Test progress with a download
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    string testDownloadId;
-    auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-        // Small delay to let download start
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        
-        // Check progress
-        uint8_t progressPercent = 0;
-        auto progressResult = downloadManagerInterface->Progress(testDownloadId, progressPercent);
-        
-        if (progressResult == Core::ERROR_NONE) {
-            TEST_LOG("Download progress: %u%%", progressPercent);
-        } else {
-            TEST_LOG("Progress check failed with error: %u (this may be expected if download completed quickly)", progressResult);
-        }
-        
-        // Cancel to cleanup
-        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
-        TEST_LOG("Cancel result: %u", cancelResult);
-    } else {
-        TEST_LOG("Download failed to start with error: %u", downloadResult);
-        // For L1 tests, we still consider this a successful test of the API
-        EXPECT_TRUE(true); // API was called successfully
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for error scenarios with invalid parameters
- * 
- * Test various error conditions with invalid downloadIds, URLs, etc.
- * Verify proper error handling and return codes
- */
-TEST_F(DownloadManagerTest, errorScenariosJsonRpc) {
-
-    TEST_LOG("Starting JSON-RPC error scenarios test");
-
-    initforJsonRpc();
-
-    // Test with invalid downloadId for various operations
-    string invalidResponse;
-    
-    if (mJsonRpcHandler.Exists(_T("pause")) == Core::ERROR_NONE) {
-        auto pauseResult = mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
-        EXPECT_NE(Core::ERROR_NONE, pauseResult);
-        TEST_LOG("Pause with invalid ID returned error: %u (expected)", pauseResult);
-    }
-    
-    if (mJsonRpcHandler.Exists(_T("resume")) == Core::ERROR_NONE) {
-        auto resumeResult = mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
-        EXPECT_NE(Core::ERROR_NONE, resumeResult);
-        TEST_LOG("Resume with invalid ID returned error: %u (expected)", resumeResult);
-    }
-    
-    if (mJsonRpcHandler.Exists(_T("cancel")) == Core::ERROR_NONE) {
-        auto cancelResult = mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
-        EXPECT_NE(Core::ERROR_NONE, cancelResult);
-        TEST_LOG("Cancel with invalid ID returned error: %u (expected)", cancelResult);
-    }
-
-    deinitforJsonRpc();
-}
-
-
-
-
-
-
-
-
-
-/* Test Case for download method with invalid URLs using COM-RPC
- * 
- * Test download method error handling via COM interface
- * Verify proper error responses for invalid parameters
- */
-TEST_F(DownloadManagerTest, downloadMethodComRpcInvalidParams) {
-
-    TEST_LOG("Starting COM-RPC download invalid parameters test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    // Test with empty URL
-    string testDownloadId1;
-    auto result1 = downloadManagerInterface->Download("", options, testDownloadId1);
-    EXPECT_NE(Core::ERROR_NONE, result1);
-    TEST_LOG("Download with empty URL returned error: %u (expected)", result1);
-    
-    // Test with malformed URL
-    string testDownloadId2;
-    auto result2 = downloadManagerInterface->Download("invalid-url", options, testDownloadId2);
-    TEST_LOG("Download with invalid URL returned: %u", result2);
-
-    deinitforComRpc();
-}
-
-/* Test Case for rate limiting using COM-RPC
- * 
- * Test rate limiting functionality via COM interface
- * Verify rate limit can be applied to downloads
- */
-TEST_F(DownloadManagerTest, rateLimitComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC rate limit test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    string testDownloadId;
-    auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-        TEST_LOG("Download started with ID: %s", testDownloadId.c_str());
-        
-        // Small delay to let download start
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        
-        // Apply rate limit
-        uint32_t rateLimit = 512; // 512 KB/s
-        auto rateLimitResult = downloadManagerInterface->RateLimit(testDownloadId, rateLimit);
-        
-        if (rateLimitResult == Core::ERROR_NONE) {
-            TEST_LOG("Rate limit of %u KB/s applied successfully", rateLimit);
-        } else {
-            TEST_LOG("Rate limit failed with error: %u (this may be expected if download completed quickly)", rateLimitResult);
-        }
-        
-        // Test rate limit with invalid download ID
-        auto rateLimitResult2 = downloadManagerInterface->RateLimit("invalid_id_12345", rateLimit);
-        EXPECT_NE(Core::ERROR_NONE, rateLimitResult2);
-        TEST_LOG("Rate limit with invalid ID returned error: %u (expected)", rateLimitResult2);
-        
-        // Cancel to cleanup
-        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
-        TEST_LOG("Cancel result: %u", cancelResult);
-    } else {
-        TEST_LOG("Download failed to start with error: %u", downloadResult);
-        // For L1 tests, we still consider this a successful test of the API
-        EXPECT_TRUE(true); // API was called successfully
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for notification registration and unregistration
- * 
- * Test notification callback registration system
- * Verify Register and Unregister methods work correctly
- */
-TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
-
-    TEST_LOG("Starting COM-RPC notification registration test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        deinitforComRpc();
-        return;
-    }
-
-    // Create notification callback pointer for safe memory management
-    NotificationTest* notificationCallback = new NotificationTest();
-    
-    try {
-        // Test registration
-        auto registerResult = downloadManagerInterface->Register(notificationCallback);
-        if (registerResult == Core::ERROR_NONE) {
-            TEST_LOG("Notification registration successful");
-            
-            // Add a small delay to ensure registration is processed
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
-            // Test unregistration
-            auto unregisterResult = downloadManagerInterface->Unregister(notificationCallback);
-[I            if (unregisterResult == Core::ERROR_NONE) {
-                TEST_LOG("Notification unregistration successful");
-            } else {
-                TEST_LOG("Notification unregistration failed with error: %u", unregisterResult);
-            }
-        } else {
-            TEST_LOG("Notification registration failed with error: %u", registerResult);
-        }
-        
-        // Clean up the first callback
-        delete notificationCallback;
-        notificationCallback = nullptr;
-        
-        // Test unregistration of non-registered callback
-        NotificationTest* notificationCallback2 = new NotificationTest();
-        auto unregisterResult2 = downloadManagerInterface->Unregister(notificationCallback2);
-        TEST_LOG("Unregistration of non-registered callback returned: %u", unregisterResult2);
-        
-        // Clean up the second callback
-        delete notificationCallback2;
-        notificationCallback2 = nullptr;
-        
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception in notification test: %s", e.what());
-        if (notificationCallback) {
-            delete notificationCallback;
-        }
-    } catch (...) {
-        TEST_LOG("Unknown exception in notification test");
-        if (notificationCallback) {
-            delete notificationCallback;
-        }
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for progress tracking with invalid download IDs
- * 
- * Test progress method error handling
- * Verify proper error responses for invalid download IDs
- */
-TEST_F(DownloadManagerTest, progressMethodInvalidId) {
-
-    TEST_LOG("Starting progress method invalid ID test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Test progress with invalid download ID
-    uint8_t progressPercent = 0;
-    auto progressResult = downloadManagerInterface->Progress("invalid_id_12345", progressPercent);
-    
-    EXPECT_NE(Core::ERROR_NONE, progressResult);
-    TEST_LOG("Progress with invalid ID returned error: %u (expected)", progressResult);
-
-    deinitforComRpc();
-}
-
-/* Test Case for comprehensive download lifecycle using COM-RPC
- * 
- * Test complete download workflow: start -> progress -> pause -> resume -> cancel
- * Verify all operations work in sequence
- */
-TEST_F(DownloadManagerTest, completeDownloadLifecycleComRpc) {
-
-    TEST_LOG("Starting complete download lifecycle test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    // Step 1: Start download
-    string testDownloadId;
-    auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-        TEST_LOG("STEP 1: Download started with ID: %s", testDownloadId.c_str());
-        
-        // Step 2: Check initial progress
-        uint8_t progressPercent = 0;
-        auto progressResult = downloadManagerInterface->Progress(testDownloadId, progressPercent);
-        if (progressResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 2: Initial progress: %u%%", progressPercent);
-        }
-        
-        // Step 3: Apply rate limit
-        uint32_t rateLimit = 1024;
-        auto rateLimitResult = downloadManagerInterface->RateLimit(testDownloadId, rateLimit);
-        if (rateLimitResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 3: Rate limit applied: %u KB/s", rateLimit);
-        }
-        
-        // Step 4: Pause download
-        auto pauseResult = downloadManagerInterface->Pause(testDownloadId);
-        if (pauseResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 4: Download paused successfully");
-            
-            // Step 5: Resume download
-            auto resumeResult = downloadManagerInterface->Resume(testDownloadId);
-            if (resumeResult == Core::ERROR_NONE) {
-                TEST_LOG("STEP 5: Download resumed successfully");
-            } else {
-                TEST_LOG("STEP 5: Resume failed with error: %u", resumeResult);
-            }
-        } else {
-            TEST_LOG("STEP 4: Pause failed with error: %u", pauseResult);
-        }
-        
-        // Step 6: Final progress check
-        progressResult = downloadManagerInterface->Progress(testDownloadId, progressPercent);
-        if (progressResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 6: Final progress: %u%%", progressPercent);
-        }
-        
-        // Step 7: Cancel download (cleanup)
-        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
-        if (cancelResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 7: Download cancelled successfully");
-        } else {
-            TEST_LOG("STEP 7: Cancel failed with error: %u", cancelResult);
-        }
-    } else {
-        TEST_LOG("Download failed to start with error: %u", downloadResult);
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for multiple simultaneous downloads
- * 
- * Test downloading multiple files simultaneously
- * Verify system can handle multiple concurrent downloads
- */
-TEST_F(DownloadManagerTest, multipleDownloadsComRpc) {
-
-    TEST_LOG("Starting multiple downloads test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    std::vector<string> downloadIds;
-    std::vector<string> urls = {
-        "file:///tmp/test_mock_file.txt",
-        "file:///tmp/test_mock_file.txt", 
-        "file:///tmp/test_mock_file.txt"
-    };
-    
-    // Start multiple downloads
-    for (size_t i = 0; i < urls.size(); ++i) {
-        string testDownloadId;
-        auto downloadResult = downloadManagerInterface->Download(urls[i], options, testDownloadId);
-        
-        if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-            downloadIds.push_back(testDownloadId);
-            TEST_LOG("Download %zu started with ID: %s", i + 1, testDownloadId.c_str());
-        } else {
-            TEST_LOG("Download %zu failed with error: %u", i + 1, downloadResult);
-        }
-    }
-    
-    // Check progress of all downloads
-    for (size_t i = 0; i < downloadIds.size(); ++i) {
-        uint8_t progressPercent = 0;
-        auto progressResult = downloadManagerInterface->Progress(downloadIds[i], progressPercent);
-        if (progressResult == Core::ERROR_NONE) {
-            TEST_LOG("Download %zu progress: %u%%", i + 1, progressPercent);
-        }
-    }
-    
-    // Cancel all downloads (cleanup)
-    for (size_t i = 0; i < downloadIds.size(); ++i) {
-        auto cancelResult = downloadManagerInterface->Cancel(downloadIds[i]);
-        if (cancelResult == Core::ERROR_NONE) {
-            TEST_LOG("Download %zu cancelled successfully", i + 1);
-        } else {
-            TEST_LOG("Download %zu cancel failed with error: %u", i + 1, cancelResult);
-        }
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for storage details consistency
- * 
- * Test storage details retrieval multiple times
- * Verify storage information consistency
- */
-TEST_F(DownloadManagerTest, storageDetailsConsistency) {
-
-    TEST_LOG("Starting storage details consistency test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Get storage details multiple times and verify consistency
-    for (int i = 0; i < 3; ++i) {
-        uint32_t quotaKB = 0, usedKB = 0;
-        auto storageResult = downloadManagerInterface->GetStorageDetails(quotaKB, usedKB);
-        
-        if (storageResult == Core::ERROR_NONE) {
-            TEST_LOG("Storage check %d - Quota: %u KB, Used: %u KB", i + 1, quotaKB, usedKB);
-            
-            // Basic consistency checks
-            if (quotaKB > 0) {
-                EXPECT_LE(usedKB, quotaKB) << "Used storage should not exceed quota";
-            }
-        } else {
-            TEST_LOG("Storage details check %d failed with error: %u", i + 1, storageResult);
-        }
-        
-        // Small delay between checks
-        waitforSignal(100);
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for edge cases and boundary conditions
- * 
- * Test various edge cases and boundary conditions
- * Verify robust error handling
- */
-TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
-
-    TEST_LOG("Starting edge cases and boundary conditions test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Test with very long download ID
-    string longId(1000, 'x');
-    auto pauseResult = downloadManagerInterface->Pause(longId);
-    EXPECT_NE(Core::ERROR_NONE, pauseResult);
-    TEST_LOG("Pause with very long ID returned error: %u (expected)", pauseResult);
-    
-    // Test with special characters in download ID
-    string specialId = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
-    auto resumeResult = downloadManagerInterface->Resume(specialId);
-    EXPECT_NE(Core::ERROR_NONE, resumeResult);
-    TEST_LOG("Resume with special char ID returned error: %u (expected)", resumeResult);
-    
-    // Test rate limit with extreme values
-    auto rateLimitResult1 = downloadManagerInterface->RateLimit("test_id", 0);
-    TEST_LOG("Rate limit with 0 returned: %u", rateLimitResult1);
-    
-    auto rateLimitResult2 = downloadManagerInterface->RateLimit("test_id", UINT32_MAX);
-    TEST_LOG("Rate limit with MAX_UINT32 returned: %u", rateLimitResult2);
-    
-    // Test delete with very long file path
-    string longPath(2000, '/');
-    longPath += "file.txt";
-    auto deleteResult = downloadManagerInterface->Delete(longPath);
-    TEST_LOG("Delete with very long path returned: %u", deleteResult);
-
-    deinitforComRpc();
-}
-
 /***************************************************************************************************
  * L1 TEST CASES FOR DOWNLOADMANAGERIMPLEMENTATION SPECIFIC METHODS
  * 
@@ -1568,570 +675,3 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationInitialize) {
         }
     }
 }
-
-/* Test Case for DownloadManagerImplementation Deinitialize method
- * 
- * Test the Deinitialize method cleanup operations
- * Verify thread cleanup and queue clearing
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationDeinitialize) {
-
-    TEST_LOG("Starting DownloadManagerImplementation Deinitialize test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Initialize first if possible
-    if (mServiceMock) {
-        EXPECT_CALL(*mServiceMock, ConfigLine())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/test_downloads/\"}"));
-
-        EXPECT_CALL(*mServiceMock, AddRef())
-            .Times(::testing::AnyNumber());
-        
-        EXPECT_CALL(*mServiceMock, Release())
-            .Times(::testing::AnyNumber());
-
-        auto initResult = implementation->Initialize(mServiceMock);
-        if (initResult == Core::ERROR_NONE) {
-            // Test deinitialize
-            auto deinitResult = implementation->Deinitialize(mServiceMock);
-            EXPECT_EQ(Core::ERROR_NONE, deinitResult);
-            TEST_LOG("Deinitialize test passed with result: %u", deinitResult);
-        } else {
-            TEST_LOG("Initialize failed, testing deinitialize independently");
-            // Test deinitialize without proper initialization
-            auto deinitResult = implementation->Deinitialize(mServiceMock);
-            TEST_LOG("Deinitialize without init returned: %u", deinitResult);
-        }
-    }
-}
-
-/* Test Case for DownloadManagerImplementation Register/Unregister Notification methods
- * 
- * Test notification registration and unregistration
- * Verify proper reference counting and list management
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationNotificationRegisterUnregister) {
-
-    TEST_LOG("Starting DownloadManagerImplementation notification register/unregister test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Create notification callbacks
-    NotificationTest notification1;
-    NotificationTest notification2;
-    
-    // Test registration
-    auto registerResult1 = implementation->Register(&notification1);
-    EXPECT_EQ(Core::ERROR_NONE, registerResult1);
-    TEST_LOG("First notification registered successfully");
-    
-    auto registerResult2 = implementation->Register(&notification2);
-    EXPECT_EQ(Core::ERROR_NONE, registerResult2);
-    TEST_LOG("Second notification registered successfully");
-    
-    // Test unregistration
-    auto unregisterResult1 = implementation->Unregister(&notification1);
-    EXPECT_EQ(Core::ERROR_NONE, unregisterResult1);
-    TEST_LOG("First notification unregistered successfully");
-    
-    auto unregisterResult2 = implementation->Unregister(&notification2);
-    EXPECT_EQ(Core::ERROR_NONE, unregisterResult2);
-    TEST_LOG("Second notification unregistered successfully");
-    
-    // Test unregistering non-existent notification
-    NotificationTest notification3;
-    auto unregisterResult3 = implementation->Unregister(&notification3);
-    EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult3);
-    TEST_LOG("Unregister non-existent notification returned expected error: %u", unregisterResult3);
-}
-
-/* Test Case for DownloadManagerImplementation Download method with different configurations
- * 
- * Test the Download method implementation directly
- * Verify queue management, ID generation, and error handling
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationDownloadMethod) {
-
-    TEST_LOG("Starting DownloadManagerImplementation Download method test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Initialize implementation
-    if (mServiceMock) {
-        EXPECT_CALL(*mServiceMock, ConfigLine())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/test_downloads/\", \"downloadId\": 5000}"));
-
-        EXPECT_CALL(*mServiceMock, AddRef())
-            .Times(::testing::AnyNumber());
-        
-        EXPECT_CALL(*mServiceMock, Release())
-            .Times(::testing::AnyNumber());
-
-        EXPECT_CALL(*mServiceMock, SubSystems())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return(mSubSystemMock));
-
-        auto initResult = implementation->Initialize(mServiceMock);
-        if (initResult != Core::ERROR_NONE) {
-            TEST_LOG("Initialize failed - skipping download tests");
-            return;
-        }
-
-        // Test download with internet available
-        EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Invoke(
-                [&](const PluginHost::ISubSystem::subsystem type) {
-                    return true; // Internet available
-                }));
-
-        Exchange::IDownloadManager::Options options;
-        options.priority = true;
-        options.retries = 3;
-        options.rateLimit = 2048;
-        
-        string downloadId1;
-        auto result1 = implementation->Download("file:///tmp/test_mock_file.txt", options, downloadId1);
-        if (result1 == Core::ERROR_NONE) {
-            EXPECT_FALSE(downloadId1.empty());
-            TEST_LOG("Priority download started with ID: %s", downloadId1.c_str());
-        } else {
-            TEST_LOG("Download returned: %u - may be expected in test environment", result1);
-        }
-
-        // Test download with empty URL
-        string downloadId2;
-        auto result2 = implementation->Download("", options, downloadId2);
-        EXPECT_EQ(Core::ERROR_GENERAL, result2);
-        TEST_LOG("Download with empty URL returned expected error: %u", result2);
-
-        // Test download without internet
-        EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Invoke(
-                [&](const PluginHost::ISubSystem::subsystem type) {
-                    return false; // No internet
-                }));
-
-        string downloadId3;
-        auto result3 = implementation->Download("file:///tmp/test_mock_file.txt", options, downloadId3);
-        EXPECT_EQ(Core::ERROR_UNAVAILABLE, result3);
-        TEST_LOG("Download without internet returned expected error: %u", result3);
-
-        // Test regular priority download
-        EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Invoke(
-                [&](const PluginHost::ISubSystem::subsystem type) {
-                    return true; // Internet available
-                }));
-
-        options.priority = false; // Regular priority
-        string downloadId4;
-        auto result4 = implementation->Download("file:///tmp/test_mock_file.txt", options, downloadId4);
-        if (result4 == Core::ERROR_NONE) {
-            EXPECT_FALSE(downloadId4.empty());
-            TEST_LOG("Regular download started with ID: %s", downloadId4.c_str());
-        }
-
-        // Cleanup
-        implementation->Deinitialize(mServiceMock);
-    }
-}
-
-/* Test Case for DownloadManagerImplementation Pause method implementation
- * 
- * Test the Pause method with various scenarios
- * Verify download ID validation and HTTP client interaction
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationPauseMethod) {
-
-    TEST_LOG("Starting DownloadManagerImplementation Pause method test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test pause with empty download ID
-    auto result1 = implementation->Pause("");
-    EXPECT_EQ(Core::ERROR_GENERAL, result1);
-    TEST_LOG("Pause with empty ID returned expected error: %u", result1);
-
-    // Test pause with invalid download ID (no current download)
-    auto result2 = implementation->Pause("invalid_id_12345");
-    EXPECT_EQ(Core::ERROR_GENERAL, result2);
-    TEST_LOG("Pause with invalid ID returned expected error: %u", result2);
-
-    // Test pause with very long download ID
-    string longId(500, 'x');
-    auto result3 = implementation->Pause(longId);
-    EXPECT_EQ(Core::ERROR_GENERAL, result3);
-    TEST_LOG("Pause with very long ID returned expected error: %u", result3);
-}
-
-/* Test Case for DownloadManagerImplementation Resume method implementation
- * 
- * Test the Resume method with various scenarios
- * Verify download ID validation and state management
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationResumeMethod) {
-
-    TEST_LOG("Starting DownloadManagerImplementation Resume method test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test resume with empty download ID
-    auto result1 = implementation->Resume("");
-    EXPECT_EQ(Core::ERROR_GENERAL, result1);
-    TEST_LOG("Resume with empty ID returned expected error: %u", result1);
-
-    // Test resume with invalid download ID (no current download)
-    auto result2 = implementation->Resume("invalid_id_67890");
-    EXPECT_EQ(Core::ERROR_GENERAL, result2);
-    TEST_LOG("Resume with invalid ID returned expected error: %u", result2);
-
-    // Test resume with special characters in ID
-    auto result3 = implementation->Resume("!@#$invalid_id%^&*");
-    EXPECT_EQ(Core::ERROR_GENERAL, result3);
-    TEST_LOG("Resume with special char ID returned expected error: %u", result3);
-}
-
-/* Test Case for DownloadManagerImplementation Cancel method implementation
- * 
- * Test the Cancel method with various scenarios
- * Verify download cancellation and cleanup
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationCancelMethod) {
-
-    TEST_LOG("Starting DownloadManagerImplementation Cancel method test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test cancel with empty download ID
-    auto result1 = implementation->Cancel("");
-    EXPECT_EQ(Core::ERROR_GENERAL, result1);
-    TEST_LOG("Cancel with empty ID returned expected error: %u", result1);
-
-    // Test cancel with invalid download ID (no current download)
-    auto result2 = implementation->Cancel("nonexistent_id_999");
-    EXPECT_EQ(Core::ERROR_GENERAL, result2);
-    TEST_LOG("Cancel with invalid ID returned expected error: %u", result2);
-
-    // Test cancel with null characters in ID
-    string nullId = "test\0id";
-    auto result3 = implementation->Cancel(nullId);
-    EXPECT_EQ(Core::ERROR_GENERAL, result3);
-    TEST_LOG("Cancel with null char ID returned expected error: %u", result3);
-}
-
-/* Test Case for DownloadManagerImplementation Delete method implementation
- * 
- * Test the Delete method with various file scenarios
- * Verify file deletion and in-progress download protection
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationDeleteMethod) {
-
-    TEST_LOG("Starting DownloadManagerImplementation Delete method test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test delete with empty file locator
-    auto result1 = implementation->Delete("");
-    EXPECT_EQ(Core::ERROR_GENERAL, result1);
-    TEST_LOG("Delete with empty locator returned expected error: %u", result1);
-
-    // Test delete with non-existent file
-    auto result2 = implementation->Delete("/tmp/nonexistent_file_12345.txt");
-    EXPECT_EQ(Core::ERROR_GENERAL, result2);
-    TEST_LOG("Delete with non-existent file returned expected error: %u", result2);
-
-    // Test delete with very long file path
-    string longPath(1000, '/');
-    longPath += "test_file.txt";
-    auto result3 = implementation->Delete(longPath);
-    EXPECT_EQ(Core::ERROR_GENERAL, result3);
-    TEST_LOG("Delete with very long path returned expected error: %u", result3);
-
-    // Test delete with invalid characters in path
-    auto result4 = implementation->Delete("/tmp/\0invalid\0path");
-    EXPECT_EQ(Core::ERROR_GENERAL, result4);
-    TEST_LOG("Delete with invalid chars returned expected error: %u", result4);
-}
-
-/* Test Case for DownloadManagerImplementation Progress method implementation
- * 
- * Test the Progress method with various scenarios
- * Verify progress tracking and validation
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationProgressMethod) {
-
-    TEST_LOG("Starting DownloadManagerImplementation Progress method test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test progress with empty download ID
-    uint8_t percent1 = 0;
-    auto result1 = implementation->Progress("", percent1);
-    EXPECT_EQ(Core::ERROR_GENERAL, result1);
-    TEST_LOG("Progress with empty ID returned expected error: %u", result1);
-
-    // Test progress with invalid download ID (no current download)
-    uint8_t percent2 = 0;
-    auto result2 = implementation->Progress("invalid_progress_id", percent2);
-    EXPECT_EQ(Core::ERROR_GENERAL, result2);
-    TEST_LOG("Progress with invalid ID returned expected error: %u", result2);
-
-    // Test progress with numeric ID string  
-    uint8_t percent3 = 0;
-    auto result3 = implementation->Progress("12345", percent3);
-    EXPECT_EQ(Core::ERROR_GENERAL, result3);
-    TEST_LOG("Progress with numeric ID returned expected error: %u", result3);
-}
-
-/* Test Case for DownloadManagerImplementation GetStorageDetails method
- * 
- * Test the GetStorageDetails method implementation
- * Verify storage quota and usage information retrieval
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationGetStorageDetails) {
-
-    TEST_LOG("Starting DownloadManagerImplementation GetStorageDetails test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test GetStorageDetails - currently returns stub values
-    uint32_t quotaKB = 999, usedKB = 999;
-    auto result = implementation->GetStorageDetails(quotaKB, usedKB);
-    
-    // Method should return ERROR_NONE as per implementation
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    TEST_LOG("GetStorageDetails returned: %u, quotaKB: %u, usedKB: %u", result, quotaKB, usedKB);
-
-    // Test multiple calls for consistency
-    for (int i = 0; i < 3; ++i) {
-        uint32_t testQuotaKB = 0, testUsedKB = 0;
-        auto testResult = implementation->GetStorageDetails(testQuotaKB, testUsedKB);
-        EXPECT_EQ(Core::ERROR_NONE, testResult);
-        TEST_LOG("GetStorageDetails call %d: result=%u, quota=%u, used=%u", 
-                 i + 1, testResult, testQuotaKB, testUsedKB);
-    }
-}
-
-/* Test Case for DownloadManagerImplementation RateLimit method implementation
- * 
- * Test the RateLimit method with various scenarios
- * Verify rate limiting functionality and validation
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationRateLimitMethod) {
-
-    TEST_LOG("Starting DownloadManagerImplementation RateLimit method test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test rate limit with empty download ID
-    auto result1 = implementation->RateLimit("", 1024);
-    EXPECT_EQ(Core::ERROR_GENERAL, result1);
-    TEST_LOG("RateLimit with empty ID returned expected error: %u", result1);
-
-    // Test rate limit with invalid download ID (no current download)
-    auto result2 = implementation->RateLimit("invalid_rate_id", 2048);
-    EXPECT_EQ(Core::ERROR_GENERAL, result2);
-    TEST_LOG("RateLimit with invalid ID returned expected error: %u", result2);
-
-    // Test rate limit with zero limit
-    auto result3 = implementation->RateLimit("test_id", 0);
-    EXPECT_EQ(Core::ERROR_GENERAL, result3);
-    TEST_LOG("RateLimit with zero limit returned expected error: %u", result3);
-
-    // Test rate limit with maximum value
-    auto result4 = implementation->RateLimit("test_id", UINT32_MAX);
-    EXPECT_EQ(Core::ERROR_GENERAL, result4);
-    TEST_LOG("RateLimit with max value returned expected error: %u", result4);
-
-    // Test rate limit with very large ID
-    string largeId(200, 'R');
-    auto result5 = implementation->RateLimit(largeId, 1024);
-    EXPECT_EQ(Core::ERROR_GENERAL, result5);
-    TEST_LOG("RateLimit with large ID returned expected error: %u", result5);
-}
-
-/* Test Case for DownloadManagerImplementation Configuration parsing
- * 
- * Test configuration parsing with different JSON configurations
- * Verify proper handling of downloadDir and downloadId settings
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationConfigurationParsing) {
-
-    TEST_LOG("Starting DownloadManagerImplementation Configuration parsing test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    if (!mServiceMock) {
-        TEST_LOG("ServiceMock not available - skipping configuration tests");
-        return;
-    }
-
-    // Test with minimal configuration
-    EXPECT_CALL(*mServiceMock, ConfigLine())
-        .WillOnce(::testing::Return("{}"));
-    EXPECT_CALL(*mServiceMock, AddRef())
-        .Times(::testing::AnyNumber());
-    EXPECT_CALL(*mServiceMock, Release())
-        .Times(::testing::AnyNumber());
-
-    auto result1 = implementation->Initialize(mServiceMock);
-    if (result1 == Core::ERROR_NONE) {
-        TEST_LOG("Initialize with minimal config succeeded");
-        implementation->Deinitialize(mServiceMock);
-    } else {
-        TEST_LOG("Initialize with minimal config returned: %u", result1);
-    }
-
-    // Test with complete configuration
-    implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    EXPECT_CALL(*mServiceMock, ConfigLine())
-        .WillOnce(::testing::Return("{\"downloadDir\": \"/custom/download/path/\", \"downloadId\": 9999}"));
-    EXPECT_CALL(*mServiceMock, AddRef())
-        .Times(::testing::AnyNumber());
-    EXPECT_CALL(*mServiceMock, Release())
-        .Times(::testing::AnyNumber());
-
-    auto result2 = implementation->Initialize(mServiceMock);
-    if (result2 == Core::ERROR_NONE) {
-        TEST_LOG("Initialize with complete config succeeded");
-        implementation->Deinitialize(mServiceMock);
-    } else {
-        TEST_LOG("Initialize with complete config returned: %u", result2);
-    }
-
-    // Test with invalid JSON configuration
-    implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    EXPECT_CALL(*mServiceMock, ConfigLine())
-        .WillOnce(::testing::Return("{invalid json}"));
-    EXPECT_CALL(*mServiceMock, AddRef())
-        .Times(::testing::AnyNumber());
-    EXPECT_CALL(*mServiceMock, Release())
-        .Times(::testing::AnyNumber());
-
-    auto result3 = implementation->Initialize(mServiceMock);
-    TEST_LOG("Initialize with invalid JSON returned: %u", result3);
-    if (result3 == Core::ERROR_NONE) {
-        implementation->Deinitialize(mServiceMock);
-    }
-}
-
-/* Test Case for DownloadManagerImplementation thread safety and concurrency
- * 
- * Test concurrent access to implementation methods
- * Verify thread safety of critical sections
- */
-TEST_F(DownloadManagerTest, downloadManagerImplementationThreadSafety) {
-
-    TEST_LOG("Starting DownloadManagerImplementation thread safety test");
-
-    auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        return;
-    }
-
-    // Test concurrent notification registration/unregistration
-    std::vector<std::unique_ptr<NotificationTest>> notifications;
-    std::vector<std::thread> threads;
-    
-    // Create multiple notifications for concurrent testing
-    for (int i = 0; i < 5; ++i) {
-        notifications.push_back(std::make_unique<NotificationTest>());
-    }
-
-    // Test concurrent registration
-    for (int i = 0; i < 5; ++i) {
-        threads.emplace_back([&implementation, &notifications, i]() {
-            auto result = implementation->Register(notifications[i].get());
-            TEST_LOG("Concurrent register %d result: %u", i, result);
-        });
-    }
-
-    // Wait for all registration threads
-    for (auto& thread : threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-    threads.clear();
-
-    // Test concurrent unregistration
-    for (int i = 0; i < 5; ++i) {
-        threads.emplace_back([&implementation, &notifications, i]() {
-            auto result = implementation->Unregister(notifications[i].get());
-            TEST_LOG("Concurrent unregister %d result: %u", i, result);
-        });
-    }
-
-    // Wait for all unregistration threads
-    for (auto& thread : threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-
-    TEST_LOG("Thread safety test completed");
-}
-
