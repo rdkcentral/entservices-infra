@@ -26,6 +26,13 @@
 #include <mutex>
 #include <chrono>
 #include <condition_variable>
+#include <thread>
+#include <memory>
+#include <future>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <cstring>
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
@@ -35,6 +42,7 @@ using namespace WPEFramework;
 #include "ISubSystemMock.h"
 #include "ServiceMock.h"
 #include "COMLinkMock.h"
+#include "WrapsMock.h"
 #include "ThunderPortability.h"
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
@@ -64,6 +72,7 @@ protected:
     // Declare the protected members
     ServiceMock* mServiceMock = nullptr;
     SubSystemMock* mSubSystemMock = nullptr;
+    WrapsImplMock* p_wrapsImplMock = nullptr;
 
     Core::ProxyType<WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
@@ -111,6 +120,16 @@ protected:
             // Set up mocks and expect calls
             mServiceMock = new NiceMock<ServiceMock>;
             mSubSystemMock = new NiceMock<SubSystemMock>;
+            p_wrapsImplMock = new NiceMock<WrapsImplMock>;
+            Wraps::setImpl(p_wrapsImplMock);
+
+            // Set up basic system call mocks
+            ON_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
+                .WillByDefault(::testing::Return(0));
+            ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+                .WillByDefault(::testing::Return(0));
+            ON_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
+                .WillByDefault(::testing::Return(0));
 
             EXPECT_CALL(*mServiceMock, ConfigLine())
               .Times(::testing::AnyNumber())
@@ -207,6 +226,12 @@ protected:
             if (mSubSystemMock) {
                 delete mSubSystemMock;
                 mSubSystemMock = nullptr;
+            }
+
+            Wraps::setImpl(nullptr);
+            if (p_wrapsImplMock != nullptr) {
+                delete p_wrapsImplMock;
+                p_wrapsImplMock = nullptr;
             }
         } catch (const std::exception& e) {
             TEST_LOG("Exception in releaseResources: %s", e.what());
@@ -1723,45 +1748,32 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
 
     deinitforComRpc();
 }
-
-
 // L1 Test Cases for DownloadManagerImplementation methods
-/* Test Case for DownloadManagerImplementation Initialize method success
+
+/* Test Case for DownloadManagerImplementation Register method success
  * 
- * Test the successful initialization of DownloadManagerImplementation with valid service
- * Verify that Initialize method returns ERROR_NONE and sets up properly
+ * Test the successful registration of notification interface in DownloadManagerImplementation
+ * Verify that Register method returns ERROR_NONE and notification is properly added
  */
-TEST_F(DownloadManagerTest, downloadManagerImplementationInitializeSuccess) {
-    TEST_LOG("Starting DownloadManagerImplementation Initialize success test");
+TEST_F(DownloadManagerTest, downloadManagerImplementationRegisterSuccess) {
+    TEST_LOG("Starting DownloadManagerImplementation Register success test");
 
     auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
     
     if (!implementation.IsValid()) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping initialize test");
+        TEST_LOG("Failed to create DownloadManagerImplementation - skipping register test");
         return;
     }
 
-    // Ensure WrapsImplMock is properly set up
-    if (p_wrapsImplMock == nullptr) {
-        TEST_LOG("WrapsImplMock is null - test setup issue, skipping test");
-        return;
-    }
-
-    // Mock mkdir to succeed for download directory creation
-    EXPECT_CALL(*p_wrapsImplMock, mkdir(::testing::_, ::testing::_))
-        .WillOnce(::testing::Return(0));
-
-    // Initialize with valid service mock
-    Core::hresult result = implementation->Initialize(mServiceMock);
-    EXPECT_EQ(Core::ERROR_NONE, result) << "Initialize should return ERROR_NONE with valid service";
-
-    // Cleanup
-    implementation->Deinitialize(mServiceMock);
+    // Create a notification test object
+    auto notification = std::make_unique<NotificationTest>();
     
-    TEST_LOG("Initialize success test completed");
+    // Test successful registration
+    Core::hresult result = implementation->Register(notification.get());
+    EXPECT_EQ(Core::ERROR_NONE, result) << "Register should return ERROR_NONE";
+
+    // Cleanup - unregister the notification
+    implementation->Unregister(notification.get());
+    
+    TEST_LOG("Register success test completed");
 }
-    
-
-  
-
-
