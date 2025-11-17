@@ -238,29 +238,35 @@ class L1USBDeviceNotificationHandler : public Exchange::IUSBDevice::INotificatio
 class USBDeviceNotificationL1Test : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Create plugin instance
+        // Create notification handler
         m_handler = Core::ProxyType<L1USBDeviceNotificationHandler>::Create();
-        ASSERT_TRUE(m_handler != nullptr);
+        ASSERT_TRUE(m_handler.IsValid());
 
-        // Create USBDevice plugin
-        m_controller = Core::ProxyType<Plugin::USBDevice>::Create();
-        ASSERT_TRUE(m_controller != nullptr);
+        // Create USBDeviceImplementation for testing
+        m_usbDeviceImpl = Core::ProxyType<Plugin::USBDeviceImplementation>::Create();
+        ASSERT_TRUE(m_usbDeviceImpl.IsValid());
 
-        // Register for notifications
-        EXPECT_EQ(Core::ERROR_NONE, m_controller->Register(m_handler.operator->()));
+        // Register notification handler with implementation
+        EXPECT_EQ(Core::ERROR_NONE, m_usbDeviceImpl->Register(m_handler.operator->()));
+        
+        TEST_LOG("USBDeviceNotificationL1Test SetUp completed");
     }
 
     void TearDown() override {
-        if (m_controller && m_handler) {
-            m_controller->Unregister(m_handler.operator->());
+        if (m_usbDeviceImpl.IsValid() && m_handler.IsValid()) {
+            m_usbDeviceImpl->Unregister(m_handler.operator->());
         }
-        m_handler.Release();
-        m_controller.Release();
+        if (m_handler.IsValid()) {
+            m_handler.Release();
+        }
+        if (m_usbDeviceImpl.IsValid()) {
+            m_usbDeviceImpl.Release();
+        }
     }
 
 protected:
     Core::ProxyType<L1USBDeviceNotificationHandler> m_handler;
-    Core::ProxyType<Plugin::USBDevice> m_controller;
+    Core::ProxyType<Plugin::USBDeviceImplementation> m_usbDeviceImpl;
 };
 
 namespace {
@@ -1460,7 +1466,7 @@ TEST_F(USBDeviceTest, L1Notification_ParametersValidation_ViaJobDispatch_Success
 
 /**
  * @brief Test USB device plug-in notification using L1 test fixture
- *        Validates notification handler receives correct device information
+ *        Uses Job::Create mechanism to trigger natural notification flow
  * @param[in] : None
  * @return : Notification should be received with correct device parameters
  */
@@ -1476,9 +1482,13 @@ TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedIn_ValidDevice_Success)
     testDevice.deviceName = "001/004";
     testDevice.devicePath = "/dev/sdb";
     
-    // Simulate device plug-in by calling notification directly
-    // This tests the notification interface itself
-    m_handler->OnDevicePluggedIn(testDevice);
+    // Use Job mechanism to trigger notification naturally
+    auto job = Plugin::USBDeviceImplementation::Job::Create(
+        m_usbDeviceImpl.operator->(),
+        Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED,
+        testDevice
+    );
+    job->Dispatch();
     
     // Verify notification was received
     EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
@@ -1494,7 +1504,7 @@ TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedIn_ValidDevice_Success)
 
 /**
  * @brief Test USB device plug-out notification using L1 test fixture
- *        Validates notification handler receives correct device removal information
+ *        Uses Job::Create mechanism to trigger natural notification flow
  * @param[in] : None
  * @return : Notification should be received with correct device parameters
  */
@@ -1510,8 +1520,13 @@ TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedOut_ValidDevice_Success)
     testDevice.deviceName = "001/002";
     testDevice.devicePath = "/dev/input/event0";
     
-    // Simulate device plug-out by calling notification directly
-    m_handler->OnDevicePluggedOut(testDevice);
+    // Use Job mechanism to trigger notification naturally
+    auto job = Plugin::USBDeviceImplementation::Job::Create(
+        m_usbDeviceImpl.operator->(),
+        Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT,
+        testDevice
+    );
+    job->Dispatch();
     
     // Verify notification was received
     EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
@@ -1527,7 +1542,7 @@ TEST_F(USBDeviceNotificationL1Test, OnDevicePluggedOut_ValidDevice_Success)
 
 /**
  * @brief Test multiple sequential notifications using L1 test fixture
- *        Validates handler can receive multiple notifications correctly
+ *        Uses Job::Create mechanism for multiple natural notification events
  * @param[in] : None
  * @return : All notifications should be received in sequence
  */
@@ -1543,7 +1558,13 @@ TEST_F(USBDeviceNotificationL1Test, MultipleNotifications_Sequential_Success)
     device1.deviceName = "001/001";
     device1.devicePath = "/dev/hub1";
     
-    m_handler->OnDevicePluggedIn(device1);
+    auto plugInJob = Plugin::USBDeviceImplementation::Job::Create(
+        m_usbDeviceImpl.operator->(),
+        Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED,
+        device1
+    );
+    plugInJob->Dispatch();
+    
     EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
     EXPECT_EQ("001/001", m_handler->GetLastPluggedInDeviceName());
     
@@ -1557,7 +1578,13 @@ TEST_F(USBDeviceNotificationL1Test, MultipleNotifications_Sequential_Success)
     device2.deviceName = "002/003";
     device2.devicePath = "/dev/sdc";
     
-    m_handler->OnDevicePluggedOut(device2);
+    auto plugOutJob = Plugin::USBDeviceImplementation::Job::Create(
+        m_usbDeviceImpl.operator->(),
+        Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT,
+        device2
+    );
+    plugOutJob->Dispatch();
+    
     EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
     EXPECT_EQ("002/003", m_handler->GetLastPluggedOutDeviceName());
     
@@ -1567,7 +1594,7 @@ TEST_F(USBDeviceNotificationL1Test, MultipleNotifications_Sequential_Success)
 
 /**
  * @brief Test notification parameter validation with comprehensive device data
- *        Validates all device fields are correctly transmitted via notifications
+ *        Uses Job::Create mechanism to validate all device fields are correctly transmitted
  * @param[in] : None
  * @return : All device parameters should match expected values
  */
@@ -1582,8 +1609,14 @@ TEST_F(USBDeviceNotificationL1Test, NotificationParameters_ComprehensiveValidati
     testDevice.deviceName = "003/007";
     testDevice.devicePath = "/dev/custom_device";
     
-    // Test plug-in notification
-    m_handler->OnDevicePluggedIn(testDevice);
+    // Test plug-in notification using Job mechanism
+    auto plugInJob = Plugin::USBDeviceImplementation::Job::Create(
+        m_usbDeviceImpl.operator->(),
+        Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED,
+        testDevice
+    );
+    plugInJob->Dispatch();
+    
     EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
     
     // Validate using individual getter methods
@@ -1600,7 +1633,13 @@ TEST_F(USBDeviceNotificationL1Test, NotificationParameters_ComprehensiveValidati
     testDevice.deviceName = "004/008";
     testDevice.devicePath = "/dev/undefined";
     
-    m_handler->OnDevicePluggedOut(testDevice);
+    auto plugOutJob = Plugin::USBDeviceImplementation::Job::Create(
+        m_usbDeviceImpl.operator->(),
+        Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT,
+        testDevice
+    );
+    plugOutJob->Dispatch();
+    
     EXPECT_TRUE(m_handler->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
     
     EXPECT_EQ(0x00, m_handler->GetLastPluggedOutDeviceClass());
