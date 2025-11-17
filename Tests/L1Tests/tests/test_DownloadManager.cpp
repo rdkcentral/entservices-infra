@@ -153,9 +153,18 @@ protected:
                 .Times(::testing::AnyNumber())
                 .WillRepeatedly(::testing::Return(0));
 
+            // Mock file operations for download tests
+            EXPECT_CALL(*p_wrapsImplMock, open(::testing::_, ::testing::_))
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return(3)); // Return valid file descriptor
+                
+            EXPECT_CALL(*p_wrapsImplMock, close(::testing::_))
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return(0));
+
             EXPECT_CALL(*mServiceMock, ConfigLine())
                 .Times(::testing::AnyNumber())
-                .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
+                .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/downloads/\"}"));
 
             EXPECT_CALL(*mServiceMock, PersistentPath())
                 .Times(::testing::AnyNumber())
