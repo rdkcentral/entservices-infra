@@ -238,7 +238,7 @@ protected:
 
             if (plugin.IsValid()) {
                 plugin->Deinitialize(mServiceMock);
-[O            }
+            }
             
             if (mServiceMock) {
                 delete mServiceMock;
@@ -943,7 +943,7 @@ TEST_F(DownloadManagerTest, errorScenariosJsonRpc) {
         TEST_LOG("Cancel with invalid ID returned error: %u (expected)", cancelResult);
     }
 
-[I    deinitforJsonRpc();
+    deinitforJsonRpc();
 }
 
 
@@ -1062,7 +1062,7 @@ TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
         return;
     }
 
-[O    // Create notification callback
+    // Create notification callback
     NotificationTest notificationCallback;
     
     // Test registration
@@ -2565,5 +2565,7 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationStressTest) {
 
     TEST_LOG("Stress test completed successfully");
 }
+
+
 
 
