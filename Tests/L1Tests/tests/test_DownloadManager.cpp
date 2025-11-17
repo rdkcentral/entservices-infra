@@ -685,8 +685,8 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcSuccess) {
     initforJsonRpc();
 
     // Check if JSON-RPC methods are available first
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
+    auto existsResult = mJsonRpcHandler.Exists(_T("download"));
+    if (existsResult != Core::ERROR_NONE) {
         TEST_LOG("JSON-RPC download method not available - this is expected in test environments");
         TEST_LOG("Test PASSED: Plugin loads and initializes without crashing");
         deinitforJsonRpc();
@@ -716,7 +716,7 @@ TEST_F(DownloadManagerTest, downloadMethodJsonRpcSuccess) {
 /* Test Case for download method using JSON-RPC - Internet unavailable
  * 
  * Initialize JSON-RPC setup with offline subsystem, invoke download method
-[O * Verify proper error handling when internet is unavailable
+ * Verify proper error handling when internet is unavailable
  */
 TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
 
@@ -792,7 +792,7 @@ TEST_F(DownloadManagerTest, resumeMethodJsonRpcSuccess) {
                 
                 // Then resume
                 EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), params, response));
-[I                
+                
                 // Cancel to cleanup
                 mJsonRpcHandler.Invoke(connection, _T("cancel"), params, response);
             }
@@ -1421,7 +1421,7 @@ TEST_F(DownloadManagerTest, storageDetailsConsistency) {
 /* Test Case for edge cases and boundary conditions
  * 
  * Test various edge cases and boundary conditions
-[O * Verify robust error handling
+ * Verify robust error handling
  */
 TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
 
@@ -1563,7 +1563,7 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationDeinitialize) {
     if (mServiceMock) {
         EXPECT_CALL(*mServiceMock, ConfigLine())
             .Times(::testing::AnyNumber())
-[I            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/test_downloads/\"}"));
+            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/test_downloads/\"}"));
 
         EXPECT_CALL(*mServiceMock, AddRef())
             .Times(::testing::AnyNumber());
