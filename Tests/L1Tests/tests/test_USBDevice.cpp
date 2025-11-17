@@ -1499,6 +1499,13 @@ class USBDeviceInfoTestFixture : public USBDeviceTest {
 protected:
     struct libusb_config_descriptor *temp_config_desc = nullptr;
 
+    void TearDown() override {
+        if (temp_config_desc != nullptr) {
+            free(temp_config_desc);
+            temp_config_desc = nullptr;
+        }
+        USBDeviceTest::TearDown();
+    }
     enum class StringDescriptorBehavior {
         SUCCESS_ALL_DESCRIPTORS,
         NO_MANUFACTURER,
