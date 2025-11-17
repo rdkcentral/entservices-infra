@@ -64,7 +64,7 @@ if (RDK_SERVICE_L2_TEST)
    else (TESTMOCKLIB_LIBRARIES)
        message ("Require ${TESTMOCKLIB_LIBRARIES} library")
    endif (TESTMOCKLIB_LIBRARIES)
-endif (RDK_SERVICES_L2_TEST)
+endif (RDK_SERVICE_L2_TEST)
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION}
     PRIVATE
