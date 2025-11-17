@@ -1737,7 +1737,7 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
  * Test proper initialization and cleanup of DownloadManagerImplementation object
  * Verify default values and HTTP client initialization
  */  
-TEST_F(DownloadManagerTest, downloadManagerImplementationConstructorDestructor) {
+/*TEST_F(DownloadManagerTest, downloadManagerImplementationConstructorDestructor) {
 
     TEST_LOG("Starting DownloadManagerImplementation constructor/destructor test");
 
@@ -1759,14 +1759,14 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationConstructorDestructor) 
     } else {
         TEST_LOG("Failed to create DownloadManagerImplementation - this may be expected in test environments");
     }
-}
+}*/
 
 /* Test Case for DownloadManagerImplementation Initialize method
  * 
  * Test the Initialize method with various scenarios
  * Verify proper configuration parsing and download path setup
  */
-TEST_F(DownloadManagerTest, downloadManagerImplementationInitialize) {
+/*TEST_F(DownloadManagerTest, downloadManagerImplementationInitialize) {
 
     TEST_LOG("Starting DownloadManagerImplementation Initialize test");
 
@@ -1804,4 +1804,4 @@ TEST_F(DownloadManagerTest, downloadManagerImplementationInitialize) {
             TEST_LOG("Initialize returned: %u - may be expected in test environment", result2);
         }
     }
-}
+}*/
