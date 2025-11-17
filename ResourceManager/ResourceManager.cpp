@@ -63,7 +63,7 @@ namespace WPEFramework {
             mEssRMgr = EssRMgrCreate();
             std::cout<<"EssRMgrCreate "<<((mEssRMgr != nullptr)?"succeeded":"failed")<<std::endl;
 
-            RFC_ParamData_t param;
+            RFC_ParamData_t param = {0};
             mDisableBlacklist = true;
             mDisableReserveTTS = true;
 
