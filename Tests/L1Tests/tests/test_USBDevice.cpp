@@ -1499,13 +1499,6 @@ class USBDeviceInfoTestFixture : public USBDeviceTest {
 protected:
     struct libusb_config_descriptor *temp_config_desc = nullptr;
 
-    void TearDown() override {
-        if (temp_config_desc != nullptr) {
-            free(temp_config_desc);
-            temp_config_desc = nullptr;
-        }
-        USBDeviceTest::TearDown();
-    }
     enum class StringDescriptorBehavior {
         SUCCESS_ALL_DESCRIPTORS,
         NO_MANUFACTURER,
@@ -1866,7 +1859,7 @@ TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_AsciiDescript
 
 class USBDevicePerInterfaceTestFixture : public USBDeviceTest {
 protected:
-    void SetupPerInterfaceDevice(uint8_t num_interfaces, const std::vector<std::pair<uint8_t, uint8_t>>& interface_classes) {
+    void SetupPerInterfaceDeviceBase(uint8_t num_interfaces, const std::vector<std::pair<uint8_t, uint8_t>>& interface_classes) {
         Mock_SetSerialNumberInUSBDevicePath();
         
         ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
@@ -1920,24 +1913,29 @@ protected:
 
         EXPECT_CALL(*p_libUSBImplMock, libusb_get_config_descriptor(::testing::_, ::testing::_, ::testing::_))
             .WillOnce([num_interfaces, interface_classes](libusb_device *dev, uint8_t config_index, libusb_config_descriptor **config) {
-                *config = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-                (*config)->bNumInterfaces = num_interfaces;
-                (*config)->interface = (libusb_interface *)malloc(num_interfaces * sizeof(libusb_interface));
+                libusb_config_descriptor *cfg = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
+                cfg->bNumInterfaces = num_interfaces;
+                
+                libusb_interface *interfaces = (libusb_interface *)malloc(num_interfaces * sizeof(libusb_interface));
                 
                 for (uint8_t i = 0; i < num_interfaces; i++) {
-                    libusb_interface *iface = const_cast<libusb_interface*>(&(*config)->interface[i]);
-                    *const_cast<int*>(&iface->num_altsetting) = 1;
-                    *const_cast<libusb_interface_descriptor**>(&iface->altsetting) = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
+                    interfaces[i].num_altsetting = 1;
                     
-                    libusb_interface_descriptor *altsetting = const_cast<libusb_interface_descriptor*>(&iface->altsetting[0]);
+                    libusb_interface_descriptor *altsetting = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
+                    
                     if (i < interface_classes.size()) {
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = interface_classes[i].first;
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = interface_classes[i].second;
+                        altsetting->bInterfaceClass = interface_classes[i].first;
+                        altsetting->bInterfaceSubClass = interface_classes[i].second;
                     } else {
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = LIBUSB_CLASS_HID;
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = 0;
+                        altsetting->bInterfaceClass = LIBUSB_CLASS_HID;
+                        altsetting->bInterfaceSubClass = 0;
                     }
+                    
+                    interfaces[i].altsetting = altsetting;
                 }
+                
+                cfg->interface = interfaces;
+                *config = cfg;
                 
                 return LIBUSB_SUCCESS;
             });
@@ -1948,14 +1946,46 @@ protected:
                     if (config->interface) {
                         for (uint8_t i = 0; i < num_interfaces; i++) {
                             if (config->interface[i].altsetting) {
-                                free(const_cast<libusb_interface_descriptor*>(config->interface[i].altsetting));
+                                free((void*)config->interface[i].altsetting);
                             }
                         }
-                        free(const_cast<libusb_interface*>(config->interface));
+                        free((void*)config->interface);
                     }
                     free(config);
                 }
             });
+    }
+
+    void SetupGetDeviceInfoMocks() {
+        Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
+
+        ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
+            .WillByDefault([](libusb_device* pDev, libusb_config_descriptor** config_desc) {
+                *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
+                (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
+                return (int)LIBUSB_SUCCESS;
+            });
+
+        ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+            .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+                data[1] = LIBUSB_DT_STRING;
+                if (desc_index == 0) {
+                    data[0] = 4;
+                    data[2] = 0x09;
+                    data[3] = 0x04;
+                } else {
+                    data[0] = 10;
+                    for (int i = 2; i < 10; i += 2) {
+                        data[i] = 'T';
+                        data[i+1] = 0;
+                    }
+                }
+                return (int)data[0];
+            });
+    }
+
+    void SetupPerInterfaceDevice(uint8_t num_interfaces, const std::vector<std::pair<uint8_t, uint8_t>>& interface_classes) {
+        SetupPerInterfaceDeviceBase(num_interfaces, interface_classes);
     }
 
     void SetupPerInterfaceDeviceConfigFailure() {
@@ -2009,117 +2039,8 @@ protected:
     }
 
     void SetupPerInterfaceDeviceForGetDeviceInfo(uint8_t num_interfaces, const std::vector<std::pair<uint8_t, uint8_t>>& interface_classes) {
-        Mock_SetSerialNumberInUSBDevicePath();
-        Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-        ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-            .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-                libusb_device **ret = (libusb_device **)malloc(1 * sizeof(libusb_device *));
-                ret[0] = (libusb_device *)malloc(sizeof(libusb_device));
-                ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-                ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-                ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-                *list = ret;
-                return (ssize_t)1;
-            });
-
-        ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-            .WillByDefault([](libusb_device **list, int unref_devices) {
-                free(list[0]);
-                free(list);
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-            .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-                desc->bDeviceClass = LIBUSB_CLASS_PER_INTERFACE;
-                desc->bDeviceSubClass = 0;
-                desc->idVendor = 0x1234;
-                desc->idProduct = 0x5678;
-                desc->iManufacturer = 1;
-                desc->iProduct = 2;
-                desc->iSerialNumber = 3;
-                desc->bDeviceProtocol = 0;
-                return LIBUSB_SUCCESS;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
-            .WillRepeatedly([](libusb_device *dev) {
-                return dev->device_address;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
-            .WillRepeatedly([](libusb_device *dev) {
-                return dev->bus_number;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
-            .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
-                if((nullptr != dev) && (nullptr != port_numbers)) {
-                    port_numbers[0] = dev->port_number;
-                    return 1;
-                }
-                return 0;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_config_descriptor(::testing::_, ::testing::_, ::testing::_))
-            .WillOnce([num_interfaces, interface_classes](libusb_device *dev, uint8_t config_index, libusb_config_descriptor **config) {
-                *config = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-                (*config)->bNumInterfaces = num_interfaces;
-                (*config)->interface = (libusb_interface *)malloc(num_interfaces * sizeof(libusb_interface));
-                
-                for (uint8_t i = 0; i < num_interfaces; i++) {
-                    libusb_interface *iface = const_cast<libusb_interface*>(&(*config)->interface[i]);
-                    *const_cast<int*>(&iface->num_altsetting) = 1;
-                    *const_cast<libusb_interface_descriptor**>(&iface->altsetting) = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
-                    
-                    libusb_interface_descriptor *altsetting = const_cast<libusb_interface_descriptor*>(&iface->altsetting[0]);
-                    if (i < interface_classes.size()) {
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceClass) = interface_classes[i].first;
-                        *const_cast<uint8_t*>(&altsetting->bInterfaceSubClass) = interface_classes[i].second;
-                    }
-                }
-                
-                return LIBUSB_SUCCESS;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_free_config_descriptor(::testing::_))
-            .WillOnce([num_interfaces](libusb_config_descriptor *config) {
-                if (config) {
-                    if (config->interface) {
-                        for (uint8_t i = 0; i < num_interfaces; i++) {
-                            if (config->interface[i].altsetting) {
-                                free(const_cast<libusb_interface_descriptor*>(config->interface[i].altsetting));
-                            }
-                        }
-                        free(const_cast<libusb_interface*>(config->interface));
-                    }
-                    free(config);
-                }
-            });
-
-        ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-            .WillByDefault([](libusb_device* pDev, libusb_config_descriptor** config_desc) {
-                *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-                (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-                return (int)LIBUSB_SUCCESS;
-            });
-
-        ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-            .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-                data[1] = LIBUSB_DT_STRING;
-                if (desc_index == 0) {
-                    data[0] = 4;
-                    data[2] = 0x09;
-                    data[3] = 0x04;
-                } else {
-                    data[0] = 10;
-                    for (int i = 2; i < 10; i += 2) {
-                        data[i] = 'T';
-                        data[i+1] = 0;
-                    }
-                }
-                return (int)data[0];
-            });
+        SetupPerInterfaceDeviceBase(num_interfaces, interface_classes);
+        SetupGetDeviceInfoMocks();
     }
 };
 
