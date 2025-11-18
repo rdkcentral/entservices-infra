@@ -1733,118 +1733,97 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
 
 TEST_F(DownloadManagerTest, DirectDownloadManagerImplementationRegisterTest) {
     
-    TEST_LOG("Testing Register method directly on DownloadManagerImplementation");
+    TEST_LOG("Testing Register method using mockImpl for DownloadManagerImplementation coverage");
 
-    // Create DownloadManagerImplementation directly for coverage
-    WPEFramework::Plugin::DownloadManagerImplementation* implementation = 
-        new WPEFramework::Plugin::DownloadManagerImplementation();
+    initforComRpc();
     
-    if (!implementation) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        GTEST_SKIP() << "Cannot create DownloadManagerImplementation instance";
+    if (!mockImpl) {
+        TEST_LOG("MockImpl not available - skipping direct implementation test");
+        deinitforComRpc();
+        GTEST_SKIP() << "MockImpl not available for direct testing";
         return;
     }
-
-    // Initialize the implementation
-    auto initResult = implementation->Initialize(mServiceMock);
-    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
 
     NotificationTest notificationCallback;
     
     // Test Register method directly - this WILL hit DownloadManagerImplementation::Register
-    auto result = implementation->Register(&notificationCallback);
+    auto result = mockImpl->Register(&notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, result);
     TEST_LOG("Direct DownloadManagerImplementation Register returned: %u", result);
 
     // Test Unregister method directly - this WILL hit DownloadManagerImplementation::Unregister  
-    auto unregisterResult = implementation->Unregister(&notificationCallback);
+    auto unregisterResult = mockImpl->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
     TEST_LOG("Direct DownloadManagerImplementation Unregister returned: %u", unregisterResult);
 
-    // Clean up
-    implementation->Deinitialize(mServiceMock);
-    implementation->Release();
+    deinitforComRpc();
 }
 
 TEST_F(DownloadManagerTest, DirectDownloadManagerImplementationUnregisterErrorTest) {
     
-    TEST_LOG("Testing Unregister error path directly on DownloadManagerImplementation");
+    TEST_LOG("Testing Unregister error path using mockImpl for DownloadManagerImplementation coverage");
 
-    // Create DownloadManagerImplementation directly for coverage
-    WPEFramework::Plugin::DownloadManagerImplementation* implementation = 
-        new WPEFramework::Plugin::DownloadManagerImplementation();
+    initforComRpc();
     
-    if (!implementation) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        GTEST_SKIP() << "Cannot create DownloadManagerImplementation instance";
+    if (!mockImpl) {
+        TEST_LOG("MockImpl not available - skipping direct implementation test");
+        deinitforComRpc();
+        GTEST_SKIP() << "MockImpl not available for direct testing";
         return;
     }
-
-    // Initialize the implementation
-    auto initResult = implementation->Initialize(mServiceMock);
-    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
 
     NotificationTest notificationCallback;
     
     // Test Unregister method directly without registering first
-    // This WILL hit DownloadManagerImplementation::Unregister error path
-    auto result = implementation->Unregister(&notificationCallback);
+    // This WILL hit DownloadManagerImplementation::Unregister error path through mockImpl
+    auto result = mockImpl->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_GENERAL, result);
     TEST_LOG("Direct DownloadManagerImplementation Unregister (error case) returned: %u", result);
 
-    // Clean up
-    implementation->Deinitialize(mServiceMock);
-    implementation->Release();
+    deinitforComRpc();
 }
 
 TEST_F(DownloadManagerTest, DirectDownloadManagerImplementationMultipleNotificationsTest) {
     
-    TEST_LOG("Testing multiple notifications directly on DownloadManagerImplementation");
+    TEST_LOG("Testing multiple notifications using mockImpl for DownloadManagerImplementation coverage");
 
-    // Create DownloadManagerImplementation directly for coverage
-    WPEFramework::Plugin::DownloadManagerImplementation* implementation = 
-        new WPEFramework::Plugin::DownloadManagerImplementation();
+    initforComRpc();
     
-    if (!implementation) {
-        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
-        GTEST_SKIP() << "Cannot create DownloadManagerImplementation instance";
+    if (!mockImpl) {
+        TEST_LOG("MockImpl not available - skipping direct implementation test");
+        deinitforComRpc();
+        GTEST_SKIP() << "MockImpl not available for direct testing";
         return;
     }
-
-    // Initialize the implementation
-    auto initResult = implementation->Initialize(mServiceMock);
-    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
 
     NotificationTest notificationCallback1;
     NotificationTest notificationCallback2;
     
     // Test Register with first callback - hits DownloadManagerImplementation::Register
-    auto registerResult1 = implementation->Register(&notificationCallback1);
+    auto registerResult1 = mockImpl->Register(&notificationCallback1);
     EXPECT_EQ(Core::ERROR_NONE, registerResult1);
     TEST_LOG("Direct Register (first) returned: %u", registerResult1);
     
     // Test Register with second callback - hits DownloadManagerImplementation::Register
-    auto registerResult2 = implementation->Register(&notificationCallback2);
+    auto registerResult2 = mockImpl->Register(&notificationCallback2);
     EXPECT_EQ(Core::ERROR_NONE, registerResult2);
     TEST_LOG("Direct Register (second) returned: %u", registerResult2);
     
     // Test Unregister with valid callback - hits DownloadManagerImplementation::Unregister
-    auto unregisterResult1 = implementation->Unregister(&notificationCallback1);
+    auto unregisterResult1 = mockImpl->Unregister(&notificationCallback1);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult1);
     TEST_LOG("Direct Unregister (valid) returned: %u", unregisterResult1);
     
     // Test Unregister with already unregistered callback - hits error path
-    auto unregisterResult2 = implementation->Unregister(&notificationCallback1);
+    auto unregisterResult2 = mockImpl->Unregister(&notificationCallback1);
     EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult2);
     TEST_LOG("Direct Unregister (invalid) returned: %u", unregisterResult2);
     
     // Clean up remaining registered callback
-    auto unregisterResult3 = implementation->Unregister(&notificationCallback2);
+    auto unregisterResult3 = mockImpl->Unregister(&notificationCallback2);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult3);
     TEST_LOG("Direct Unregister (cleanup) returned: %u", unregisterResult3);
 
-    // Clean up
-    implementation->Deinitialize(mServiceMock);
-    implementation->Release();
+    deinitforComRpc();
 }
 
