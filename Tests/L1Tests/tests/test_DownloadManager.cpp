@@ -1725,128 +1725,126 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
     deinitforComRpc();
 }
 
-/* Test cases for Register and Unregister methods using IDownloadManager interface */
+/* Test cases for Register and Unregister methods - Direct DownloadManagerImplementation Testing
+ * 
+ * These tests directly test the DownloadManagerImplementation class to ensure 
+ * coverage hits the actual implementation files (.cpp and .h)
+ */
 
-TEST_F(DownloadManagerTest, RegisterValidNotification) {
+TEST_F(DownloadManagerTest, DirectDownloadManagerImplementationRegisterTest) {
     
-    TEST_LOG("Testing Register method with valid notification using IDownloadManager interface");
+    TEST_LOG("Testing Register method directly on DownloadManagerImplementation");
 
-    initforComRpc();
-
-    if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping Register test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+    // Create DownloadManagerImplementation directly for coverage
+    WPEFramework::Plugin::DownloadManagerImplementation* implementation = 
+        new WPEFramework::Plugin::DownloadManagerImplementation();
+    
+    if (!implementation) {
+        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
+        GTEST_SKIP() << "Cannot create DownloadManagerImplementation instance";
         return;
     }
 
+    // Initialize the implementation
+    auto initResult = implementation->Initialize(mServiceMock);
+    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
+
     NotificationTest notificationCallback;
     
-    // Test Register method through IDownloadManager interface
-    // This should call through to DownloadManagerImplementation::Register
-    auto result = downloadManagerInterface->Register(&notificationCallback);
+    // Test Register method directly - this WILL hit DownloadManagerImplementation::Register
+    auto result = implementation->Register(&notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, result);
-    TEST_LOG("IDownloadManager Register returned: %u", result);
+    TEST_LOG("Direct DownloadManagerImplementation Register returned: %u", result);
 
-    // Clean up by unregistering
-    // This should call through to DownloadManagerImplementation::Unregister
-    auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
+    // Test Unregister method directly - this WILL hit DownloadManagerImplementation::Unregister  
+    auto unregisterResult = implementation->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
-    TEST_LOG("IDownloadManager Unregister returned: %u", unregisterResult);
+    TEST_LOG("Direct DownloadManagerImplementation Unregister returned: %u", unregisterResult);
 
-    deinitforComRpc();
+    // Clean up
+    implementation->Deinitialize(mServiceMock);
+    implementation->Release();
 }
 
-TEST_F(DownloadManagerTest, UnregisterNonRegisteredNotification) {
+TEST_F(DownloadManagerTest, DirectDownloadManagerImplementationUnregisterErrorTest) {
     
-    TEST_LOG("Testing Unregister method with non-registered notification using IDownloadManager interface");
+    TEST_LOG("Testing Unregister error path directly on DownloadManagerImplementation");
 
-    initforComRpc();
-
-    if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping Unregister test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+    // Create DownloadManagerImplementation directly for coverage
+    WPEFramework::Plugin::DownloadManagerImplementation* implementation = 
+        new WPEFramework::Plugin::DownloadManagerImplementation();
+    
+    if (!implementation) {
+        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
+        GTEST_SKIP() << "Cannot create DownloadManagerImplementation instance";
         return;
     }
 
+    // Initialize the implementation
+    auto initResult = implementation->Initialize(mServiceMock);
+    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
+
     NotificationTest notificationCallback;
     
-    // Test Unregister method through IDownloadManager interface without registering first
-    // This should call through to DownloadManagerImplementation::Unregister and return error
-    auto result = downloadManagerInterface->Unregister(&notificationCallback);
+    // Test Unregister method directly without registering first
+    // This WILL hit DownloadManagerImplementation::Unregister error path
+    auto result = implementation->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_GENERAL, result);
-    TEST_LOG("IDownloadManager Unregister non-registered returned: %u", result);
+    TEST_LOG("Direct DownloadManagerImplementation Unregister (error case) returned: %u", result);
 
-    deinitforComRpc();
+    // Clean up
+    implementation->Deinitialize(mServiceMock);
+    implementation->Release();
 }
 
-TEST_F(DownloadManagerTest, RegisterUnregisterWorkflow) {
+TEST_F(DownloadManagerTest, DirectDownloadManagerImplementationMultipleNotificationsTest) {
     
-    TEST_LOG("Testing Register-Unregister workflow using IDownloadManager interface");
+    TEST_LOG("Testing multiple notifications directly on DownloadManagerImplementation");
 
-    initforComRpc();
-
-    if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping workflow test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+    // Create DownloadManagerImplementation directly for coverage
+    WPEFramework::Plugin::DownloadManagerImplementation* implementation = 
+        new WPEFramework::Plugin::DownloadManagerImplementation();
+    
+    if (!implementation) {
+        TEST_LOG("Failed to create DownloadManagerImplementation - skipping test");
+        GTEST_SKIP() << "Cannot create DownloadManagerImplementation instance";
         return;
     }
 
-    NotificationTest notificationCallback;
-    
-    // Test complete Register-Unregister workflow through IDownloadManager interface
-    // Register notification - this should call through to DownloadManagerImplementation::Register
-    auto registerResult = downloadManagerInterface->Register(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_NONE, registerResult);
-    TEST_LOG("IDownloadManager Register returned: %u", registerResult);
-    
-    // Unregister notification - this should call through to DownloadManagerImplementation::Unregister
-    auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
-    TEST_LOG("IDownloadManager Unregister returned: %u", unregisterResult);
-
-    deinitforComRpc();
-}
-
-TEST_F(DownloadManagerTest, DownloadManagerImplementationMultipleCallbacks) {
-    
-    TEST_LOG("Testing DownloadManagerImplementation with multiple callbacks for comprehensive coverage");
-
-    initforComRpc();
-
-    if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping comprehensive test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
-        return;
-    }
+    // Initialize the implementation
+    auto initResult = implementation->Initialize(mServiceMock);
+    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
 
     NotificationTest notificationCallback1;
     NotificationTest notificationCallback2;
     
-    // Test Register method with first callback - hits DownloadManagerImplementation::Register
-    auto registerResult1 = downloadManagerInterface->Register(&notificationCallback1);
+    // Test Register with first callback - hits DownloadManagerImplementation::Register
+    auto registerResult1 = implementation->Register(&notificationCallback1);
     EXPECT_EQ(Core::ERROR_NONE, registerResult1);
-    TEST_LOG("IDownloadManager Register (first) returned: %u", registerResult1);
+    TEST_LOG("Direct Register (first) returned: %u", registerResult1);
     
-    // Test Register with different callback - hits DownloadManagerImplementation::Register
-    auto registerResult2 = downloadManagerInterface->Register(&notificationCallback2);
+    // Test Register with second callback - hits DownloadManagerImplementation::Register
+    auto registerResult2 = implementation->Register(&notificationCallback2);
     EXPECT_EQ(Core::ERROR_NONE, registerResult2);
-    TEST_LOG("IDownloadManager Register (second) returned: %u", registerResult2);
+    TEST_LOG("Direct Register (second) returned: %u", registerResult2);
     
     // Test Unregister with valid callback - hits DownloadManagerImplementation::Unregister
-    auto unregisterResult1 = downloadManagerInterface->Unregister(&notificationCallback1);
+    auto unregisterResult1 = implementation->Unregister(&notificationCallback1);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult1);
-    TEST_LOG("IDownloadManager Unregister (valid) returned: %u", unregisterResult1);
+    TEST_LOG("Direct Unregister (valid) returned: %u", unregisterResult1);
     
-    // Test Unregister with already unregistered callback - hits error path in DownloadManagerImplementation::Unregister
-    auto unregisterResult2 = downloadManagerInterface->Unregister(&notificationCallback1);
+    // Test Unregister with already unregistered callback - hits error path
+    auto unregisterResult2 = implementation->Unregister(&notificationCallback1);
     EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult2);
-    TEST_LOG("IDownloadManager Unregister (invalid) returned: %u", unregisterResult2);
+    TEST_LOG("Direct Unregister (invalid) returned: %u", unregisterResult2);
     
     // Clean up remaining registered callback
-    auto unregisterResult3 = downloadManagerInterface->Unregister(&notificationCallback2);
+    auto unregisterResult3 = implementation->Unregister(&notificationCallback2);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult3);
-    TEST_LOG("IDownloadManager Unregister (cleanup) returned: %u", unregisterResult3);
+    TEST_LOG("Direct Unregister (cleanup) returned: %u", unregisterResult3);
 
-    deinitforComRpc();
+    // Clean up
+    implementation->Deinitialize(mServiceMock);
+    implementation->Release();
 }
 
