@@ -25,6 +25,9 @@ find_package(WPEFramework)
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
+# Product configuration dir
+set(PRODUCT_CONFIG_DIR "/etc/entservices")
+
 option(COMCAST_CONFIG "Comcast services configuration" ON)
 if(COMCAST_CONFIG)
     include(services.cmake)
@@ -159,6 +162,19 @@ endif()
 if(PLUGIN_MIGRATION)
     add_subdirectory(Migration)
 endif()
+
+if(PLUGIN_APPGATEWAY)
+    add_subdirectory(AppGateway)
+endif()
+
+if(PLUGIN_APPNOTIFICATIONS)
+    add_subdirectory(AppNotifications)
+endif()
+
+if(PLUGIN_FBSETTINGS)
+	add_subdirectory(FbSettings)
+endif()
+
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
