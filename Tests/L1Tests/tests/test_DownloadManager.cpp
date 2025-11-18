@@ -1723,10 +1723,11 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
 
     deinitforComRpc();
 }
+/* Test cases for Register and Unregister methods using IDownloadManager interface */
 
 TEST_F(DownloadManagerTest, RegisterValidNotification) {
-
-    TEST_LOG("Testing Register method with valid notification");
+    
+    TEST_LOG("Testing Register method with valid notification using IDownloadManager interface");
 
     initforComRpc();
 
@@ -1737,23 +1738,25 @@ TEST_F(DownloadManagerTest, RegisterValidNotification) {
     }
 
     NotificationTest notificationCallback;
-
-    // Register a valid notification - this will test DownloadManagerImplementation::Register
+    
+    // Test Register method through IDownloadManager interface
+    // This should call through to DownloadManagerImplementation::Register
     auto result = downloadManagerInterface->Register(&notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, result);
-    TEST_LOG("Register returned: %u", result);
+    TEST_LOG("IDownloadManager Register returned: %u", result);
 
-    // Clean up by unregistering - this will test DownloadManagerImplementation::Unregister
+    // Clean up by unregistering
+    // This should call through to DownloadManagerImplementation::Unregister
     auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
-    TEST_LOG("Unregister returned: %u", unregisterResult);
+    TEST_LOG("IDownloadManager Unregister returned: %u", unregisterResult);
 
     deinitforComRpc();
 }
 
 TEST_F(DownloadManagerTest, UnregisterNonRegisteredNotification) {
-
-    TEST_LOG("Testing Unregister method with non-registered notification");
+    
+    TEST_LOG("Testing Unregister method with non-registered notification using IDownloadManager interface");
 
     initforComRpc();
 
@@ -1764,19 +1767,19 @@ TEST_F(DownloadManagerTest, UnregisterNonRegisteredNotification) {
     }
 
     NotificationTest notificationCallback;
-
-    // Try to unregister without registering first - should return error
-    // This will test DownloadManagerImplementation::Unregister error path
+    
+    // Test Unregister method through IDownloadManager interface without registering first
+    // This should call through to DownloadManagerImplementation::Unregister and return error
     auto result = downloadManagerInterface->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_GENERAL, result);
-    TEST_LOG("Unregister non-registered notification returned: %u", result);
+    TEST_LOG("IDownloadManager Unregister non-registered returned: %u", result);
 
     deinitforComRpc();
 }
 
 TEST_F(DownloadManagerTest, RegisterUnregisterWorkflow) {
-
-    TEST_LOG("Testing Register-Unregister workflow");
+    
+    TEST_LOG("Testing Register-Unregister workflow using IDownloadManager interface");
 
     initforComRpc();
 
@@ -1787,16 +1790,17 @@ TEST_F(DownloadManagerTest, RegisterUnregisterWorkflow) {
     }
 
     NotificationTest notificationCallback;
-
-    // Register notification - this will test DownloadManagerImplementation::Register
+    
+    // Test complete Register-Unregister workflow through IDownloadManager interface
+    // Register notification - this should call through to DownloadManagerImplementation::Register
     auto registerResult = downloadManagerInterface->Register(&notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, registerResult);
-    TEST_LOG("Register returned: %u", registerResult);
-
-    // Unregister notification - this will test DownloadManagerImplementation::Unregister
+    TEST_LOG("IDownloadManager Register returned: %u", registerResult);
+    
+    // Unregister notification - this should call through to DownloadManagerImplementation::Unregister
     auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
-    TEST_LOG("Unregister returned: %u", unregisterResult);
+    TEST_LOG("IDownloadManager Unregister returned: %u", unregisterResult);
 
     deinitforComRpc();
 }
