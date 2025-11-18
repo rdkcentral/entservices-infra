@@ -1724,7 +1724,6 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
     deinitforComRpc();
 }
 /* Test cases for Register and Unregister methods in DownloadManagerImplementation */
-
 TEST_F(DownloadManagerTest, RegisterValidNotification) {
     
     TEST_LOG("Testing Register method with valid notification");
@@ -1735,9 +1734,9 @@ TEST_F(DownloadManagerTest, RegisterValidNotification) {
         TEST_LOG("DownloadManager interface not available - trying to create implementation directly");
         
         // Try to create DownloadManagerImplementation directly for coverage
-        WPEFramework::PluginHost::DownloadManagerImplementation* impl = nullptr;
+        WPEFramework::Plugin::DownloadManagerImplementation* impl = nullptr;
         try {
-            impl = new WPEFramework::PluginHost::DownloadManagerImplementation();
+            impl = new WPEFramework::Plugin::DownloadManagerImplementation();
             if (impl) {
                 NotificationTest notificationCallback;
                 
@@ -1788,9 +1787,9 @@ TEST_F(DownloadManagerTest, UnregisterNonRegisteredNotification) {
         TEST_LOG("DownloadManager interface not available - trying to create implementation directly");
         
         // Try to create DownloadManagerImplementation directly for coverage
-        WPEFramework::PluginHost::DownloadManagerImplementation* impl = nullptr;
+        WPEFramework::Plugin::DownloadManagerImplementation* impl = nullptr;
         try {
-            impl = new WPEFramework::PluginHost::DownloadManagerImplementation();
+            impl = new WPEFramework::Plugin::DownloadManagerImplementation();
             if (impl) {
                 NotificationTest notificationCallback;
                 
@@ -1832,9 +1831,9 @@ TEST_F(DownloadManagerTest, RegisterUnregisterWorkflow) {
         TEST_LOG("DownloadManager interface not available - trying to create implementation directly");
         
         // Try to create DownloadManagerImplementation directly for coverage
-        WPEFramework::PluginHost::DownloadManagerImplementation* impl = nullptr;
+        WPEFramework::Plugin::DownloadManagerImplementation* impl = nullptr;
         try {
-            impl = new WPEFramework::PluginHost::DownloadManagerImplementation();
+            impl = new WPEFramework::Plugin::DownloadManagerImplementation();
             if (impl) {
                 NotificationTest notificationCallback;
                 
