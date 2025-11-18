@@ -2009,12 +2009,15 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Co
         TEST_LOG("Direct implementation creation failed - trying alternative approach");
         
         // Alternative: Try to create through plugin mechanism
-        auto pluginImpl = plugin->QueryInterface(Exchange::IDownloadManager::ID);
-        if (!pluginImpl) {
+        auto pluginImplVoid = plugin->QueryInterface(Exchange::IDownloadManager::ID);
+        if (!pluginImplVoid) {
             TEST_LOG("Cannot create DownloadManagerImplementation instance - may be expected in test environment");
             GTEST_SKIP() << "Cannot create direct DownloadManagerImplementation instance";
             return;
         }
+        
+        // Cast to proper interface type
+        Exchange::IDownloadManager* pluginImpl = static_cast<Exchange::IDownloadManager*>(pluginImplVoid);
         
         // Use the plugin interface for testing
         NotificationTest notificationCallback;
@@ -2110,18 +2113,4 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Co
     directImpl.Release();
     
     TEST_LOG("Direct DownloadManagerImplementation testing completed - all methods covered!");
-}
-        return;
-    }
-
-    string invalidFileLocator = "/nonexistent/path/file.txt";
-    
-    // Test Delete with invalid file locator - hits DownloadManagerImplementation::Delete error path
-    auto result = mockImpl->Delete(invalidFileLocator);
-    
-    // Should return error for invalid file locator
-    EXPECT_NE(Core::ERROR_NONE, result);
-    TEST_LOG("Delete with invalid file locator returned error: %u", result);
-
-    deinitforComRpc();
 }
