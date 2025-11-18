@@ -1751,3 +1751,52 @@ TEST_F(DownloadManagerTest, RegisterValidNotification) {
 
     deinitforComRpc();
 }
+
+TEST_F(DownloadManagerTest, UnregisterNonRegisteredNotification) {
+    
+    TEST_LOG("Testing Unregister method with non-registered notification");
+
+    initforComRpc();
+
+    if (!downloadManagerInterface) {
+        TEST_LOG("DownloadManager interface not available - skipping Unregister test");
+        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+        return;
+    }
+
+    NotificationTest notificationCallback;
+    
+    // Try to unregister without registering first - should return error
+    auto result = downloadManagerInterface->Unregister(&notificationCallback);
+    EXPECT_EQ(Core::ERROR_GENERAL, result);
+    TEST_LOG("Unregister non-registered notification returned: %u", result);
+
+    deinitforComRpc();
+}
+
+TEST_F(DownloadManagerTest, RegisterUnregisterWorkflow) {
+    
+    TEST_LOG("Testing Register-Unregister workflow");
+
+    initforComRpc();
+
+    if (!downloadManagerInterface) {
+        TEST_LOG("DownloadManager interface not available - skipping workflow test");
+        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+        return;
+    }
+
+    NotificationTest notificationCallback;
+    
+    // Register notification
+    auto registerResult = downloadManagerInterface->Register(&notificationCallback);
+    EXPECT_EQ(Core::ERROR_NONE, registerResult);
+    TEST_LOG("Register returned: %u", registerResult);
+    
+    // Unregister notification
+    auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
+    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+    TEST_LOG("Unregister returned: %u", unregisterResult);
+
+    deinitforComRpc();
+}
