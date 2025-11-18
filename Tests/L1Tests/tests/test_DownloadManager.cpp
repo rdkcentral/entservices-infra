@@ -1723,7 +1723,6 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
 
     deinitforComRpc();
 }
-
 /* Test cases for Register and Unregister methods in DownloadManagerImplementation */
 
 TEST_F(DownloadManagerTest, RegisterValidNotification) {
@@ -1733,8 +1732,35 @@ TEST_F(DownloadManagerTest, RegisterValidNotification) {
     initforComRpc();
 
     if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping Register test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+        TEST_LOG("DownloadManager interface not available - trying to create implementation directly");
+        
+        // Try to create DownloadManagerImplementation directly for coverage
+        WPEFramework::PluginHost::DownloadManagerImplementation* impl = nullptr;
+        try {
+            impl = new WPEFramework::PluginHost::DownloadManagerImplementation();
+            if (impl) {
+                NotificationTest notificationCallback;
+                
+                // Test Register method directly on implementation
+                auto result = impl->Register(&notificationCallback);
+                EXPECT_EQ(Core::ERROR_NONE, result);
+                TEST_LOG("Direct implementation Register returned: %u", result);
+                
+                // Clean up by unregistering
+                auto unregisterResult = impl->Unregister(&notificationCallback);
+                EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+                TEST_LOG("Direct implementation Unregister returned: %u", unregisterResult);
+                
+                delete impl;
+                deinitforComRpc();
+                return;
+            }
+        } catch (...) {
+            if (impl) delete impl;
+            TEST_LOG("Failed to create implementation directly");
+        }
+        
+        GTEST_SKIP() << "Skipping test - DownloadManager interface and direct implementation not available";
         return;
     }
 
@@ -1759,8 +1785,30 @@ TEST_F(DownloadManagerTest, UnregisterNonRegisteredNotification) {
     initforComRpc();
 
     if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping Unregister test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+        TEST_LOG("DownloadManager interface not available - trying to create implementation directly");
+        
+        // Try to create DownloadManagerImplementation directly for coverage
+        WPEFramework::PluginHost::DownloadManagerImplementation* impl = nullptr;
+        try {
+            impl = new WPEFramework::PluginHost::DownloadManagerImplementation();
+            if (impl) {
+                NotificationTest notificationCallback;
+                
+                // Test Unregister method directly on implementation without registering first
+                auto result = impl->Unregister(&notificationCallback);
+                EXPECT_EQ(Core::ERROR_GENERAL, result);
+                TEST_LOG("Direct implementation Unregister non-registered returned: %u", result);
+                
+                delete impl;
+                deinitforComRpc();
+                return;
+            }
+        } catch (...) {
+            if (impl) delete impl;
+            TEST_LOG("Failed to create implementation directly");
+        }
+        
+        GTEST_SKIP() << "Skipping test - DownloadManager interface and direct implementation not available";
         return;
     }
 
@@ -1781,8 +1829,34 @@ TEST_F(DownloadManagerTest, RegisterUnregisterWorkflow) {
     initforComRpc();
 
     if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping workflow test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+        TEST_LOG("DownloadManager interface not available - trying to create implementation directly");
+        
+        // Try to create DownloadManagerImplementation directly for coverage
+        WPEFramework::PluginHost::DownloadManagerImplementation* impl = nullptr;
+        try {
+            impl = new WPEFramework::PluginHost::DownloadManagerImplementation();
+            if (impl) {
+                NotificationTest notificationCallback;
+                
+                // Test complete workflow on implementation
+                auto registerResult = impl->Register(&notificationCallback);
+                EXPECT_EQ(Core::ERROR_NONE, registerResult);
+                TEST_LOG("Direct implementation Register returned: %u", registerResult);
+                
+                auto unregisterResult = impl->Unregister(&notificationCallback);
+                EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+                TEST_LOG("Direct implementation Unregister returned: %u", unregisterResult);
+                
+                delete impl;
+                deinitforComRpc();
+                return;
+            }
+        } catch (...) {
+            if (impl) delete impl;
+            TEST_LOG("Failed to create implementation directly");
+        }
+        
+        GTEST_SKIP() << "Skipping test - DownloadManager interface and direct implementation not available";
         return;
     }
 
