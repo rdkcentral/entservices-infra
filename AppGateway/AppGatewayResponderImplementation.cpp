@@ -127,11 +127,13 @@ namespace WPEFramework
                         mAppIdRegistry.Add(connectionId, appId);
                         
                         #ifdef ENABLE_APP_GATEWAY_AUTOMATION
-                        // Check if this is the bolt automation client
-                        if (appId == "bolt") {
+                        // Check if this is the automation client
+                        #ifdef AUTOMATION_APP_ID
+                        if (appId == AUTOMATION_APP_ID) {
                             mWsManager.SetAutomationId(connectionId);
-                            LOGINFO("Automation server connected with ID: %d", connectionId);
+                            LOGINFO("Automation server connected with ID: %d, appId: %s", connectionId, appId.c_str());
                         }
+                        #endif
                         #endif
                         
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
