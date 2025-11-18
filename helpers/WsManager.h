@@ -21,6 +21,7 @@
 
 #include <mutex>
 #include <memory>
+#include <sstream>
 #include <plugins/plugins.h>
 #include "UtilsLogging.h"
 #include "WebSocketLink.h"
@@ -250,6 +251,30 @@ public:
                     LOGTRACE("[ProcessMessage] Method: %s, RequestId: %d, ConnectionId: %d",
                             methodName.c_str(), requestId, connectionId);
 
+                    #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+                    // Forward to automation server if automation is active
+                    if (_parent.Interface()._automationId > 0) {
+                        std::string params = "{}";
+                        if (message->Parameters.IsSet() && !message->Parameters.Value().empty()) {
+                            params = message->Parameters.Value();
+                        }
+                        
+                        std::stringstream automationMsg;
+                        automationMsg << R"({"connectionId":)" << connectionId 
+                                     << R"(,"type":"request","id":)" << requestId
+                                     << R"(,"method":")" << methodName << R"(")"
+                                     << R"(,"params":)" << params << "}";
+                        
+                        LOGINFO("[Automation] Forwarding request: %s", automationMsg.str().c_str());
+                        
+                        Core::ProxyType<Core::JSONRPC::Message> automationNotif = Core::ProxyType<Core::JSONRPC::Message>::Create();
+                        automationNotif->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+                        automationNotif->Designator = "automationUpdate";
+                        automationNotif->Parameters = automationMsg.str();
+                        _parent.Interface().mChannel->Submit(_parent.Interface()._automationId, Core::ProxyType<Core::JSON::IElement>(automationNotif));
+                    }
+                    #endif
+
                     // SYNCHRONOUS PROCESSING
                     try
                     {
@@ -345,10 +370,34 @@ public:
 
     void SetDisconnectHandler(DisconnectHandler handler) { _disconnectHandler = handler; }
 
+    // NEW: Setter for automation ID
+    void SetAutomationId(uint32_t automationId) { 
+        _automationId = automationId; 
+        LOGINFO("Automation ID set to: %d", _automationId);
+    }
+
     // Create a new method which can send message to a given connection id using the connection registry
     // Use the SendJSONRPCResponse in Websocket Server to send the message
     bool SendMessageToConnection(const uint32_t connectionId, const std::string &result, const int requestId)
     {
+        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+        // Forward to automation server if automation is active
+        if (_automationId > 0 && connectionId != _automationId) {
+            std::stringstream automationMsg;
+            automationMsg << R"({"connectionId":)" << connectionId 
+                         << R"(,"type":"response","id":)" << requestId
+                         << R"(,"payload":)" << result << "}";
+            
+            LOGINFO("[Automation] Forwarding response: %s", automationMsg.str().c_str());
+            
+            Core::ProxyType<Core::JSONRPC::Message> automationNotif = Core::ProxyType<Core::JSONRPC::Message>::Create();
+            automationNotif->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+            automationNotif->Designator = "automationUpdate";
+            automationNotif->Parameters = automationMsg.str();
+            mChannel->Submit(_automationId, Core::ProxyType<Core::JSON::IElement>(automationNotif));
+        }
+        #endif
+
         Core::ProxyType<Core::JSONRPC::Message> response = Core::ProxyType<Core::JSONRPC::Message>::Create();
         response->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
         response->Id = requestId;
@@ -372,6 +421,23 @@ public:
 
     bool DispatchNotificationToConnection(const uint32_t connectionId, const std::string &designator, const std::string &payload)
     {
+        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+        if (_automationId > 0 && connectionId != _automationId) {
+            std::stringstream automationMsg;
+            automationMsg << R"({"connectionId":)" << connectionId 
+                         << R"(,"type":"notification","method":")" << designator << R"(")"
+                         << R"(,"params":)" << payload << "}";
+            
+            LOGINFO("[Automation] Forwarding notification: %s", automationMsg.str().c_str());
+            
+            Core::ProxyType<Core::JSONRPC::Message> automationNotif = Core::ProxyType<Core::JSONRPC::Message>::Create();
+            automationNotif->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+            automationNotif->Designator = "automationUpdate";
+            automationNotif->Parameters = automationMsg.str();
+            mChannel->Submit(_automationId, Core::ProxyType<Core::JSON::IElement>(automationNotif));
+        }
+        #endif
+
         Core::ProxyType<Core::JSONRPC::Message> event = Core::ProxyType<Core::JSONRPC::Message>::Create();
         event->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
         event->Designator = designator;
@@ -383,6 +449,24 @@ public:
 
     bool SendRequestToConnection(const uint32_t connectionId, const std::string &designator, const uint32_t requestId, const std::string &params)
     {
+        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+        if (_automationId > 0 && connectionId != _automationId) {
+            std::stringstream automationMsg;
+            automationMsg << R"({"connectionId":)" << connectionId 
+                         << R"(,"type":"request","id":)" << requestId
+                         << R"(,"method":")" << designator << R"(")"
+                         << R"(,"params":)" << params << "}";
+            
+            LOGINFO("[Automation] Forwarding server request: %s", automationMsg.str().c_str());
+            
+            Core::ProxyType<Core::JSONRPC::Message> automationNotif = Core::ProxyType<Core::JSONRPC::Message>::Create();
+            automationNotif->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+            automationNotif->Designator = "automationUpdate";
+            automationNotif->Parameters = automationMsg.str();
+            mChannel->Submit(_automationId, Core::ProxyType<Core::JSON::IElement>(automationNotif));
+        }
+        #endif
+
         Core::ProxyType<Core::JSONRPC::Message> request = Core::ProxyType<Core::JSONRPC::Message>::Create();
         request->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
         request->Id = requestId;
@@ -392,6 +476,25 @@ public:
         LOGINFO("Send Request for method=%s, connectionId=%d params=%s", designator.c_str(), connectionId, params.c_str());
         mChannel->Submit(connectionId, Core::ProxyType<Core::JSON::IElement>(request));
         return true;
+    }
+
+    // NEW: Method to update connection status to automation server
+    void UpdateConnection(uint32_t connectionId, const std::string& appId, bool connected) {
+        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+        if (_automationId > 0) {
+            std::stringstream automationMsg;
+            automationMsg << R"({"connectionId":)" << connectionId 
+                         << R"(,"appId":")" << appId << R"("})";
+            
+            LOGINFO("[Automation] Connection update: %s", automationMsg.str().c_str());
+            
+            Core::ProxyType<Core::JSONRPC::Message> event = Core::ProxyType<Core::JSONRPC::Message>::Create();
+            event->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+            event->Designator = "connectionUpdate";
+            event->Parameters = automationMsg.str();
+            mChannel->Submit(_automationId, Core::ProxyType<Core::JSON::IElement>(event));
+        }
+        #endif
     }
 
     // New Method to start websocket channel using NodeId
@@ -428,11 +531,13 @@ public:
     }
 
 private:
+    friend class WebSocketServer;  // Allow WebSocketServer to access private members
     
     MessageHandler _messageHandler;
     AuthHandler _authHandler;
     DisconnectHandler _disconnectHandler;
     WebSocketChannel *mChannel = nullptr;
+    uint32_t _automationId = 0;  // NEW: Automation server connection ID
 };
 
    

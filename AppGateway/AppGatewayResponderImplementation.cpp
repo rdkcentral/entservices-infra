@@ -125,7 +125,21 @@ namespace WPEFramework
                     if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
                         LOGINFO("APP ID %s", appId.c_str());
                         mAppIdRegistry.Add(connectionId, appId);
+                        
+                        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+                        // Check if this is the bolt automation client
+                        if (appId == "bolt") {
+                            mWsManager.SetAutomationId(connectionId);
+                            LOGINFO("Automation server connected with ID: %d", connectionId);
+                        }
+                        #endif
+                        
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
+                        
+                        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+                        // Notify automation server of successful connection
+                        mWsManager.UpdateConnection(connectionId, "", true);
+                        #endif
 
                         return true;
                     }
@@ -143,7 +157,13 @@ namespace WPEFramework
                     } else {
                         LOGINFO("App ID %s found for connection %d during disconnect", appId.c_str(), connectionId);
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, false));
-                    }    
+                    }
+                    
+                    #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+                    // Notify automation server of disconnection
+                    mWsManager.UpdateConnection(connectionId, "", false);
+                    #endif
+                    
                     mAppIdRegistry.Remove(connectionId);
                     Exchange::IAppNotifications* appNotifications = mService->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
                     if (appNotifications != nullptr) {
