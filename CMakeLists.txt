@@ -25,6 +25,10 @@ find_package(WPEFramework)
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
+# App Gateway Automation options
+option(ENABLE_APP_GATEWAY_AUTOMATION "Enable App Gateway Automation" OFF)
+set(AUTOMATION_APP_ID "" CACHE STRING "Automation App ID")
+
 # Product configuration dir
 set(PRODUCT_CONFIG_DIR "/etc/entservices")
 
