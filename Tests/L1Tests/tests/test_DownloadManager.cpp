@@ -555,7 +555,7 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Unregister_ValidCallba
     initforComRpc();
     
     if (!mockImpl) {
-[O        deinitforComRpc();
+        deinitforComRpc();
         GTEST_SKIP() << "MockImpl not available";
         return;
     }
@@ -708,7 +708,7 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_ErrorPaths_EdgeCases_C
         TEST_LOG("Progress with invalid ID returned: %u", progressResult1);
         
         // Test RateLimit with invalid ID
-[I        auto rateLimitResult1 = mockImpl->RateLimit(invalidId, 0);
+        auto rateLimitResult1 = mockImpl->RateLimit(invalidId, 0);
         TEST_LOG("RateLimit with invalid ID and zero limit returned: %u", rateLimitResult1);
         
         // Test RateLimit with very high limit
@@ -731,4 +731,3 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_ErrorPaths_EdgeCases_C
 
     deinitforComRpc();
 }
-
