@@ -46,7 +46,34 @@ using namespace std;
 
 namespace {
 
+    // Mock SubSystem class
+    class SubSystemMock : public PluginHost::ISubSystem {
+    public:
+        SubSystemMock() = default;
+        ~SubSystemMock() override = default;
+        
+        void AddRef() const override { }
+        uint32_t Release() const override { return 1; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
+        
+        // Mock IsActive to return true for INTERNET
+        bool IsActive(const PluginHost::ISubSystem::subsystem subsystem) const override {
+            return (subsystem == PluginHost::ISubSystem::INTERNET);
+        }
+        
+        Core::hresult Set(const PluginHost::ISubSystem::subsystem, PluginHost::IShell*) override { return Core::ERROR_NONE; }
+        const PluginHost::ISubSystem::INotification* Get(const PluginHost::ISubSystem::subsystem) const override { return nullptr; }
+        void Register(PluginHost::ISubSystem::INotification*) override { }
+        void Unregister(PluginHost::ISubSystem::INotification*) override { }
+        
+        BEGIN_INTERFACE_MAP(SubSystemMock)
+            INTERFACE_ENTRY(PluginHost::ISubSystem)
+        END_INTERFACE_MAP
+    };
+
     class ServiceMock : public PluginHost::IShell {
+    private:
+        mutable SubSystemMock mSubSystemMock;
     public:
         ServiceMock() = default;
         ~ServiceMock() override = default;
@@ -93,7 +120,7 @@ namespace {
         string Accessor() const override { return ""; }
         string ProxyStubPath() const override { return ""; }
         Core::hresult Hibernate(const uint32_t timeout) override { return Core::ERROR_NONE; }
-        PluginHost::ISubSystem* SubSystems() override { return nullptr; }
+        PluginHost::ISubSystem* SubSystems() override { return &mSubSystemMock; }
         void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
         uint32_t Submit(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
         PluginHost::IShell::ICOMLink* COMLink() override { return nullptr; }
