@@ -1774,11 +1774,11 @@ TEST_F(DownloadManagerTest, DirectDownloadManagerImplementationUnregisterErrorTe
 
     NotificationTest notificationCallback;
     
-[O    // Test Unregister method directly without registering first
+    // Test Unregister method directly without registering first
     // This WILL hit DownloadManagerImplementation::Unregister error path through mockImpl
     auto result = mockImpl->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_GENERAL, result);
-    TEST_LOG("Direct DownloadManagerImplementation Unregister (error case) returned: %u", result);
+    TEST_LOG("Direct DownloadManagerImplementation Unregister error case returned: %u", result);
 
     deinitforComRpc();
 }
@@ -1978,9 +1978,9 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Progress_InvalidDownlo
     
     if (!mockImpl) {
         TEST_LOG("MockImpl not available - skipping Progress test");
-        deinitforComRpc();
+        deinitforComRpc(); 
         GTEST_SKIP() << "MockImpl not available";
-[I        return;
+        return;
     }
 
     string invalidDownloadId = "nonexistent_id";
@@ -2139,52 +2139,8 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Re
     }
     
     // GUARANTEED Direct Implementation Access Approach
-    // This approach will DEFINITELY hit DownloadManagerImplementation.cpp/.h files
-    try {
-        // Method 1: Direct class instantiation (most direct way)
-        auto* directImpl = new WPEFramework::Plugin::DownloadManagerImplementation();
-        if (directImpl != nullptr) {
-            TEST_LOG("SUCCESS: Created direct DownloadManagerImplementation instance!");
-            
-            // Create test notification
-            class DirectImplTestNotification : public Exchange::IDownloadManager::INotification {
-            public:
-                virtual void AddRef() const override { }
-                virtual uint32_t Release() const override { return 1; }
-                void OnAppDownloadStatus(const string& downloadStatus) override {
-                    TEST_LOG("DirectImplTestNotification::OnAppDownloadStatus: %s", downloadStatus.c_str());
-                }
-                BEGIN_INTERFACE_MAP(DirectImplTestNotification)
-                    INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
-                END_INTERFACE_MAP
-            };
-            
-            DirectImplTestNotification directCallback;
-            
-            // Cast to interface
-            Exchange::IDownloadManager* implInterface = dynamic_cast<Exchange::IDownloadManager*>(directImpl);
-            if (implInterface) {
-                // DIRECT calls to DownloadManagerImplementation methods - GUARANTEED coverage
-                auto directRegisterResult = implInterface->Register(&directCallback);
-                TEST_LOG("DIRECT Register on DownloadManagerImplementation returned: %u", directRegisterResult);
-                
-                auto directUnregisterResult = implInterface->Unregister(&directCallback);
-                TEST_LOG("DIRECT Unregister on DownloadManagerImplementation returned: %u", directUnregisterResult);
-                
-                TEST_LOG("DIRECT method calls completed - DownloadManagerImplementation.cpp/.h GUARANTEED coverage!");
-            } else {
-                TEST_LOG("Failed to cast to IDownloadManager interface");
-            }
-            
-            // Cleanup
-            delete directImpl;
-            return;
-        }
-    } catch (const std::exception& e) {
-        TEST_LOG("Direct instantiation exception: %s", e.what());
-    } catch (...) {
-        TEST_LOG("Direct instantiation failed with unknown exception");
-    }
+    // Since DownloadManagerImplementation is abstract, we need to use the ProxyType approach
+    TEST_LOG("Attempting ProxyType approach for direct DownloadManagerImplementation access");
     
     // Method 2: ProxyType approach (fallback)
     WPEFramework::Core::ProxyType<WPEFramework::Plugin::DownloadManagerImplementation> implementation;
