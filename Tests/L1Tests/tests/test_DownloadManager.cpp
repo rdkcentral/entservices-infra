@@ -306,18 +306,36 @@ protected:
           .Times(::testing::AnyNumber());
 
         // Initialize the plugin for COM-RPC
-        if (downloadManagerInterface) {
-            // Interface already initialized in createResources, no need to initialize again
-            TEST_LOG("Using existing initialized DownloadManager interface");
+        // First ensure mockImpl is set if not already available
+        if (!mockImpl) {
+            if (downloadManagerInterface) {
+                mockImpl = downloadManagerInterface;
+                TEST_LOG("Set mockImpl from existing downloadManagerInterface (%p)", mockImpl);
+            } else {
+                // Try to get the implementation directly from the plugin
+                if (plugin.IsValid()) {
+                    mockImpl = static_cast<Exchange::IDownloadManager*>(
+                        plugin->QueryInterface(Exchange::IDownloadManager::ID));
+                    TEST_LOG("Set mockImpl from plugin QueryInterface (%p)", mockImpl);
+                } else {
+                    TEST_LOG("Plugin not valid - cannot get mockImpl");
+                }
+            }
         } else {
-            // Try to use the mock implementation if available
-            if (mockImpl) {
+            TEST_LOG("mockImpl already available (%p)", mockImpl);
+        }
+        
+        // Validate mockImpl before proceeding
+        if (mockImpl) {
+            TEST_LOG("mockImpl validated successfully (%p)", mockImpl);
+            // Ensure downloadManagerInterface is also set
+            if (!downloadManagerInterface) {
                 downloadManagerInterface = mockImpl;
                 downloadManagerInterface->AddRef(); // Add reference for COM-RPC usage
-                TEST_LOG("Using mockImpl for COM-RPC interface");
-            } else {
-                TEST_LOG("No DownloadManager interface available for COM-RPC tests");
+                TEST_LOG("Set downloadManagerInterface from mockImpl");
             }
+        } else {
+            TEST_LOG("WARNING: mockImpl is NULL - COM-RPC tests may fail");
         }
     }
 
@@ -911,7 +929,7 @@ TEST_F(DownloadManagerTest, rateLimitJsonRpcSuccess) {
         TEST_LOG("JSON-RPC rateLimit method not available - skipping test");
         deinitforJsonRpc();
         return;
-    }
+[O    }
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1122,7 +1140,7 @@ TEST_F(DownloadManagerTest, errorScenariosJsonRpc) {
         auto pauseResult = mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
         EXPECT_NE(Core::ERROR_NONE, pauseResult);
         TEST_LOG("Pause with invalid ID returned error: %u (expected)", pauseResult);
-    }
+[I    }
     
     if (mJsonRpcHandler.Exists(_T("resume")) == Core::ERROR_NONE) {
         auto resumeResult = mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
@@ -1591,7 +1609,7 @@ TEST_F(DownloadManagerTest, multipleDownloadsComRpc) {
         return;
     }
 
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+[O    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillRepeatedly(::testing::Invoke(
             [&](const PluginHost::ISubSystem::subsystem type) {
@@ -1866,7 +1884,7 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Download_ValidRequest)
         TEST_LOG("Download failed as expected in test environment, result: %u", result);
         EXPECT_TRUE(result != Core::ERROR_NONE);
     }
-
+[I
     deinitforComRpc();
 }
 
@@ -2013,15 +2031,25 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Register_ValidCallback
 
     NotificationTest notificationCallback;
     
-    // Test Register method - hits DownloadManagerImplementation::Register
-    auto result = mockImpl->Register(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    TEST_LOG("Register returned: %u", result);
+    // Test Register method with safety checks - hits DownloadManagerImplementation::Register
+    try {
+        TEST_LOG("Calling Register on mockImpl (%p)", mockImpl);
+        auto result = mockImpl->Register(&notificationCallback);
+        EXPECT_EQ(Core::ERROR_NONE, result);
+        TEST_LOG("Register returned: %u", result);
 
-    // Clean up - Unregister the callback
-    auto unregisterResult = mockImpl->Unregister(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
-    TEST_LOG("Cleanup Unregister returned: %u", unregisterResult);
+        // Clean up - Unregister the callback
+        TEST_LOG("Calling Unregister for cleanup");
+        auto unregisterResult = mockImpl->Unregister(&notificationCallback);
+        EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+        TEST_LOG("Cleanup Unregister returned: %u", unregisterResult);
+    } catch (const std::exception& e) {
+        TEST_LOG("Exception during Register test: %s", e.what());
+        FAIL() << "Register test failed with exception: " << e.what();
+    } catch (...) {
+        TEST_LOG("Unknown exception during Register test");
+        FAIL() << "Register test failed with unknown exception";
+    }
 
     deinitforComRpc();
 }
@@ -2095,8 +2123,9 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Re
     // Primary approach: Use mockImpl but ensure it hits the implementation
     initforComRpc();
     
-    if (mockImpl) {
-        TEST_LOG("Using mockImpl - this should route to DownloadManagerImplementation methods");
+    // Add extra null checking to prevent segfaults
+    if (mockImpl != nullptr) {
+        TEST_LOG("mockImpl is available (%p) - proceeding with Register/Unregister tests", mockImpl);
         
         // Create test notification callback using the correct interface 
         class ImplTestNotification : public Exchange::IDownloadManager::INotification {
@@ -2117,15 +2146,27 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Re
         
         ImplTestNotification testCallback;
         
-        // Test Register - should hit DownloadManagerImplementation::Register in .cpp file
-        auto registerResult = mockImpl->Register(&testCallback);
-        TEST_LOG("Register method returned: %u", registerResult);
-        EXPECT_EQ(Core::ERROR_NONE, registerResult) << "Register should succeed";
-        
-        // Test Unregister - should hit DownloadManagerImplementation::Unregister in .cpp file  
-        auto unregisterResult = mockImpl->Unregister(&testCallback);
-        TEST_LOG("Unregister method returned: %u", unregisterResult);
-        EXPECT_EQ(Core::ERROR_NONE, unregisterResult) << "Unregister should succeed";
+        // Test Register with error handling to prevent segfaults
+        try {
+            TEST_LOG("Calling Register on mockImpl (%p) with callback (%p)", mockImpl, &testCallback);
+            auto registerResult = mockImpl->Register(&testCallback);
+            TEST_LOG("Register method returned: %u", registerResult);
+            EXPECT_EQ(Core::ERROR_NONE, registerResult) << "Register should succeed";
+            
+            // Test Unregister - should hit DownloadManagerImplementation::Unregister in .cpp file  
+            TEST_LOG("Calling Unregister on mockImpl (%p) with callback (%p)", mockImpl, &testCallback);
+            auto unregisterResult = mockImpl->Unregister(&testCallback);
+            TEST_LOG("Unregister method returned: %u", unregisterResult);
+            EXPECT_EQ(Core::ERROR_NONE, unregisterResult) << "Unregister should succeed";
+            
+            TEST_LOG("Register/Unregister calls completed successfully - DownloadManagerImplementation.cpp methods hit!");
+        } catch (const std::exception& e) {
+            TEST_LOG("Exception during Register/Unregister calls: %s", e.what());
+            FAIL() << "Register/Unregister calls failed with exception: " << e.what();
+        } catch (...) {
+            TEST_LOG("Unknown exception during Register/Unregister calls");
+            FAIL() << "Register/Unregister calls failed with unknown exception";
+        }
         
         deinitforComRpc();
         TEST_LOG("Register/Unregister through mockImpl completed - may or may not hit implementation directly");
