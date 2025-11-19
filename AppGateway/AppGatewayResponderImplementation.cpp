@@ -137,11 +137,6 @@ namespace WPEFramework
                         #endif
                         
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
-                        
-                        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
-                        // Notify automation server of successful connection
-                        mWsManager.UpdateConnection(connectionId, "", true);
-                        #endif
 
                         return true;
                     }
@@ -160,11 +155,6 @@ namespace WPEFramework
                         LOGINFO("App ID %s found for connection %d during disconnect", appId.c_str(), connectionId);
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, false));
                     }
-                    
-                    #ifdef ENABLE_APP_GATEWAY_AUTOMATION
-                    // Notify automation server of disconnection
-                    mWsManager.UpdateConnection(connectionId, "", false);
-                    #endif
                     
                     mAppIdRegistry.Remove(connectionId);
                     Exchange::IAppNotifications* appNotifications = mService->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
