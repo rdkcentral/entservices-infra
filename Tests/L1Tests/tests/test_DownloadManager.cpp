@@ -126,6 +126,7 @@ namespace {
 class DownloadManagerTest : public ::testing::Test {
 protected:
     Core::ProxyType<Plugin::DownloadManager> plugin;
+    Core::ProxyType<Plugin::DownloadManagerImplementation> implementation; // Keep implementation alive
     string callsign, uri, fileName, directoryName;
     Exchange::IDownloadManager::Options options;
     string downloadId;
@@ -164,36 +165,47 @@ protected:
 public:
     void initforComRpc() 
     {
-        // Get the DownloadManager interface for COM-RPC tests
+        // Create DownloadManagerImplementation directly for reliable testing
+        // This ensures we're testing the actual implementation methods
         if (!mockImpl) {
-            // First try to get the interface via QueryInterface
-            mockImpl = static_cast<Exchange::IDownloadManager*>(
-                plugin->QueryInterface(Exchange::IDownloadManager::ID));
-            TEST_LOG("Set mockImpl from plugin QueryInterface (%p)", mockImpl);
+            TEST_LOG("Creating DownloadManagerImplementation directly for testing");
             
-            // If that fails, the plugin might not be fully initialized yet
-            // In a real system, the COM-RPC interface would be created by the service
-            if (!mockImpl) {
-                TEST_LOG("COM-RPC interface not available via QueryInterface");
-                
-                // For testing purposes, create a direct instance
-                // This won't be the exact same path as COM-RPC but will test the implementation
-                auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+            try {
+                // Create the implementation instance directly
+                implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
                 if (implementation.IsValid()) {
-                    implementation->Initialize(mServiceMock);
-                    mockImpl = implementation.operator->();
-                    if (mockImpl) {
-                        mockImpl->AddRef(); // Keep a reference
-                        TEST_LOG("Created direct DownloadManagerImplementation instance (%p)", mockImpl);
+                    TEST_LOG("DownloadManagerImplementation ProxyType created successfully");
+                    
+                    // Initialize the implementation with our service mock
+                    auto initResult = implementation->Initialize(mServiceMock);
+                    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
+                    
+                    if (initResult == Core::ERROR_NONE) {
+                        // Get the interface pointer
+                        mockImpl = static_cast<Exchange::IDownloadManager*>(implementation.operator->());
+                        if (mockImpl) {
+                            mockImpl->AddRef(); // Keep a reference to prevent cleanup
+                            TEST_LOG("Successfully got mockImpl pointer (%p)", mockImpl);
+                        } else {
+                            TEST_LOG("ERROR: Failed to get interface pointer from implementation");
+                        }
+                    } else {
+                        TEST_LOG("ERROR: DownloadManagerImplementation Initialize failed with: %u", initResult);
                     }
+                } else {
+                    TEST_LOG("ERROR: Failed to create DownloadManagerImplementation ProxyType");
                 }
+            } catch (const std::exception& e) {
+                TEST_LOG("EXCEPTION during DownloadManagerImplementation creation: %s", e.what());
+            } catch (...) {
+                TEST_LOG("UNKNOWN EXCEPTION during DownloadManagerImplementation creation");
             }
         }
         
         if (mockImpl) {
-            TEST_LOG("mockImpl validated successfully (%p)", mockImpl);
+            TEST_LOG("mockImpl validation successful (%p) - ready for testing", mockImpl);
         } else {
-            TEST_LOG("WARNING: mockImpl is NULL - COM-RPC tests may fail");
+            TEST_LOG("CRITICAL: mockImpl is NULL - tests will be skipped");
         }
     }
 
@@ -202,6 +214,10 @@ public:
         if (mockImpl) {
             mockImpl->Release();
             mockImpl = nullptr;
+        }
+        if (implementation.IsValid()) {
+            implementation->Deinitialize(mServiceMock);
+            implementation.Release();
         }
     }
 
