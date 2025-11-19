@@ -154,7 +154,8 @@ protected:
     virtual void SetUp() override
     {
         mServiceMock = new ServiceMock();
-        EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
+        auto initResult = plugin->Initialize(mServiceMock);
+        EXPECT_EQ(string(""), initResult);
     }
 
     virtual void TearDown() override
@@ -178,9 +179,9 @@ public:
                     
                     // Initialize the implementation with our service mock
                     auto initResult = implementation->Initialize(mServiceMock);
-                    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
+                    TEST_LOG("DownloadManagerImplementation Initialize returned: %s", initResult.c_str());
                     
-                    if (initResult == Core::ERROR_NONE) {
+                    if (initResult.empty()) {
                         // Get the interface pointer
                         mockImpl = static_cast<Exchange::IDownloadManager*>(implementation.operator->());
                         if (mockImpl) {
@@ -190,7 +191,7 @@ public:
                             TEST_LOG("ERROR: Failed to get interface pointer from implementation");
                         }
                     } else {
-                        TEST_LOG("ERROR: DownloadManagerImplementation Initialize failed with: %u", initResult);
+                        TEST_LOG("ERROR: DownloadManagerImplementation Initialize failed with: %s", initResult.c_str());
                     }
                 } else {
                     TEST_LOG("ERROR: Failed to create DownloadManagerImplementation ProxyType");
@@ -216,7 +217,8 @@ public:
             mockImpl = nullptr;
         }
         if (implementation.IsValid()) {
-            implementation->Deinitialize(mServiceMock);
+            auto deinitResult = implementation->Deinitialize(mServiceMock);
+            TEST_LOG("DownloadManagerImplementation Deinitialize returned: %s", deinitResult.c_str());
             implementation.Release();
         }
     }
@@ -275,11 +277,13 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Download_ValidParams_S
         }
         
         // Clean up
-        downloadManagerImpl->Deinitialize(mServiceMock);
+        auto deinitResult = downloadManagerImpl->Deinitialize(mServiceMock);
+        TEST_LOG("Cleanup Deinitialize returned: %s", deinitResult.c_str());
         
     } catch (const std::exception& e) {
         TEST_LOG("Exception during Download test: %s", e.what());
-        downloadManagerImpl->Deinitialize(mServiceMock);
+        auto deinitResult = downloadManagerImpl->Deinitialize(mServiceMock);
+        TEST_LOG("Exception cleanup Deinitialize returned: %s", deinitResult.c_str());
         FAIL() << "Download test failed with exception: " << e.what();
     }
 }
