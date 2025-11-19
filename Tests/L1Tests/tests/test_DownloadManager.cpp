@@ -52,38 +52,51 @@ namespace {
         ~ServiceMock() override = default;
 
         // COM interface methods
-        uint32_t AddRef() const override { return Core::ERROR_NONE; }
+        void AddRef() const override { }
         uint32_t Release() const override { return Core::ERROR_NONE; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
 
         // IShell interface methods with proper signatures
-        string Reason() const override { return ""; }
+        PluginHost::IShell::reason Reason() const override { return PluginHost::IShell::reason::FAILURE; }
         string Callsign() const override { return "DownloadManager"; }
         string Locator() const override { return ""; }
         string ClassName() const override { return "DownloadManagerImplementation"; }
         string Versions() const override { return ""; }  
-        string Metadata() const override { return ""; }
-        uint8_t* HashKey() const override { return nullptr; }
+        string HashKey() const override { return ""; }
         string ConfigLine() const override { return ""; }
+        Core::hresult ConfigLine(const string& config) override { return Core::ERROR_NONE; }
+        Core::hresult Metadata(string& info) const override { return Core::ERROR_NONE; }
         string PersistentPath() const override { return "/tmp/persistent/"; }
         string DataPath() const override { return "/tmp/data/"; }
         string VolatilePath() const override { return "/tmp/volatile/"; }
         string SystemPath() const override { return "/usr/share/"; }
-        void EnableWebServer(const string&) override { }
+        string PluginPath() const override { return "/usr/lib/wpeframework/plugins/"; }
+        string SystemRootPath() const override { return "/"; }
+        Core::hresult SystemRootPath(const string& systemRootPath) override { return Core::ERROR_NONE; }
+        PluginHost::IShell::startup Startup() const override { return PluginHost::IShell::startup::ACTIVATED; }
+        Core::hresult Startup(const PluginHost::IShell::startup value) override { return Core::ERROR_NONE; }
+        string Substitute(const string& input) const override { return input; }
+        bool Resumed() const override { return false; }
+        Core::hresult Resumed(const bool value) override { return Core::ERROR_NONE; }
+        bool IsSupported(const uint8_t version) const override { return true; }
+        void EnableWebServer(const string& URLPath, const string& fileSystemPath) override { }
         void DisableWebServer() override { }
         string WebPrefix() const override { return ""; }
         PluginHost::IShell::state State() const override { return PluginHost::IShell::ACTIVATED; }
         uint32_t Activate(const PluginHost::IShell::reason) override { return Core::ERROR_NONE; }
         uint32_t Deactivate(const PluginHost::IShell::reason) override { return Core::ERROR_NONE; }
-        uint32_t Unavailable() const override { return 0; }
-        void Notify(const string&, const string&) override { }
+        Core::hresult Unavailable(const PluginHost::IShell::reason) override { return Core::ERROR_NONE; }
+        void Notify(const string& message) override { }
         void Register(PluginHost::IPlugin::INotification*) override { }
         void Unregister(PluginHost::IPlugin::INotification*) override { }
         string Model() const override { return ""; }
         bool Background() const override { return false; }
         string Accessor() const override { return ""; }
         string ProxyStubPath() const override { return ""; }
-        void Hibernate() override { }
+        Core::hresult Hibernate(const uint32_t timeout) override { return Core::ERROR_NONE; }
+        ISubSystem* SubSystems() override { return nullptr; }
+        void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
+        uint32_t Submit(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
+        ICOMLink* COMLink() override { return nullptr; }
 
         BEGIN_INTERFACE_MAP(ServiceMock)
             INTERFACE_ENTRY(PluginHost::IShell)
