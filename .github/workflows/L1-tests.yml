@@ -505,6 +505,7 @@ jobs:
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DPLUGIN_PACKAGE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
@@ -590,6 +591,7 @@ jobs:
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DPLUGIN_PACKAGE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
@@ -607,6 +609,7 @@ jobs:
           /opt/secure/persistent
           /opt/secure/persistent/System
           /opt/persistent/storageManager
+          /opt/preinstall
           /opt/logs
           /lib/rdk
           /run/media/sda1/logs/PreviousLogs
