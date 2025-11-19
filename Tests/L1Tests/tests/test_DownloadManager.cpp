@@ -449,7 +449,7 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
  * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
-/*
+
 TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
 
     TEST_LOG("Starting JSON-RPC method registration test");
@@ -491,7 +491,7 @@ TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
     TEST_LOG("Plugin validation completed successfully");
     TEST_LOG("Test PASSED: Plugin loads and initializes without crashing");
     return; // Pass the test without attempting risky operations
-}*/
+}
 
 /* Test Case for COM-RPC interface availability
  * 
@@ -1413,7 +1413,7 @@ TEST_F(DownloadManagerTest, rateLimitComRpcSuccess) {
  * Test notification callback registration system
  * Verify Register and Unregister methods work correctly
  */
-/*TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
+TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
 
     TEST_LOG("Starting COM-RPC notification registration test");
 
@@ -1449,7 +1449,7 @@ TEST_F(DownloadManagerTest, rateLimitComRpcSuccess) {
     TEST_LOG("Unregistration of non-registered callback returned: %u", unregisterResult2);
 
     deinitforComRpc();
-}*/
+}
 
 /* Test Case for progress tracking with invalid download IDs
  * 
