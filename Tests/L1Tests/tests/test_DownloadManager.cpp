@@ -250,20 +250,19 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Download_ValidParams_S
     
     TEST_LOG("Testing Download method with valid parameters - hits DownloadManagerImplementation::Download");
 
-    initforComRpc();
+    // Create DownloadManagerImplementation directly instead of using COM-RPC
+    auto downloadManagerImpl = Core::ProxyType<WPEFramework::Plugin::DownloadManagerImplementation>::Create();
+    ASSERT_TRUE(downloadManagerImpl.IsValid());
     
-    if (!mockImpl) {
-        TEST_LOG("MockImpl not available - skipping Download test");
-        deinitforComRpc();
-        GTEST_SKIP() << "MockImpl not available for Download testing";
-        return;
-    }
-
+    // Initialize it with our mock service
+    auto initResult = downloadManagerImpl->Initialize(mServiceMock);
+    EXPECT_EQ(string(""), initResult);
+    
     getDownloadParams();
     
     try {
         // Test Download method - hits DownloadManagerImplementation::Download
-        auto result = mockImpl->Download(uri, options, downloadId);
+        auto result = downloadManagerImpl->Download(uri, options, downloadId);
         TEST_LOG("Download method returned: %u, downloadId: %s", result, downloadId.c_str());
         
         // Download may succeed or fail depending on network/environment, both are valid test outcomes
@@ -275,12 +274,14 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Download_ValidParams_S
             TEST_LOG("Download failed with error: %u (expected in test environment)", result);
         }
         
+        // Clean up
+        downloadManagerImpl->Deinitialize(mServiceMock);
+        
     } catch (const std::exception& e) {
         TEST_LOG("Exception during Download test: %s", e.what());
+        downloadManagerImpl->Deinitialize(mServiceMock);
         FAIL() << "Download test failed with exception: " << e.what();
     }
-
-    deinitforComRpc();
 }
 
 /**
