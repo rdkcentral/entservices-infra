@@ -40,7 +40,7 @@ using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::_;
 using ::testing::Invoke;
-using ::testing::::testing::AnyNumber;
+using ::testing::AnyNumber;
 
 using namespace std;
 
@@ -50,8 +50,8 @@ namespace {
     public:
         ~ServiceMock() override = default;
 
-        MOCK_METHOD1(Register, void(PluginHost::IShell::INotification*));
-        MOCK_METHOD1(Unregister, void(PluginHost::IShell::INotification*));
+        MOCK_METHOD1(Register, void(PluginHost::IPlugin::INotification*));
+        MOCK_METHOD1(Unregister, void(PluginHost::IPlugin::INotification*));
         MOCK_CONST_METHOD0(Reason, string());
         MOCK_CONST_METHOD0(Callsign, string());
         MOCK_CONST_METHOD0(Locator, string());
@@ -72,8 +72,6 @@ namespace {
         MOCK_METHOD1(Deactivate, uint32_t(const PluginHost::IShell::reason));
         MOCK_CONST_METHOD0(Unavailable, uint32_t());
         MOCK_METHOD2(Notify, void(const string&, const string&));
-        MOCK_METHOD1(Register, void(PluginHost::IPlugin::INotification*));
-        MOCK_METHOD1(Unregister, void(PluginHost::IPlugin::INotification*));
         MOCK_CONST_METHOD0(Model, string());
         MOCK_CONST_METHOD0(Background, bool());
         MOCK_CONST_METHOD0(Accessor, string());
