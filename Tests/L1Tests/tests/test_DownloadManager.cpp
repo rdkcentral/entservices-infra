@@ -178,7 +178,7 @@ public:
                 
                 // For testing purposes, create a direct instance
                 // This won't be the exact same path as COM-RPC but will test the implementation
-                auto implementation = Core::ProxyType<DownloadManagerImplementation>::Create();
+                auto implementation = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
                 if (implementation.IsValid()) {
                     implementation->Initialize(mServiceMock);
                     mockImpl = implementation.operator->();
@@ -764,4 +764,3 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_ErrorPaths_EdgeCases_C
 
     deinitforComRpc();
 }
-*/
