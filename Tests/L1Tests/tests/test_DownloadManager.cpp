@@ -46,34 +46,25 @@ using namespace std;
 
 namespace {
 
-    // Mock SubSystem class
-    class SubSystemMock : public PluginHost::ISubSystem {
+    // Simple mock for ISubSystem that always reports INTERNET as active
+    class SimpleSubSystemMock : public PluginHost::ISubSystem {
     public:
-        SubSystemMock() = default;
-        ~SubSystemMock() override = default;
+        ~SimpleSubSystemMock() override = default;
         
-        void AddRef() const override { }
-        uint32_t Release() const override { return 1; }
-        void* QueryInterface(const uint32_t) override { return nullptr; }
-        
-        // Mock IsActive to return true for INTERNET
-        bool IsActive(const PluginHost::ISubSystem::subsystem subsystem) const override {
-            return (subsystem == PluginHost::ISubSystem::INTERNET);
+        bool IsActive(const PluginHost::ISubSystem::subsystem type) const override {
+            return (type == PluginHost::ISubSystem::INTERNET); // Always return true for INTERNET
         }
-        
+        bool IsAvailable(const PluginHost::ISubSystem::subsystem) const override { return true; }
+        void AddRef() const override { }
+        uint32_t Release() const override { return 0; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
         Core::hresult Set(const PluginHost::ISubSystem::subsystem, PluginHost::IShell*) override { return Core::ERROR_NONE; }
-        const PluginHost::ISubSystem::INotification* Get(const PluginHost::ISubSystem::subsystem) const override { return nullptr; }
-        void Register(PluginHost::ISubSystem::INotification*) override { }
-        void Unregister(PluginHost::ISubSystem::INotification*) override { }
-        
-        BEGIN_INTERFACE_MAP(SubSystemMock)
-            INTERFACE_ENTRY(PluginHost::ISubSystem)
-        END_INTERFACE_MAP
+        Core::hresult Unset(const PluginHost::ISubSystem::subsystem) override { return Core::ERROR_NONE; }
     };
 
     class ServiceMock : public PluginHost::IShell {
     private:
-        mutable SubSystemMock mSubSystemMock;
+        mutable SimpleSubSystemMock mSubSystemMock;
     public:
         ServiceMock() = default;
         ~ServiceMock() override = default;
@@ -124,6 +115,16 @@ namespace {
         void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
         uint32_t Submit(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
         PluginHost::IShell::ICOMLink* COMLink() override { return nullptr; }
+
+        // QueryInterface for COM interface
+        void* QueryInterface(const uint32_t interfaceNumber) override { 
+            void* result = nullptr;
+            if (interfaceNumber == PluginHost::IShell::ID) {
+                AddRef();
+                result = static_cast<PluginHost::IShell*>(this);
+            }
+            return result;
+        }
 
         BEGIN_INTERFACE_MAP(ServiceMock)
             INTERFACE_ENTRY(PluginHost::IShell)
