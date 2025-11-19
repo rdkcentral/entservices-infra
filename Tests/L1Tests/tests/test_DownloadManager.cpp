@@ -48,35 +48,42 @@ namespace {
 
     class ServiceMock : public PluginHost::IShell {
     public:
+        ServiceMock() = default;
         ~ServiceMock() override = default;
 
-        MOCK_METHOD1(Register, void(PluginHost::IPlugin::INotification*));
-        MOCK_METHOD1(Unregister, void(PluginHost::IPlugin::INotification*));
-        MOCK_CONST_METHOD0(Reason, string());
-        MOCK_CONST_METHOD0(Callsign, string());
-        MOCK_CONST_METHOD0(Locator, string());
-        MOCK_CONST_METHOD0(ClassName, string());
-        MOCK_CONST_METHOD0(Versions, string());
-        MOCK_CONST_METHOD0(Metadata, string());
-        MOCK_CONST_METHOD0(HashKey, uint32_t());
-        MOCK_CONST_METHOD0(ConfigLine, string());
-        MOCK_CONST_METHOD0(PersistentPath, string());
-        MOCK_CONST_METHOD0(DataPath, string());
-        MOCK_CONST_METHOD0(VolatilePath, string());
-        MOCK_CONST_METHOD0(SystemPath, string());
-        MOCK_METHOD1(EnableWebServer, void(const string&));
-        MOCK_METHOD0(DisableWebServer, void());
-        MOCK_CONST_METHOD0(WebPrefix, string());
-        MOCK_CONST_METHOD0(State, PluginHost::IShell::state());
-        MOCK_METHOD1(Activate, uint32_t(const PluginHost::IShell::reason));
-        MOCK_METHOD1(Deactivate, uint32_t(const PluginHost::IShell::reason));
-        MOCK_CONST_METHOD0(Unavailable, uint32_t());
-        MOCK_METHOD2(Notify, void(const string&, const string&));
-        MOCK_CONST_METHOD0(Model, string());
-        MOCK_CONST_METHOD0(Background, bool());
-        MOCK_CONST_METHOD0(Accessor, string());
-        MOCK_CONST_METHOD0(ProxyStubPath, string());
-        MOCK_METHOD0(Hibernate, void());
+        // COM interface methods
+        uint32_t AddRef() const override { return Core::ERROR_NONE; }
+        uint32_t Release() const override { return Core::ERROR_NONE; }
+        void* QueryInterface(const uint32_t) override { return nullptr; }
+
+        // IShell interface methods with proper signatures
+        string Reason() const override { return ""; }
+        string Callsign() const override { return "DownloadManager"; }
+        string Locator() const override { return ""; }
+        string ClassName() const override { return "DownloadManagerImplementation"; }
+        string Versions() const override { return ""; }  
+        string Metadata() const override { return ""; }
+        uint8_t* HashKey() const override { return nullptr; }
+        string ConfigLine() const override { return ""; }
+        string PersistentPath() const override { return "/tmp/persistent/"; }
+        string DataPath() const override { return "/tmp/data/"; }
+        string VolatilePath() const override { return "/tmp/volatile/"; }
+        string SystemPath() const override { return "/usr/share/"; }
+        void EnableWebServer(const string&) override { }
+        void DisableWebServer() override { }
+        string WebPrefix() const override { return ""; }
+        PluginHost::IShell::state State() const override { return PluginHost::IShell::ACTIVATED; }
+        uint32_t Activate(const PluginHost::IShell::reason) override { return Core::ERROR_NONE; }
+        uint32_t Deactivate(const PluginHost::IShell::reason) override { return Core::ERROR_NONE; }
+        uint32_t Unavailable() const override { return 0; }
+        void Notify(const string&, const string&) override { }
+        void Register(PluginHost::IPlugin::INotification*) override { }
+        void Unregister(PluginHost::IPlugin::INotification*) override { }
+        string Model() const override { return ""; }
+        bool Background() const override { return false; }
+        string Accessor() const override { return ""; }
+        string ProxyStubPath() const override { return ""; }
+        void Hibernate() override { }
 
         BEGIN_INTERFACE_MAP(ServiceMock)
             INTERFACE_ENTRY(PluginHost::IShell)
@@ -113,35 +120,37 @@ protected:
     PluginHost::IDispatcher* dispatcher{};
     Exchange::IDownloadManager* downloadManagerInterface{};
     Exchange::IDownloadManager* mockImpl = nullptr;
-    Core::Sink<NiceMock<ServiceMock>> mServiceMock;
+    ServiceMock* mServiceMock;
     uint32_t status{};
 
-    DownloadManagerTest() : mServiceMock(5, false, true, true, false, false, "0.0.0.0", ""), plugin(Core::ProxyType<Plugin::DownloadManager>::Create())
+    DownloadManagerTest() : mServiceMock(nullptr), plugin(Core::ProxyType<Plugin::DownloadManager>::Create())
     {
         callsign = "org.rdk.DownloadManager";
     }
 
     virtual ~DownloadManagerTest() override
     {
+        if (mServiceMock) {
+            delete mServiceMock;
+            mServiceMock = nullptr;
+        }
         plugin.Release();
     }
 
     virtual void SetUp() override
     {
-        EXPECT_EQ(string(""), plugin->Initialize(&(*mServiceMock)));
+        mServiceMock = new ServiceMock();
+        EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
     }
 
     virtual void TearDown() override
     {
-        plugin->Deinitialize(&(*mServiceMock));
+        plugin->Deinitialize(mServiceMock);
     }
 
 public:
     void initforComRpc() 
     {
-        EXPECT_CALL(*mServiceMock, AddRef())
-          .Times(::testing::AnyNumber());
-
         // Get the DownloadManager interface for COM-RPC tests
         if (!mockImpl) {
             mockImpl = static_cast<Exchange::IDownloadManager*>(
@@ -546,7 +555,7 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Unregister_ValidCallba
     initforComRpc();
     
     if (!mockImpl) {
-        deinitforComRpc();
+[O        deinitforComRpc();
         GTEST_SKIP() << "MockImpl not available";
         return;
     }
@@ -699,7 +708,7 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_ErrorPaths_EdgeCases_C
         TEST_LOG("Progress with invalid ID returned: %u", progressResult1);
         
         // Test RateLimit with invalid ID
-        auto rateLimitResult1 = mockImpl->RateLimit(invalidId, 0);
+[I        auto rateLimitResult1 = mockImpl->RateLimit(invalidId, 0);
         TEST_LOG("RateLimit with invalid ID and zero limit returned: %u", rateLimitResult1);
         
         // Test RateLimit with very high limit
