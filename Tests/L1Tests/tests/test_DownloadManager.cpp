@@ -93,10 +93,10 @@ namespace {
         string Accessor() const override { return ""; }
         string ProxyStubPath() const override { return ""; }
         Core::hresult Hibernate(const uint32_t timeout) override { return Core::ERROR_NONE; }
-        ISubSystem* SubSystems() override { return nullptr; }
+        PluginHost::ISubSystem* SubSystems() override { return nullptr; }
         void* QueryInterfaceByCallsign(const uint32_t id, const string& name) override { return nullptr; }
         uint32_t Submit(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response) override { return Core::ERROR_NONE; }
-        ICOMLink* COMLink() override { return nullptr; }
+        PluginHost::IShell::ICOMLink* COMLink() override { return nullptr; }
 
         BEGIN_INTERFACE_MAP(ServiceMock)
             INTERFACE_ENTRY(PluginHost::IShell)
