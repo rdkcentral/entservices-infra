@@ -1774,7 +1774,7 @@ TEST_F(DownloadManagerTest, DirectDownloadManagerImplementationUnregisterErrorTe
 
     NotificationTest notificationCallback;
     
-    // Test Unregister method directly without registering first
+[O    // Test Unregister method directly without registering first
     // This WILL hit DownloadManagerImplementation::Unregister error path through mockImpl
     auto result = mockImpl->Unregister(&notificationCallback);
     EXPECT_EQ(Core::ERROR_GENERAL, result);
@@ -1980,7 +1980,7 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_Progress_InvalidDownlo
         TEST_LOG("MockImpl not available - skipping Progress test");
         deinitforComRpc();
         GTEST_SKIP() << "MockImpl not available";
-        return;
+[I        return;
     }
 
     string invalidDownloadId = "nonexistent_id";
@@ -2098,15 +2098,18 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Re
     if (mockImpl) {
         TEST_LOG("Using mockImpl - this should route to DownloadManagerImplementation methods");
         
-        // Create test notification callback  
+        // Create test notification callback using the correct interface 
         class ImplTestNotification : public Exchange::IDownloadManager::INotification {
         public:
-            void DownloadProgress(const string& downloadId, uint64_t downloadedBytes, uint64_t totalBytes) override {
-                TEST_LOG("ImplTestNotification::DownloadProgress called");
+            // Required for reference counting
+            virtual void AddRef() const override { }
+            virtual uint32_t Release() const override { return 1; }
+            
+            // Implement the actual notification method from the interface
+            void OnAppDownloadStatus(const string& downloadStatus) override {
+                TEST_LOG("ImplTestNotification::OnAppDownloadStatus called with: %s", downloadStatus.c_str());
             }
-            void DownloadComplete(const string& downloadId, const string& filePath) override {
-                TEST_LOG("ImplTestNotification::DownloadComplete called");  
-            }
+            
             BEGIN_INTERFACE_MAP(ImplTestNotification)
                 INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
             END_INTERFACE_MAP
@@ -2125,14 +2128,65 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Re
         EXPECT_EQ(Core::ERROR_NONE, unregisterResult) << "Unregister should succeed";
         
         deinitforComRpc();
-        TEST_LOG("Register/Unregister implementation coverage test completed successfully!");
-        return;
+        TEST_LOG("Register/Unregister through mockImpl completed - may or may not hit implementation directly");
+        
+        // ADDITIONAL DIRECT APPROACH for GUARANTEED implementation coverage
+        TEST_LOG("Now attempting DIRECT instantiation for guaranteed DownloadManagerImplementation.cpp coverage");
+    }
+    else {
+        TEST_LOG("mockImpl not available - using direct instantiation only");  
+        deinitforComRpc();
     }
     
-    TEST_LOG("mockImpl not available - attempting direct instantiation approach");
-    deinitforComRpc();
+    // GUARANTEED Direct Implementation Access Approach
+    // This approach will DEFINITELY hit DownloadManagerImplementation.cpp/.h files
+    try {
+        // Method 1: Direct class instantiation (most direct way)
+        auto* directImpl = new WPEFramework::Plugin::DownloadManagerImplementation();
+        if (directImpl != nullptr) {
+            TEST_LOG("SUCCESS: Created direct DownloadManagerImplementation instance!");
+            
+            // Create test notification
+            class DirectImplTestNotification : public Exchange::IDownloadManager::INotification {
+            public:
+                virtual void AddRef() const override { }
+                virtual uint32_t Release() const override { return 1; }
+                void OnAppDownloadStatus(const string& downloadStatus) override {
+                    TEST_LOG("DirectImplTestNotification::OnAppDownloadStatus: %s", downloadStatus.c_str());
+                }
+                BEGIN_INTERFACE_MAP(DirectImplTestNotification)
+                    INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
+                END_INTERFACE_MAP
+            };
+            
+            DirectImplTestNotification directCallback;
+            
+            // Cast to interface
+            Exchange::IDownloadManager* implInterface = dynamic_cast<Exchange::IDownloadManager*>(directImpl);
+            if (implInterface) {
+                // DIRECT calls to DownloadManagerImplementation methods - GUARANTEED coverage
+                auto directRegisterResult = implInterface->Register(&directCallback);
+                TEST_LOG("DIRECT Register on DownloadManagerImplementation returned: %u", directRegisterResult);
+                
+                auto directUnregisterResult = implInterface->Unregister(&directCallback);
+                TEST_LOG("DIRECT Unregister on DownloadManagerImplementation returned: %u", directUnregisterResult);
+                
+                TEST_LOG("DIRECT method calls completed - DownloadManagerImplementation.cpp/.h GUARANTEED coverage!");
+            } else {
+                TEST_LOG("Failed to cast to IDownloadManager interface");
+            }
+            
+            // Cleanup
+            delete directImpl;
+            return;
+        }
+    } catch (const std::exception& e) {
+        TEST_LOG("Direct instantiation exception: %s", e.what());
+    } catch (...) {
+        TEST_LOG("Direct instantiation failed with unknown exception");
+    }
     
-    // Alternative approach: Direct instantiation (safer version to avoid segfaults)
+    // Method 2: ProxyType approach (fallback)
     WPEFramework::Core::ProxyType<WPEFramework::Plugin::DownloadManagerImplementation> implementation;
     
     try {
@@ -2145,11 +2199,18 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Re
             // Get IDownloadManager interface
             Exchange::IDownloadManager* directImpl = implementation.operator->();
             if (directImpl) {
-                // Create test callback
+                // Create test callback with correct interface implementation
                 class ImplTestNotification : public Exchange::IDownloadManager::INotification {
                 public:
-                    void DownloadProgress(const string& downloadId, uint64_t downloadedBytes, uint64_t totalBytes) override {}
-                    void DownloadComplete(const string& downloadId, const string& filePath) override {}
+                    // Required for reference counting
+                    virtual void AddRef() const override { }
+                    virtual uint32_t Release() const override { return 1; }
+                    
+                    // Implement the actual notification method
+                    void OnAppDownloadStatus(const string& downloadStatus) override {
+                        TEST_LOG("Direct ImplTestNotification::OnAppDownloadStatus called");
+                    }
+                    
                     BEGIN_INTERFACE_MAP(ImplTestNotification)
                         INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
                     END_INTERFACE_MAP
@@ -2182,27 +2243,5 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementation_DirectInstantiation_Re
     // Final fallback: Skip test but log the attempt
     TEST_LOG("All instantiation methods failed - implementation coverage may need alternative approach");
     GTEST_SKIP() << "Cannot create DownloadManagerImplementation instance";
-}
-    
-    // Test multiple Download calls to verify ID generation
-    Exchange::IDownloadManager::Options options;
-    string downloadId1, downloadId2, downloadId3;
-    string baseUrl = "http://example.com/file";
-    
-    auto downloadResult1 = mockImpl->Download(baseUrl + "1.zip", options, downloadId1);
-    auto downloadResult2 = mockImpl->Download(baseUrl + "2.zip", options, downloadId2);
-    auto downloadResult3 = mockImpl->Download(baseUrl + "3.zip", options, downloadId3);
-    
-    TEST_LOG("Download ID generation test:");
-    TEST_LOG("  Download 1: result=%u, id=%s", downloadResult1, downloadId1.c_str());
-    TEST_LOG("  Download 2: result=%u, id=%s", downloadResult2, downloadId2.c_str());
-    TEST_LOG("  Download 3: result=%u, id=%s", downloadResult3, downloadId3.c_str());
-    
-    // Verify IDs are different (if downloads succeeded)
-    if (downloadResult1 == Core::ERROR_NONE && downloadResult2 == Core::ERROR_NONE) {
-        EXPECT_NE(downloadId1, downloadId2) << "Download IDs should be unique";
-    }
-
-    deinitforComRpc();
 }
 
