@@ -57,7 +57,7 @@ target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NA
 if(ENABLE_APP_GATEWAY_AUTOMATION)
     target_compile_definitions(${MODULE_NAME} PRIVATE ENABLE_APP_GATEWAY_AUTOMATION)
     if(AUTOMATION_APP_ID)
-        target_compile_definitions(${MODULE_NAME} PRIVATE AUTOMATION_APP_ID="${AUTOMATION_APP_ID}")
+        target_compile_definitions(${MODULE_NAME} PRIVATE AUTOMATION_APP_ID=${AUTOMATION_APP_ID})
     endif()
 endif()
 
