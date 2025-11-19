@@ -44,8 +44,11 @@ namespace
 DobbySpecGenerator::DobbySpecGenerator(): mIonMemoryPluginData(Json::objectValue), mPackageMountPoint("/package"), mRuntimeMountPoint("/runtime"), mGstRegistrySourcePath(""), mGstRegistryDestinationPath("/tmp/gstreamer-cached-registry.bin")
 {
     LOGINFO("DobbySpecGenerator()");
-    mAIConfiguration = new AIConfiguration();
-    mAIConfiguration->initialize();
+    mAIConfiguration = std::make_unique<AIConfiguration>();
+    if (mAIConfiguration)
+    {
+        mAIConfiguration->initialize();
+    }
     initialiseIonHeapsJson();
 //TODO SUPPORT THIS
 /*
@@ -63,10 +66,6 @@ DobbySpecGenerator::DobbySpecGenerator(): mIonMemoryPluginData(Json::objectValue
 DobbySpecGenerator::~DobbySpecGenerator()
 {
     LOGINFO("~DobbySpecGenerator()");
-    if (nullptr != mAIConfiguration)
-    {
-        delete mAIConfiguration;
-    }
 }
 
 Json::Value DobbySpecGenerator::getWorkingDir(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
