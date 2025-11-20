@@ -30,12 +30,7 @@
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
-#include "PackageManager.h"
-#include "PackageManagerImplementation.h"
 #include <interfaces/json/JDownloadManager.h>
-#include <interfaces/json/JPackageDownloader.h>
-#include <interfaces/json/JPackageInstaller.h>
-#include <interfaces/json/JPackageHandler.h>
 
 using namespace WPEFramework;
 
@@ -157,7 +152,6 @@ protected:
     Core::ProxyType<WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
     Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
-    Core::ProxyType<Plugin::PackageManager> packageManagerPlugin;
 
     // JSON-RPC related members
     Core::JSONRPC::Handler& mJsonRpcHandler;
@@ -173,8 +167,6 @@ protected:
     // Interface pointers
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
     Exchange::IDownloadManager* mockImpl = nullptr;
-    Exchange::IPackageDownloader* packageDownloaderInterface = nullptr;
-    Exchange::IPackageInstaller* packageInstallerInterface = nullptr;
 
     // Test parameters
     Exchange::IDownloadManager::Options options;
@@ -188,7 +180,6 @@ protected:
          2, Core::Thread::DefaultStackSize(), 16)),
        plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
        mDownloadManagerImpl(Core::ProxyType<Plugin::DownloadManagerImplementation>::Create()),
-       packageManagerPlugin(Core::ProxyType<Plugin::PackageManager>::Create()),
        mJsonRpcHandler(*plugin),  // This needs to be initialized even if plugin is invalid
         INIT_CONX(1,0)
     {
@@ -271,9 +262,7 @@ protected:
             // The interface wrapping mechanism in Wraps.cpp:387 is failing with null implementation
             TEST_LOG("Skipping IDownloadManager interface querying to prevent segfault in Wraps.cpp");
             downloadManagerInterface = nullptr;
-            packageDownloaderInterface = nullptr;
-            packageInstallerInterface = nullptr;
-            TEST_LOG("All interfaces set to null - individual tests will handle unavailability");
+            TEST_LOG("DownloadManager interface set to null - individual tests will handle unavailability");
              
             TEST_LOG("createResources - All done!");
             status = Core::ERROR_NONE;
@@ -296,16 +285,6 @@ protected:
             if (downloadManagerInterface) {
                 downloadManagerInterface->Release();
                 downloadManagerInterface = nullptr;
-            }
-
-            if (packageDownloaderInterface) {
-                packageDownloaderInterface->Release();
-                packageDownloaderInterface = nullptr;
-            }
-
-            if (packageInstallerInterface) {
-                packageInstallerInterface->Release();
-                packageInstallerInterface = nullptr;
             }
 
             if (dispatcher) {
@@ -580,13 +559,6 @@ TEST_F(DownloadManagerTest, pluginLifecycleTest) {
         TEST_LOG("DownloadManagerImplementation is valid");
     } else {
         TEST_LOG("DownloadManagerImplementation is not valid");
-    }
-
-    // Test PackageManager plugin reference
-    if (packageManagerPlugin.IsValid()) {
-        TEST_LOG("PackageManager plugin reference is valid");
-    } else {
-        TEST_LOG("PackageManager plugin reference is not valid");
     }
 
     TEST_LOG("Plugin lifecycle test completed");
@@ -1248,29 +1220,3 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
     deinitforComRpc();
 }
 
-/* Test Case for PackageManager integration
- * 
- * Test integration with PackageManager functionality
- * Verify package download and installation capabilities
- */
-TEST_F(DownloadManagerTest, packageManagerIntegration) {
-
-    TEST_LOG("Starting PackageManager integration test");
-
-    if (packageManagerPlugin.IsValid()) {
-        TEST_LOG("PackageManager plugin is available for integration");
-        
-        // Test basic integration scenarios
-        TEST_LOG("Testing DownloadManager and PackageManager integration");
-        
-        // Mock package download scenario
-        TEST_LOG("Simulating package download scenario");
-        
-        // Mock package installation scenario  
-        TEST_LOG("Simulating package installation scenario");
-        
-        TEST_LOG("PackageManager integration test completed successfully");
-    } else {
-        TEST_LOG("PackageManager plugin not available - integration test skipped");
-    }
-}
