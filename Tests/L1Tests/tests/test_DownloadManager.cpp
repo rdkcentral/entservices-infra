@@ -2494,16 +2494,21 @@ TEST_F(DownloadManagerImplementationTest, DownloadCoverageTest) {
     
     // Test the Download method with safe wrapper
     Core::hresult result = SafeMethodCall("Download", [this]() -> Core::hresult {
-        uint32_t downloadId = 0;
+        Exchange::IDownloadManager::Options options;
+        options.priority = true;
+        options.retries = 3;
+        options.rateLimit = 1000;
+        
+        string downloadId;
         
         // Test Download method - this should work without full Thunder initialization
-        uint32_t status = mDownloadManagerImpl->Download("http://example.com/test.zip", downloadId);
+        Core::hresult status = mDownloadManagerImpl->Download("http://example.com/test.zip", options, downloadId);
         
-        TEST_LOG("Download method called, returned status: %d, downloadId: %d", status, downloadId);
+        TEST_LOG("Download method called, returned status: %u, downloadId: %s", status, downloadId.c_str());
         
         // For basic functionality test, we expect some response (not necessarily success)
         // since we're not fully initialized, but method should be callable
-        return (status != UINT32_MAX) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+        return status;
     });
     
     TEST_LOG("Download method test result: %d", result);
