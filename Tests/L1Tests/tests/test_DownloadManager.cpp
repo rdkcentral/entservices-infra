@@ -990,7 +990,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcSuccess) {
             
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforSignal(300);
+    waitforSignal(100);
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
@@ -1047,7 +1047,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
 
     getDownloadParams();
     
-    uint32_t timeout_ms = 200;
+    uint32_t timeout_ms = 100;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
