@@ -851,14 +851,6 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-	EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillOnce(::testing::Invoke(
-            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
-                onAppDownloadStatus.SetEvent();
-                return Core::ERROR_NONE;
-            }));
-
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 	
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
