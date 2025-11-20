@@ -1299,6 +1299,7 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
     );
     
     // Submit to worker pool (same way as dispatchEvent does internally)
+    TEST_LOG("Submitting OnDevicePluggedOut job to worker pool");
     Core::IWorkerPool::Instance().Submit(job);
     
     // Give worker pool time to process the job
