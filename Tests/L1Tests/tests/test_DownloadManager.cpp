@@ -472,7 +472,7 @@ protected:
     }
 
     // Methods merged from DownloadManagerImplementationTest
-    void SafeInitialize() 
+    Core::hresult SafeInitialize() 
     {
         TEST_LOG("SafeInitialize called - skipping actual Initialize to prevent segfaults");
         
@@ -481,14 +481,16 @@ protected:
         
         if (downloadManagerImpl.IsValid()) {
             TEST_LOG("DownloadManagerImplementation object is valid and ready for testing");
+            return Core::ERROR_NONE;
         } else {
             TEST_LOG("DownloadManagerImplementation object is not valid - tests may be limited");
+            return Core::ERROR_GENERAL;
         }
         
         TEST_LOG("SafeInitialize completed without calling actual Initialize()");
     }
 
-    void SafeDeinitialize() 
+    Core::hresult SafeDeinitialize() 
     {
         TEST_LOG("SafeDeinitialize called - skipping actual Deinitialize to prevent segfaults");
         
@@ -500,6 +502,7 @@ protected:
         }
         
         TEST_LOG("SafeDeinitialize completed without calling actual Deinitialize()");
+        return Core::ERROR_NONE;
     }
 };
 
