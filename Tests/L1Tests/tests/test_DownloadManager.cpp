@@ -1082,7 +1082,7 @@ TEST_F(DownloadManagerTest, progressMethodusingComRpcFailure) {
     string downloadId = "1001";
 
     // TC-25: Progress failure via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, interface->Progress(downloadId, progress));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Progress(downloadId, percent));
 
 	deinitforComRpc();
 }
