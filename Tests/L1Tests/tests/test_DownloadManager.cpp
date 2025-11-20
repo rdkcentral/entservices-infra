@@ -1207,7 +1207,7 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
 
     getDownloadParams();
     
-    uint32_t timeout_ms = 100;
+    uint32_t timeout_ms = 50;
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1220,9 +1220,9 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
-
     EXPECT_EQ(downloadId, "2001");
+
+	waitforSignal(timeout_ms);
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Pause(downloadId));
 
