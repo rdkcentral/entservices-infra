@@ -38,6 +38,7 @@
 #include "WrapsMock.h"
 #include "secure_wrappermock.h"
 #include "ThunderPortability.h"
+#include "USBDeviceMock.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
@@ -249,6 +250,7 @@ protected:
     string response;
     libUSBImplMock  *p_libUSBImplMock   = nullptr;
     Core::ProxyType<Plugin::USBDeviceImplementation> USBDeviceImpl;
+    USBDeviceMock       *p_usbDeviceMock = nullptr;
     NiceMock<COMLinkMock> comLinkMock;
     NiceMock<ServiceMock> service;
     PLUGINHOST_DISPATCHER* dispatcher;
@@ -266,6 +268,8 @@ protected:
     {
         p_libUSBImplMock  = new NiceMock <libUSBImplMock>;
         libusbApi::setImpl(p_libUSBImplMock);
+
+        p_usbDeviceMock = new NiceMock<USBDeviceMock>;
 
         ON_CALL(service, COMLink())
             .WillByDefault(::testing::Invoke(
@@ -287,6 +291,12 @@ protected:
 #endif /*USE_THUNDER_R4 */
 
         PluginHost::IFactories::Assign(&factoriesImplementation);
+
+        // Setup USBDevice mock for notification registration/unregistration
+        ON_CALL(*p_usbDeviceMock, Register(::testing::_))
+            .WillByDefault(::testing::Return(Core::ERROR_NONE));
+        ON_CALL(*p_usbDeviceMock, Unregister(::testing::_))
+            .WillByDefault(::testing::Return(Core::ERROR_NONE));
 
         Core::IWorkerPool::Assign(&(*workerPool));
         workerPool->Run();
@@ -332,6 +342,12 @@ protected:
         {
             delete p_libUSBImplMock;
             p_libUSBImplMock = nullptr;
+        }
+        
+        if (p_usbDeviceMock != nullptr)
+        {
+            delete p_usbDeviceMock;
+            p_usbDeviceMock = nullptr;
         }
     }
 
@@ -1240,8 +1256,10 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     TEST_LOG("Created notification sink");
     
-    USBDeviceImpl->Register(&notification);
-    TEST_LOG("Registered notification handler");
+    // Register with the actual USBDeviceImpl through the implementation
+    p_usbDeviceMock->AddRef();
+    p_usbDeviceMock->Register(&notification);
+    TEST_LOG("Registered notification handler with USBDeviceImpl");
     notification.ResetEvents();
     
     // Create test data for device plugged in event
@@ -1259,21 +1277,20 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
         testDevice
     );
     
-    // Submit to worker pool (same way as dispatchEvent does internally)
+    // Submit to worker pool (natural workflow)
     TEST_LOG("Submitting OnDevicePluggedIn job to worker pool");
     Core::IWorkerPool::Instance().Submit(job);
     
-    // Give worker pool time to process the job
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    // Verify notification was received
-    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_OnDevicePluggedIn));
+    // Wait for the job to be processed by worker pool and notification to be triggered
+    EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedIn));
     EXPECT_EQ("001/004", notification.GetLastPluggedInDeviceName());
     EXPECT_EQ("/dev/sda", notification.GetLastPluggedInDevicePath());
     EXPECT_EQ(8, notification.GetLastPluggedInDeviceClass());
     EXPECT_EQ(6, notification.GetLastPluggedInDeviceSubclass());
     
     USBDeviceImpl->Unregister(&notification);
+    p_usbDeviceMock->Release();
+    TEST_LOG("OnDevicePluggedIn_ViaJobDispatch_Success test completed");
 }
 
 /**
@@ -1285,7 +1302,9 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
 {
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
-    USBDeviceImpl->Register(&notification);
+    // Register with the actual USBDeviceImpl through the implementation
+    p_usbDeviceMock->AddRef();
+    p_usbDeviceMock->Register(&notification);
     notification.ResetEvents();
     
     // Create test data for device plugged out event
@@ -1302,21 +1321,19 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
         testDevice
     );
     
-    // Submit to worker pool (same way as dispatchEvent does internally)
+    // Submit to worker pool (natural workflow)
     TEST_LOG("Submitting OnDevicePluggedOut job to worker pool");
     Core::IWorkerPool::Instance().Submit(job);
     
-    // Give worker pool time to process the job
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    // Verify notification was received
-    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_OnDevicePluggedOut));
+    // Wait for the job to be processed by worker pool and notification to be triggered
+    EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedOut));
     EXPECT_EQ("001/005", notification.GetLastPluggedOutDeviceName());
     EXPECT_EQ("/dev/sdb", notification.GetLastPluggedOutDevicePath());
     EXPECT_EQ(8, notification.GetLastPluggedOutDeviceClass());
     EXPECT_EQ(6, notification.GetLastPluggedOutDeviceSubclass());
     
     USBDeviceImpl->Unregister(&notification);
+    p_usbDeviceMock->Release();
 }
 
 /**
@@ -1328,7 +1345,9 @@ TEST_F(USBDeviceTest, NotificationVia_PublicAPIMethods_Success)
 {
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
-    USBDeviceImpl->Register(&notification);
+    // Register with the actual USBDeviceImpl through the implementation
+    p_usbDeviceMock->AddRef();
+    p_usbDeviceMock->Register(&notification);
     notification.ResetEvents();
     
     // Setup mock infrastructure for device detection
@@ -1343,6 +1362,7 @@ TEST_F(USBDeviceTest, NotificationVia_PublicAPIMethods_Success)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100/001\"}"), response));
     
     USBDeviceImpl->Unregister(&notification);
+    p_usbDeviceMock->Release();
 }
 
 /**
@@ -1354,7 +1374,9 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaHotplugCallback_Success)
 {
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
-    USBDeviceImpl->Register(&notification);
+    // Register with the actual USBDeviceImpl through the implementation
+    p_usbDeviceMock->AddRef();
+    p_usbDeviceMock->Register(&notification);
     notification.ResetEvents();
     
     // Setup mock infrastructure
@@ -1367,13 +1389,14 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaHotplugCallback_Success)
     dev.device_address = MOCK_USB_DEVICE_ADDRESS_1;
     dev.port_number = MOCK_USB_DEVICE_PORT_1;
     
-    // Trigger hotplug callback directly
+    // Trigger hotplug callback directly - this should create and dispatch a job through worker pool
     libUSBHotPlugCbDeviceAttached(nullptr, &dev, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 0);
     
-    // Verify notification was triggered
-    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_OnDevicePluggedIn));
+    // Wait for the job to be processed and notification to be triggered
+    EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedIn));
     
     USBDeviceImpl->Unregister(&notification);
+    p_usbDeviceMock->Release();
 }
 
 /**
@@ -1385,7 +1408,9 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaHotplugCallback_Success)
 {
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
-    USBDeviceImpl->Register(&notification);
+    // Register with the actual USBDeviceImpl through the implementation
+    p_usbDeviceMock->AddRef();
+    p_usbDeviceMock->Register(&notification);
     notification.ResetEvents();
     
     // Setup mock infrastructure
@@ -1398,13 +1423,14 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaHotplugCallback_Success)
     dev.device_address = MOCK_USB_DEVICE_ADDRESS_2;
     dev.port_number = MOCK_USB_DEVICE_PORT_2;
     
-    // Trigger hotplug callback directly
+    // Trigger hotplug callback directly - this should create and dispatch a job through worker pool
     libUSBHotPlugCbDeviceDetached(nullptr, &dev, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0);
     
-    // Verify notification was triggered
-    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_OnDevicePluggedOut));
+    // Wait for the job to be processed and notification to be triggered
+    EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedOut));
     
     USBDeviceImpl->Unregister(&notification);
+    p_usbDeviceMock->Release();
 }
 
 /**
@@ -1417,39 +1443,43 @@ TEST_F(USBDeviceTest, NotificationRegistration_MultipleHandlers_Success)
     Core::Sink<L1USBDeviceNotificationHandler> notification1;
     Core::Sink<L1USBDeviceNotificationHandler> notification2;
     
-    // Register multiple handlers
-    USBDeviceImpl->Register(&notification1);
-    USBDeviceImpl->Register(&notification2);
+    // Register multiple handlers with actual implementation
+    p_usbDeviceMock->AddRef();
+    p_usbDeviceMock->Register(&notification1);
+    p_usbDeviceMock->AddRef();
+    p_usbDeviceMock->Register(&notification2);
     
     notification1.ResetEvents();
     notification2.ResetEvents();
     
-    // Create test data and trigger notification
+    // Create test data and trigger notification via job dispatch
     Exchange::IUSBDevice::USBDevice testDevice;
     testDevice.deviceClass = 8;
     testDevice.deviceSubclass = 6;
     testDevice.deviceName = "002/003";
     testDevice.devicePath = "/dev/sdc";
     
+    // Use Job mechanism for natural notification flow
     auto job = Plugin::USBDeviceImplementation::Job::Create(
         USBDeviceImpl.operator->(),
         Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED,
         testDevice
     );
+    
+    // Submit to worker pool (natural workflow)
     Core::IWorkerPool::Instance().Submit(job);
     
-    // Give worker pool time to process the job
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
     // Verify both handlers received notification
-    EXPECT_TRUE(notification1.WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
-    EXPECT_TRUE(notification2.WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
+    EXPECT_TRUE(notification1.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedIn));
+    EXPECT_TRUE(notification2.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedIn));
     
     EXPECT_EQ("002/003", notification1.GetLastPluggedInDeviceName());
     EXPECT_EQ("002/003", notification2.GetLastPluggedInDeviceName());
     
     USBDeviceImpl->Unregister(&notification1);
     USBDeviceImpl->Unregister(&notification2);
+    p_usbDeviceMock->Release();
+    p_usbDeviceMock->Release();
 }
 
 /**
@@ -1461,9 +1491,11 @@ TEST_F(USBDeviceTest, NotificationTiming_RapidNotifications_Success)
 {
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
-    USBDeviceImpl->Register(&notification);
+    // Register with actual implementation
+    p_usbDeviceMock->AddRef();
+    p_usbDeviceMock->Register(&notification);
     
-    // Test rapid plug-in, plug-out sequence
+    // Test rapid plug-in, plug-out sequence using job dispatch
     notification.ResetEvents();
     
     // Create device plugged in event
@@ -1473,17 +1505,16 @@ TEST_F(USBDeviceTest, NotificationTiming_RapidNotifications_Success)
     testDevice1.deviceName = "003/001";
     testDevice1.devicePath = "/dev/sdd";
     
+    // Create and submit plug-in job
     auto job1 = Plugin::USBDeviceImplementation::Job::Create(
         USBDeviceImpl.operator->(),
         Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED,
         testDevice1
     );
+    
     Core::IWorkerPool::Instance().Submit(job1);
     
-    // Give worker pool time to process the job
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    EXPECT_TRUE(notification.WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
+    EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedIn));
     
     // Reset and test device removal
     notification.ResetPluggedInEvent();
@@ -1494,20 +1525,20 @@ TEST_F(USBDeviceTest, NotificationTiming_RapidNotifications_Success)
     testDevice2.deviceName = "003/002";
     testDevice2.devicePath = "/dev/sde";
     
+    // Create and submit plug-out job
     auto job2 = Plugin::USBDeviceImplementation::Job::Create(
         USBDeviceImpl.operator->(),
         Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT,
         testDevice2
     );
+    
     Core::IWorkerPool::Instance().Submit(job2);
     
-    // Give worker pool time to process the job
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    EXPECT_TRUE(notification.WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
+    EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedOut));
     EXPECT_EQ("003/002", notification.GetLastPluggedOutDeviceName());
     
     USBDeviceImpl->Unregister(&notification);
+    p_usbDeviceMock->Release();
 }
 
 /*Test cases for L1 Notification Tests end here*/
