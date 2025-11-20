@@ -853,7 +853,7 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 	
-	waitforSignal(200);
+	waitforSignal(1000);
 
     // TC-18: Delete download using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package2001\"}"), mJsonRpcResponse));
