@@ -403,20 +403,14 @@ protected:
                 auto deinitResult = downloadManagerImpl->Deinitialize(mServiceMock);
                 TEST_LOG("Deinitialize result: %u", deinitResult);
                 
-                // Properly release the interface reference first
-                if (downloadManagerInterface != nullptr) {
-                    downloadManagerInterface->Release();
-                    downloadManagerInterface = nullptr;
-                }
+                // Clear the interface pointers (no need to call Release on static_cast pointer)
+                downloadManagerInterface = nullptr;
                 mockImpl = nullptr;
                 downloadManagerImpl.Release();
                 TEST_LOG("DownloadManagerImplementation cleaned up successfully");
             } catch (const std::exception& e) {
                 TEST_LOG("Exception during DownloadManagerImplementation cleanup: %s", e.what());
-                if (downloadManagerInterface != nullptr) {
-                    downloadManagerInterface->Release();
-                    downloadManagerInterface = nullptr;
-                }
+                downloadManagerInterface = nullptr;
                 mockImpl = nullptr;
                 downloadManagerImpl.Release();
             } catch (...) {
