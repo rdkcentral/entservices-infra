@@ -212,7 +212,6 @@ namespace Plugin {
     private:
         inline string GetInstalledVersion(const string& id) {
             for (auto const& [key, state] : mState) {
-                //LOGDBG("packageId: '%s' version:'%s' state:%d", key.first.c_str(), key.second.c_str(), (int) state.installState);
                 if ((id.compare(key.first) == 0) &&
                     (state.installState == InstallState::INSTALLED || state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
                     return key.second;
@@ -223,7 +222,6 @@ namespace Plugin {
 
         inline string GetBlockedVersion(const string& id) {
             for (auto const& [key, state] : mState) {
-                //LOGDBG("packageId: '%s' version:'%s' state:%d", key.first.c_str(), key.second.c_str(), (int) state.installState);
                 if ((id.compare(key.first) == 0) &&
                     (state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
                     return key.second;
