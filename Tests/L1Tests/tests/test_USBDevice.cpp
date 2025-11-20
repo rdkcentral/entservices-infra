@@ -1236,9 +1236,12 @@ TEST_F(USBDeviceTest, getDeviceInfoSuccessCase)
  */
 TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
 {
+    TEST_LOG("Creating notification handler");
     L1USBDeviceNotificationHandler* notificationHandler = new L1USBDeviceNotificationHandler();
     
+    TEST_LOG("Registering notification handler");
     USBDeviceImpl->Register(notificationHandler);
+    TEST_LOG("Registered notification handler");
     notificationHandler->ResetEvents();
     
     // Create test data for device plugged in event
@@ -1247,6 +1250,7 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
     testDevice.deviceSubclass = 6;
     testDevice.deviceName = "001/004";
     testDevice.devicePath = "/dev/sda";
+    TEST_LOG("Created test device for OnDevicePluggedIn event");
     
     // Use Job mechanism for natural notification flow - submit to worker pool
     auto job = Plugin::USBDeviceImplementation::Job::Create(
