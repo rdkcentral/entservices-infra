@@ -252,10 +252,6 @@ namespace Plugin {
             virtual void Dispatch()
             {
                 mParent.OnConnectionStatusChanged(mAppId, mConnectionId, mConnected);
-                #ifdef ENABLE_APP_GATEWAY_AUTOMATION
-                // Notify automation server of connection status change
-                mParent.mWsManager.UpdateConnection(mConnectionId, mAppId, mConnected);
-                #endif
             }
 
         private:

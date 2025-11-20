@@ -286,6 +286,11 @@ namespace WPEFramework
             {
                 notification->OnAppConnectionChanged(appId, connectionId, connected);
             }
+
+            #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+            // Notify automation server of connection status change
+            mWsManager.UpdateConnection(connectionId, appId, connected);
+            #endif
         }
 
     } // namespace Plugin
