@@ -76,17 +76,12 @@ private:
     // Parameter storage for validation
     Exchange::IUSBDevice::USBDevice m_pluggedInDevice;
     Exchange::IUSBDevice::USBDevice m_pluggedOutDevice;
-    
-    // Reference counting
-    mutable Core::CriticalSection m_refCountLock;
-    mutable uint32_t m_refCount;
 
 public:
     NotificationHandler() 
         : m_event_signalled(0)
         , m_onDevicePluggedInReceived(false)
         , m_onDevicePluggedOutReceived(false)
-        , m_refCount(1)
     {
         m_pluggedInDevice.deviceClass = 0;
         m_pluggedInDevice.deviceSubclass = 0;
@@ -104,28 +99,6 @@ public:
     BEGIN_INTERFACE_MAP(NotificationHandler)
     INTERFACE_ENTRY(Exchange::IUSBDevice::INotification)
     END_INTERFACE_MAP
-
-    // IReferenceCounted interface implementation
-    void AddRef() const override
-    {
-        m_refCountLock.Lock();
-        ++m_refCount;
-        m_refCountLock.Unlock();
-    }
-
-    uint32_t Release() const override
-    {
-        m_refCountLock.Lock();
-        --m_refCount;
-        uint32_t refCount = m_refCount;
-        m_refCountLock.Unlock();
-        
-        if (refCount == 0) {
-            delete this;
-            return Core::ERROR_DESTRUCTION_SUCCEEDED;
-        }
-        return refCount;
-    }
 
     // Notification interface implementations
     void OnDevicePluggedIn(const Exchange::IUSBDevice::USBDevice& device) override
@@ -1110,14 +1083,14 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
 {
     TEST_LOG("Testing OnDevicePluggedIn notification via Job dispatch");
     
-    // Create local notification handler
-    NotificationHandler* notificationHandler = new NotificationHandler();
+    // Create local notification handler using Core::Sink
+    Core::Sink<NotificationHandler> notification;
     
     // Register notification handler
-    USBDeviceImpl->Register(notificationHandler);
+    USBDeviceImpl->Register(&notification);
     
     // Reset notification state
-    notificationHandler->resetAll();
+    notification.resetAll();
     
     // Create test device data
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1140,13 +1113,13 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
     
     // Wait for notification with timeout
     TEST_LOG("Waiting for OnDevicePluggedIn notification");
-    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
     
     // Verify notification was received
-    EXPECT_TRUE(notificationHandler->getOnDevicePluggedInReceived());
+    EXPECT_TRUE(notification.getOnDevicePluggedInReceived());
     
     // Validate device parameters
-    Exchange::IUSBDevice::USBDevice receivedDevice = notificationHandler->getPluggedInDevice();
+    Exchange::IUSBDevice::USBDevice receivedDevice = notification.getPluggedInDevice();
     EXPECT_EQ(testDevice.deviceClass, receivedDevice.deviceClass);
     EXPECT_EQ(testDevice.deviceSubclass, receivedDevice.deviceSubclass);
     EXPECT_EQ(testDevice.deviceName, receivedDevice.deviceName);
@@ -1154,9 +1127,8 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
     
     TEST_LOG("OnDevicePluggedIn notification received and validated successfully");
     
-    // Cleanup
-    USBDeviceImpl->Unregister(notificationHandler);
-    notificationHandler->Release();
+    // Cleanup - Core::Sink handles unregister automatically
+    USBDeviceImpl->Unregister(&notification);
 }
 
 /**
@@ -1171,14 +1143,14 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
 {
     TEST_LOG("Testing OnDevicePluggedOut notification via Job dispatch");
     
-    // Create local notification handler
-    NotificationHandler* notificationHandler = new NotificationHandler();
+    // Create local notification handler using Core::Sink
+    Core::Sink<NotificationHandler> notification;
     
     // Register notification handler
-    USBDeviceImpl->Register(notificationHandler);
+    USBDeviceImpl->Register(&notification);
     
     // Reset notification state
-    notificationHandler->resetAll();
+    notification.resetAll();
     
     // Create test device data
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1201,13 +1173,13 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
     
     // Wait for notification with timeout
     TEST_LOG("Waiting for OnDevicePluggedOut notification");
-    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
     
     // Verify notification was received
-    EXPECT_TRUE(notificationHandler->getOnDevicePluggedOutReceived());
+    EXPECT_TRUE(notification.getOnDevicePluggedOutReceived());
     
     // Validate device parameters
-    Exchange::IUSBDevice::USBDevice receivedDevice = notificationHandler->getPluggedOutDevice();
+    Exchange::IUSBDevice::USBDevice receivedDevice = notification.getPluggedOutDevice();
     EXPECT_EQ(testDevice.deviceClass, receivedDevice.deviceClass);
     EXPECT_EQ(testDevice.deviceSubclass, receivedDevice.deviceSubclass);
     EXPECT_EQ(testDevice.deviceName, receivedDevice.deviceName);
@@ -1215,9 +1187,8 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
     
     TEST_LOG("OnDevicePluggedOut notification received and validated successfully");
     
-    // Cleanup
-    USBDeviceImpl->Unregister(notificationHandler);
-    notificationHandler->Release();
+    // Cleanup - Core::Sink handles unregister automatically
+    USBDeviceImpl->Unregister(&notification);
 }
 
 /**
@@ -1231,19 +1202,19 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_MultipleHandlers_AllNotified)
     TEST_LOG("Testing OnDevicePluggedIn with multiple notification handlers");
     
     // Create multiple notification handlers
-    NotificationHandler* handler1 = new NotificationHandler();
-    NotificationHandler* handler2 = new NotificationHandler();
-    NotificationHandler* handler3 = new NotificationHandler();
+    Core::Sink<NotificationHandler> notification1;
+    Core::Sink<NotificationHandler> notification2;
+    Core::Sink<NotificationHandler> notification3;
     
     // Register all handlers
-    USBDeviceImpl->Register(handler1);
-    USBDeviceImpl->Register(handler2);
-    USBDeviceImpl->Register(handler3);
+    USBDeviceImpl->Register(&notification1);
+    USBDeviceImpl->Register(&notification2);
+    USBDeviceImpl->Register(&notification3);
     
     // Reset all notification states
-    handler1->resetAll();
-    handler2->resetAll();
-    handler3->resetAll();
+    notification1.resetAll();
+    notification2.resetAll();
+    notification3.resetAll();
     
     // Create test device data
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1264,18 +1235,18 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_MultipleHandlers_AllNotified)
     
     // Verify all handlers received notification
     TEST_LOG("Verifying all handlers received notification");
-    EXPECT_TRUE(handler1->WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
-    EXPECT_TRUE(handler2->WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
-    EXPECT_TRUE(handler3->WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
+    EXPECT_TRUE(notification1.WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
+    EXPECT_TRUE(notification2.WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
+    EXPECT_TRUE(notification3.WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
     
-    EXPECT_TRUE(handler1->getOnDevicePluggedInReceived());
-    EXPECT_TRUE(handler2->getOnDevicePluggedInReceived());
-    EXPECT_TRUE(handler3->getOnDevicePluggedInReceived());
+    EXPECT_TRUE(notification1.getOnDevicePluggedInReceived());
+    EXPECT_TRUE(notification2.getOnDevicePluggedInReceived());
+    EXPECT_TRUE(notification3.getOnDevicePluggedInReceived());
     
     // Verify all handlers received same device data
-    Exchange::IUSBDevice::USBDevice received1 = handler1->getPluggedInDevice();
-    Exchange::IUSBDevice::USBDevice received2 = handler2->getPluggedInDevice();
-    Exchange::IUSBDevice::USBDevice received3 = handler3->getPluggedInDevice();
+    Exchange::IUSBDevice::USBDevice received1 = notification1.getPluggedInDevice();
+    Exchange::IUSBDevice::USBDevice received2 = notification2.getPluggedInDevice();
+    Exchange::IUSBDevice::USBDevice received3 = notification3.getPluggedInDevice();
     
     EXPECT_EQ(testDevice.deviceName, received1.deviceName);
     EXPECT_EQ(testDevice.deviceName, received2.deviceName);
@@ -1284,13 +1255,9 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_MultipleHandlers_AllNotified)
     TEST_LOG("All handlers notified successfully");
     
     // Cleanup
-    USBDeviceImpl->Unregister(handler1);
-    USBDeviceImpl->Unregister(handler2);
-    USBDeviceImpl->Unregister(handler3);
-    
-    handler1->Release();
-    handler2->Release();
-    handler3->Release();
+    USBDeviceImpl->Unregister(&notification1);
+    USBDeviceImpl->Unregister(&notification2);
+    USBDeviceImpl->Unregister(&notification3);
 }
 
 /**
@@ -1305,18 +1272,19 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_MultipleHandlers_AllNotified)
     
     // Create multiple notification handlers
     NotificationHandler* handler1 = new NotificationHandler();
-    NotificationHandler* handler2 = new NotificationHandler();
-    NotificationHandler* handler3 = new NotificationHandler();
+    Core::Sink<NotificationHandler> notification1;
+    Core::Sink<NotificationHandler> notification2;
+    Core::Sink<NotificationHandler> notification3;
     
     // Register all handlers
-    USBDeviceImpl->Register(handler1);
-    USBDeviceImpl->Register(handler2);
-    USBDeviceImpl->Register(handler3);
+    USBDeviceImpl->Register(&notification1);
+    USBDeviceImpl->Register(&notification2);
+    USBDeviceImpl->Register(&notification3);
     
     // Reset all notification states
-    handler1->resetAll();
-    handler2->resetAll();
-    handler3->resetAll();
+    notification1.resetAll();
+    notification2.resetAll();
+    notification3.resetAll();
     
     // Create test device data
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1337,18 +1305,18 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_MultipleHandlers_AllNotified)
     
     // Verify all handlers received notification
     TEST_LOG("Verifying all handlers received notification");
-    EXPECT_TRUE(handler1->WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
-    EXPECT_TRUE(handler2->WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
-    EXPECT_TRUE(handler3->WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
+    EXPECT_TRUE(notification1.WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
+    EXPECT_TRUE(notification2.WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
+    EXPECT_TRUE(notification3.WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
     
-    EXPECT_TRUE(handler1->getOnDevicePluggedOutReceived());
-    EXPECT_TRUE(handler2->getOnDevicePluggedOutReceived());
-    EXPECT_TRUE(handler3->getOnDevicePluggedOutReceived());
+    EXPECT_TRUE(notification1.getOnDevicePluggedOutReceived());
+    EXPECT_TRUE(notification2.getOnDevicePluggedOutReceived());
+    EXPECT_TRUE(notification3.getOnDevicePluggedOutReceived());
     
     // Verify all handlers received same device data
-    Exchange::IUSBDevice::USBDevice received1 = handler1->getPluggedOutDevice();
-    Exchange::IUSBDevice::USBDevice received2 = handler2->getPluggedOutDevice();
-    Exchange::IUSBDevice::USBDevice received3 = handler3->getPluggedOutDevice();
+    Exchange::IUSBDevice::USBDevice received1 = notification1.getPluggedOutDevice();
+    Exchange::IUSBDevice::USBDevice received2 = notification2.getPluggedOutDevice();
+    Exchange::IUSBDevice::USBDevice received3 = notification3.getPluggedOutDevice();
     
     EXPECT_EQ(testDevice.deviceClass, received1.deviceClass);
     EXPECT_EQ(testDevice.deviceClass, received2.deviceClass);
@@ -1357,13 +1325,9 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_MultipleHandlers_AllNotified)
     TEST_LOG("All handlers notified successfully");
     
     // Cleanup
-    USBDeviceImpl->Unregister(handler1);
-    USBDeviceImpl->Unregister(handler2);
-    USBDeviceImpl->Unregister(handler3);
-    
-    handler1->Release();
-    handler2->Release();
-    handler3->Release();
+    USBDeviceImpl->Unregister(&notification1);
+    USBDeviceImpl->Unregister(&notification2);
+    USBDeviceImpl->Unregister(&notification3);
 }
 
 /**
@@ -1377,13 +1341,13 @@ TEST_F(USBDeviceTest, SequentialEvents_PlugInThenPlugOut_BothNotifications)
     TEST_LOG("Testing sequential plug in and plug out events");
     
     // Create notification handler
-    NotificationHandler* notificationHandler = new NotificationHandler();
+    Core::Sink<NotificationHandler> notification;
     
     // Register handler
-    USBDeviceImpl->Register(notificationHandler);
+    USBDeviceImpl->Register(&notification);
     
     // Reset state
-    notificationHandler->resetAll();
+    notification.resetAll();
     
     // Create test device data
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1402,14 +1366,14 @@ TEST_F(USBDeviceTest, SequentialEvents_PlugInThenPlugOut_BothNotifications)
     jobPlugIn->Dispatch();
     
     // Verify plug in notification
-    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
-    EXPECT_TRUE(notificationHandler->getOnDevicePluggedInReceived());
-    EXPECT_EQ(testDevice.deviceName, notificationHandler->getPluggedInDevice().deviceName);
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
+    EXPECT_TRUE(notification.getOnDevicePluggedInReceived());
+    EXPECT_EQ(testDevice.deviceName, notification.getPluggedInDevice().deviceName);
     
     TEST_LOG("Plug in notification verified, now testing plug out");
     
     // Reset only plug out state
-    notificationHandler->resetOnDevicePluggedOut();
+    notification.resetOnDevicePluggedOut();
     
     // Second event: Device plugged out
     TEST_LOG("Dispatching device plug out event");
@@ -1421,18 +1385,17 @@ TEST_F(USBDeviceTest, SequentialEvents_PlugInThenPlugOut_BothNotifications)
     jobPlugOut->Dispatch();
     
     // Verify plug out notification
-    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
-    EXPECT_TRUE(notificationHandler->getOnDevicePluggedOutReceived());
-    EXPECT_EQ(testDevice.deviceName, notificationHandler->getPluggedOutDevice().deviceName);
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_onDevicePluggedOut));
+    EXPECT_TRUE(notification.getOnDevicePluggedOutReceived());
+    EXPECT_EQ(testDevice.deviceName, notification.getPluggedOutDevice().deviceName);
     
     // Verify plug in is still recorded
-    EXPECT_TRUE(notificationHandler->getOnDevicePluggedInReceived());
+    EXPECT_TRUE(notification.getOnDevicePluggedInReceived());
     
     TEST_LOG("Sequential events handled successfully");
     
     // Cleanup
-    USBDeviceImpl->Unregister(notificationHandler);
-    notificationHandler->Release();
+    USBDeviceImpl->Unregister(&notification);
 }
 
 /**
@@ -1445,12 +1408,12 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_VariousDeviceClasses_AllNotified)
 {
     TEST_LOG("Testing notifications with various device classes");
     
-    NotificationHandler* notificationHandler = new NotificationHandler();
-    USBDeviceImpl->Register(notificationHandler);
+    Core::Sink<NotificationHandler> notification;
+    USBDeviceImpl->Register(&notification);
     
     // Test Mass Storage device
     TEST_LOG("Testing Mass Storage device (class 8)");
-    notificationHandler->resetAll();
+    notification.resetAll();
     Exchange::IUSBDevice::USBDevice massStorageDevice;
     massStorageDevice.deviceClass = 8;  // Mass Storage
     massStorageDevice.deviceSubclass = 6;
@@ -1464,12 +1427,12 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_VariousDeviceClasses_AllNotified)
     );
     job1->Dispatch();
     
-    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
-    EXPECT_EQ(8, notificationHandler->getPluggedInDevice().deviceClass);
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
+    EXPECT_EQ(8, notification.getPluggedInDevice().deviceClass);
     
     // Test HID device
     TEST_LOG("Testing HID device (class 3)");
-    notificationHandler->resetAll();
+    notification.resetAll();
     Exchange::IUSBDevice::USBDevice hidDevice;
     hidDevice.deviceClass = 3;  // HID
     hidDevice.deviceSubclass = 1;
@@ -1483,12 +1446,12 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_VariousDeviceClasses_AllNotified)
     );
     job2->Dispatch();
     
-    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
-    EXPECT_EQ(3, notificationHandler->getPluggedInDevice().deviceClass);
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
+    EXPECT_EQ(3, notification.getPluggedInDevice().deviceClass);
     
     // Test Audio device
     TEST_LOG("Testing Audio device (class 1)");
-    notificationHandler->resetAll();
+    notification.resetAll();
     Exchange::IUSBDevice::USBDevice audioDevice;
     audioDevice.deviceClass = 1;  // Audio
     audioDevice.deviceSubclass = 2;
@@ -1502,14 +1465,13 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_VariousDeviceClasses_AllNotified)
     );
     job3->Dispatch();
     
-    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
-    EXPECT_EQ(1, notificationHandler->getPluggedInDevice().deviceClass);
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_onDevicePluggedIn));
+    EXPECT_EQ(1, notification.getPluggedInDevice().deviceClass);
     
     TEST_LOG("All device classes notified successfully");
     
     // Cleanup
-    USBDeviceImpl->Unregister(notificationHandler);
-    notificationHandler->Release();
+    USBDeviceImpl->Unregister(&notification);
 }
 
 /**
@@ -1522,14 +1484,14 @@ TEST_F(USBDeviceTest, UnregisteredHandler_NoNotifications_Success)
 {
     TEST_LOG("Testing that unregistered handler does not receive notifications");
     
-    NotificationHandler* notificationHandler = new NotificationHandler();
+    Core::Sink<NotificationHandler> notification;
     
     // Register and then immediately unregister
-    USBDeviceImpl->Register(notificationHandler);
-    USBDeviceImpl->Unregister(notificationHandler);
+    USBDeviceImpl->Register(&notification);
+    USBDeviceImpl->Unregister(&notification);
     
     // Reset state
-    notificationHandler->resetAll();
+    notification.resetAll();
     
     // Create test device
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1551,12 +1513,9 @@ TEST_F(USBDeviceTest, UnregisteredHandler_NoNotifications_Success)
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     
     // Verify no notification was received
-    EXPECT_FALSE(notificationHandler->getOnDevicePluggedInReceived());
+    EXPECT_FALSE(notification.getOnDevicePluggedInReceived());
     
     TEST_LOG("Confirmed unregistered handler did not receive notification");
-    
-    // Cleanup
-    notificationHandler->Release();
 }
 
 /*Test cases for L1 Notifications end here*/
