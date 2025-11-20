@@ -328,11 +328,15 @@ protected:
                 TEST_LOG("Initialize result: %u", initResult);
                 
                 if (initResult == Core::ERROR_NONE) {
-                    // Use the implementation as the interface (it inherits from IDownloadManager)
-                    downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*downloadManagerImpl));
-                    // Keep a reference to prevent deletion
-                    mockImpl = downloadManagerInterface;
-                    TEST_LOG("DownloadManagerImplementation created and initialized successfully");
+                    // Query for the IDownloadManager interface properly using Thunder framework
+                    downloadManagerInterface = downloadManagerImpl->QueryInterface<Exchange::IDownloadManager>();
+                    if (downloadManagerInterface != nullptr) {
+                        // Keep a reference to prevent deletion
+                        mockImpl = downloadManagerInterface;
+                        TEST_LOG("DownloadManagerImplementation created and initialized successfully");
+                    } else {
+                        TEST_LOG("Failed to query IDownloadManager interface");
+                    }
                 } else {
                     TEST_LOG("Failed to initialize DownloadManagerImplementation, result: %u", initResult);
                     downloadManagerInterface = nullptr;
@@ -403,14 +407,20 @@ protected:
                 auto deinitResult = downloadManagerImpl->Deinitialize(mServiceMock);
                 TEST_LOG("Deinitialize result: %u", deinitResult);
                 
-                // Clear the interface pointers and release the implementation
-                downloadManagerInterface = nullptr;
+                // Properly release the interface reference first
+                if (downloadManagerInterface != nullptr) {
+                    downloadManagerInterface->Release();
+                    downloadManagerInterface = nullptr;
+                }
                 mockImpl = nullptr;
                 downloadManagerImpl.Release();
                 TEST_LOG("DownloadManagerImplementation cleaned up successfully");
             } catch (const std::exception& e) {
                 TEST_LOG("Exception during DownloadManagerImplementation cleanup: %s", e.what());
-                downloadManagerInterface = nullptr;
+                if (downloadManagerInterface != nullptr) {
+                    downloadManagerInterface->Release();
+                    downloadManagerInterface = nullptr;
+                }
                 mockImpl = nullptr;
                 downloadManagerImpl.Release();
             } catch (...) {
