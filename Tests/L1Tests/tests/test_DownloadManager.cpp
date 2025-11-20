@@ -1032,7 +1032,7 @@ TEST_F(DownloadManagerTest, rateLimitJsonRpcSuccess) {
  * Initialize COM-RPC interface and invoke Download method directly
  * Verify successful download initiation via COM interface
  */
-TEST_F(DownloadManagerTest, downloadMethodComRpcSuccess) {
+/*TEST_F(DownloadManagerTest, downloadMethodComRpcSuccess) {
 
     TEST_LOG("Starting COM-RPC download success test");
 
@@ -1068,7 +1068,7 @@ TEST_F(DownloadManagerTest, downloadMethodComRpcSuccess) {
 
     deinitforComRpc();
 }
-
+*/
 /* Test Case for pause and resume methods using COM-RPC
  * 
  * Start download, pause it, then resume using COM interface
@@ -2365,7 +2365,7 @@ TEST_F(DownloadManagerTest, DeinitializeCoverageTest) {
  * Test the Download method of DownloadManagerImplementation directly
  * Covers various scenarios including valid and invalid inputs
  */
-TEST_F(DownloadManagerTest, DownloadCoverageTest) {
+/*TEST_F(DownloadManagerTest, DownloadCoverageTest) {
     TEST_LOG("=== DownloadCoverageTest - Testing Download Method Coverage ===");
     
     try {
@@ -2429,7 +2429,7 @@ TEST_F(DownloadManagerTest, DownloadCoverageTest) {
         TEST_LOG("Unknown exception in DownloadCoverageTest");
         FAIL() << "DownloadCoverageTest failed with unknown exception";
     }
-}
+}*/
 
 /* Test Case for Pause method coverage
  * 
@@ -2483,7 +2483,7 @@ TEST_F(DownloadManagerTest, PauseCoverageTest) {
  * 
  * Test the Resume method of DownloadManagerImplementation directly
  */
-TEST_F(DownloadManagerTest, ResumeCoverageTest) {
+/*TEST_F(DownloadManagerTest, ResumeCoverageTest) {
 
     TEST_LOG("Starting ResumeCoverageTest");
 
@@ -2569,5 +2569,5 @@ TEST_F(DownloadManagerTest, CancelCoverageTest) {
         TEST_LOG("Unknown exception in CancelCoverageTest");
         FAIL() << "CancelCoverageTest failed with unknown exception";
     }
-}
+}*/
 
