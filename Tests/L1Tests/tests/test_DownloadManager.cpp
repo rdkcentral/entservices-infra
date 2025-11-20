@@ -165,8 +165,7 @@ protected:
             
             // Activate the plugin
             TEST_LOG("Activating plugin");
-            string result;
-            auto activateResult = plugin->Activate(mServiceMock);
+            Core::hresult activateResult = plugin->Activate(mServiceMock);
             TEST_LOG("Plugin activation result: %u", activateResult);
             
             // Set up dispatcher
@@ -179,19 +178,43 @@ protected:
            
             // Get IDownloadManager interface  
             TEST_LOG("Querying for IDownloadManager interface");
-            // Try to get the interface - using the interface directly from plugin
-            downloadManagerInterface = plugin->QueryInterface<Exchange::IDownloadManager>();
-            if (downloadManagerInterface != nullptr) {
-                TEST_LOG("IDownloadManager interface obtained successfully");
-            } else {
-                TEST_LOG("Failed to obtain IDownloadManager interface, trying alternative method");
-                // Alternative: cast the plugin directly if it implements the interface
-                downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*plugin));
-                if (downloadManagerInterface != nullptr) {
-                    TEST_LOG("IDownloadManager interface obtained via direct cast");
-                } else {
-                    TEST_LOG("Failed to obtain IDownloadManager interface via direct cast");
+            
+            // In Thunder framework, the plugin implements IDispatcher which provides access to interfaces
+            // Try to get the IDownloadManager interface through proper Thunder framework methods
+            void* interface = nullptr;
+            
+            if (dispatcher != nullptr) {
+                // Use the dispatcher to invoke and get the interface
+                string result;
+                auto invokeResult = dispatcher->Invoke(connection, _T(""), _T(""), result);
+                if (invokeResult == Core::ERROR_NONE) {
+                    TEST_LOG("Dispatcher invoke successful - interface should be available");
                 }
+                
+                // Try to query the interface from the plugin
+                Core::IUnknown* unknown = plugin->QueryInterface(Core::IUnknown::ID);
+                if (unknown != nullptr) {
+                    TEST_LOG("Got IUnknown interface from plugin");
+                    
+                    // The DownloadManager plugin should provide IDownloadManager interface
+                    // This is the proper way to get it in Thunder framework
+                    downloadManagerInterface = unknown->QueryInterface<Exchange::IDownloadManager>();
+                    
+                    if (downloadManagerInterface != nullptr) {
+                        TEST_LOG("SUCCESS: IDownloadManager interface obtained from plugin");
+                        downloadManagerInterface->AddRef();
+                    } else {
+                        TEST_LOG("Failed to query IDownloadManager interface from plugin");
+                    }
+                    
+                    unknown->Release();
+                } else {
+                    TEST_LOG("Failed to get IUnknown interface from plugin");
+                }
+            }
+            
+            if (downloadManagerInterface == nullptr) {
+                TEST_LOG("Could not get interface through plugin - will try direct creation in tests");
             }
              
             TEST_LOG("createResources - All done!");
