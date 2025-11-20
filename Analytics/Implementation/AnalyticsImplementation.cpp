@@ -93,24 +93,14 @@ namespace Plugin {
         event->eventSource = eventSource;
         event->eventSourceVersion = eventSourceVersion;
 
-        LOGINFO("Event Name: %s", eventName.c_str());
-        LOGINFO("Event Version: %s", eventVersion.c_str());
-        LOGINFO("Event Source: %s", eventSource.c_str());
-        LOGINFO("Event Source Version: %s", eventSourceVersion.c_str());
-        LOGINFO("cetList[]: ");
         std::string entry;
         while (cetList->Next(entry) == true) {
             event->cetList.push_back(entry);
-            LOGINFO("     %s ", entry.c_str());
         }
         event->epochTimestamp = epochTimestamp;
         event->uptimeTimestamp = uptimeTimestamp;
         event->appId = appId;
         event->eventPayload = eventPayload;
-
-        LOGINFO("Epoch Timestamp:  %" PRIu64, epochTimestamp);
-        LOGINFO("Uptime Timestamp: %" PRIu64, uptimeTimestamp);
-        LOGINFO("Event Payload: %s", eventPayload.c_str());
 
         bool valid = true;
         if (eventName.empty())

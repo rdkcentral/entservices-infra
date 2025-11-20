@@ -17,10 +17,6 @@
             "useComRpc": true,
             "permissionGroup": "org.rdk.permission.group.enhanced"
         },
-        "device.sku": {
-            "alias": "org.rdk.FbSettings",
-            "useComRpc": true
-        },
         "localization.countryCode": {
             "alias": "org.rdk.FbSettings",
             "useComRpc": true
@@ -38,10 +34,6 @@
             "alias": "org.rdk.FbSettings",
             "useComRpc": true,
             "permissionGroup": "org.rdk.permission.group.enhanced"
-        },
-        "secondscreen.friendlyName": {
-            "alias": "org.rdk.FbSettings",
-            "useComRpc": true
         },
         "localization.language": {
             "alias": "org.rdk.FbSettings",
