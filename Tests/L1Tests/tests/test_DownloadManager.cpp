@@ -302,33 +302,41 @@ protected:
         EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
 
-        // Set up additional mock expectations that DownloadManagerImplementation may need
+        EXPECT_CALL(*mServiceMock, Release())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
+
+        // Set up mock expectations that DownloadManagerImplementation needs
         EXPECT_CALL(*mServiceMock, ConfigLine())
           .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\", \"downloadId\": 3000}"));
+          .WillRepeatedly(::testing::Return(string("{\"downloadDir\": \"/tmp/downloads/\", \"downloadId\": 3000}")));
 
         EXPECT_CALL(*mServiceMock, SubSystems())
           .Times(::testing::AnyNumber())
           .WillRepeatedly(::testing::Return(mSubSystemMock));
 
-        // Create DownloadManagerImplementation directly to avoid interface wrapping issues
+        // Create DownloadManagerImplementation and initialize it properly
         try {
-            TEST_LOG("Creating DownloadManagerImplementation directly");
+            TEST_LOG("Creating DownloadManagerImplementation with proper initialization");
             
             // Create implementation instance
             downloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
             
             if (downloadManagerImpl.IsValid()) {
-                // CRITICAL: Do NOT call Initialize() as it triggers Thunder framework interface wrapping
-                // that causes segfault at Wraps.cpp:387 in test environment
-                TEST_LOG("BYPASSING Initialize() to prevent Thunder framework segfault");
-                TEST_LOG("DownloadManagerImplementation created without full initialization");
+                // Initialize the implementation - this sets mCurrentservice which is needed for Download method
+                auto initResult = downloadManagerImpl->Initialize(mServiceMock);
+                TEST_LOG("Initialize result: %u", initResult);
                 
-                // Use the implementation as the interface (it inherits from IDownloadManager)
-                downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*downloadManagerImpl));
-                // Keep a reference to prevent deletion
-                mockImpl = downloadManagerInterface;
-                TEST_LOG("DownloadManagerImplementation created successfully (without Initialize)");
+                if (initResult == Core::ERROR_NONE) {
+                    // Use the implementation as the interface (it inherits from IDownloadManager)
+                    downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*downloadManagerImpl));
+                    // Keep a reference to prevent deletion
+                    mockImpl = downloadManagerInterface;
+                    TEST_LOG("DownloadManagerImplementation created and initialized successfully");
+                } else {
+                    TEST_LOG("Failed to initialize DownloadManagerImplementation, result: %u", initResult);
+                    downloadManagerInterface = nullptr;
+                }
             } else {
                 TEST_LOG("Failed to create DownloadManagerImplementation");
                 downloadManagerInterface = nullptr;
@@ -389,16 +397,17 @@ protected:
         // Clean up the DownloadManagerImplementation interface
         if (downloadManagerImpl.IsValid()) {
             try {
-                // CRITICAL: Do NOT call Deinitialize() as it can trigger Thunder framework interface wrapping
-                // that causes segfault at Wraps.cpp:387 in test environment
-                TEST_LOG("BYPASSING Deinitialize() to prevent Thunder framework segfault");
-                TEST_LOG("Cleaning up DownloadManagerImplementation without Deinitialize");
+                TEST_LOG("Calling Deinitialize() on DownloadManagerImplementation");
+                
+                // Properly deinitialize the implementation
+                auto deinitResult = downloadManagerImpl->Deinitialize(mServiceMock);
+                TEST_LOG("Deinitialize result: %u", deinitResult);
                 
                 // Clear the interface pointers and release the implementation
                 downloadManagerInterface = nullptr;
                 mockImpl = nullptr;
                 downloadManagerImpl.Release();
-                TEST_LOG("DownloadManagerImplementation cleaned up successfully (without Deinitialize)");
+                TEST_LOG("DownloadManagerImplementation cleaned up successfully");
             } catch (const std::exception& e) {
                 TEST_LOG("Exception during DownloadManagerImplementation cleanup: %s", e.what());
                 downloadManagerInterface = nullptr;
