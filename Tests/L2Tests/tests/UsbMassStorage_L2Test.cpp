@@ -220,6 +220,8 @@ protected:
 };
 
 USBMassStorageTest:: USBMassStorageTest():L2TestMocks()
+    , m_controller_usbmassstorage(nullptr)
+    , m_usbmassstorageplugin(nullptr)
 {
         Core::JSONRPC::Message message;
         string response;
@@ -275,6 +277,17 @@ USBMassStorageTest::~USBMassStorageTest()
             }
             // No return value needed as function returns void
         }));
+
+	// Release COM-RPC interface objects if they were created
+    if (m_usbmassstorageplugin != nullptr) {
+        m_usbmassstorageplugin->Release();
+        m_usbmassstorageplugin = nullptr;
+    }
+    
+    if (m_controller_usbmassstorage != nullptr) {
+        m_controller_usbmassstorage->Release();
+        m_controller_usbmassstorage = nullptr;
+    }
 
     TEST_LOG("DeActivate USBDevice plugin");
 
