@@ -127,7 +127,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: feature/L1-L2test
 
       - name: Apply  ThunderTools
         run: |
@@ -586,7 +586,7 @@ jobs:
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
-          RdkServicesL2Test &&
+          RdkServicesL2Test < /dev/null &&
           cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithoutValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
 
@@ -602,7 +602,7 @@ jobs:
           --show-reachable=yes
           --track-fds=yes
           --fair-sched=try
-          RdkServicesL2Test &&
+          RdkServicesL2Test < /dev/null &&
           cp -rf $(pwd)/rdkL2TestResults.json $GITHUB_WORKSPACE/rdkL2TestOOPResultsWithValgrind.json &&
           rm -rf $(pwd)/rdkL2TestResults.json
           
