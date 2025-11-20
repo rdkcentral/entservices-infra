@@ -516,6 +516,8 @@ TEST_F(DownloadManagerTest, pauseMethodusingJsonRpcFailure) {
     // TC-7: Failure in pausing download using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"2001\"}"), mJsonRpcResponse));
 
+	waitforSignal(200);
+	
     deinitforJsonRpc();
 }
 
@@ -578,6 +580,8 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcFailure) {
     // TC-9: Failure in pausing download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Pause(downloadId));
 
+	waitforSignal(200);
+	
 	deinitforComRpc();
 }
 
@@ -637,6 +641,8 @@ TEST_F(DownloadManagerTest, resumeMethodusingJsonRpcSuccess) {
     // TC-11: Failure in resuming download using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"2001\"}"), mJsonRpcResponse));
 
+	waitforSignal(200);
+	 
 	deinitforJsonRpc();
 }
 
@@ -703,6 +709,8 @@ TEST_F(DownloadManagerTest, resumeMethodusingComRpcSuccess) {
     // TC-13: Failure in resuming download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Resume(downloadId));
 
+	waitforSignal(200);
+	  
 	deinitforComRpc();
 }
 
@@ -758,6 +766,8 @@ TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcSuccess) {
     // TC-15: Failure in cancelling download using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"2001\"}"), mJsonRpcResponse));
 
+	waitforSignal(200);
+	 
 	deinitforJsonRpc();
 }
 
@@ -820,6 +830,8 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcFailure) {
     // TC-17: Failure in cancelling download using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Cancel(downloadId));
 
+	waitforSignal(200);
+	
 	deinitforComRpc();
 }
 
@@ -884,6 +896,8 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcFailure) {
     // TC-19: Failure in delete using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"\"}"), mJsonRpcResponse));
 
+	waitforSignal(200);
+	
 	deinitforJsonRpc();
 }
 
@@ -944,6 +958,8 @@ TEST_F(DownloadManagerTest, deleteMethodusingComRpcFailure) {
     // TC-21: Failure in delete using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Delete(fileLocator));
 
+	waitforSignal(200);
+	
 	deinitforComRpc();
 }
 
@@ -1005,6 +1021,8 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
     // TC-23: Download progress failure using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"2001\"}"), mJsonRpcResponse));
 
+	waitforSignal(200);
+	
 	deinitforJsonRpc();
 }
 
@@ -1075,6 +1093,8 @@ TEST_F(DownloadManagerTest, progressMethodusingComRpcFailure) {
     // TC-25: Progress failure via downloadId using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, interface->Progress(downloadId, percent));
 
+	waitforSignal(200);
+	
 	deinitforComRpc();
 }
 
@@ -1093,6 +1113,8 @@ TEST_F(DownloadManagerTest, getStorageDetailsusingJsonRpc) {
     // TC-26: Get Storage Details using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getStorageDetails"), _T("{\"quotaKB\": \"1024\", \"usedKB\": \"568\"}"), mJsonRpcResponse));
 
+	waitforSignal(200);
+	
 	deinitforJsonRpc();
 }
 
@@ -1114,6 +1136,8 @@ TEST_F(DownloadManagerTest, getStorageDetailsusingComRpc) {
     // TC-27: Get Storage Details using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, interface->GetStorageDetails(quotaKB, usedKB));
 
+	waitforSignal(200);
+	
 	deinitforComRpc();
 }
 
@@ -1173,6 +1197,8 @@ TEST_F(DownloadManagerTest, rateLimitusingJsonRpcFailure) {
     // TC-29: Rate limit failure using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("rateLimit"), _T("{\"downloadId\": \"2001\", \"limit\": 1024}"), mJsonRpcResponse));
 
+	waitforSignal(200);
+	
 	deinitforJsonRpc();
 }
 
@@ -1242,5 +1268,7 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
     // TC-31: Rate limit failure using ComRpc
     EXPECT_EQ(Core::ERROR_GENERAL, interface->RateLimit(downloadId, limit));
 
+	waitforSignal(200);
+	 
 	deinitforComRpc();
 }
