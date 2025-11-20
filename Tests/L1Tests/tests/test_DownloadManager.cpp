@@ -239,28 +239,73 @@ protected:
             EXPECT_CALL(*mServiceMock, Release())
               .Times(::testing::AnyNumber());
 
-            // Skip plugin operations that may cause issues in test environment
-            TEST_LOG("Skipping plugin activation and initialization to prevent potential issues");
-            TEST_LOG("Tests will work with basic plugin object only");
+            // Properly initialize plugin with required setup
+            TEST_LOG("Initializing plugin and download manager implementation");
             
-            // Initialize plugin following established patterns but skip risky operations
+            // Initialize plugin following established patterns
             PluginHost::IFactories::Assign(&factoriesImplementation);
             
             if (!plugin.IsValid()) {
                 TEST_LOG("Plugin is null - cannot proceed");
                 return Core::ERROR_GENERAL;
             } else {
-                TEST_LOG("Plugin is valid, but skipping activation/initialization");
+                TEST_LOG("Plugin is valid, proceeding with initialization");
             }
             
-            // Skip dispatcher operations entirely
+            // Initialize the DownloadManagerImplementation with proper service
+            if (mDownloadManagerImpl.IsValid()) {
+                TEST_LOG("Initializing DownloadManagerImplementation with service mock");
+                
+                // Debug print statements for initialization
+                printf("[INIT] Setting up DownloadManagerImplementation\n");
+                fflush(stdout);
+                
+                try {
+                    // Initialize the implementation with the service mock (cast to PluginHost::IShell*)
+                    auto initResult = mDownloadManagerImpl->Initialize(static_cast<PluginHost::IShell*>(mServiceMock));
+                    TEST_LOG("DownloadManagerImplementation Initialize returned: %u", initResult);
+                    printf("[INIT] DownloadManagerImplementation Initialize returned: %u\n", initResult);
+                    fflush(stdout);
+                    
+                    if (initResult == Core::ERROR_NONE) {
+                        // Debug print for successful initialization
+                        printf("[INIT] DownloadManagerImplementation initialized successfully\n");
+                        fflush(stdout);
+                        
+                        // Try to get the interface from the implementation
+                        downloadManagerInterface = mDownloadManagerImpl->QueryInterface<Exchange::IDownloadManager>();
+                        if (downloadManagerInterface) {
+                            TEST_LOG("Successfully obtained IDownloadManager interface from implementation");
+                            printf("[INIT] IDownloadManager interface obtained successfully\n");
+                            fflush(stdout);
+                        } else {
+                            TEST_LOG("Failed to obtain IDownloadManager interface from implementation");
+                            printf("[INIT] Failed to get IDownloadManager interface\n");
+                            fflush(stdout);
+                        }
+                    } else {
+                        TEST_LOG("DownloadManagerImplementation initialization failed with error: %u", initResult);
+                        printf("[INIT] DownloadManagerImplementation initialization failed: %u\n", initResult);
+                        fflush(stdout);
+                    }
+                } catch (const std::exception& e) {
+                    TEST_LOG("Exception during DownloadManagerImplementation initialization: %s", e.what());
+                    printf("[INIT] Exception during initialization: %s\n", e.what());
+                    fflush(stdout);
+                } catch (...) {
+                    TEST_LOG("Unknown exception during DownloadManagerImplementation initialization");
+                    printf("[INIT] Unknown exception during initialization\n");
+                    fflush(stdout);
+                }
+            } else {
+                TEST_LOG("DownloadManagerImplementation is not valid");
+                printf("[INIT] DownloadManagerImplementation is invalid\n");
+                fflush(stdout);
+            }
+            
+            // Set up dispatcher if needed
             dispatcher = nullptr;
-            TEST_LOG("Dispatcher set to null to avoid interface wrapping issues");
-           
-            // Skip IDownloadManager interface querying to prevent potential issues
-            TEST_LOG("Skipping IDownloadManager interface querying to prevent potential segfaults");
-            downloadManagerInterface = nullptr;
-            TEST_LOG("DownloadManager interface set to null - individual tests will handle unavailability");
+            TEST_LOG("Dispatcher set to null for test environment");
              
             TEST_LOG("createResources - All done!");
             status = Core::ERROR_NONE;
@@ -809,12 +854,19 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
 TEST_F(DownloadManagerTest, downloadApiSuccessTest) {
 
     TEST_LOG("Starting Download API success test");
+    printf("[TEST] downloadApiSuccessTest starting\n");
+    fflush(stdout);
 
     if (!mDownloadManagerImpl.IsValid()) {
         TEST_LOG("DownloadManagerImplementation not available - skipping test");
+        printf("[TEST] mDownloadManagerImpl is not valid, skipping\n");
+        fflush(stdout);
         GTEST_SKIP() << "DownloadManagerImplementation not available";
         return;
     }
+
+    printf("[TEST] mDownloadManagerImpl is valid, proceeding with test\n");
+    fflush(stdout);
 
     // Test parameters
     string testUrl = "https://httpbin.org/bytes/1024";
@@ -824,17 +876,44 @@ TEST_F(DownloadManagerTest, downloadApiSuccessTest) {
     testOptions.rateLimit = 1024;
     string downloadId;
 
-    // Test Download API
-    auto result = mDownloadManagerImpl->Download(testUrl, testOptions, downloadId);
-    
-    if (result == Core::ERROR_NONE) {
-        TEST_LOG("Download initiated successfully with ID: %s", downloadId.c_str());
-        EXPECT_FALSE(downloadId.empty()) << "Download ID should not be empty on success";
-    } else {
-        TEST_LOG("Download initiation failed with error: %u", result);
-        // In test environment, this might be expected due to missing dependencies
+    printf("[TEST] About to call mDownloadManagerImpl->Download with URL: %s\n", testUrl.c_str());
+    fflush(stdout);
+
+    try {
+        // Test Download API with additional safety checks
+        printf("[TEST] Calling Download API...\n");
+        fflush(stdout);
+        
+        auto result = mDownloadManagerImpl->Download(testUrl, testOptions, downloadId);
+        
+        printf("[TEST] Download API returned result: %u\n", result);
+        fflush(stdout);
+        
+        if (result == Core::ERROR_NONE) {
+            TEST_LOG("Download initiated successfully with ID: %s", downloadId.c_str());
+            printf("[TEST] Download ID: %s\n", downloadId.c_str());
+            fflush(stdout);
+            EXPECT_FALSE(downloadId.empty()) << "Download ID should not be empty on success";
+        } else {
+            TEST_LOG("Download initiation failed with error: %u", result);
+            printf("[TEST] Download failed with error: %u\n", result);
+            fflush(stdout);
+            // In test environment, this might be expected due to missing dependencies
+        }
+    } catch (const std::exception& e) {
+        printf("[TEST] Exception caught in downloadApiSuccessTest: %s\n", e.what());
+        fflush(stdout);
+        TEST_LOG("Exception in downloadApiSuccessTest: %s", e.what());
+        FAIL() << "Exception during Download API test: " << e.what();
+    } catch (...) {
+        printf("[TEST] Unknown exception caught in downloadApiSuccessTest\n");
+        fflush(stdout);
+        TEST_LOG("Unknown exception in downloadApiSuccessTest");
+        FAIL() << "Unknown exception during Download API test";
     }
 
+    printf("[TEST] downloadApiSuccessTest completed\n");
+    fflush(stdout);
     TEST_LOG("Download API success test completed");
 }
 
@@ -846,12 +925,19 @@ TEST_F(DownloadManagerTest, downloadApiSuccessTest) {
 TEST_F(DownloadManagerTest, downloadApiInvalidUrlTest) {
 
     TEST_LOG("Starting Download API invalid URL test");
+    printf("[TEST] downloadApiInvalidUrlTest starting\n");
+    fflush(stdout);
 
     if (!mDownloadManagerImpl.IsValid()) {
         TEST_LOG("DownloadManagerImplementation not available - skipping test");
+        printf("[TEST] mDownloadManagerImpl is not valid, skipping invalid URL test\n");
+        fflush(stdout);
         GTEST_SKIP() << "DownloadManagerImplementation not available";
         return;
     }
+
+    printf("[TEST] Testing invalid URL download\n");
+    fflush(stdout);
 
     // Test parameters with invalid URL
     string invalidUrl = "invalid_url_format";
@@ -861,12 +947,33 @@ TEST_F(DownloadManagerTest, downloadApiInvalidUrlTest) {
     testOptions.rateLimit = 512;
     string downloadId;
 
-    // Test Download API with invalid URL
-    auto result = mDownloadManagerImpl->Download(invalidUrl, testOptions, downloadId);
-    
-    EXPECT_NE(Core::ERROR_NONE, result) << "Download should fail with invalid URL";
-    TEST_LOG("Download with invalid URL returned error: %u (expected)", result);
+    try {
+        printf("[TEST] About to call Download with invalid URL: %s\n", invalidUrl.c_str());
+        fflush(stdout);
+        
+        // Test Download API with invalid URL
+        auto result = mDownloadManagerImpl->Download(invalidUrl, testOptions, downloadId);
+        
+        printf("[TEST] Invalid URL download returned: %u\n", result);
+        fflush(stdout);
+        
+        EXPECT_NE(Core::ERROR_NONE, result) << "Download should fail with invalid URL";
+        TEST_LOG("Download with invalid URL returned error: %u (expected)", result);
+        
+    } catch (const std::exception& e) {
+        printf("[TEST] Exception in downloadApiInvalidUrlTest: %s\n", e.what());
+        fflush(stdout);
+        TEST_LOG("Exception in downloadApiInvalidUrlTest: %s", e.what());
+        FAIL() << "Exception during invalid URL test: " << e.what();
+    } catch (...) {
+        printf("[TEST] Unknown exception in downloadApiInvalidUrlTest\n");
+        fflush(stdout);
+        TEST_LOG("Unknown exception in downloadApiInvalidUrlTest");
+        FAIL() << "Unknown exception during invalid URL test";
+    }
 
+    printf("[TEST] downloadApiInvalidUrlTest completed\n");
+    fflush(stdout);
     TEST_LOG("Download API invalid URL test completed");
 }
 
