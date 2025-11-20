@@ -56,8 +56,6 @@ namespace {
 const string callSign = _T("USBDevice");
 }
 
-// Add these type definitions and class after the existing includes and before the test class definition
-
 typedef enum : uint32_t {
     USBDevice_onDevicePluggedIn  = 0x00000001,
     USBDevice_onDevicePluggedOut = 0x00000002,
@@ -65,7 +63,7 @@ typedef enum : uint32_t {
 
 class NotificationHandler : public Exchange::IUSBDevice::INotification {
 private:
-    std::mutex m_mutex;
+    mutable std::mutex m_mutex;  // Made mutable for const methods
     std::condition_variable m_condition_variable;
     uint32_t m_event_signalled;
     
@@ -77,11 +75,15 @@ private:
     Exchange::IUSBDevice::USBDevice m_pluggedInDevice;
     Exchange::IUSBDevice::USBDevice m_pluggedOutDevice;
 
+    // Reference counting support
+    mutable uint32_t m_refCount;
+
 public:
     NotificationHandler() 
         : m_event_signalled(0)
         , m_onDevicePluggedInReceived(false)
         , m_onDevicePluggedOutReceived(false)
+        , m_refCount(1)
     {
         m_pluggedInDevice.deviceClass = 0;
         m_pluggedInDevice.deviceSubclass = 0;
@@ -99,6 +101,21 @@ public:
     BEGIN_INTERFACE_MAP(NotificationHandler)
     INTERFACE_ENTRY(Exchange::IUSBDevice::INotification)
     END_INTERFACE_MAP
+
+    // IReferenceCounted interface implementation
+    void AddRef() const override
+    {
+        Core::InterlockedIncrement(m_refCount);
+    }
+
+    uint32_t Release() const override
+    {
+        if (Core::InterlockedDecrement(m_refCount) == 0) {
+            delete this;
+            return Core::ERROR_DESTRUCTION_SUCCEEDED;
+        }
+        return Core::ERROR_NONE;
+    }
 
     // Notification interface implementations
     void OnDevicePluggedIn(const Exchange::IUSBDevice::USBDevice& device) override
@@ -216,9 +233,6 @@ public:
         m_pluggedOutDevice.deviceName = "";
         m_pluggedOutDevice.devicePath = "";
     }
-
-private:
-    mutable std::mutex m_mutex;
 };
 
 class USBDeviceTest : public ::testing::Test {
