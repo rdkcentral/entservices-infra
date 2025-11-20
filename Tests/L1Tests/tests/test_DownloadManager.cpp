@@ -328,16 +328,11 @@ protected:
                 TEST_LOG("Initialize result: %u", initResult);
                 
                 if (initResult == Core::ERROR_NONE) {
-                    // Query for the IDownloadManager interface properly using Thunder framework
-                    Exchange::IDownloadManager* interface = nullptr;
-                    if (downloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID, (void**)&interface) == Core::ERROR_NONE && interface != nullptr) {
-                        downloadManagerInterface = interface;
-                        // Keep a reference to prevent deletion
-                        mockImpl = downloadManagerInterface;
-                        TEST_LOG("DownloadManagerImplementation created and initialized successfully");
-                    } else {
-                        TEST_LOG("Failed to query IDownloadManager interface");
-                    }
+                    // Use the implementation as the interface (it inherits from IDownloadManager)
+                    downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*downloadManagerImpl));
+                    // Keep a reference to prevent deletion
+                    mockImpl = downloadManagerInterface;
+                    TEST_LOG("DownloadManagerImplementation created and initialized successfully");
                 } else {
                     TEST_LOG("Failed to initialize DownloadManagerImplementation, result: %u", initResult);
                     downloadManagerInterface = nullptr;
