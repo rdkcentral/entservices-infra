@@ -842,6 +842,8 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+	Core::Event onAppDownloadStatus(false, true);
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -849,12 +851,23 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
+	EXPECT_CALL(*mServiceMock, Submit(::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const uint32_t, const Core::ProxyType<Core::JSON::IElement>& json) {
+                onAppDownloadStatus.SetEvent();
+                return Core::ERROR_NONE;
+            }));
+
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
+
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
+    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
+	
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 	
-	waitforSignal(4000);
-
     // TC-18: Delete download using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package2001\"}"), mJsonRpcResponse));
 
