@@ -1892,40 +1892,115 @@ protected:
         EXPECT_CALL(*mServiceMock, Release())
             .Times(::testing::AnyNumber());
 
-        // Initialize the DownloadManagerImplementation with service mock
-        if (mDownloadManagerImpl.IsValid()) {
-            try {
-                // Set up factories for proper initialization
-                PluginHost::IFactories::Assign(&factoriesImplementation);
+        // Add additional mock expectations that might be needed by DownloadManagerImplementation
+        EXPECT_CALL(*mServiceMock, Callsign())
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return("DownloadManager"));
+
+        EXPECT_CALL(*mServiceMock, WebPrefix())
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return(""));
+
+        EXPECT_CALL(*mServiceMock, Locator())
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return(""));
+
+        // Mock any potential QueryInterface calls that might be causing issues
+        EXPECT_CALL(*mServiceMock, QueryInterface(::testing::_))
+            .Times(::testing::AnyNumber())
+            .WillRepeatedly(::testing::Return(nullptr));
+
+        // Set up factories for potential use
+        PluginHost::IFactories::Assign(&factoriesImplementation);
+        
+        // Do NOT initialize the implementation in SetUp() to avoid interface wrapping issues
+        // Each test method will handle initialization/deinitialization as needed
+        TEST_LOG("DownloadManagerImplementationTest SetUp completed - initialization deferred to test methods");
+    }
+
+    // Helper method to safely initialize the implementation
+    Core::hresult SafeInitialize() {
+        if (!mDownloadManagerImpl.IsValid()) {
+            TEST_LOG("Implementation not valid - cannot initialize");
+            return Core::ERROR_GENERAL;
+        }
+        
+        try {
+            TEST_LOG("Attempting safe initialization of DownloadManagerImplementation");
+            
+            // Add additional mock expectations that may be needed
+            EXPECT_CALL(*mServiceMock, PersistentPath())
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return("/tmp/"));
                 
-                // Initialize the implementation with service mock
-                mDownloadManagerImpl->Initialize(mServiceMock);
+            EXPECT_CALL(*mServiceMock, VolatilePath())
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return("/tmp/"));
                 
-                TEST_LOG("DownloadManagerImplementation initialized successfully");
-            } catch (const std::exception& e) {
-                TEST_LOG("Exception during initialization: %s", e.what());
-            } catch (...) {
-                TEST_LOG("Unknown exception during initialization");
+            EXPECT_CALL(*mServiceMock, DataPath())
+                .Times(::testing::AnyNumber())
+                .WillRepeatedly(::testing::Return("/tmp/"));
+            
+            // Try initialization with enhanced error handling
+            // Set signal handlers or use other mechanisms to prevent segfault
+            TEST_LOG("Attempting Initialize() call on DownloadManagerImplementation");
+            
+            auto result = mDownloadManagerImpl->Initialize(mServiceMock);
+            if (result == Core::ERROR_NONE) {
+                TEST_LOG("Implementation initialized successfully");
+                return Core::ERROR_NONE;
+            } else {
+                TEST_LOG("Implementation initialization returned error: %u", result);
+                // Even if initialization fails, we can still test some methods
+                return result;
             }
-        } else {
-            TEST_LOG("WARNING: mDownloadManagerImpl is not valid");
+        } catch (const std::exception& e) {
+            TEST_LOG("Exception during safe initialization: %s", e.what());
+            // Return a specific error code rather than GENERAL
+            return Core::ERROR_UNAVAILABLE;
+        } catch (...) {
+            TEST_LOG("Unknown exception during safe initialization");
+            return Core::ERROR_UNAVAILABLE;
+        }
+    }
+
+    // Helper method to safely deinitialize the implementation
+    Core::hresult SafeDeinitialize() {
+        if (!mDownloadManagerImpl.IsValid()) {
+            TEST_LOG("Implementation not valid - cannot deinitialize");
+            return Core::ERROR_NONE; // Not an error if already invalid
+        }
+        
+        try {
+            auto result = mDownloadManagerImpl->Deinitialize(mServiceMock);
+            if (result == Core::ERROR_NONE) {
+                TEST_LOG("Implementation deinitialized successfully");
+            } else {
+                TEST_LOG("Implementation deinitialization failed with error: %u", result);
+            }
+            return result;
+        } catch (const std::exception& e) {
+            TEST_LOG("Exception during safe deinitialization: %s", e.what());
+            return Core::ERROR_UNAVAILABLE;
+        } catch (...) {
+            TEST_LOG("Unknown exception during safe deinitialization");
+            return Core::ERROR_UNAVAILABLE;
+        }
+    }
+
+    // Helper method to create a fresh implementation instance if needed
+    void EnsureValidImplementation() {
+        if (!mDownloadManagerImpl.IsValid()) {
+            TEST_LOG("Creating fresh DownloadManagerImplementation instance");
+            mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+            if (!mDownloadManagerImpl.IsValid()) {
+                TEST_LOG("FATAL: Could not create DownloadManagerImplementation instance");
+            }
         }
     }
 
     void TearDown() override
     {
-        // Deinitialize the implementation
-        if (mDownloadManagerImpl.IsValid()) {
-            try {
-                mDownloadManagerImpl->Deinitialize(mServiceMock);
-                TEST_LOG("DownloadManagerImplementation deinitialized successfully");
-            } catch (const std::exception& e) {
-                TEST_LOG("Exception during deinitialization: %s", e.what());
-            } catch (...) {
-                TEST_LOG("Unknown exception during deinitialization");
-            }
-        }
-
         // Clean up factories
         PluginHost::IFactories::Assign(nullptr);
 
@@ -1939,6 +2014,8 @@ protected:
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
         }
+        
+        TEST_LOG("DownloadManagerImplementationTest TearDown completed");
     }
 };
 
@@ -2320,20 +2397,34 @@ TEST_F(DownloadManagerImplementationTest, InitializeCoverageTest) {
     TEST_LOG("Starting InitializeCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("InitializeCoverageTest skipped - implementation pointer null (prevents segfault)");
-        GTEST_SKIP();
-        return;
+        TEST_LOG("Implementation not valid - creating new instance");
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
-        // The implementation should already be initialized in SetUp()
-        // This test verifies it's properly initialized and accessible
-        TEST_LOG("DownloadManagerImplementation is valid and initialized");
+        // Test the initialization process
+        TEST_LOG("Testing DownloadManagerImplementation initialization");
         
-        // Basic validation that the implementation is accessible
-        EXPECT_TRUE(mDownloadManagerImpl.IsValid());
+        auto result = SafeInitialize();
         
-        TEST_LOG("InitializeCoverageTest completed successfully");
+        if (result == Core::ERROR_NONE) {
+            TEST_LOG("SUCCESS: Implementation initialized successfully");
+            EXPECT_EQ(result, Core::ERROR_NONE);
+            
+            // Verify initialization was successful by checking if service is set
+            TEST_LOG("Initialization completed successfully");
+            
+            // Clean up - deinitialize
+            auto deinitResult = SafeDeinitialize();
+            TEST_LOG("Deinitialization result: %u", deinitResult);
+        } else {
+            TEST_LOG("Initialization failed with error: %u", result);
+            // This might be acceptable in test environment, but let's try to fix it
+            EXPECT_TRUE(mDownloadManagerImpl.IsValid()); // At least the object should be valid
+        }
+        
+        TEST_LOG("InitializeCoverageTest completed");
     } catch (const std::exception& e) {
         TEST_LOG("Exception in InitializeCoverageTest: %s", e.what());
         FAIL() << "InitializeCoverageTest failed with exception: " << e.what();
@@ -2353,17 +2444,27 @@ TEST_F(DownloadManagerImplementationTest, DeinitializeCoverageTest) {
     TEST_LOG("Starting DeinitializeCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("DeinitializeCoverageTest skipped - implementation pointer null (prevents segfault)");
-        GTEST_SKIP();
-        return;
+        TEST_LOG("Implementation not valid - creating new instance");
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
-        // The implementation will be deinitialized in TearDown()
-        // This test verifies the implementation is still valid before teardown
-        EXPECT_TRUE(mDownloadManagerImpl.IsValid());
+        // First initialize so we can test deinitialization
+        TEST_LOG("Testing DownloadManagerImplementation deinitialization");
         
-        TEST_LOG("DeinitializeCoverageTest completed successfully - deinitialize will happen in TearDown");
+        // Initialize first (even if it fails partially, we can still test deinitialize)
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for deinitialization test: %u", initResult);
+        
+        // Test deinitialization regardless of initialization result
+        auto deinitResult = SafeDeinitialize();
+        TEST_LOG("Deinitialize result: %u", deinitResult);
+        
+        // Deinitialization should succeed or return a reasonable error
+        EXPECT_TRUE(deinitResult == Core::ERROR_NONE || deinitResult == Core::ERROR_UNAVAILABLE);
+        
+        TEST_LOG("DeinitializeCoverageTest completed successfully");
     } catch (const std::exception& e) {
         TEST_LOG("Exception in DeinitializeCoverageTest: %s", e.what());
         FAIL() << "DeinitializeCoverageTest failed with exception: " << e.what();
@@ -2383,12 +2484,16 @@ TEST_F(DownloadManagerImplementationTest, DownloadCoverageTest) {
     TEST_LOG("Starting DownloadCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("DownloadCoverageTest - Implementation access skipped to prevent segmentation fault");
-        GTEST_SKIP();
-        return;
+        TEST_LOG("Implementation not valid - creating new instance");
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
+        // Initialize the implementation first
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for download test: %u", initResult);
+        
         // Set up internet availability expectation
         EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
             .Times(::testing::AnyNumber())
@@ -2397,30 +2502,42 @@ TEST_F(DownloadManagerImplementationTest, DownloadCoverageTest) {
                     return true;  // Internet available
                 }));
 
-        // Test Case 1: Valid download
+        // Test Case 1: Download with empty URL (should fail)
         Exchange::IDownloadManager::Options options;
         options.priority = true;
         options.retries = 3;
         options.rateLimit = 1000;
         
-        string downloadId;
-        string testUrl = "https://httpbin.org/bytes/1024";
+        string downloadId1;
+        auto result1 = mDownloadManagerImpl->Download("", options, downloadId1);
+        TEST_LOG("Download with empty URL result: %u", result1);
+        EXPECT_NE(result1, Core::ERROR_NONE); // Should fail
         
-        auto result = mDownloadManagerImpl->Download(testUrl, options, downloadId);
-        TEST_LOG("Download result: %u, Download ID: %s", result, downloadId.c_str());
-        
-        // Test Case 2: Download with empty URL
+        // Test Case 2: Download with valid URL (may succeed or fail depending on initialization)
         string downloadId2;
-        auto result2 = mDownloadManagerImpl->Download("", options, downloadId2);
-        TEST_LOG("Download with empty URL result: %u", result2);
-        EXPECT_NE(result2, Core::ERROR_NONE);
+        string testUrl = "https://httpbin.org/bytes/1024";
+        auto result2 = mDownloadManagerImpl->Download(testUrl, options, downloadId2);
+        TEST_LOG("Download with valid URL result: %u, Download ID: %s", result2, downloadId2.c_str());
+        
+        // If initialization succeeded, download should work, otherwise expect specific error
+        if (initResult == Core::ERROR_NONE) {
+            EXPECT_TRUE(result2 == Core::ERROR_NONE || result2 == Core::ERROR_UNAVAILABLE);
+        } else {
+            // If initialization failed, download will likely fail too
+            TEST_LOG("Download test completed with initialization challenges");
+        }
         
         TEST_LOG("DownloadCoverageTest completed successfully");
+        
+        // Clean up
+        SafeDeinitialize();
     } catch (const std::exception& e) {
         TEST_LOG("Exception in DownloadCoverageTest: %s", e.what());
+        SafeDeinitialize(); // Clean up on exception
         FAIL() << "DownloadCoverageTest failed with exception: " << e.what();
     } catch (...) {
         TEST_LOG("Unknown exception in DownloadCoverageTest");
+        SafeDeinitialize(); // Clean up on exception
         FAIL() << "DownloadCoverageTest failed with unknown exception";
     }
 }
@@ -2434,16 +2551,22 @@ TEST_F(DownloadManagerImplementationTest, PauseCoverageTest) {
     TEST_LOG("Starting PauseCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("PauseCoverageTest - Implementation access skipped to prevent segmentation fault");
-        GTEST_SKIP();
-        return;
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
+        // Initialize for testing
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for pause test: %u", initResult);
+        
         // Test pause with invalid download ID (no active download)
         string testDownloadId = "test123";
         auto result = mDownloadManagerImpl->Pause(testDownloadId);
         TEST_LOG("Pause result with invalid ID: %u", result);
+        
+        // Pause should return an error when no download is active
+        EXPECT_NE(result, Core::ERROR_NONE);
         
         // Test pause with empty download ID
         auto result2 = mDownloadManagerImpl->Pause("");
@@ -2451,11 +2574,14 @@ TEST_F(DownloadManagerImplementationTest, PauseCoverageTest) {
         EXPECT_NE(result2, Core::ERROR_NONE);
         
         TEST_LOG("PauseCoverageTest completed successfully");
+        SafeDeinitialize();
     } catch (const std::exception& e) {
         TEST_LOG("Exception in PauseCoverageTest: %s", e.what());
+        SafeDeinitialize();
         FAIL() << "PauseCoverageTest failed with exception: " << e.what();
     } catch (...) {
         TEST_LOG("Unknown exception in PauseCoverageTest");
+        SafeDeinitialize();
         FAIL() << "PauseCoverageTest failed with unknown exception";
     }
 }
@@ -2469,16 +2595,22 @@ TEST_F(DownloadManagerImplementationTest, ResumeCoverageTest) {
     TEST_LOG("Starting ResumeCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("ResumeCoverageTest - Implementation access skipped to prevent segmentation fault");
-        GTEST_SKIP();
-        return;
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
+        // Initialize for testing
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for resume test: %u", initResult);
+        
         // Test resume with invalid download ID (no active download)
         string testDownloadId = "test456";
         auto result = mDownloadManagerImpl->Resume(testDownloadId);
         TEST_LOG("Resume result with invalid ID: %u", result);
+        
+        // Resume should return an error when no download is active
+        EXPECT_NE(result, Core::ERROR_NONE);
         
         // Test resume with empty download ID
         auto result2 = mDownloadManagerImpl->Resume("");
@@ -2486,34 +2618,39 @@ TEST_F(DownloadManagerImplementationTest, ResumeCoverageTest) {
         EXPECT_NE(result2, Core::ERROR_NONE);
         
         TEST_LOG("ResumeCoverageTest completed successfully");
+        SafeDeinitialize();
     } catch (const std::exception& e) {
         TEST_LOG("Exception in ResumeCoverageTest: %s", e.what());
+        SafeDeinitialize();
         FAIL() << "ResumeCoverageTest failed with exception: " << e.what();
     } catch (...) {
         TEST_LOG("Unknown exception in ResumeCoverageTest");
+        SafeDeinitialize();
         FAIL() << "ResumeCoverageTest failed with unknown exception";
     }
 }
 
-/* Test Case for Cancel method coverage
- * 
- * Test the Cancel method of DownloadManagerImplementation directly
- */
 TEST_F(DownloadManagerImplementationTest, CancelCoverageTest) {
 
     TEST_LOG("Starting CancelCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("CancelCoverageTest - Implementation access skipped to prevent segmentation fault");
-        GTEST_SKIP();
-        return;
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
+        // Initialize for testing
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for cancel test: %u", initResult);
+        
         // Test cancel with invalid download ID (no active download)
         string testDownloadId = "test789";
         auto result = mDownloadManagerImpl->Cancel(testDownloadId);
         TEST_LOG("Cancel result with invalid ID: %u", result);
+        
+        // Cancel should return an error when no download is active
+        EXPECT_NE(result, Core::ERROR_NONE);
         
         // Test cancel with empty download ID
         auto result2 = mDownloadManagerImpl->Cancel("");
@@ -2521,38 +2658,42 @@ TEST_F(DownloadManagerImplementationTest, CancelCoverageTest) {
         EXPECT_NE(result2, Core::ERROR_NONE);
         
         TEST_LOG("CancelCoverageTest completed successfully");
+        SafeDeinitialize();
     } catch (const std::exception& e) {
         TEST_LOG("Exception in CancelCoverageTest: %s", e.what());
+        SafeDeinitialize();
         FAIL() << "CancelCoverageTest failed with exception: " << e.what();
     } catch (...) {
         TEST_LOG("Unknown exception in CancelCoverageTest");
+        SafeDeinitialize();
         FAIL() << "CancelCoverageTest failed with unknown exception";
     }
 }
 
-/* Test Case for Delete method coverage
- * 
- * Test the Delete method of DownloadManagerImplementation directly
- */
 TEST_F(DownloadManagerImplementationTest, DeleteCoverageTest) {
 
     TEST_LOG("Starting DeleteCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("DeleteCoverageTest - Implementation access skipped to prevent segmentation fault");
-        GTEST_SKIP();
-        return;
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
-        // Test delete with non-existent file
-        string testFileLocator = "/tmp/nonexistent_test_file.txt";
-        auto result = mDownloadManagerImpl->Delete(testFileLocator);
-        TEST_LOG("Delete result with non-existent file: %u", result);
+        // Initialize for testing
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for delete test: %u", initResult);
         
         // Test delete with empty file locator
-        auto result2 = mDownloadManagerImpl->Delete("");
-        TEST_LOG("Delete result with empty locator: %u", result2);
+        auto result1 = mDownloadManagerImpl->Delete("");
+        TEST_LOG("Delete result with empty locator: %u", result1);
+        EXPECT_NE(result1, Core::ERROR_NONE);
+        
+        // Test delete with non-existent file
+        string testFileLocator = "/tmp/nonexistent_test_file.txt";
+        auto result2 = mDownloadManagerImpl->Delete(testFileLocator);
+        TEST_LOG("Delete result with non-existent file: %u", result2);
+        // Non-existent file delete should fail
         EXPECT_NE(result2, Core::ERROR_NONE);
         
         // Create and test delete with valid file
@@ -2564,38 +2705,45 @@ TEST_F(DownloadManagerImplementationTest, DeleteCoverageTest) {
             
             auto result3 = mDownloadManagerImpl->Delete(validFileLocator);
             TEST_LOG("Delete result with valid file: %u", result3);
+            // Valid file delete should succeed
+            EXPECT_EQ(result3, Core::ERROR_NONE);
         }
         
         TEST_LOG("DeleteCoverageTest completed successfully");
+        SafeDeinitialize();
     } catch (const std::exception& e) {
         TEST_LOG("Exception in DeleteCoverageTest: %s", e.what());
+        SafeDeinitialize();
         FAIL() << "DeleteCoverageTest failed with exception: " << e.what();
     } catch (...) {
         TEST_LOG("Unknown exception in DeleteCoverageTest");
+        SafeDeinitialize();
         FAIL() << "DeleteCoverageTest failed with unknown exception";
     }
 }
 
-/* Test Case for Progress method coverage
- * 
- * Test the Progress method of DownloadManagerImplementation directly
- */
 TEST_F(DownloadManagerImplementationTest, ProgressCoverageTest) {
 
     TEST_LOG("Starting ProgressCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("ProgressCoverageTest - Implementation access skipped to prevent segmentation fault");
-        GTEST_SKIP();
-        return;
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
+        // Initialize for testing
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for progress test: %u", initResult);
+        
         // Test progress with invalid download ID (no active download)
         string testDownloadId = "test999";
         uint8_t progress = 0;
         auto result = mDownloadManagerImpl->Progress(testDownloadId, progress);
         TEST_LOG("Progress result with invalid ID: %u, Progress: %u", result, progress);
+        
+        // Progress should return an error when no download is active
+        EXPECT_NE(result, Core::ERROR_NONE);
         
         // Test progress with empty download ID
         uint8_t progress2 = 0;
@@ -2604,30 +2752,32 @@ TEST_F(DownloadManagerImplementationTest, ProgressCoverageTest) {
         EXPECT_NE(result2, Core::ERROR_NONE);
         
         TEST_LOG("ProgressCoverageTest completed successfully");
+        SafeDeinitialize();
     } catch (const std::exception& e) {
         TEST_LOG("Exception in ProgressCoverageTest: %s", e.what());
+        SafeDeinitialize();
         FAIL() << "ProgressCoverageTest failed with exception: " << e.what();
     } catch (...) {
         TEST_LOG("Unknown exception in ProgressCoverageTest");
+        SafeDeinitialize();
         FAIL() << "ProgressCoverageTest failed with unknown exception";
     }
 }
 
-/* Test Case for GetStorageDetails method coverage
- * 
- * Test the GetStorageDetails method of DownloadManagerImplementation directly
- */
 TEST_F(DownloadManagerImplementationTest, GetStorageDetailsCoverageTest) {
 
     TEST_LOG("Starting GetStorageDetailsCoverageTest");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("GetStorageDetailsCoverageTest - Implementation access skipped to prevent segmentation fault");
-        GTEST_SKIP();
-        return;
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
+        // Initialize for testing  
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for storage details test: %u", initResult);
+        
         // Test GetStorageDetails (currently a stub implementation)
         uint32_t quotaKB = 0;
         uint32_t usedKB = 0;
@@ -2639,31 +2789,32 @@ TEST_F(DownloadManagerImplementationTest, GetStorageDetailsCoverageTest) {
         EXPECT_EQ(result, Core::ERROR_NONE);
         
         TEST_LOG("GetStorageDetailsCoverageTest completed successfully");
+        SafeDeinitialize();
     } catch (const std::exception& e) {
         TEST_LOG("Exception in GetStorageDetailsCoverageTest: %s", e.what());
+        SafeDeinitialize();
         FAIL() << "GetStorageDetailsCoverageTest failed with exception: " << e.what();
     } catch (...) {
         TEST_LOG("Unknown exception in GetStorageDetailsCoverageTest");
+        SafeDeinitialize();
         FAIL() << "GetStorageDetailsCoverageTest failed with unknown exception";
     }
 }
 
-/* Test Case for Download method with no internet connection
- * 
- * Test the Download method when internet is not available
- * This addresses the segmentation fault issue by proper null checking
- */
 TEST_F(DownloadManagerImplementationTest, DownloadNoInternetConnection) {
 
     TEST_LOG("Starting DownloadNoInternetConnection test");
 
     if (!mDownloadManagerImpl.IsValid()) {
-        TEST_LOG("DownloadNoInternetConnection - Implementation pointer is null, skipping to prevent segfault");
-        GTEST_SKIP();
-        return;
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid());
     }
 
     try {
+        // Initialize for testing
+        auto initResult = SafeInitialize();
+        TEST_LOG("Initialize result for no internet test: %u", initResult);
+        
         // Set up internet unavailable expectation
         EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
             .Times(::testing::AnyNumber())
@@ -2687,11 +2838,14 @@ TEST_F(DownloadManagerImplementationTest, DownloadNoInternetConnection) {
         EXPECT_EQ(result, Core::ERROR_UNAVAILABLE);
         
         TEST_LOG("DownloadNoInternetConnection test completed successfully");
+        SafeDeinitialize();
     } catch (const std::exception& e) {
         TEST_LOG("Exception in DownloadNoInternetConnection: %s", e.what());
+        SafeDeinitialize();
         FAIL() << "DownloadNoInternetConnection failed with exception: " << e.what();
     } catch (...) {
         TEST_LOG("Unknown exception in DownloadNoInternetConnection");
+        SafeDeinitialize();
         FAIL() << "DownloadNoInternetConnection failed with unknown exception";
     }
 }
