@@ -165,8 +165,8 @@ protected:
             
             // Activate the plugin
             TEST_LOG("Activating plugin");
-            Core::hresult activateResult = plugin->Activate(mServiceMock);
-            TEST_LOG("Plugin activation result: %u", activateResult);
+            plugin->Activate(mServiceMock);
+            TEST_LOG("Plugin activation completed");
             
             // Set up dispatcher
             dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
@@ -184,15 +184,21 @@ protected:
             void* interface = nullptr;
             
             if (dispatcher != nullptr) {
-                // Use the dispatcher to invoke and get the interface
+                // Use the dispatcher to invoke with proper parameters
                 string result;
-                auto invokeResult = dispatcher->Invoke(connection, _T(""), _T(""), result);
+                uint32_t channelId = 1;
+                uint32_t id = 0;
+                string token = "";
+                string method = "";
+                string parameters = "";
+                auto invokeResult = dispatcher->Invoke(channelId, id, token, method, parameters, result);
                 if (invokeResult == Core::ERROR_NONE) {
                     TEST_LOG("Dispatcher invoke successful - interface should be available");
                 }
                 
                 // Try to query the interface from the plugin
-                Core::IUnknown* unknown = plugin->QueryInterface(Core::IUnknown::ID);
+                void* unknownPtr = plugin->QueryInterface(Core::IUnknown::ID);
+                Core::IUnknown* unknown = static_cast<Core::IUnknown*>(unknownPtr);
                 if (unknown != nullptr) {
                     TEST_LOG("Got IUnknown interface from plugin");
                     
