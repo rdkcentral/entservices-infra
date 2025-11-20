@@ -332,6 +332,8 @@ TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getStorageDetails")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("rateLimit")));
 
+	waitforSignal(200);
+
 	deinitforJsonRpc();
 }
 
