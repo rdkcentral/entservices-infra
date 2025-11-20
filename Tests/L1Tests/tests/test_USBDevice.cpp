@@ -1326,9 +1326,7 @@ TEST_F(USBDeviceTest, NotificationVia_PublicAPIMethods_Success)
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
     
     // Test via getDeviceInfo - may trigger device state verification
-    JsonObject deviceInfoParams;
-    deviceInfoParams["deviceName"] = "100/001";
-    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), deviceInfoParams.ToString(), response));
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100/001\"}"), response));
     
     USBDeviceImpl->Unregister(notificationHandler);
     notificationHandler->Release();
