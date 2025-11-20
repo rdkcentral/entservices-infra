@@ -79,6 +79,7 @@ protected:
 
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
     Exchange::IDownloadManager* mockImpl = nullptr;
+    Core::ProxyType<Plugin::DownloadManagerImplementation> downloadManagerImpl;
     Exchange::IDownloadManager::Options options;
     string downloadId;
     uint8_t progress;
@@ -296,19 +297,55 @@ protected:
 
     void initforComRpc() 
     {
-        TEST_LOG("initforComRpc called - setting up safe COM-RPC environment");
+        TEST_LOG("initforComRpc called - setting up COM-RPC environment with direct implementation");
         
         EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
 
-        // Skip COM-RPC interface operations to prevent potential segfaults
-        TEST_LOG("Skipping COM-RPC interface setup to prevent interface wrapping issues");
-        TEST_LOG("COM-RPC functionality will not be available in this test run");
+        // Set up additional mock expectations that DownloadManagerImplementation may need
+        EXPECT_CALL(*mServiceMock, ConfigLine())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\", \"downloadId\": 3000}"));
+
+        EXPECT_CALL(*mServiceMock, SubSystems())
+          .Times(::testing::AnyNumber())
+          .WillRepeatedly(::testing::Return(mSubSystemMock));
+
+        // Create DownloadManagerImplementation directly to avoid interface wrapping issues
+        try {
+            TEST_LOG("Creating DownloadManagerImplementation directly");
+            
+            // Create implementation instance
+            downloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+            
+            if (downloadManagerImpl.IsValid()) {
+                // Initialize the implementation with service mock
+                auto result = downloadManagerImpl->Initialize(mServiceMock);
+                if (result == Core::ERROR_NONE) {
+                    // Use the implementation as the interface (it inherits from IDownloadManager)
+                    downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*downloadManagerImpl));
+                    // Keep a reference to prevent deletion
+                    mockImpl = downloadManagerInterface;
+                    TEST_LOG("DownloadManagerImplementation created and initialized successfully");
+                } else {
+                    TEST_LOG("Failed to initialize DownloadManagerImplementation: %u", result);
+                    downloadManagerInterface = nullptr;
+                    downloadManagerImpl.Release();
+                }
+            } else {
+                TEST_LOG("Failed to create DownloadManagerImplementation");
+                downloadManagerInterface = nullptr;
+            }
+        } catch (const std::exception& e) {
+            TEST_LOG("Exception creating DownloadManagerImplementation: %s", e.what());
+            downloadManagerInterface = nullptr;
+        } catch (...) {
+            TEST_LOG("Unknown exception creating DownloadManagerImplementation");
+            downloadManagerInterface = nullptr;
+        }
         
-        // Ensure downloadManagerInterface is null to indicate unavailability
-        downloadManagerInterface = nullptr;
-        
-        TEST_LOG("initforComRpc completed safely without attempting risky operations");
+        TEST_LOG("initforComRpc completed - interface available: %s", 
+                 downloadManagerInterface ? "YES" : "NO");
     }
 
     void getDownloadParams()
@@ -347,15 +384,40 @@ protected:
 
     void deinitforComRpc()
     {
-        TEST_LOG("deinitforComRpc called - performing safe cleanup");
+        TEST_LOG("deinitforComRpc called - performing cleanup");
         
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
-        // No COM-RPC interface cleanup needed since we didn't set any up
-        TEST_LOG("Skipping COM-RPC interface cleanup since none were set up");
+        // Clean up the DownloadManagerImplementation interface
+        if (downloadManagerImpl.IsValid()) {
+            try {
+                TEST_LOG("Deinitializing DownloadManagerImplementation");
+                downloadManagerImpl->Deinitialize(mServiceMock);
+                
+                // Clear the interface pointers and release the implementation
+                downloadManagerInterface = nullptr;
+                mockImpl = nullptr;
+                downloadManagerImpl.Release();
+                TEST_LOG("DownloadManagerImplementation cleaned up successfully");
+            } catch (const std::exception& e) {
+                TEST_LOG("Exception during DownloadManagerImplementation cleanup: %s", e.what());
+                downloadManagerInterface = nullptr;
+                mockImpl = nullptr;
+                downloadManagerImpl.Release();
+            } catch (...) {
+                TEST_LOG("Unknown exception during DownloadManagerImplementation cleanup");
+                downloadManagerInterface = nullptr;
+                mockImpl = nullptr;
+                downloadManagerImpl.Release();
+            }
+        } else if (downloadManagerInterface) {
+            // Fallback cleanup if only interface pointer exists
+            downloadManagerInterface = nullptr;
+            mockImpl = nullptr;
+        }
         
-        TEST_LOG("COM-RPC cleanup completed safely");
+        TEST_LOG("COM-RPC cleanup completed");
     }
 
     void waitforSignal(uint32_t timeout_ms) 
@@ -2632,4 +2694,38 @@ TEST_F(DownloadManagerImplementationTest, DownloadNoInternetConnection) {
         TEST_LOG("Unknown exception in DownloadNoInternetConnection");
         FAIL() << "DownloadNoInternetConnection failed with unknown exception";
     }
+}
+
+/* Test Case to validate COM-RPC interface creation
+ * 
+ * This test validates that our fixed initforComRpc() method
+ * successfully creates a working DownloadManager interface
+ */
+TEST_F(DownloadManagerTest, ValidateComRpcInterfaceCreation) {
+    
+    TEST_LOG("Testing COM-RPC interface creation validation");
+
+    initforComRpc();
+
+    // The interface should now be available (not null)
+    EXPECT_NE(downloadManagerInterface, nullptr);
+    
+    if (downloadManagerInterface) {
+        TEST_LOG("SUCCESS: DownloadManager interface created successfully");
+        
+        // Test basic functionality - GetStorageDetails (stub method that should always work)
+        uint32_t quotaKB = 0;
+        uint32_t usedKB = 0;
+        
+        auto result = downloadManagerInterface->GetStorageDetails(quotaKB, usedKB);
+        EXPECT_EQ(result, Core::ERROR_NONE);
+        TEST_LOG("GetStorageDetails test result: %u", result);
+        
+        TEST_LOG("Interface validation test PASSED");
+    } else {
+        TEST_LOG("FAILURE: DownloadManager interface is still null");
+        FAIL() << "DownloadManager interface creation failed - interface is null";
+    }
+
+    deinitforComRpc();
 }
