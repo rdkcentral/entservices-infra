@@ -1239,7 +1239,7 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
     USBDeviceImpl->Register(&notification);
-    notification->ResetEvents();
+    notification.ResetEvents();
     
     // Create test data for device plugged in event
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1264,11 +1264,11 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
     // Verify notification was received
-    EXPECT_TRUE(notification->WaitForRequestStatus(2000, USBDevice_OnDevicePluggedIn));
-    EXPECT_EQ("001/004", notification->GetLastPluggedInDeviceName());
-    EXPECT_EQ("/dev/sda", notification->GetLastPluggedInDevicePath());
-    EXPECT_EQ(8, notification->GetLastPluggedInDeviceClass());
-    EXPECT_EQ(6, notification->GetLastPluggedInDeviceSubclass());
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_OnDevicePluggedIn));
+    EXPECT_EQ("001/004", notification.GetLastPluggedInDeviceName());
+    EXPECT_EQ("/dev/sda", notification.GetLastPluggedInDevicePath());
+    EXPECT_EQ(8, notification.GetLastPluggedInDeviceClass());
+    EXPECT_EQ(6, notification.GetLastPluggedInDeviceSubclass());
     
     USBDeviceImpl->Unregister(&notification);
 }
@@ -1283,7 +1283,7 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
     USBDeviceImpl->Register(&notification);
-    notification->ResetEvents();
+    notification.ResetEvents();
     
     // Create test data for device plugged out event
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1307,11 +1307,11 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
     // Verify notification was received
-    EXPECT_TRUE(notification->WaitForRequestStatus(2000, USBDevice_OnDevicePluggedOut));
-    EXPECT_EQ("001/005", notification->GetLastPluggedOutDeviceName());
-    EXPECT_EQ("/dev/sdb", notification->GetLastPluggedOutDevicePath());
-    EXPECT_EQ(8, notification->GetLastPluggedOutDeviceClass());
-    EXPECT_EQ(6, notification->GetLastPluggedOutDeviceSubclass());
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_OnDevicePluggedOut));
+    EXPECT_EQ("001/005", notification.GetLastPluggedOutDeviceName());
+    EXPECT_EQ("/dev/sdb", notification.GetLastPluggedOutDevicePath());
+    EXPECT_EQ(8, notification.GetLastPluggedOutDeviceClass());
+    EXPECT_EQ(6, notification.GetLastPluggedOutDeviceSubclass());
     
     USBDeviceImpl->Unregister(&notification);
 }
@@ -1326,7 +1326,7 @@ TEST_F(USBDeviceTest, NotificationVia_PublicAPIMethods_Success)
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
     USBDeviceImpl->Register(&notification);
-    notification->ResetEvents();
+    notification.ResetEvents();
     
     // Setup mock infrastructure for device detection
     Mock_SetSerialNumberInUSBDevicePath();
@@ -1352,7 +1352,7 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaHotplugCallback_Success)
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
     USBDeviceImpl->Register(&notification);
-    notification->ResetEvents();
+    notification.ResetEvents();
     
     // Setup mock infrastructure
     Mock_SetSerialNumberInUSBDevicePath();
@@ -1368,7 +1368,7 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaHotplugCallback_Success)
     libUSBHotPlugCbDeviceAttached(nullptr, &dev, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 0);
     
     // Verify notification was triggered
-    EXPECT_TRUE(notification->WaitForRequestStatus(2000, USBDevice_OnDevicePluggedIn));
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_OnDevicePluggedIn));
     
     USBDeviceImpl->Unregister(&notification);
 }
@@ -1383,7 +1383,7 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaHotplugCallback_Success)
     Core::Sink<L1USBDeviceNotificationHandler> notification;
     
     USBDeviceImpl->Register(&notification);
-    notification->ResetEvents();
+    notification.ResetEvents();
     
     // Setup mock infrastructure
     Mock_SetSerialNumberInUSBDevicePath();
@@ -1399,7 +1399,7 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaHotplugCallback_Success)
     libUSBHotPlugCbDeviceDetached(nullptr, &dev, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0);
     
     // Verify notification was triggered
-    EXPECT_TRUE(notification->WaitForRequestStatus(2000, USBDevice_OnDevicePluggedOut));
+    EXPECT_TRUE(notification.WaitForRequestStatus(2000, USBDevice_OnDevicePluggedOut));
     
     USBDeviceImpl->Unregister(&notification);
 }
@@ -1418,8 +1418,8 @@ TEST_F(USBDeviceTest, NotificationRegistration_MultipleHandlers_Success)
     USBDeviceImpl->Register(&notification1);
     USBDeviceImpl->Register(&notification2);
     
-    notification1->ResetEvents();
-    notification2->ResetEvents();
+    notification1.ResetEvents();
+    notification2.ResetEvents();
     
     // Create test data and trigger notification
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1439,11 +1439,11 @@ TEST_F(USBDeviceTest, NotificationRegistration_MultipleHandlers_Success)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
     // Verify both handlers received notification
-    EXPECT_TRUE(notification1->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
-    EXPECT_TRUE(notification2->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
+    EXPECT_TRUE(notification1.WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
+    EXPECT_TRUE(notification2.WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
     
-    EXPECT_EQ("002/003", notification1->GetLastPluggedInDeviceName());
-    EXPECT_EQ("002/003", notification2->GetLastPluggedInDeviceName());
+    EXPECT_EQ("002/003", notification1.GetLastPluggedInDeviceName());
+    EXPECT_EQ("002/003", notification2.GetLastPluggedInDeviceName());
     
     USBDeviceImpl->Unregister(&notification1);
     USBDeviceImpl->Unregister(&notification2);
@@ -1461,7 +1461,7 @@ TEST_F(USBDeviceTest, NotificationTiming_RapidNotifications_Success)
     USBDeviceImpl->Register(&notification);
     
     // Test rapid plug-in, plug-out sequence
-    notification->ResetEvents();
+    notification.ResetEvents();
     
     // Create device plugged in event
     Exchange::IUSBDevice::USBDevice testDevice1;
@@ -1480,10 +1480,10 @@ TEST_F(USBDeviceTest, NotificationTiming_RapidNotifications_Success)
     // Give worker pool time to process the job
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
-    EXPECT_TRUE(notification->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
+    EXPECT_TRUE(notification.WaitForRequestStatus(1000, USBDevice_OnDevicePluggedIn));
     
     // Reset and test device removal
-    notification->ResetPluggedInEvent();
+    notification.ResetPluggedInEvent();
     
     Exchange::IUSBDevice::USBDevice testDevice2;
     testDevice2.deviceClass = 8;
@@ -1501,8 +1501,8 @@ TEST_F(USBDeviceTest, NotificationTiming_RapidNotifications_Success)
     // Give worker pool time to process the job
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
-    EXPECT_TRUE(notification->WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
-    EXPECT_EQ("003/002", notification->GetLastPluggedOutDeviceName());
+    EXPECT_TRUE(notification.WaitForRequestStatus(1000, USBDevice_OnDevicePluggedOut));
+    EXPECT_EQ("003/002", notification.GetLastPluggedOutDeviceName());
     
     USBDeviceImpl->Unregister(&notification);
 }
