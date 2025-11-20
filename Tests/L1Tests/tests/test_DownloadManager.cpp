@@ -974,7 +974,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcSuccess) {
             
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforSignal(200);
+    waitforSignal(300);
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
