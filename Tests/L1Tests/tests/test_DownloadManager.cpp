@@ -323,29 +323,29 @@ protected:
             downloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
             
             if (downloadManagerImpl.IsValid()) {
-                TEST_LOG("BYPASSING Initialize() to prevent Thunder framework thread/interface issues");
-                TEST_LOG("Setting up essential members manually for test environment");
+                TEST_LOG("Attempting to Initialize DownloadManagerImplementation properly");
                 
-                // Manually set up the essential members that Initialize() would set
-                // This avoids the thread creation and potential Thunder framework interface issues
                 try {
-                    // Set mCurrentservice directly (this is what Initialize does first)
-                    // We can't access private members directly, so we'll use the interface
-                    // but avoid calling Initialize which creates threads and triggers segfaults
+                    // Call Initialize to properly set up the implementation
+                    // This sets mCurrentservice and other essential members
+                    auto initResult = downloadManagerImpl->Initialize(mServiceMock);
+                    TEST_LOG("Initialize result: %u", initResult);
                     
-                    // Create the interface pointer without full initialization
-                    downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*downloadManagerImpl));
-                    mockImpl = downloadManagerInterface;
-                    
-                    TEST_LOG("DownloadManagerImplementation interface created successfully (without Initialize)");
-                    TEST_LOG("WARNING: Some functionality may be limited due to bypassed initialization");
-                    TEST_LOG("This approach avoids Thunder framework interface wrapping segfaults");
+                    if (initResult == Core::ERROR_NONE) {
+                        // Create the interface pointer after successful initialization
+                        downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*downloadManagerImpl));
+                        mockImpl = downloadManagerInterface;
+                        TEST_LOG("DownloadManagerImplementation initialized and interface created successfully");
+                    } else {
+                        TEST_LOG("Initialize failed with error: %u", initResult);
+                        downloadManagerInterface = nullptr;
+                    }
                     
                 } catch (const std::exception& e) {
-                    TEST_LOG("Exception during interface creation: %s", e.what());
+                    TEST_LOG("Exception during initialization: %s", e.what());
                     downloadManagerInterface = nullptr;
                 } catch (...) {
-                    TEST_LOG("Unknown exception during interface creation");
+                    TEST_LOG("Unknown exception during initialization");
                     downloadManagerInterface = nullptr;
                 }
             } else {
@@ -408,15 +408,17 @@ protected:
         // Clean up the DownloadManagerImplementation interface
         if (downloadManagerImpl.IsValid()) {
             try {
-                TEST_LOG("BYPASSING Deinitialize() since Initialize() was bypassed");
-                TEST_LOG("Performing safe cleanup without Deinitialize");
+                TEST_LOG("Calling Deinitialize() to properly clean up");
                 
-                // Since we bypassed Initialize(), we should also bypass Deinitialize()
-                // Just clean up the interface pointers
+                // Call Deinitialize to properly clean up the implementation
+                auto deinitResult = downloadManagerImpl->Deinitialize(mServiceMock);
+                TEST_LOG("Deinitialize result: %u", deinitResult);
+                
+                // Clean up the interface pointers
                 downloadManagerInterface = nullptr;
                 mockImpl = nullptr;
                 downloadManagerImpl.Release();
-                TEST_LOG("DownloadManagerImplementation cleaned up successfully (without Deinitialize)");
+                TEST_LOG("DownloadManagerImplementation cleaned up successfully");
             } catch (const std::exception& e) {
                 TEST_LOG("Exception during DownloadManagerImplementation cleanup: %s", e.what());
                 downloadManagerInterface = nullptr;
@@ -521,56 +523,6 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
         }
     };
 
-/* Test Case for verifying registered methods using JsonRpc
- * 
- * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
- * Check if the methods listed exist by using the Exists() from the JSON RPC handler
- * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
- * Deinitialize the JSON-RPC resources and clean-up related test resources
- */
-/*
-TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
-
-    TEST_LOG("Starting JSON-RPC method registration test");
-
-    // This test verifies that DownloadManager plugin can register JSON-RPC methods
-    // In test environments, full plugin instantiation may not be possible
-    if (!plugin.IsValid()) {
-        TEST_LOG("Plugin not available - skipping JSON-RPC method registration test");
-        GTEST_SKIP() << "Skipping test - Plugin not available in test environment";
-        return;
-    }
-
-    // Skip interface querying to prevent segfault - just verify plugin is valid
-    if (!plugin.IsValid()) {
-        TEST_LOG("Plugin is not valid - this indicates a fundamental issue");
-        GTEST_SKIP() << "Skipping test - Plugin not valid";
-        return;
-    }
-    
-    TEST_LOG("Plugin is valid - proceeding with safe test execution");
-    TEST_LOG("Skipping interface querying to prevent potential segfault in Wraps.cpp");
-
-    // Skip JSON-RPC registration entirely if we detect potential issues
-    // The plugin initialization logs show success, but interface wrapping may be failing
-    TEST_LOG("Plugin is valid, but skipping JSON-RPC registration due to potential interface wrapping issues");
-    TEST_LOG("This test will focus on verifying plugin loading and basic functionality");
-    
-    // Test basic plugin functionality without risky interface operations
-    if (plugin.IsValid()) {
-        TEST_LOG("Test PASSED: Plugin loaded successfully and is valid");
-        TEST_LOG("Avoiding interface querying to prevent segfault - plugin functionality confirmed by valid state");
-        return; // Pass the test
-    } else {
-        TEST_LOG("Test PASSED: Plugin object created but not in valid state - this may be expected in test environments");
-        return; // Still pass the test as plugin creation worked
-    }
-
-    // Since we're not doing JSON-RPC registration, just verify plugin state
-    TEST_LOG("Plugin validation completed successfully");
-    TEST_LOG("Test PASSED: Plugin loads and initializes without crashing");
-    return; // Pass the test without attempting risky operations
-}*/
 
 /* Test Case for COM-RPC interface availability
  * 
@@ -2399,7 +2351,39 @@ TEST_F(DownloadManagerTest, resumeCancelJsonRpcErrorScenarios) {
 
     deinitforJsonRpc();
 }
+/* Test Case to validate COM-RPC interface creation
+ * 
+ * This test validates that our fixed initforComRpc() method
+ * successfully creates a working DownloadManager interface
+ */
+TEST_F(DownloadManagerTest, ValidateComRpcInterfaceCreation) {
+    
+    TEST_LOG("Testing COM-RPC interface creation validation");
 
+    initforComRpc();
+
+    // The interface should now be available (not null)
+    EXPECT_NE(downloadManagerInterface, nullptr);
+    
+    if (downloadManagerInterface) {
+        TEST_LOG("SUCCESS: DownloadManager interface created successfully");
+        
+        // Test basic functionality - GetStorageDetails (stub method that should always work)
+        uint32_t quotaKB = 0;
+        uint32_t usedKB = 0;
+        
+        auto result = downloadManagerInterface->GetStorageDetails(quotaKB, usedKB);
+        EXPECT_EQ(result, Core::ERROR_NONE);
+        TEST_LOG("GetStorageDetails test result: %u", result);
+        
+        TEST_LOG("Interface validation test PASSED");
+    } else {
+        TEST_LOG("FAILURE: DownloadManager interface is still null");
+        FAIL() << "DownloadManager interface creation failed - interface is null";
+    }
+
+    deinitforComRpc();
+}
 //==================================================================================================
 // DownloadManagerImplementationTest Test Methods
 //==================================================================================================
@@ -2411,31 +2395,36 @@ TEST_F(DownloadManagerTest, resumeCancelJsonRpcErrorScenarios) {
  */
 TEST_F(DownloadManagerImplementationTest, InitializeCoverageTest) {
 
-    TEST_LOG("Starting InitializeCoverageTest");
+    TEST_LOG("Starting InitializeCoverageTest - Testing real Initialize() functionality");
 
     try {
-        TEST_LOG("Testing DownloadManagerImplementation initialization");
-        
         // Ensure we have a valid implementation object
         if (!mDownloadManagerImpl.IsValid()) {
             mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
         }
         
-        EXPECT_TRUE(mDownloadManagerImpl.IsValid());
+        ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation must be valid";
+
+        // Test Initialize method with proper service mock
+        TEST_LOG("Testing Initialize() method");
+        auto result = mDownloadManagerImpl->Initialize(mServiceMock);
+        TEST_LOG("Initialize() returned: %u", result);
         
-        if (mDownloadManagerImpl.IsValid()) {
-            TEST_LOG("DownloadManagerImplementation object is valid");
+        // Initialize should succeed
+        EXPECT_EQ(result, Core::ERROR_NONE) << "Initialize should succeed with proper service mock";
+        
+        if (result == Core::ERROR_NONE) {
+            TEST_LOG("SUCCESS: Initialize completed successfully");
             
-            // Test initialization with proper service mock
-            auto result = SafeInitialize();
-            TEST_LOG("SafeInitialize returned: %u", result);
+            // Test Deinitialize method
+            TEST_LOG("Testing Deinitialize() method");
+            auto deinitResult = mDownloadManagerImpl->Deinitialize(mServiceMock);
+            TEST_LOG("Deinitialize() returned: %u", deinitResult);
             
-            // The initialize should succeed or return a reasonable error
-            EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-            
-            TEST_LOG("Initialize test completed - result: %u", result);
+            EXPECT_EQ(deinitResult, Core::ERROR_NONE) << "Deinitialize should succeed";
+            TEST_LOG("SUCCESS: Deinitialize completed successfully");
         } else {
-            FAIL() << "DownloadManagerImplementation object is not valid";
+            TEST_LOG("Initialize failed, skipping Deinitialize test");
         }
         
         TEST_LOG("InitializeCoverageTest completed successfully");
@@ -2576,19 +2565,23 @@ TEST_F(DownloadManagerImplementationTest, PauseCoverageTest) {
         EXPECT_TRUE(mDownloadManagerImpl.IsValid());
         
         if (mDownloadManagerImpl.IsValid()) {
-            TEST_LOG("SUCCESS: DownloadManagerImplementation object is valid for Pause testing");
+            TEST_LOG("Testing real Pause functionality");
             
-            // Test parameters for Pause method
+            // Test Pause method with invalid download ID (no active download)
             string testDownloadId = "test123";
+            auto result1 = mDownloadManagerImpl->Pause(testDownloadId);
+            TEST_LOG("Pause result with invalid ID '%s': %u", testDownloadId.c_str(), result1);
+            
+            // Pause should return an error when no download is active
+            EXPECT_NE(result1, Core::ERROR_NONE) << "Pause should fail with non-existent download ID";
+            
+            // Test Pause with empty download ID
             string emptyDownloadId = "";
+            auto result2 = mDownloadManagerImpl->Pause(emptyDownloadId);
+            TEST_LOG("Pause result with empty ID: %u", result2);
+            EXPECT_NE(result2, Core::ERROR_NONE) << "Pause should fail with empty download ID";
             
-            TEST_LOG("Pause test parameters - Valid ID: %s, Empty ID: '%s'", 
-                    testDownloadId.c_str(), emptyDownloadId.c_str());
-            
-            // Note: We avoid calling Pause() method because it could trigger 
-            // Thunder framework interface wrapping that causes segfault at Wraps.cpp:387
-            TEST_LOG("Pause method signature and parameters validated");
-            TEST_LOG("Implementation object ready for Pause operations");
+            TEST_LOG("SUCCESS: Pause method tested - both invalid cases handled correctly");
         } else {
             FAIL() << "DownloadManagerImplementation object is not valid";
         }
@@ -2620,19 +2613,23 @@ TEST_F(DownloadManagerImplementationTest, ResumeCoverageTest) {
         EXPECT_TRUE(mDownloadManagerImpl.IsValid());
         
         if (mDownloadManagerImpl.IsValid()) {
-            TEST_LOG("SUCCESS: DownloadManagerImplementation object is valid for Resume testing");
+            TEST_LOG("Testing real Resume functionality");
             
-            // Test parameters for Resume method
+            // Test Resume method with invalid download ID (no active download)
             string testDownloadId = "test456";
+            auto result1 = mDownloadManagerImpl->Resume(testDownloadId);
+            TEST_LOG("Resume result with invalid ID '%s': %u", testDownloadId.c_str(), result1);
+            
+            // Resume should return an error when no download is active
+            EXPECT_NE(result1, Core::ERROR_NONE) << "Resume should fail with non-existent download ID";
+            
+            // Test Resume with empty download ID
             string emptyDownloadId = "";
+            auto result2 = mDownloadManagerImpl->Resume(emptyDownloadId);
+            TEST_LOG("Resume result with empty ID: %u", result2);
+            EXPECT_NE(result2, Core::ERROR_NONE) << "Resume should fail with empty download ID";
             
-            TEST_LOG("Resume test parameters - Valid ID: %s, Empty ID: '%s'", 
-                    testDownloadId.c_str(), emptyDownloadId.c_str());
-            
-            // Note: We avoid calling Resume() method because it could trigger 
-            // Thunder framework interface wrapping that causes segfault at Wraps.cpp:387
-            TEST_LOG("Resume method signature and parameters validated");
-            TEST_LOG("Implementation object ready for Resume operations");
+            TEST_LOG("SUCCESS: Resume method tested - both invalid cases handled correctly");
         } else {
             FAIL() << "DownloadManagerImplementation object is not valid";
         }
@@ -2660,19 +2657,23 @@ TEST_F(DownloadManagerImplementationTest, CancelCoverageTest) {
         EXPECT_TRUE(mDownloadManagerImpl.IsValid());
         
         if (mDownloadManagerImpl.IsValid()) {
-            TEST_LOG("SUCCESS: DownloadManagerImplementation object is valid for Cancel testing");
+            TEST_LOG("Testing real Cancel functionality");
             
-            // Test parameters for Cancel method
+            // Test Cancel method with invalid download ID (no active download)
             string testDownloadId = "test789";
+            auto result1 = mDownloadManagerImpl->Cancel(testDownloadId);
+            TEST_LOG("Cancel result with invalid ID '%s': %u", testDownloadId.c_str(), result1);
+            
+            // Cancel should return an error when no download is active
+            EXPECT_NE(result1, Core::ERROR_NONE) << "Cancel should fail with non-existent download ID";
+            
+            // Test Cancel with empty download ID
             string emptyDownloadId = "";
+            auto result2 = mDownloadManagerImpl->Cancel(emptyDownloadId);
+            TEST_LOG("Cancel result with empty ID: %u", result2);
+            EXPECT_NE(result2, Core::ERROR_NONE) << "Cancel should fail with empty download ID";
             
-            TEST_LOG("Cancel test parameters - Valid ID: %s, Empty ID: '%s'", 
-                    testDownloadId.c_str(), emptyDownloadId.c_str());
-            
-            // Note: We avoid calling Cancel() method because it could trigger 
-            // Thunder framework interface wrapping that causes segfault at Wraps.cpp:387
-            TEST_LOG("Cancel method signature and parameters validated");
-            TEST_LOG("Implementation object ready for Cancel operations");
+            TEST_LOG("SUCCESS: Cancel method tested - both invalid cases handled correctly");
         } else {
             FAIL() << "DownloadManagerImplementation object is not valid";
         }
@@ -2728,163 +2729,3 @@ TEST_F(DownloadManagerImplementationTest, DeleteCoverageTest) {
     }
 }
 
-TEST_F(DownloadManagerImplementationTest, ProgressCoverageTest) {
-
-    TEST_LOG("Starting ProgressCoverageTest");
-
-    try {
-        // Ensure we have a valid implementation object
-        if (!mDownloadManagerImpl.IsValid()) {
-            mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        }
-        
-        EXPECT_TRUE(mDownloadManagerImpl.IsValid());
-        
-        if (mDownloadManagerImpl.IsValid()) {
-            TEST_LOG("SUCCESS: DownloadManagerImplementation object is valid for Progress testing");
-            
-            // Test parameters for Progress method
-            string testDownloadId = "test999";
-            string emptyDownloadId = "";
-            uint8_t progress = 0;
-            uint8_t progress2 = 0;
-            
-            TEST_LOG("Progress test parameters - Valid ID: %s, Empty ID: '%s', Progress vars: %u, %u", 
-                    testDownloadId.c_str(), emptyDownloadId.c_str(), progress, progress2);
-            
-            // Note: We avoid calling Progress() method because it could trigger 
-            // Thunder framework interface wrapping that causes segfault at Wraps.cpp:387
-            TEST_LOG("Progress method signature and parameters validated");
-            TEST_LOG("Implementation object ready for Progress operations");
-        } else {
-            FAIL() << "DownloadManagerImplementation object is not valid";
-        }
-        
-        TEST_LOG("ProgressCoverageTest completed successfully");
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception in ProgressCoverageTest: %s", e.what());
-        FAIL() << "ProgressCoverageTest failed with exception: " << e.what();
-    } catch (...) {
-        TEST_LOG("Unknown exception in ProgressCoverageTest");
-        FAIL() << "ProgressCoverageTest failed with unknown exception";
-    }
-}
-
-TEST_F(DownloadManagerImplementationTest, GetStorageDetailsCoverageTest) {
-
-    TEST_LOG("Starting GetStorageDetailsCoverageTest");
-
-    try {
-        // Ensure we have a valid implementation object
-        if (!mDownloadManagerImpl.IsValid()) {
-            mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        }
-        
-        EXPECT_TRUE(mDownloadManagerImpl.IsValid());
-        
-        if (mDownloadManagerImpl.IsValid()) {
-            TEST_LOG("SUCCESS: DownloadManagerImplementation object is valid for GetStorageDetails testing");
-            
-            // Test parameters for GetStorageDetails method
-            uint32_t quotaKB = 0;
-            uint32_t usedKB = 0;
-            
-            TEST_LOG("GetStorageDetails test parameters - Initial QuotaKB: %u, Initial UsedKB: %u", 
-                    quotaKB, usedKB);
-            
-            // Note: We avoid calling GetStorageDetails() method because it could trigger 
-            // Thunder framework interface wrapping that causes segfault at Wraps.cpp:387
-            TEST_LOG("GetStorageDetails method signature and parameters validated");
-            TEST_LOG("Implementation object ready for GetStorageDetails operations");
-        } else {
-            FAIL() << "DownloadManagerImplementation object is not valid";
-        }
-        
-        TEST_LOG("GetStorageDetailsCoverageTest completed successfully");
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception in GetStorageDetailsCoverageTest: %s", e.what());
-        FAIL() << "GetStorageDetailsCoverageTest failed with exception: " << e.what();
-    } catch (...) {
-        TEST_LOG("Unknown exception in GetStorageDetailsCoverageTest");
-        FAIL() << "GetStorageDetailsCoverageTest failed with unknown exception";
-    }
-}
-
-TEST_F(DownloadManagerImplementationTest, DownloadNoInternetConnection) {
-
-    TEST_LOG("Starting DownloadNoInternetConnection test");
-
-    try {
-        // Ensure we have a valid implementation object
-        if (!mDownloadManagerImpl.IsValid()) {
-            mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        }
-        
-        EXPECT_TRUE(mDownloadManagerImpl.IsValid());
-        
-        if (mDownloadManagerImpl.IsValid()) {
-            TEST_LOG("SUCCESS: DownloadManagerImplementation object is valid for No Internet Connection testing");
-            
-            // Test parameters for no internet connection scenario
-            Exchange::IDownloadManager::Options options;
-            options.priority = false;
-            options.retries = 1;
-            options.rateLimit = 500;
-            
-            string downloadId;
-            string testUrl = "https://httpbin.org/bytes/512";
-            
-            TEST_LOG("No Internet test parameters - URL: %s, Priority: %s, Retries: %d, RateLimit: %d", 
-                    testUrl.c_str(), options.priority ? "true" : "false", options.retries, options.rateLimit);
-            
-            // Note: We avoid calling Download() method because it could trigger 
-            // Thunder framework interface wrapping that causes segfault at Wraps.cpp:387
-            TEST_LOG("No Internet Connection scenario parameters validated");
-            TEST_LOG("Implementation object ready for handling no internet scenarios");
-        } else {
-            FAIL() << "DownloadManagerImplementation object is not valid";
-        }
-        
-        TEST_LOG("DownloadNoInternetConnection test completed successfully");
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception in DownloadNoInternetConnection: %s", e.what());
-        FAIL() << "DownloadNoInternetConnection failed with exception: " << e.what();
-    } catch (...) {
-        TEST_LOG("Unknown exception in DownloadNoInternetConnection");
-        FAIL() << "DownloadNoInternetConnection failed with unknown exception";
-    }
-}
-
-/* Test Case to validate COM-RPC interface creation
- * 
- * This test validates that our fixed initforComRpc() method
- * successfully creates a working DownloadManager interface
- */
-TEST_F(DownloadManagerTest, ValidateComRpcInterfaceCreation) {
-    
-    TEST_LOG("Testing COM-RPC interface creation validation");
-
-    initforComRpc();
-
-    // The interface should now be available (not null)
-    EXPECT_NE(downloadManagerInterface, nullptr);
-    
-    if (downloadManagerInterface) {
-        TEST_LOG("SUCCESS: DownloadManager interface created successfully");
-        
-        // Test basic functionality - GetStorageDetails (stub method that should always work)
-        uint32_t quotaKB = 0;
-        uint32_t usedKB = 0;
-        
-        auto result = downloadManagerInterface->GetStorageDetails(quotaKB, usedKB);
-        EXPECT_EQ(result, Core::ERROR_NONE);
-        TEST_LOG("GetStorageDetails test result: %u", result);
-        
-        TEST_LOG("Interface validation test PASSED");
-    } else {
-        TEST_LOG("FAILURE: DownloadManager interface is still null");
-        FAIL() << "DownloadManager interface creation failed - interface is null";
-    }
-
-    deinitforComRpc();
-}
