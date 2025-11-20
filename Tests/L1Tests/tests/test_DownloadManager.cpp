@@ -329,8 +329,9 @@ protected:
                 
                 if (initResult == Core::ERROR_NONE) {
                     // Query for the IDownloadManager interface properly using Thunder framework
-                    downloadManagerInterface = downloadManagerImpl->QueryInterface<Exchange::IDownloadManager>();
-                    if (downloadManagerInterface != nullptr) {
+                    Exchange::IDownloadManager* interface = nullptr;
+                    if (downloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID, (void**)&interface) == Core::ERROR_NONE && interface != nullptr) {
+                        downloadManagerInterface = interface;
                         // Keep a reference to prevent deletion
                         mockImpl = downloadManagerInterface;
                         TEST_LOG("DownloadManagerImplementation created and initialized successfully");
