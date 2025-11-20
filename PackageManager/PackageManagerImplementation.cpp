@@ -412,7 +412,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::Progress(const string &downloadId, ProgressInfo &progress)
     {
         Core::hresult result = Core::ERROR_NONE;
-
+        LOGDBG("'%s'", downloadId.c_str());
         if (mInprogressDownload.get() != nullptr) {
             progress.progress = mHttpClient->getProgress();
         } else {
@@ -425,6 +425,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::GetStorageDetails(string &quotaKB, string &usedKB)
     {
         Core::hresult result = Core::ERROR_NONE;
+        LOGDBG();
         return result;
     }
 
@@ -476,20 +477,50 @@ namespace Plugin {
                 keyValues.push_back(std::make_pair(kv.name, kv.value));
             }
         }
-        if (!IsInstallBlocked(packageId, keyValues, fileLocator)) {
-            StateKey key { packageId, version };
-            auto it = mState.find( key );
-            State tempState;
-            bool found = it != mState.end();
-            State &state = found ? it->second : tempState;
+
+        bool bNewEntry = false;
+        StateKey key { packageId, version };
+        auto it = mState.find( key );
+        State tempState;
+        bool found = it != mState.end();
+        State &state = found ? it->second : tempState;
+        state.installState = InstallState::INSTALLING;
+
+        string installedVersion = GetInstalledVersion(packageId);
+        if (installedVersion.empty()) {
+            // No other versions
+            bNewEntry = true;
+        } else {
+            if (installedVersion.compare(version) == 0) {
+                // Same version already installed, upgrading ?!
+            } else {
+                // different version
+                StateKey installedKey { packageId, installedVersion };
+                auto it = mState.find( installedKey );
+                bNewEntry = true;
+                if (it != mState.end()) {
+                    State &installedState = it->second;
+                    if ( installedState.mLockCount ) {
+                        LOGWARN("App is locked id: '%s' ver: '%s' count:%d", packageId.c_str(), installedVersion.c_str(), installedState.mLockCount);
+                        state.installState = InstallState::INSTALLATION_BLOCKED;
+                        state.blockedInstallData.version = version;
+                        state.blockedInstallData.keyValues = keyValues;
+                        state.blockedInstallData.fileLocator = fileLocator;
+                    }
+                }
+            }
+        }
+
+        //if (!IsInstallBlocked(packageId, version, keyValues, fileLocator)) {
+        if (state.installState == InstallState::INSTALLING) {
 
             result = Install(packageId, version, keyValues, fileLocator, state);
-            if ((result == Core::ERROR_NONE) && !found) {
-                LOGDBG("Inserting Package: %s Version: %s", packageId.c_str(), version.c_str());
-                mState.insert( { key, state } );    // XXX: may need protection
-            } else {
+            //if ((result == Core::ERROR_NONE) && !found) {
+            //    LOGDBG("Inserting Package: %s Version: %s", packageId.c_str(), version.c_str());
+            //    mState.insert( { key, state } );    // XXX: may need protection
+            //} else {
                 LOGDBG("Package: %s Version: %s found=%d result=%d", packageId.c_str(), version.c_str(), found, result);
-            }
+            //}
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
                         ? PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE
@@ -559,6 +590,11 @@ namespace Plugin {
                                                         requestTime,
                                                         packageFailureErrorCode);
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+        }
+
+        if (bNewEntry) {
+            LOGDBG("Inserting Package: %s Version: %s state: %u", key.first.c_str(), key.second.c_str(), (unsigned) state.installState);
+            mState.insert( { key, state } );    // XXX: may need protection
         }
         return result;
     }
@@ -664,7 +700,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig)
     {
         CHECK_CACHE()
-        LOGDBG();
+        LOGDBG("id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
         Core::hresult result = Core::ERROR_GENERAL;
 
         auto it = mState.find( { packageId, version } );
@@ -687,13 +723,14 @@ namespace Plugin {
         Exchange::IPackageInstaller::InstallState &installState)
     {
         CHECK_CACHE()
-        LOGDBG();
+        LOGDBG("id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
         Core::hresult result = Core::ERROR_NONE;
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
             installState = state.installState;
+            LOGDBG("id: '%s' ver: '%s' state: %s", packageId.c_str(), version.c_str(), getInstallState(installState).c_str());
         } else {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_GENERAL;
@@ -780,7 +817,7 @@ namespace Plugin {
                         lock.version = nv.second;
                         state.additionalLocks.emplace_back(lock);
                     }
-                    LOGDBG("Locked id: %s ver: %s additionalLocks=%zu", packageId.c_str(), version.c_str(), state.additionalLocks.size());
+                    LOGDBG("Locked. id: %s ver: %s additionalLocks=%zu", packageId.c_str(), version.c_str(), state.additionalLocks.size());
                 } else {
                     LOGERR("Lock Failed id: %s ver: %s", packageId.c_str(), version.c_str());
                     result = Core::ERROR_GENERAL;
@@ -881,26 +918,33 @@ namespace Plugin {
             auto &state = it->second;
             #ifdef USE_LIBPACKAGE
             if (state.mLockCount) {
+                LOGDBG("id: %s ver: %s lock count:%d state:%d", packageId.c_str(), version.c_str(),
+                    state.mLockCount, (int) state.installState);
                 if (--state.mLockCount == 0) {
-                    state.unpackedPath = "";
-                       if (state.installState == InstallState::INSTALLATION_BLOCKED) {
-                            //Exchange::IPackageInstaller::FailReason failReason;
-                            packagemanager::NameValues kv;
-                            if (Install(packageId, version, kv, "", state) == packagemanager::SUCCESS) {
-                                LOGDBG("Blocked package installed id: %s ver: %s", packageId.c_str(), version.c_str());
+                    string blockedVer = GetBlockedVersion(packageId);
+                    LOGDBG("blockedVer: %s", blockedVer.c_str());
+                    auto itBlocked = mState.find( { packageId, blockedVer } );
+                    if (itBlocked != mState.end()) {
+                        auto &stateBlocked = itBlocked->second;
+                        LOGDBG("blockedVer: '%s' state: %d", blockedVer.c_str(), (unsigned) stateBlocked.installState);
+                        stateBlocked.unpackedPath = "";
+                        if (stateBlocked.installState == InstallState::INSTALLATION_BLOCKED) {
+                            auto blockedData = stateBlocked.blockedInstallData;
+                            if (Install(packageId, blockedData.version, blockedData.keyValues, blockedData.fileLocator, stateBlocked) == packagemanager::SUCCESS) {
+                                LOGDBG("Blocked package installed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
+                                state.installState = InstallState::UNINSTALLED;
                             } else {
-                                LOGERR("Blocked package installed failed id: %s ver: %s", packageId.c_str(), version.c_str());
+                                LOGERR("Blocked package installed failed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                             }
-
-                        } else if (state.installState == InstallState::UNINSTALL_BLOCKED) {
+                        } else if (stateBlocked.installState == InstallState::UNINSTALL_BLOCKED) {
                             string errorReason;
                             if (Uninstall(packageId, errorReason) == packagemanager::SUCCESS) {
-                                LOGDBG("Blocked package uninstalled id: %s ver: %s", packageId.c_str(), version.c_str());
+                                LOGDBG("Blocked package uninstalled id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                             } else {
-                                //state.installState == InstallState::UNINSTALL_FAILURE;
-                                LOGERR("Blocked package uninstall failed id: %s ver: %s", packageId.c_str(), version.c_str());
+                                LOGERR("Blocked package uninstall failed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                             }
                         }
+                    }
                 }
             } else {
                 LOGERR("Never Locked (mLockCount is 0) id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -1084,7 +1128,7 @@ namespace Plugin {
                 #ifdef USE_LIBPACKAGE
                 packagemanager::ConfigMetaData config;
                 packagemanager::Result pmResult = (state.installState == InstallState::INSTALLATION_BLOCKED)
-                    ? packageImpl->Install(packageId, version, state.blockedInstallData.keyValues, state.blockedInstallData.fileLocator, config)
+                    ? packageImpl->Install(packageId, state.blockedInstallData.version, state.blockedInstallData.keyValues, state.blockedInstallData.fileLocator, config)
                     : packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                 if (pmResult == packagemanager::SUCCESS) {
                     result = Core::ERROR_NONE;
@@ -1106,27 +1150,30 @@ namespace Plugin {
         return result;
     }
 
-    bool PackageManagerImplementation::IsInstallBlocked(const string &packageId, const packagemanager::NameValues &keyValues, const string &fileLocator)
+    /*
+    bool PackageManagerImplementation::IsInstallBlocked(const string &packageId, const string &version, const packagemanager::NameValues &keyValues, const string &fileLocator)
     {
         bool blocked = false;
         string installedVersion = GetInstalledVersion(packageId);
         if (!installedVersion.empty()) {
             StateKey key { packageId, installedVersion };
             auto it = mState.find( key );
-            if (it == mState.end()) {
+            if (it != mState.end()) {
                 State &state = it->second;
                 if ( state.mLockCount ) {
                     LOGWARN("App is locked id: '%s' ver: '%s' count:%d", packageId.c_str(), installedVersion.c_str(), state.mLockCount);
                     state.installState = InstallState::INSTALLATION_BLOCKED;
+                    state.blockedInstallData.version = version;
                     state.blockedInstallData.keyValues = keyValues;
                     state.blockedInstallData.fileLocator = fileLocator;
                 }
                 blocked = true;
             }
         }
-        LOGDBG("blocked=%d", blocked);
+        LOGDBG("packageId: '%s' installedVersion:'%s' blocked:%d", packageId.c_str(), installedVersion.c_str(), blocked);
         return blocked;
     }
+    */
 
     void PackageManagerImplementation::NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason reason)
     {
