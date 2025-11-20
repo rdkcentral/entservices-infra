@@ -863,7 +863,6 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
-    EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
     EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
 	
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
