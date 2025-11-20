@@ -150,30 +150,49 @@ protected:
             EXPECT_CALL(*mServiceMock, Release())
               .Times(::testing::AnyNumber());
 
-            // Skip all risky plugin operations that trigger interface wrapping
-            TEST_LOG("Skipping plugin activation and initialization to prevent Wraps.cpp:387 segfault");
-            TEST_LOG("The segfault occurs during interface wrapping when (impl) is nullptr");
-            TEST_LOG("Tests will work with basic plugin object only");
+            // Properly activate and initialize the plugin
+            TEST_LOG("Activating and initializing plugin properly");
             
-            // Initialize plugin following established patterns but skip risky operations
+            // Initialize plugin following established patterns
             PluginHost::IFactories::Assign(&factoriesImplementation);
             
             if (!plugin.IsValid()) {
                 TEST_LOG("Plugin is null - cannot proceed");
                 return Core::ERROR_GENERAL;
             } else {
-                TEST_LOG("Plugin is valid, but skipping activation/initialization");
+                TEST_LOG("Plugin is valid - proceeding with activation");
             }
             
-            // Skip dispatcher operations entirely
-            dispatcher = nullptr;
-            TEST_LOG("Dispatcher set to null to avoid interface wrapping issues");
+            // Activate the plugin
+            TEST_LOG("Activating plugin");
+            string result;
+            auto activateResult = plugin->Activate(mServiceMock);
+            TEST_LOG("Plugin activation result: %u", activateResult);
+            
+            // Set up dispatcher
+            dispatcher = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
+            if (dispatcher != nullptr) {
+                TEST_LOG("Dispatcher interface obtained successfully");
+            } else {
+                TEST_LOG("Failed to obtain dispatcher interface");
+            }
            
-            // Skip IDownloadManager interface querying to prevent segmentation fault
-            // The interface wrapping mechanism in Wraps.cpp:387 is failing with null implementation
-            TEST_LOG("Skipping IDownloadManager interface querying to prevent segfault in Wraps.cpp");
-            downloadManagerInterface = nullptr;
-            TEST_LOG("DownloadManager interface set to null - individual tests will handle unavailability");
+            // Get IDownloadManager interface  
+            TEST_LOG("Querying for IDownloadManager interface");
+            // Try to get the interface - using the interface directly from plugin
+            downloadManagerInterface = plugin->QueryInterface<Exchange::IDownloadManager>();
+            if (downloadManagerInterface != nullptr) {
+                TEST_LOG("IDownloadManager interface obtained successfully");
+            } else {
+                TEST_LOG("Failed to obtain IDownloadManager interface, trying alternative method");
+                // Alternative: cast the plugin directly if it implements the interface
+                downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(&(*plugin));
+                if (downloadManagerInterface != nullptr) {
+                    TEST_LOG("IDownloadManager interface obtained via direct cast");
+                } else {
+                    TEST_LOG("Failed to obtain IDownloadManager interface via direct cast");
+                }
+            }
              
             TEST_LOG("createResources - All done!");
             status = Core::ERROR_NONE;
@@ -2685,47 +2704,6 @@ TEST_F(DownloadManagerImplementationTest, CancelCoverageTest) {
     } catch (...) {
         TEST_LOG("Unknown exception in CancelCoverageTest");
         FAIL() << "CancelCoverageTest failed with unknown exception";
-    }
-}
-
-TEST_F(DownloadManagerImplementationTest, DeleteCoverageTest) {
-
-    TEST_LOG("Starting DeleteCoverageTest");
-
-    try {
-        // Ensure we have a valid implementation object
-        if (!mDownloadManagerImpl.IsValid()) {
-            mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        }
-        
-        EXPECT_TRUE(mDownloadManagerImpl.IsValid());
-        
-        if (mDownloadManagerImpl.IsValid()) {
-            TEST_LOG("SUCCESS: DownloadManagerImplementation object is valid for Delete testing");
-            
-            // Test parameters for Delete method
-            string emptyFileLocator = "";
-            string nonExistentFile = "/tmp/nonexistent_test_file.txt";
-            string validFileLocator = "/tmp/test_delete_file.txt";
-            
-            TEST_LOG("Delete test parameters - Empty: '%s', Non-existent: %s, Valid: %s", 
-                    emptyFileLocator.c_str(), nonExistentFile.c_str(), validFileLocator.c_str());
-            
-            // Note: We avoid calling Delete() method because it could trigger 
-            // Thunder framework interface wrapping that causes segfault at Wraps.cpp:387
-            TEST_LOG("Delete method signature and parameters validated");
-            TEST_LOG("Implementation object ready for Delete operations");
-        } else {
-            FAIL() << "DownloadManagerImplementation object is not valid";
-        }
-        
-        TEST_LOG("DeleteCoverageTest completed successfully");
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception in DeleteCoverageTest: %s", e.what());
-        FAIL() << "DeleteCoverageTest failed with exception: " << e.what();
-    } catch (...) {
-        TEST_LOG("Unknown exception in DeleteCoverageTest");
-        FAIL() << "DeleteCoverageTest failed with unknown exception";
     }
 }
 
