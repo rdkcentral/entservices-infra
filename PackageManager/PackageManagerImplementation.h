@@ -64,6 +64,7 @@ namespace Plugin {
         class State {
             class BlockedInstallData {
                 public:
+                string version;
                 packagemanager::NameValues keyValues;
                 string fileLocator;
             };
@@ -86,6 +87,7 @@ namespace Plugin {
         };
 
         typedef std::pair<std::string, std::string> StateKey;
+        typedef std::map<StateKey, State> StateMap;
 
         class Configuration : public Core::JSON::Container {
             public:
@@ -206,6 +208,7 @@ namespace Plugin {
     private:
         inline string GetInstalledVersion(const string& id) {
             for (auto const& [key, state] : mState) {
+                //LOGDBG("packageId: '%s' version:'%s' state:%d", key.first.c_str(), key.second.c_str(), (int) state.installState);
                 if ((id.compare(key.first) == 0) &&
                     (state.installState == InstallState::INSTALLED || state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
                     return key.second;
@@ -213,7 +216,19 @@ namespace Plugin {
             }
             return "";
         }
-        inline bool IsInstallBlocked(const string &packageId, const packagemanager::NameValues &keyValues, const string &fileLocator);
+
+        inline string GetBlockedVersion(const string& id) {
+            for (auto const& [key, state] : mState) {
+                //LOGDBG("packageId: '%s' version:'%s' state:%d", key.first.c_str(), key.second.c_str(), (int) state.installState);
+                if ((id.compare(key.first) == 0) &&
+                    (state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
+                    return key.second;
+                }
+            }
+            return "";
+        }
+
+        inline bool IsInstallBlocked(const string &packageId, const string &version, const packagemanager::NameValues &keyValues, const string &fileLocator);
         Core::hresult Install(const string &packageId, const string &version, const packagemanager::NameValues &keyValues, const string &fileLocator, State& state);
 
         void InitializeState();
@@ -281,7 +296,7 @@ namespace Plugin {
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
-        std::map<StateKey, State>  mState;
+        StateMap  mState;
         bool cacheInitialized = false;
 
         std::string downloadDir = "/opt/CDL/";
