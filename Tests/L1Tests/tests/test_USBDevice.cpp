@@ -1236,9 +1236,12 @@ TEST_F(USBDeviceTest, getDeviceInfoSuccessCase)
  */
 TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
 {
+    TEST_LOG("Starting OnDevicePluggedIn_ViaJobDispatch_Success test");
     Core::Sink<L1USBDeviceNotificationHandler> notification;
+    TEST_LOG("Created notification sink");
     
     USBDeviceImpl->Register(&notification);
+    TEST_LOG("Registered notification handler");
     notification.ResetEvents();
     
     // Create test data for device plugged in event
