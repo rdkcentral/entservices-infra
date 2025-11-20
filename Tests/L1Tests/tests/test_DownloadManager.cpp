@@ -54,14 +54,12 @@ struct StatusParams {
     string version;
     string downloadId;
     string fileLocator;
-    Exchange::IDownloadManager::Reason reason;
 };
 
 class DownloadManagerTest : public ::testing::Test {
 protected:
     // Declare the protected members
     ServiceMock* mServiceMock = nullptr;
-    StorageManagerMock* mStorageManagerMock = nullptr;
     SubSystemMock* mSubSystemMock = nullptr;
 
     Core::ProxyType<Plugin::DownloadManager> plugin;
@@ -80,7 +78,7 @@ protected:
     Exchange::IDownloadManager* interface = nullptr;
     Exchange::IDownloadManager::Options options;
 	string downloadId;
-    uint8_t progress;
+    uint8_t percent;
     uint32_t quotaKB, usedKB;
 
     // Constructor
@@ -375,13 +373,13 @@ TEST_F(DownloadManagerTest, downloadMethodusingJsonRpcSuccess) {
                 return Core::ERROR_NONE;
             }));
 
-    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManagerRDKEMS"), message);
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
     
     // TC-2: Add download request to regular queue using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
-    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManagerRDKEMS"), message);
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -438,11 +436,11 @@ TEST_F(DownloadManagerTest, downloadMethodsusingComRpcSuccess) {
             }));
     
     // TC-4: Add download request to priority queue using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
     
     waitforSignal(TIMEOUT);
 
-    EXPECT_EQ(downloadId.downloadId, "1001");
+    EXPECT_EQ(downloadId, "1001");
 
 	deinitforComRpc();
 }
@@ -470,7 +468,7 @@ TEST_F(DownloadManagerTest, downloadMethodsusingComRpcError) {
             }));
     
     // TC-5: Download request error when internet is unavailable using ComRpc
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, interface->Download(uri, options, downloadId));
 
 	deinitforComRpc();   
 }
@@ -558,18 +556,16 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
     waitforSignal(timeout_ms);
 
-    EXPECT_EQ(downloadId.downloadId, "1001");
-
-    string downloadId = "1001";
+    EXPECT_EQ(downloadId, "1001");
 
     // TC-8: Pause download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Pause(downloadId));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Cancel(downloadId));
 
 	deinitforComRpc();    
 }
@@ -589,7 +585,7 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcFailure) {
     string downloadId = "1001";
 
     // TC-9: Failure in pausing download using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Pause(downloadId));
 
 	deinitforComRpc();
 }
@@ -683,20 +679,18 @@ TEST_F(DownloadManagerTest, resumeMethodusingComRpcSuccess) {
                 return true;
             }));
 
-   	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+   	EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
     waitforSignal(timeout_ms);
 
-    EXPECT_EQ(downloadId.downloadId, "1001");
-
-    string downloadId = "1001";
+    EXPECT_EQ(downloadId, "1001");
     
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Pause(downloadId));
 
     // TC-12: Resume download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Resume(downloadId));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Cancel(downloadId));
 
     deinitforComRpc();
 }
@@ -716,7 +710,7 @@ TEST_F(DownloadManagerTest, resumeMethodusingComRpcSuccess) {
     string downloadId = "1001";
 
     // TC-13: Failure in resuming download using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Resume(downloadId));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Resume(downloadId));
 
 	deinitforComRpc();
 }
@@ -804,18 +798,16 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
     waitforSignal(timeout_ms);
 
-    EXPECT_EQ(downloadId.downloadId, "1001");
-
-    string downloadId = "1001";
+    EXPECT_EQ(downloadId, "1001");
     
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Pause(downloadId));
 
     // TC-16: Cancel download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Cancel(downloadId));
 
 	deinitforComRpc();
 }
@@ -835,7 +827,7 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcFailure) {
     string downloadId = "1001";
 
     // TC-17: Failure in cancelling download using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Cancel(downloadId));
 
 	deinitforComRpc();
 }
@@ -871,12 +863,12 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
                 return Core::ERROR_NONE;
             }));
 
-    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManagerRDKEMS"), message);
+    EVENT_SUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
     EXPECT_EQ(Core::ERROR_NONE, onAppDownloadStatus.Lock());
-    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManagerRDKEMS"), message);
+    EVENT_UNSUBSCRIBE(0, _T("onAppDownloadStatus"), _T("org.rdk.DownloadManager"), message);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -930,16 +922,16 @@ TEST_F(DownloadManagerTest, deleteMethodusingComRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
     waitforSignal(timeout_ms);
 
-    EXPECT_EQ(downloadId.downloadId, "1001");
+    EXPECT_EQ(downloadId, "1001");
 
     string fileLocator = "/opt/CDL/package1001";
 
     // TC-20: Delete download failure when download in progress using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Delete(fileLocator));
 
 	deinitforComRpc();
 }
@@ -959,7 +951,7 @@ TEST_F(DownloadManagerTest, deleteMethodusingComRpcFailure) {
     string fileLocator = "";
 
     // TC-21: Failure in delete using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Delete(fileLocator));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Delete(fileLocator));
 
 	deinitforComRpc();
 }
@@ -1055,22 +1047,20 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
                 return true;
             }));
 
-    progress = {};
+    percent = 0;
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
     waitforSignal(timeout_ms);
 
-    EXPECT_EQ(downloadId.downloadId, "1001");
+    EXPECT_EQ(downloadId, "1001");
 
-    string downloadId = "1001";
-
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Pause(downloadId));
 
     // TC-24: Download progress via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Progress(downloadId, percent));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Cancel(downloadId));
     
 	deinitforComRpc();
 }
@@ -1087,12 +1077,12 @@ TEST_F(DownloadManagerTest, progressMethodusingComRpcFailure) {
 
     initforComRpc();
 
-    progress = {};
+    percent = 0;
 
     string downloadId = "1001";
 
     // TC-25: Progress failure via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->Progress(downloadId, progress));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->Progress(downloadId, progress));
 
 	deinitforComRpc();
 }
@@ -1127,11 +1117,11 @@ TEST_F(DownloadManagerTest, getStorageDetailsusingComRpc) {
 
     initforComRpc();
 
-    string quotaKB = "1024";
-    string usedKB = "568";
+    quotaKB = 1024;
+    usedKB = 568;
 
     // TC-27: Get Storage Details using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->GetStorageDetails(quotaKB, usedKB));
+    EXPECT_EQ(Core::ERROR_NONE, interface->GetStorageDetails(quotaKB, usedKB));
 
 	deinitforComRpc();
 }
@@ -1227,20 +1217,18 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
 
     uint64_t limit = 1024;
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
     waitforSignal(timeout_ms);
 
-    EXPECT_EQ(downloadId.downloadId, "1001");
+    EXPECT_EQ(downloadId, "1001");
 
-    string downloadId = "1001";
-
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Pause(downloadId));
 
     // TC-30: Set rate limit via downloadID using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId, limit));
+    EXPECT_EQ(Core::ERROR_NONE, interface->RateLimit(downloadId, limit));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, interface->Cancel(downloadId));
     
 	deinitforComRpc();
 }
@@ -1261,7 +1249,7 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
     string downloadId = "1001";
 
     // TC-31: Rate limit failure using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkgdownloaderInterface->RateLimit(downloadId, limit));
+    EXPECT_EQ(Core::ERROR_GENERAL, interface->RateLimit(downloadId, limit));
 
 	deinitforComRpc();
 }
