@@ -279,7 +279,6 @@ protected:
 			.WillByDefault(::testing::Invoke(
                   [&](const RPC::Object& object, const uint32_t waitTime, uint32_t& connectionId) {
                         USBDeviceImpl = Core::ProxyType<Plugin::USBDeviceImplementation>::Create();
-                        TEST_LOG("Pass created USBDeviceImpl: %p &USBDeviceImpl: %p", USBDeviceImpl, &USBDeviceImpl);
                         return &USBDeviceImpl;
                     }));
 #else
@@ -1237,15 +1236,10 @@ TEST_F(USBDeviceTest, getDeviceInfoSuccessCase)
  */
 TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
 {
-    TEST_LOG("Starting OnDevicePluggedIn_ViaJobDispatch_Success test");
-    
     L1USBDeviceNotificationHandler* notificationHandler = new L1USBDeviceNotificationHandler();
-    TEST_LOG("Created notification handler: %p", notificationHandler);
     
-    TEST_LOG("Registering notification handler with USBDeviceImpl: %p", USBDeviceImpl.operator->());
     USBDeviceImpl->Register(notificationHandler);
     notificationHandler->ResetEvents();
-    TEST_LOG("Handler registered and events reset");
     
     // Create test data for device plugged in event
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1253,47 +1247,29 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
     testDevice.deviceSubclass = 6;
     testDevice.deviceName = "001/004";
     testDevice.devicePath = "/dev/sda";
-    TEST_LOG("Created test device: class=%d, subclass=%d, name=%s, path=%s", 
-             testDevice.deviceClass, testDevice.deviceSubclass, 
-             testDevice.deviceName.c_str(), testDevice.devicePath.c_str());
     
     // Use Job mechanism for natural notification flow - submit to worker pool
-    TEST_LOG("Creating Job for worker pool submission");
     auto job = Plugin::USBDeviceImplementation::Job::Create(
         USBDeviceImpl.operator->(),
         Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED,
         testDevice
     );
-    TEST_LOG("Job created: %p", job.operator->());
     
     // Submit to worker pool (same way as dispatchEvent does internally)
-    TEST_LOG("Submitting job to worker pool");
     Core::IWorkerPool::Instance().Submit(job);
-    TEST_LOG("Job submitted to worker pool successfully");
     
     // Give worker pool time to process the job
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    TEST_LOG("Waited for job processing");
     
     // Verify notification was received
-    TEST_LOG("Waiting for notification...");
-    bool received = notificationHandler->WaitForRequestStatus(2000, USBDevice_OnDevicePluggedIn);
-    TEST_LOG("Notification wait result: %s", received ? "SUCCESS" : "TIMEOUT");
+    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_OnDevicePluggedIn));
+    EXPECT_EQ("001/004", notificationHandler->GetLastPluggedInDeviceName());
+    EXPECT_EQ("/dev/sda", notificationHandler->GetLastPluggedInDevicePath());
+    EXPECT_EQ(8, notificationHandler->GetLastPluggedInDeviceClass());
+    EXPECT_EQ(6, notificationHandler->GetLastPluggedInDeviceSubclass());
     
-    EXPECT_TRUE(received);
-    if (received) {
-        TEST_LOG("Verifying notification parameters");
-        EXPECT_EQ("001/004", notificationHandler->GetLastPluggedInDeviceName());
-        EXPECT_EQ("/dev/sda", notificationHandler->GetLastPluggedInDevicePath());
-        EXPECT_EQ(8, notificationHandler->GetLastPluggedInDeviceClass());
-        EXPECT_EQ(6, notificationHandler->GetLastPluggedInDeviceSubclass());
-        TEST_LOG("Parameter verification completed");
-    }
-    
-    TEST_LOG("Unregistering and cleaning up");
     USBDeviceImpl->Unregister(notificationHandler);
     notificationHandler->Release();
-    TEST_LOG("OnDevicePluggedIn_ViaJobDispatch_Success test completed");
 }
 
 /**
@@ -1303,15 +1279,10 @@ TEST_F(USBDeviceTest, OnDevicePluggedIn_ViaJobDispatch_Success)
  */
 TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
 {
-    TEST_LOG("Starting OnDevicePluggedOut_ViaJobDispatch_Success test");
-    
     L1USBDeviceNotificationHandler* notificationHandler = new L1USBDeviceNotificationHandler();
-    TEST_LOG("Created notification handler: %p", notificationHandler);
     
-    TEST_LOG("Registering notification handler with USBDeviceImpl: %p", USBDeviceImpl.operator->());
     USBDeviceImpl->Register(notificationHandler);
     notificationHandler->ResetEvents();
-    TEST_LOG("Handler registered and events reset");
     
     // Create test data for device plugged out event
     Exchange::IUSBDevice::USBDevice testDevice;
@@ -1319,48 +1290,26 @@ TEST_F(USBDeviceTest, OnDevicePluggedOut_ViaJobDispatch_Success)
     testDevice.deviceSubclass = 6;
     testDevice.deviceName = "001/005";
     testDevice.devicePath = "/dev/sdb";
-    TEST_LOG("Created test device: class=%d, subclass=%d, name=%s, path=%s", 
-             testDevice.deviceClass, testDevice.deviceSubclass, 
-             testDevice.deviceName.c_str(), testDevice.devicePath.c_str());
     
     // Use Job mechanism for natural notification flow - submit to worker pool
-    TEST_LOG("Creating Job for worker pool submission");
     auto job = Plugin::USBDeviceImplementation::Job::Create(
         USBDeviceImpl.operator->(),
         Plugin::USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT,
         testDevice
     );
-    TEST_LOG("Job created: %p", job.operator->());
     
     // Submit to worker pool (same way as dispatchEvent does internally)
-    TEST_LOG("Submitting job to worker pool");
     Core::IWorkerPool::Instance().Submit(job);
-    TEST_LOG("Job submitted to worker pool successfully");
     
     // Give worker pool time to process the job
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    TEST_LOG("Waited for job processing");
     
     // Verify notification was received
-    TEST_LOG("Waiting for notification...");
-    bool received = notificationHandler->WaitForRequestStatus(2000, USBDevice_OnDevicePluggedOut);
-    TEST_LOG("Notification wait result: %s", received ? "SUCCESS" : "TIMEOUT");
-    
-    EXPECT_TRUE(received);
-    if (received) {
-        TEST_LOG("Verifying notification parameters");
-        EXPECT_EQ("001/005", notificationHandler->GetLastPluggedOutDeviceName());
-        EXPECT_EQ("/dev/sdb", notificationHandler->GetLastPluggedOutDevicePath());
-        EXPECT_EQ(8, notificationHandler->GetLastPluggedOutDeviceClass());
-        EXPECT_EQ(6, notificationHandler->GetLastPluggedOutDeviceSubclass());
-        TEST_LOG("Parameter verification completed");
-    }
-    
-    TEST_LOG("Unregistering and cleaning up");
-    USBDeviceImpl->Unregister(notificationHandler);
-    notificationHandler->Release();
-    TEST_LOG("OnDevicePluggedOut_ViaJobDispatch_Success test completed");
-}
+    EXPECT_TRUE(notificationHandler->WaitForRequestStatus(2000, USBDevice_OnDevicePluggedOut));
+    EXPECT_EQ("001/005", notificationHandler->GetLastPluggedOutDeviceName());
+    EXPECT_EQ("/dev/sdb", notificationHandler->GetLastPluggedOutDevicePath());
+    EXPECT_EQ(8, notificationHandler->GetLastPluggedOutDeviceClass());
+    EXPECT_EQ(6, notificationHandler->GetLastPluggedOutDeviceSubclass());
     
     USBDeviceImpl->Unregister(notificationHandler);
     notificationHandler->Release();
