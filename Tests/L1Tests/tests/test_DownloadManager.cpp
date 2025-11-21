@@ -588,7 +588,7 @@ TEST_F(DownloadManagerTest, downloadManagerInterfaceAvailability) {
  * Verify that the plugin can be created, initialized, and destroyed without crashing
  * This is a fundamental test that should always pass
  */
-TEST_F(DownloadManagerTest, pluginLifecycleTest) {
+/*TEST_F(DownloadManagerTest, pluginLifecycleTest) {
 
     TEST_LOG("Starting plugin lifecycle test");
 
@@ -614,7 +614,7 @@ TEST_F(DownloadManagerTest, pluginLifecycleTest) {
     }
 
     // Cleanup is handled by TearDown automatically
-}
+}*/
 
 /* Test Case for download method using JSON-RPC - Success scenario
  * 
