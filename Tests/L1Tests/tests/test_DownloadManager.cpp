@@ -393,18 +393,18 @@ protected:
         }
 
         // Clean up implementation first
-        if (mockImpl) {
+        if (this->mockImpl) {
             // Only deinitialize if mockImpl is different from downloadManagerInterface
             // to avoid double deinitialization
-            if (mockImpl != downloadManagerInterface) {
+            if (this->mockImpl != this->downloadManagerInterface) {
                 try {
-                    mockImpl->Deinitialize(mServiceMock);
+                    this->mockImpl->Deinitialize(mServiceMock);
                 } catch (...) {
                     TEST_LOG("Failed to deinitialize mockImpl");
                 }
             }
-            mockImpl->Release();
-            mockImpl = nullptr;
+            this->mockImpl->Release();
+            this->mockImpl = nullptr;
         }
 
         // Since we avoided dispatcher activation in initforJsonRpc, no need to deactivate
