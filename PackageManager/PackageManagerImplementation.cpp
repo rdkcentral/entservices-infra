@@ -486,13 +486,14 @@ namespace Plugin {
         State &state = found ? it->second : tempState;
         state.installState = InstallState::INSTALLING;
 
+        NotifyInstallStatus(packageId, version, state);
         string installedVersion = GetInstalledVersion(packageId);
         if (installedVersion.empty()) {
             // No other versions
             bNewEntry = true;
         } else {
             if (installedVersion.compare(version) == 0) {
-                // Same version already installed, upgrading ?!
+                // Same version already installed, upgrading
             } else {
                 // different version
                 StateKey installedKey { packageId, installedVersion };
@@ -513,7 +514,6 @@ namespace Plugin {
 
         if (state.installState == InstallState::INSTALLING) {
             result = Install(packageId, version, keyValues, fileLocator, state);
-            LOGDBG("Package: %s Version: %s found=%d result=%d", packageId.c_str(), version.c_str(), found, result);
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
                         ? PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE
@@ -586,9 +586,10 @@ namespace Plugin {
         }
 
         if (bNewEntry) {
-            LOGDBG("Inserting Package: %s Version: %s state: %u", key.first.c_str(), key.second.c_str(), (unsigned) state.installState);
+            LOGDBG("Inserting id: %s ver: %s ", key.first.c_str(), key.second.c_str());
             mState.insert( { key, state } );
         }
+
         return result;
     }
 
@@ -609,7 +610,6 @@ namespace Plugin {
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-
             if (state.mLockCount == 0) {
                 if (nullptr == mStorageManagerObject) {
                     LOGINFO("Create StorageManager object");
@@ -621,8 +621,6 @@ namespace Plugin {
                 if (nullptr != mStorageManagerObject) {
                     if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
                         LOGINFO("DeleteStorage done");
-                        state.installState = InstallState::UNINSTALLING;
-                        NotifyInstallStatus(packageId, version, state);
                         #ifdef USE_LIBPACKAGE
                         // XXX: what if DeleteStorage() fails, who Uninstall the package
                         packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
@@ -646,6 +644,9 @@ namespace Plugin {
                     }
                 }
             } else {
+                state.installState = InstallState::UNINSTALLING;
+                NotifyInstallStatus(packageId, version, state);
+
                 LOGWARN("App is locked, uninstall delayed id: '%s' ver: '%s' count:%d", packageId.c_str(), version.c_str(), state.mLockCount);
                 state.installState = InstallState::UNINSTALL_BLOCKED;
                 NotifyInstallStatus(packageId, version, state);
@@ -923,15 +924,15 @@ namespace Plugin {
                         stateBlocked.unpackedPath = "";
                         if (stateBlocked.installState == InstallState::INSTALLATION_BLOCKED) {
                             auto blockedData = stateBlocked.blockedInstallData;
-                            if (Install(packageId, blockedData.version, blockedData.keyValues, blockedData.fileLocator, stateBlocked) == packagemanager::SUCCESS) {
-                                LOGDBG("Blocked package installed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
+                            if (Install(packageId, blockedData.version, blockedData.keyValues, blockedData.fileLocator, stateBlocked) == Core::ERROR_NONE) {
+                                LOGDBG("Blocked package installed. id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                                 state.installState = InstallState::UNINSTALLED;
                             } else {
-                                LOGERR("Blocked package installed failed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
+                                LOGERR("Blocked package installion failed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                             }
                         } else if (stateBlocked.installState == InstallState::UNINSTALL_BLOCKED) {
                             string errorReason;
-                            if (Uninstall(packageId, errorReason) == packagemanager::SUCCESS) {
+                            if (Uninstall(packageId, errorReason) == Core::ERROR_NONE) {
                                 LOGDBG("Blocked package uninstalled id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                             } else {
                                 LOGERR("Blocked package uninstall failed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
@@ -1105,7 +1106,7 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_GENERAL;
 
-        if (nullptr == mStorageManagerObject) { // XXX: ?!?!?!
+        if (nullptr == mStorageManagerObject) { // XXX: Delayed instantiation is a bad idea
             if (Core::ERROR_NONE != createStorageManagerObject()) {
                 LOGERR("Failed to create StorageManager");
             }
@@ -1116,13 +1117,9 @@ namespace Plugin {
             string errorReason = "";
             if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
                 LOGINFO("CreateStorage path [%s]", path.c_str());
-                state.installState = InstallState::INSTALLING;
-                NotifyInstallStatus(packageId, version, state);
                 #ifdef USE_LIBPACKAGE
                 packagemanager::ConfigMetaData config;
-                packagemanager::Result pmResult = (state.installState == InstallState::INSTALLATION_BLOCKED)
-                    ? packageImpl->Install(packageId, state.blockedInstallData.version, state.blockedInstallData.keyValues, state.blockedInstallData.fileLocator, config)
-                    : packageImpl->Install(packageId, version, keyValues, fileLocator, config);
+                packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                 if (pmResult == packagemanager::SUCCESS) {
                     result = Core::ERROR_NONE;
                     state.installState = InstallState::INSTALLED;
@@ -1132,12 +1129,13 @@ namespace Plugin {
                         FailReason::PACKAGE_MISMATCH_FAILURE : FailReason::SIGNATURE_VERIFICATION_FAILURE;
                     LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
                 }
+                LOGDBG("Package: %s Version: %s result=%d", packageId.c_str(), version.c_str(), result);
+                NotifyInstallStatus(packageId, version, state);
                 #endif
             } else {
                 LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
                 state.failReason = FailReason::PERSISTENCE_FAILURE;
             }
-            NotifyInstallStatus(packageId, version, state);
         }
 
         return result;
@@ -1180,6 +1178,7 @@ namespace Plugin {
             LOGERR("Failed to  stringify JsonArray");
         }
 
+        LOGDBG("id: '%s; ver: '%s' state: %s", id.c_str(), version.c_str(), getInstallState(state.installState).c_str());
         mAdminLock.Lock();
         for (auto notification: mInstallNotifications) {
             notification->OnAppInstallationStatus(jsonstr);
