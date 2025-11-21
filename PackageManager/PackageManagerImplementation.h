@@ -298,6 +298,7 @@ namespace Plugin {
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
+        std::recursive_mutex mtxState;
         StateMap  mState;
         bool cacheInitialized = false;
 

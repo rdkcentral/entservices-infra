@@ -478,6 +478,7 @@ namespace Plugin {
             }
         }
 
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
         bool bNewEntry = false;
         StateKey key { packageId, version };
         auto it = mState.find( key );
@@ -607,6 +608,7 @@ namespace Plugin {
         LOGDBG("Uninstalling id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
         CHECK_CACHE()
 
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
@@ -674,6 +676,7 @@ namespace Plugin {
         LOGTRACE("entry");
         Core::hresult result = Core::ERROR_NONE;
         std::list<Exchange::IPackageInstaller::Package> packageList;
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
 
         for (auto const& [key, state] : mState) {
             Exchange::IPackageInstaller::Package package;
@@ -696,6 +699,7 @@ namespace Plugin {
         CHECK_CACHE()
         LOGDBG("id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
         Core::hresult result = Core::ERROR_GENERAL;
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
@@ -719,6 +723,7 @@ namespace Plugin {
         CHECK_CACHE()
         LOGDBG("id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
         Core::hresult result = Core::ERROR_NONE;
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
 
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
@@ -785,6 +790,7 @@ namespace Plugin {
         LOGDBG("id: %s ver: %s reason=%u", packageId.c_str(), version.c_str(), (uint8_t) lockReason);
         CHECK_CACHE()
 
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
@@ -907,6 +913,7 @@ namespace Plugin {
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
         CHECK_CACHE()
 
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
@@ -971,6 +978,7 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
@@ -1022,6 +1030,7 @@ namespace Plugin {
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
+        std::lock_guard<std::recursive_mutex> lock(mtxState);
         for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
             StateKey key = it->first;
             State state(it->second);
