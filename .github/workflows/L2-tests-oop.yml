@@ -643,6 +643,7 @@ jobs:
           path: |
             coverage/
             valgrind_log
+            rdkL2TestOOPResultsWithoutValgrind.json
             rdkL2TestOOPResultsWithValgrind.json
           if-no-files-found: warn
 
