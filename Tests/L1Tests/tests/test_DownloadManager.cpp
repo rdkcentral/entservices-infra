@@ -160,15 +160,57 @@ protected:
             if (initResult != "") {
                 TEST_LOG("Plugin initialization failed: %s", initResult.c_str());
                 // Don't fail the test here - let individual tests handle this
+            } else {
+                TEST_LOG("Plugin initialization succeeded");
             }
-           
-            // Get the interface directly from the plugin using interface ID
-            downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(
-                plugin->QueryInterface(Exchange::IDownloadManager::ID));
             
-            // If interface is not available, we'll handle it in individual tests
-            if (downloadManagerInterface == nullptr) {
-                TEST_LOG("DownloadManager interface not available from plugin - will handle in individual tests");
+            // Give the plugin some time to complete initialization
+            waitforSignal(100);
+           
+            // Try to get the interface - but with proper error handling to prevent segfault
+            // If plugin interface fails, we'll use mDownloadManagerImpl for actual testing
+            try {
+                downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(
+                    plugin->QueryInterface(Exchange::IDownloadManager::ID));
+                
+                if (downloadManagerInterface) {
+                    TEST_LOG("Successfully obtained IDownloadManager interface from plugin");
+                } else {
+                    TEST_LOG("IDownloadManager interface not available from plugin - will use implementation directly");
+                    // Use the implementation directly as a fallback
+                    if (mDownloadManagerImpl.IsValid()) {
+                        // Initialize the implementation
+                        auto implInitResult = mDownloadManagerImpl->Initialize(mServiceMock);
+                        if (implInitResult == Core::ERROR_NONE) {
+                            downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl.operator->());
+                            TEST_LOG("Using DownloadManagerImplementation directly as interface");
+                        } else {
+                            TEST_LOG("Failed to initialize DownloadManagerImplementation: %u", implInitResult);
+                        }
+                    }
+                }
+            } catch (const std::exception& e) {
+                TEST_LOG("Exception during interface querying: %s", e.what());
+                downloadManagerInterface = nullptr;
+                // Try fallback to implementation
+                if (mDownloadManagerImpl.IsValid()) {
+                    auto implInitResult = mDownloadManagerImpl->Initialize(mServiceMock);
+                    if (implInitResult == Core::ERROR_NONE) {
+                        downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl.operator->());
+                        TEST_LOG("Using DownloadManagerImplementation as fallback after exception");
+                    }
+                }
+            } catch (...) {
+                TEST_LOG("Unknown exception during interface querying");
+                downloadManagerInterface = nullptr;
+                // Try fallback to implementation
+                if (mDownloadManagerImpl.IsValid()) {
+                    auto implInitResult = mDownloadManagerImpl->Initialize(mServiceMock);
+                    if (implInitResult == Core::ERROR_NONE) {
+                        downloadManagerInterface = static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl.operator->());
+                        TEST_LOG("Using DownloadManagerImplementation as fallback after unknown exception");
+                    }
+                }
             }
              
             TEST_LOG("createResources - All done!");
@@ -190,7 +232,16 @@ protected:
 
         try {
             if (downloadManagerInterface) {
-                downloadManagerInterface->Release();
+                // Check if this is our implementation before releasing
+                if (downloadManagerInterface == static_cast<Exchange::IDownloadManager*>(mDownloadManagerImpl.operator->())) {
+                    // This is our direct implementation, deinitialize it
+                    if (mDownloadManagerImpl.IsValid()) {
+                        mDownloadManagerImpl->Deinitialize(mServiceMock);
+                    }
+                } else {
+                    // This is from plugin, release normally
+                    downloadManagerInterface->Release();
+                }
                 downloadManagerInterface = nullptr;
             }
 
@@ -274,8 +325,18 @@ protected:
             TEST_LOG("Using existing DownloadManager interface from createResources");
         } else {
             // Try to get the implementation directly from the plugin as fallback
-            mockImpl = static_cast<Exchange::IDownloadManager*>(
-                plugin->QueryInterface(Exchange::IDownloadManager::ID));
+            try {
+                mockImpl = static_cast<Exchange::IDownloadManager*>(
+                    plugin->QueryInterface(Exchange::IDownloadManager::ID));
+                if (mockImpl) {
+                    TEST_LOG("Successfully obtained DownloadManager interface for JSON-RPC");
+                } else {
+                    TEST_LOG("DownloadManager interface not available for JSON-RPC");
+                }
+            } catch (...) {
+                TEST_LOG("Exception during JSON-RPC interface querying");
+                mockImpl = nullptr;
+            }
         }
         
         if (mockImpl) {
