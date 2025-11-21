@@ -66,7 +66,7 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
 
 if(RDK_SERVICES_L1_TEST)
 	#target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
-    target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,opendir -Wl,--wrap,readdir -Wl,--wrap,stat -Wl,--wrap,closedir)
+	#target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,opendir -Wl,--wrap,readdir -Wl,--wrap,stat -Wl,--wrap,closedir)
     #   find_package( Curl REQUIRED)
     # if (CURL_FOUND)
     #message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
