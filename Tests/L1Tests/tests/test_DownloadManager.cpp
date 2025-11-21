@@ -793,6 +793,8 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcSuccess) {
     
    // uint32_t timeout_ms = 100;
 
+	uri = "https://testfile.org/files-5GB";
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1045,7 +1047,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
     
     //uint32_t timeout_ms = 100;
 
-	uri = "https://testfile.org/file-1GB";
+	uri = "https://testfile.org/files-5GB";
 	 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1227,7 +1229,7 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
     
     //uint32_t timeout_ms = 50;
 
-	uri = "https://testfile.org/file-1GB";
+	uri = "https://testfile.org/files-5GB";
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
