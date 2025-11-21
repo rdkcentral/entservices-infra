@@ -535,9 +535,9 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-	//uint32_t timeout_ms = 100;
+	uint32_t timeout_ms = 100;
 
-	uri = "https://testfile.org/file-1GB";
+	//uri = "https://testfile.org/file-1GB";
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -548,7 +548,7 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    //waitforSignal(timeout_ms);
+    waitforSignal(timeout_ms);
 
     EXPECT_EQ(downloadId, "2001");
 
@@ -740,7 +740,7 @@ TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforSignal(100);
+    //waitforSignal(100);
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
@@ -791,9 +791,9 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcSuccess) {
 
     getDownloadParams();
     
-   // uint32_t timeout_ms = 100;
+    uint32_t timeout_ms = 100;
 
-	uri = "https://testfile.org/files-5GB";
+	//uri = "https://testfile.org/files-5GB";
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -804,7 +804,7 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    //waitforSignal(timeout_ms);
+    waitforSignal(timeout_ms);
 
     EXPECT_EQ(downloadId, "2001");
     
@@ -984,7 +984,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcSuccess) {
                 return true;
             }));
             
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://testfile.org/file-1GB\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
    // waitforSignal(100);
 
@@ -1045,9 +1045,9 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
 
     getDownloadParams();
     
-    //uint32_t timeout_ms = 100;
+    uint32_t timeout_ms = 100;
 
-	uri = "https://testfile.org/files-5GB";
+	//uri = "https://testfile.org/files-5GB";
 	 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1060,7 +1060,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    //waitforSignal(timeout_ms);
+    waitforSignal(timeout_ms);
 
     EXPECT_EQ(downloadId, "2001");
 
@@ -1168,7 +1168,7 @@ TEST_F(DownloadManagerTest, rateLimitusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://testfile.org/file-1GB\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
     //waitforSignal(100);
 
@@ -1227,9 +1227,9 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
 
     getDownloadParams();
     
-    //uint32_t timeout_ms = 50;
+    uint32_t timeout_ms = 100;
 
-	uri = "https://testfile.org/files-5GB";
+	//uri = "https://testfile.org/files-5GB";
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1244,7 +1244,7 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId, "2001");
 
-	//waitforSignal(timeout_ms);
+	waitforSignal(timeout_ms);
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Pause(downloadId));
 
