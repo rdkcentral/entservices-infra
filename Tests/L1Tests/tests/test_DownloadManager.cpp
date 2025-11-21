@@ -67,6 +67,7 @@ protected:
 
     Core::ProxyType<WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
+    Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
     Core::JSONRPC::Handler& mJsonRpcHandler;
     Core::JSONRPC::Message message;
     DECL_CORE_JSONRPC_CONX connection;
@@ -86,6 +87,7 @@ protected:
     // Constructor
     DownloadManagerTest()
      : plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
+       mDownloadManagerImpl(Core::ProxyType<Plugin::DownloadManagerImplementation>::Create()),
 	 workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
          2, Core::Thread::DefaultStackSize(), 16)),
        mJsonRpcHandler(*plugin),
@@ -98,9 +100,12 @@ protected:
     // Destructor
     virtual ~DownloadManagerTest() override
     {
-
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
+        
+        if (mDownloadManagerImpl.IsValid()) {
+            mDownloadManagerImpl.Release();
+        }
     }
 
     Core::hresult createResources()
@@ -2033,5 +2038,3 @@ TEST_F(DownloadManagerTest, L1_DownloadImplementationEmptyUrl) {
     
     TEST_LOG("L1 Download Implementation Empty URL test completed");
 }
-
-
