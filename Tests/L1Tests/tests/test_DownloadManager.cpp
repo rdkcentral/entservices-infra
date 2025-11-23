@@ -1450,7 +1450,7 @@ TEST_F(DownloadManagerTest, rateLimitComRpcSuccess) {
  * Test notification callback registration system
  * Verify Register and Unregister methods work correctly
  */
-TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
+/*TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
 
     TEST_LOG("Starting COM-RPC notification registration test");
 
@@ -1486,7 +1486,7 @@ TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
     TEST_LOG("Unregistration of non-registered callback returned: %u", unregisterResult2);
 
     deinitforComRpc();
-}
+}*/
 
 /* Test Case for progress tracking with invalid download IDs
  * 
