@@ -996,8 +996,11 @@ TEST_F(DownloadManagerTest, downloadMethodComRpcSuccess) {
         EXPECT_FALSE(testDownloadId.empty());
         TEST_LOG("Download started successfully with ID: %s", testDownloadId.c_str());
         
-        // Cancel to cleanup
-        downloadManagerInterface->Cancel(testDownloadId);
+        // Cancel to cleanup - may fail if download not active yet
+        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
+        if (cancelResult != Core::ERROR_NONE) {
+            TEST_LOG("Cancel returned error: %u (download may not be active yet)", cancelResult);
+        }
     } else {
         TEST_LOG("Download failed with error: %u", result);
     }
@@ -1052,8 +1055,11 @@ TEST_F(DownloadManagerTest, pauseResumeComRpcSuccess) {
             TEST_LOG("Pause failed with error: %u", pauseResult);
         }
         
-        // Cancel to cleanup
-        downloadManagerInterface->Cancel(testDownloadId);
+        // Cancel to cleanup - may fail if download not active yet
+        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
+        if (cancelResult != Core::ERROR_NONE) {
+            TEST_LOG("Cancel returned error: %u (download may not be active yet)", cancelResult);
+        }
     }
 
     deinitforComRpc();
@@ -1414,70 +1420,36 @@ TEST_F(DownloadManagerTest, rateLimitComRpcSuccess) {
     if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
         TEST_LOG("Download started with ID: %s", testDownloadId.c_str());
         
-        // Apply rate limit
+        // Wait a bit for the downloader thread to pick up the job
+        waitforSignal(50);
+        
+        // Apply rate limit - may fail if download hasn't been picked up by worker thread yet
         uint32_t rateLimit = 512; // 512 KB/s
         auto rateLimitResult = downloadManagerInterface->RateLimit(testDownloadId, rateLimit);
         
         if (rateLimitResult == Core::ERROR_NONE) {
             TEST_LOG("Rate limit of %u KB/s applied successfully", rateLimit);
         } else {
-            TEST_LOG("Rate limit failed with error: %u", rateLimitResult);
+            TEST_LOG("Rate limit failed with error: %u (download may not be active yet)", rateLimitResult);
+            // This is expected behavior - rate limit can only be applied to active downloads
         }
         
-        // Test rate limit with invalid download ID
+        // Test rate limit with invalid download ID - this should always fail
         auto rateLimitResult2 = downloadManagerInterface->RateLimit("invalid_id_12345", rateLimit);
         EXPECT_NE(Core::ERROR_NONE, rateLimitResult2);
         TEST_LOG("Rate limit with invalid ID returned error: %u (expected)", rateLimitResult2);
         
-        // Cancel to cleanup
-        downloadManagerInterface->Cancel(testDownloadId);
+        // Cancel to cleanup - may also fail if download not active yet
+        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
+        if (cancelResult == Core::ERROR_NONE) {
+            TEST_LOG("Download cancelled successfully");
+        } else {
+            TEST_LOG("Cancel failed with error: %u (download may not be active yet)", cancelResult);
+        }
     }
 
     deinitforComRpc();
 }
-
-/* Test Case for notification registration and unregistration
- * 
- * Test notification callback registration system
- * Verify Register and Unregister methods work correctly
- */
-/*TEST_F(DownloadManagerTest, notificationRegistrationComRpc) {
-
-    TEST_LOG("Starting COM-RPC notification registration test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Create notification callback
-    NotificationTest notificationCallback;
-    
-    // Test registration
-    auto registerResult = downloadManagerInterface->Register(&notificationCallback);
-    if (registerResult == Core::ERROR_NONE) {
-        TEST_LOG("Notification registration successful");
-        
-        // Test unregistration
-        auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
-        if (unregisterResult == Core::ERROR_NONE) {
-            TEST_LOG("Notification unregistration successful");
-        } else {
-            TEST_LOG("Notification unregistration failed with error: %u", unregisterResult);
-        }
-    } else {
-        TEST_LOG("Notification registration failed with error: %u", registerResult);
-    }
-    
-    // Test unregistration of non-registered callback
-    NotificationTest notificationCallback2;
-    auto unregisterResult2 = downloadManagerInterface->Unregister(&notificationCallback2);
-    TEST_LOG("Unregistration of non-registered callback returned: %u", unregisterResult2);
-
-    deinitforComRpc();
-}*/
 
 /* Test Case for progress tracking with invalid download IDs
  * 
