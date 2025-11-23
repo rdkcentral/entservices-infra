@@ -310,6 +310,8 @@ protected:
         // This bypasses the plugin wrapping that was causing segfaults
         if (!downloadManagerInterface && !mDownloadManagerImpl.IsValid()) {
             try {
+                TEST_LOG("Creating new DownloadManagerImplementation instance");
+                
                 // Create DownloadManagerImplementation directly
                 mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
                 if (mDownloadManagerImpl.IsValid()) {
@@ -331,12 +333,18 @@ protected:
             } catch (const std::exception& e) {
                 TEST_LOG("Exception creating DownloadManagerImplementation: %s", e.what());
                 downloadManagerInterface = nullptr;
-                mDownloadManagerImpl.Release();
+                if (mDownloadManagerImpl.IsValid()) {
+                    mDownloadManagerImpl.Release();
+                }
             } catch (...) {
                 TEST_LOG("Unknown exception creating DownloadManagerImplementation");
                 downloadManagerInterface = nullptr;
-                mDownloadManagerImpl.Release();
+                if (mDownloadManagerImpl.IsValid()) {
+                    mDownloadManagerImpl.Release();
+                }
             }
+        } else if (downloadManagerInterface) {
+            TEST_LOG("Reusing existing DownloadManagerImplementation instance");
         }
         
         if (downloadManagerInterface) {
@@ -390,30 +398,43 @@ protected:
         // Clean up the DownloadManagerImplementation interface if it exists
         if (downloadManagerInterface && mDownloadManagerImpl.IsValid()) {
             try {
-                // Deinitialize the implementation
-                mDownloadManagerImpl->Deinitialize(mServiceMock);
-                TEST_LOG("Successfully deinitialized DownloadManagerImplementation");
+                // Call Deinitialize to properly shut down the downloader thread
+                TEST_LOG("Calling Deinitialize to shut down downloader thread");
+                auto deinitResult = mDownloadManagerImpl->Deinitialize(mServiceMock);
+                if (deinitResult == Core::ERROR_NONE) {
+                    TEST_LOG("Successfully deinitialized DownloadManagerImplementation");
+                } else {
+                    TEST_LOG("Deinitialize returned error: %u, continuing with cleanup", deinitResult);
+                }
                 
-                // Release the reference we added
-                downloadManagerInterface->Release();
-                downloadManagerInterface = nullptr;
+                // Release the interface reference
+                if (downloadManagerInterface) {
+                    downloadManagerInterface->Release();
+                    downloadManagerInterface = nullptr;
+                    TEST_LOG("Released DownloadManagerImplementation interface reference");
+                }
                 
                 // Release the ProxyType
                 mDownloadManagerImpl.Release();
-                TEST_LOG("Released DownloadManagerImplementation interface");
+                TEST_LOG("Released DownloadManagerImplementation ProxyType - cleanup completed");
             } catch (const std::exception& e) {
                 TEST_LOG("Exception during DownloadManagerImplementation cleanup: %s", e.what());
                 downloadManagerInterface = nullptr;
-                mDownloadManagerImpl.Release();
+                if (mDownloadManagerImpl.IsValid()) {
+                    mDownloadManagerImpl.Release();
+                }
             } catch (...) {
                 TEST_LOG("Unknown exception during DownloadManagerImplementation cleanup");
                 downloadManagerInterface = nullptr;
-                mDownloadManagerImpl.Release();
+                if (mDownloadManagerImpl.IsValid()) {
+                    mDownloadManagerImpl.Release();
+                }
             }
         } else if (downloadManagerInterface) {
             // Just release the interface if we don't have the implementation reference
             downloadManagerInterface->Release();
             downloadManagerInterface = nullptr;
+            TEST_LOG("Released standalone interface reference");
         }
         
         TEST_LOG("COM-RPC cleanup completed");
