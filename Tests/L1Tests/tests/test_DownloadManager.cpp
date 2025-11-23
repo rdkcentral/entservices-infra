@@ -425,6 +425,19 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
             return refs - 1;
         }
 
+        // Implement QueryInterface to avoid pure virtual method call
+        virtual void* QueryInterface(const uint32_t interfaceNumber) override {
+            void* result = nullptr;
+            if (interfaceNumber == Exchange::IDownloadManager::INotification::ID) {
+                AddRef();
+                result = static_cast<Exchange::IDownloadManager::INotification*>(this);
+            } else if (interfaceNumber == Core::IUnknown::ID) {
+                AddRef();
+                result = static_cast<Core::IUnknown*>(this);
+            }
+            return result;
+        }
+
         uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
         {
             uint32_t status_signal = DownloadManager_invalidStatus;
@@ -441,10 +454,6 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
 	    return status_signal;
         }
     private:
-        BEGIN_INTERFACE_MAP(NotificationTest)
-        INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
-        END_INTERFACE_MAP
-
         void SetStatusParams(const StatusParams& statusParam)
         {
             m_status_param = statusParam;
