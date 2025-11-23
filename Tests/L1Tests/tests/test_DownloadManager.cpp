@@ -1773,25 +1773,27 @@ TEST_F(DownloadManagerTest, DirectImplementationInitializeTest) {
     EXPECT_CALL(*mServiceMock, Release())
         .Times(::testing::AnyNumber());
 
-    // Create DownloadManagerImplementation directly - this will hit the actual implementation code
+    // Create DownloadManagerImplementation using Thunder framework pattern
     try {
-        Plugin::DownloadManagerImplementation* implementation = new Plugin::DownloadManagerImplementation();
-        ASSERT_NE(implementation, nullptr);
+        // Use Core::ProxyType to properly instantiate the implementation
+        Core::ProxyType<Plugin::DownloadManagerImplementation> implementation = 
+            Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(implementation.IsValid());
         TEST_LOG("DownloadManagerImplementation created successfully");
 
         // Test Initialize method directly - this will provide coverage
-        string result = implementation->Initialize(mServiceMock);
-        TEST_LOG("Initialize returned: %s", result.c_str());
+        Core::hresult result = implementation->Initialize(mServiceMock);
+        TEST_LOG("Initialize returned: %u", result);
         
-        // Initialize should succeed (empty string means success in Thunder framework)
-        EXPECT_TRUE(result.empty() || result == "");
+        // Initialize should succeed (Core::ERROR_NONE means success in Thunder framework)
+        EXPECT_EQ(Core::ERROR_NONE, result);
         
         // Test Deinitialize
         implementation->Deinitialize(mServiceMock);
         TEST_LOG("Deinitialize called successfully");
         
-        // Clean up
-        delete implementation;
+        // Clean up - ProxyType handles reference counting automatically
+        implementation.Release();
         TEST_LOG("DownloadManagerImplementation cleaned up");
         
     } catch (const std::exception& e) {
@@ -1826,12 +1828,13 @@ TEST_F(DownloadManagerTest, DirectImplementationInterfaceTest) {
         .WillRepeatedly(::testing::Return(true));
 
     try {
-        Plugin::DownloadManagerImplementation* implementation = new Plugin::DownloadManagerImplementation();
-        ASSERT_NE(implementation, nullptr);
+        Core::ProxyType<Plugin::DownloadManagerImplementation> implementation = 
+            Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(implementation.IsValid());
 
         // Initialize the implementation
-        string initResult = implementation->Initialize(mServiceMock);
-        EXPECT_TRUE(initResult.empty()) << "Initialize should succeed";
+        Core::hresult initResult = implementation->Initialize(mServiceMock);
+        EXPECT_EQ(Core::ERROR_NONE, initResult) << "Initialize should succeed";
 
         // Get the interface - this tests QueryInterface method
         Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
@@ -1864,7 +1867,7 @@ TEST_F(DownloadManagerTest, DirectImplementationInterfaceTest) {
 
         // Clean up
         implementation->Deinitialize(mServiceMock);
-        delete implementation;
+        implementation.Release();
 
     } catch (const std::exception& e) {
         TEST_LOG("Exception during direct interface test: %s", e.what());
@@ -1896,13 +1899,14 @@ TEST_F(DownloadManagerTest, DirectImplementationRegisterTest) {
     EXPECT_CALL(*mServiceMock, SubSystems()).WillRepeatedly(::testing::Return(mSubSystemMock));
 
     try {
-        // Create implementation directly
-        Plugin::DownloadManagerImplementation* implementation = new Plugin::DownloadManagerImplementation();
-        ASSERT_NE(implementation, nullptr);
+        // Create implementation using Thunder framework pattern
+        Core::ProxyType<Plugin::DownloadManagerImplementation> implementation = 
+            Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(implementation.IsValid());
 
         // Initialize 
-        string initResult = implementation->Initialize(mServiceMock);
-        EXPECT_TRUE(initResult.empty());
+        Core::hresult initResult = implementation->Initialize(mServiceMock);
+        EXPECT_EQ(Core::ERROR_NONE, initResult);
 
         // Get interface
         Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
@@ -1960,13 +1964,14 @@ TEST_F(DownloadManagerTest, DirectImplementationDownloadTest) {
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_)).WillRepeatedly(::testing::Return(true));
 
     try {
-        // Create implementation directly
-        Plugin::DownloadManagerImplementation* implementation = new Plugin::DownloadManagerImplementation();
-        ASSERT_NE(implementation, nullptr);
+        // Create implementation using Thunder framework pattern
+        Core::ProxyType<Plugin::DownloadManagerImplementation> implementation = 
+            Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(implementation.IsValid());
 
         // Initialize 
-        string initResult = implementation->Initialize(mServiceMock);
-        EXPECT_TRUE(initResult.empty());
+        Core::hresult initResult = implementation->Initialize(mServiceMock);
+        EXPECT_EQ(Core::ERROR_NONE, initResult);
 
         // Get interface
         Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
@@ -2040,15 +2045,16 @@ TEST_F(DownloadManagerTest, DirectImplementationComprehensiveTest) {
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_)).WillRepeatedly(::testing::Return(true));
 
     try {
-        // Create implementation directly
-        Plugin::DownloadManagerImplementation* implementation = new Plugin::DownloadManagerImplementation();
-        ASSERT_NE(implementation, nullptr);
+        // Create implementation using Thunder framework pattern
+        Core::ProxyType<Plugin::DownloadManagerImplementation> implementation = 
+            Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(implementation.IsValid());
         TEST_LOG("DownloadManagerImplementation created");
 
         // Test Initialize - hits implementation code
-        string initResult = implementation->Initialize(mServiceMock);
-        TEST_LOG("Initialize returned: '%s'", initResult.c_str());
-        EXPECT_TRUE(initResult.empty()) << "Initialize should succeed";
+        Core::hresult initResult = implementation->Initialize(mServiceMock);
+        TEST_LOG("Initialize returned: %u", initResult);
+        EXPECT_EQ(Core::ERROR_NONE, initResult) << "Initialize should succeed";
 
         // Get interface for method testing
         Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
@@ -2119,8 +2125,8 @@ TEST_F(DownloadManagerTest, DirectImplementationComprehensiveTest) {
         implementation->Deinitialize(mServiceMock);
         TEST_LOG("Deinitialize completed");
 
-        // Clean up
-        delete implementation;
+        // Clean up using Thunder framework pattern
+        implementation.Release();
         TEST_LOG("Implementation cleaned up successfully");
 
     } catch (const std::exception& e) {
@@ -2147,12 +2153,13 @@ TEST_F(DownloadManagerTest, DirectImplementationErrorHandlingTest) {
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_)).WillRepeatedly(::testing::Return(false)); // Internet not active
 
     try {
-        Plugin::DownloadManagerImplementation* implementation = new Plugin::DownloadManagerImplementation();
-        ASSERT_NE(implementation, nullptr);
+        Core::ProxyType<Plugin::DownloadManagerImplementation> implementation = 
+            Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        ASSERT_TRUE(implementation.IsValid());
 
         // Initialize 
-        string initResult = implementation->Initialize(mServiceMock);
-        EXPECT_TRUE(initResult.empty());
+        Core::hresult initResult = implementation->Initialize(mServiceMock);
+        EXPECT_EQ(Core::ERROR_NONE, initResult);
 
         // Get interface
         Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
@@ -2198,7 +2205,7 @@ TEST_F(DownloadManagerTest, DirectImplementationErrorHandlingTest) {
 
         // Test Deinitialize
         implementation->Deinitialize(mServiceMock);
-        delete implementation;
+        implementation.Release();
 
     } catch (const std::exception& e) {
         TEST_LOG("Exception in error handling test: %s", e.what());
