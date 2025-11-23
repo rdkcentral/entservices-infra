@@ -1936,9 +1936,9 @@ TEST_F(DownloadManagerTest, DirectImplementationRegisterTest) {
             TEST_LOG("Could not get interface for Register test");
         }
 
-        // Cleanup implementation
-        implementation->Deinitialize(mServiceMock);
-        delete implementation;
+    // Cleanup implementation
+    implementation->Deinitialize(mServiceMock);
+    implementation.Release();
 
     } catch (const std::exception& e) {
         TEST_LOG("Exception in direct Register test: %s", e.what());
@@ -2014,9 +2014,9 @@ TEST_F(DownloadManagerTest, DirectImplementationDownloadTest) {
             TEST_LOG("Could not get interface for Download test");
         }
 
-        // Cleanup implementation
-        implementation->Deinitialize(mServiceMock);
-        delete implementation;
+    // Cleanup implementation
+    implementation->Deinitialize(mServiceMock);
+    implementation.Release();
 
     } catch (const std::exception& e) {
         TEST_LOG("Exception in direct Download test: %s", e.what());
