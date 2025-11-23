@@ -442,56 +442,6 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
         }
     };
 
-/* Test Case for verifying registered methods using JsonRpc
- * 
- * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
- * Check if the methods listed exist by using the Exists() from the JSON RPC handler
- * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
- * Deinitialize the JSON-RPC resources and clean-up related test resources
- */
-/*
-TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
-
-    TEST_LOG("Starting JSON-RPC method registration test");
-
-    // This test verifies that DownloadManager plugin can register JSON-RPC methods
-    // In test environments, full plugin instantiation may not be possible
-    if (!plugin.IsValid()) {
-        TEST_LOG("Plugin not available - skipping JSON-RPC method registration test");
-        GTEST_SKIP() << "Skipping test - Plugin not available in test environment";
-        return;
-    }
-
-    // Skip interface querying to prevent segfault - just verify plugin is valid
-    if (!plugin.IsValid()) {
-        TEST_LOG("Plugin is not valid - this indicates a fundamental issue");
-        GTEST_SKIP() << "Skipping test - Plugin not valid";
-        return;
-    }
-    
-    TEST_LOG("Plugin is valid - proceeding with safe test execution");
-    TEST_LOG("Skipping interface querying to prevent potential segfault in Wraps.cpp");
-
-    // Skip JSON-RPC registration entirely if we detect potential issues
-    // The plugin initialization logs show success, but interface wrapping may be failing
-    TEST_LOG("Plugin is valid, but skipping JSON-RPC registration due to potential interface wrapping issues");
-    TEST_LOG("This test will focus on verifying plugin loading and basic functionality");
-    
-    // Test basic plugin functionality without risky interface operations
-    if (plugin.IsValid()) {
-        TEST_LOG("Test PASSED: Plugin loaded successfully and is valid");
-        TEST_LOG("Avoiding interface querying to prevent segfault - plugin functionality confirmed by valid state");
-        return; // Pass the test
-    } else {
-        TEST_LOG("Test PASSED: Plugin object created but not in valid state - this may be expected in test environments");
-        return; // Still pass the test as plugin creation worked
-    }
-
-    // Since we're not doing JSON-RPC registration, just verify plugin state
-    TEST_LOG("Plugin validation completed successfully");
-    TEST_LOG("Test PASSED: Plugin loads and initializes without crashing");
-    return; // Pass the test without attempting risky operations
-}*/
 
 /* Test Case for COM-RPC interface availability
  * 
@@ -1709,37 +1659,6 @@ TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
     deinitforComRpc();
 }
 
-/* Test cases for Register and Unregister methods using IDownloadManager interface */
-
-/*TEST_F(DownloadManagerTest, RegisterValidNotification) {
-    
-    TEST_LOG("Testing Register method with valid notification using IDownloadManager interface");
-
-    initforComRpc();
-
-    if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping Register test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
-        return;
-    }
-
-    NotificationTest notificationCallback;
-    
-    // Test Register method through IDownloadManager interface
-    // This should call through to DownloadManagerImplementation::Register
-    auto result = downloadManagerInterface->Register(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    TEST_LOG("IDownloadManager Register returned: %u", result);
-
-    // Clean up by unregistering
-    // This should call through to DownloadManagerImplementation::Unregister
-    auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
-    TEST_LOG("IDownloadManager Unregister returned: %u", unregisterResult);
-
-    deinitforComRpc();
-}*/
-
 TEST_F(DownloadManagerTest, UnregisterNonRegisteredNotification) {
     
     TEST_LOG("Testing Unregister method with non-registered notification using IDownloadManager interface");
@@ -1972,47 +1891,34 @@ TEST_F(DownloadManagerImplementationTest, InitializeStressTest) {
     TEST_LOG("DownloadManagerImplementation Initialize stress test completed");
 }
 
-/* Test Case for edge cases and boundary conditions
- * 
- * Test various edge cases and boundary conditions
- * Verify robust error handling
- */
-TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
 
-    TEST_LOG("Starting edge cases and boundary conditions test");
+/* Test cases for Register and Unregister methods using IDownloadManager interface */
+
+TEST_F(DownloadManagerTest, RegisterValidNotification) {
+    
+    TEST_LOG("Testing Register method with valid notification using IDownloadManager interface");
 
     initforComRpc();
 
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
+    if (!downloadManagerInterface) {
+        TEST_LOG("DownloadManager interface not available - skipping Register test");
+        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
         return;
     }
 
-    // Test with very long download ID
-    string longId(1000, 'x');
-    auto pauseResult = downloadManagerInterface->Pause(longId);
-    EXPECT_NE(Core::ERROR_NONE, pauseResult);
-    TEST_LOG("Pause with very long ID returned error: %u (expected)", pauseResult);
+    NotificationTest notificationCallback;
     
-    // Test with special characters in download ID
-    string specialId = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
-    auto resumeResult = downloadManagerInterface->Resume(specialId);
-    EXPECT_NE(Core::ERROR_NONE, resumeResult);
-    TEST_LOG("Resume with special char ID returned error: %u (expected)", resumeResult);
-    
-    // Test rate limit with extreme values
-    auto rateLimitResult1 = downloadManagerInterface->RateLimit("test_id", 0);
-    TEST_LOG("Rate limit with 0 returned: %u", rateLimitResult1);
-    
-    auto rateLimitResult2 = downloadManagerInterface->RateLimit("test_id", UINT32_MAX);
-    TEST_LOG("Rate limit with MAX_UINT32 returned: %u", rateLimitResult2);
-    
-    // Test delete with very long file path
-    string longPath(2000, '/');
-    longPath += "file.txt";
-    auto deleteResult = downloadManagerInterface->Delete(longPath);
-    TEST_LOG("Delete with very long path returned: %u", deleteResult);
+    // Test Register method through IDownloadManager interface
+    // This should call through to DownloadManagerImplementation::Register
+    auto result = downloadManagerInterface->Register(&notificationCallback);
+    EXPECT_EQ(Core::ERROR_NONE, result);
+    TEST_LOG("IDownloadManager Register returned: %u", result);
+
+    // Clean up by unregistering
+    // This should call through to DownloadManagerImplementation::Unregister
+    auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
+    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+    TEST_LOG("IDownloadManager Unregister returned: %u", unregisterResult);
 
     deinitforComRpc();
 }
-
