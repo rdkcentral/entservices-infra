@@ -435,15 +435,33 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
 
         StatusParams m_status_param;
 
-        NotificationTest()
+        NotificationTest() : m_refCount(1)
         {
         }
         
         virtual ~NotificationTest() override = default;
 
-        // Required for reference counting
-        virtual void AddRef() const override {  }
-        virtual uint32_t Release() const override { return 1; }
+        // Required for reference counting - properly implemented
+        virtual void AddRef() const override { 
+            ++m_refCount;
+        }
+        virtual uint32_t Release() const override { 
+            uint32_t result = --m_refCount;
+            if (result == 0) {
+                // Don't delete this in test - it's stack allocated
+                // delete this;
+            }
+            return result;
+        }
+
+        // Implement QueryInterface to avoid pure virtual method calls
+        virtual void* QueryInterface(const uint32_t interfaceNumber) override {
+            if (interfaceNumber == Exchange::IDownloadManager::INotification::ID) {
+                AddRef();
+                return static_cast<Exchange::IDownloadManager::INotification*>(this);
+            }
+            return nullptr;
+        }
 
         uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
         {
@@ -460,10 +478,6 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
             m_status_signal = DownloadManager_invalidStatus;
 	    return status_signal;
         }
-    private:
-        BEGIN_INTERFACE_MAP(NotificationTest)
-        INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
-        END_INTERFACE_MAP
 
         void SetStatusParams(const StatusParams& statusParam)
         {
@@ -497,6 +511,9 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
 
             m_condition_variable.notify_one();
         }
+
+    private:
+        mutable std::atomic<uint32_t> m_refCount;
     };
 
 /* Test Case for verifying registered methods using JsonRpc
