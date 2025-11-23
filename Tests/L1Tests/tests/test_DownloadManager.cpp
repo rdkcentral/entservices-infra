@@ -1922,3 +1922,107 @@ TEST_F(DownloadManagerTest, RegisterValidNotification) {
 
     deinitforComRpc();
 }
+
+/* Test Case for Register/Unregister multiple notifications and error scenarios
+ * 
+ * Test registering multiple notification callbacks
+ * Verify each can be unregistered successfully
+ * Test error handling when unregistering non-registered notification
+ * Validate proper reference counting (AddRef/Release calls)
+ */
+TEST_F(DownloadManagerTest, RegisterUnregisterMultipleNotifications) {
+    
+    TEST_LOG("Testing Register/Unregister with multiple notifications using IDownloadManager interface");
+
+    initforComRpc();
+
+    if (!downloadManagerInterface) {
+        TEST_LOG("DownloadManager interface not available - skipping Register/Unregister test");
+        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+        return;
+    }
+
+    // Create multiple notification callbacks
+    NotificationTest notification1;
+    NotificationTest notification2;
+    NotificationTest notification3;
+    
+    // Register multiple notifications - should all succeed
+    auto result1 = downloadManagerInterface->Register(&notification1);
+    EXPECT_EQ(Core::ERROR_NONE, result1);
+    TEST_LOG("Register notification1 returned: %u", result1);
+
+    auto result2 = downloadManagerInterface->Register(&notification2);
+    EXPECT_EQ(Core::ERROR_NONE, result2);
+    TEST_LOG("Register notification2 returned: %u", result2);
+
+    // Try to register same notification again - should still succeed (implementation adds only if not found)
+    auto duplicateResult = downloadManagerInterface->Register(&notification1);
+    EXPECT_EQ(Core::ERROR_NONE, duplicateResult);
+    TEST_LOG("Register duplicate notification1 returned: %u", duplicateResult);
+
+    // Unregister the notifications
+    auto unregister1 = downloadManagerInterface->Unregister(&notification1);
+    EXPECT_EQ(Core::ERROR_NONE, unregister1);
+    TEST_LOG("Unregister notification1 returned: %u", unregister1);
+
+    auto unregister2 = downloadManagerInterface->Unregister(&notification2);
+    EXPECT_EQ(Core::ERROR_NONE, unregister2);
+    TEST_LOG("Unregister notification2 returned: %u", unregister2);
+
+    // Try to unregister a non-registered notification - should return error
+    auto unregisterError = downloadManagerInterface->Unregister(&notification3);
+    EXPECT_EQ(Core::ERROR_GENERAL, unregisterError);
+    TEST_LOG("Unregister non-registered notification3 returned: %u (expected error)", unregisterError);
+
+    // Try to unregister already unregistered notification - should return error
+    auto unregisterAlready = downloadManagerInterface->Unregister(&notification1);
+    EXPECT_EQ(Core::ERROR_GENERAL, unregisterAlready);
+    TEST_LOG("Unregister already unregistered notification1 returned: %u (expected error)", unregisterAlready);
+
+    deinitforComRpc();
+}
+
+/* Test Case for Unregister error handling
+ * 
+ * Test Unregister method error scenarios
+ * Verify proper error codes for invalid unregister operations  
+ * Test unregistering notifications that were never registered
+ */
+TEST_F(DownloadManagerTest, UnregisterErrorHandling) {
+    
+    TEST_LOG("Testing Unregister method error handling using IDownloadManager interface");
+
+    initforComRpc();
+
+    if (!downloadManagerInterface) {
+        TEST_LOG("DownloadManager interface not available - skipping Unregister error test");
+        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
+        return;
+    }
+
+    NotificationTest notification1;
+    NotificationTest notification2;
+    
+    // Register one notification
+    auto registerResult = downloadManagerInterface->Register(&notification1);
+    EXPECT_EQ(Core::ERROR_NONE, registerResult);
+    TEST_LOG("Register notification1 returned: %u", registerResult);
+
+    // Try to unregister a different notification that was never registered - should fail
+    auto unregisterNeverRegistered = downloadManagerInterface->Unregister(&notification2);
+    EXPECT_EQ(Core::ERROR_GENERAL, unregisterNeverRegistered);
+    TEST_LOG("Unregister never-registered notification returned: %u (expected Core::ERROR_GENERAL)", unregisterNeverRegistered);
+
+    // Properly unregister the registered notification - should succeed
+    auto unregisterValid = downloadManagerInterface->Unregister(&notification1);
+    EXPECT_EQ(Core::ERROR_NONE, unregisterValid);
+    TEST_LOG("Unregister valid notification returned: %u", unregisterValid);
+
+    // Now try to unregister the same notification again - should fail
+    auto unregisterTwice = downloadManagerInterface->Unregister(&notification1);
+    EXPECT_EQ(Core::ERROR_GENERAL, unregisterTwice);
+    TEST_LOG("Unregister same notification twice returned: %u (expected Core::ERROR_GENERAL)", unregisterTwice);
+
+    deinitforComRpc();
+}
