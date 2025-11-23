@@ -452,8 +452,8 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
         virtual uint32_t Release() const override { 
             uint32_t result = --m_refCount;
             if (result == 0) {
-                // Don't delete this in test - it's stack allocated
-                // delete this;
+                // Delete only if created on heap (ref count started at 1)
+                delete this;
             }
             return result;
         }
@@ -996,6 +996,9 @@ TEST_F(DownloadManagerTest, downloadMethodComRpcSuccess) {
         EXPECT_FALSE(testDownloadId.empty());
         TEST_LOG("Download started successfully with ID: %s", testDownloadId.c_str());
         
+        // Allow downloader thread time to set up mCurrentDownload
+        waitforSignal(100);
+        
         // Cancel to cleanup - may fail if download not active yet
         auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
         if (cancelResult != Core::ERROR_NONE) {
@@ -1038,6 +1041,9 @@ TEST_F(DownloadManagerTest, pauseResumeComRpcSuccess) {
     
     if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
         TEST_LOG("Download started with ID: %s", testDownloadId.c_str());
+        
+        // Allow downloader thread time to set up mCurrentDownload
+        waitforSignal(100);
         
         // Pause the download
         auto pauseResult = downloadManagerInterface->Pause(testDownloadId);
@@ -1105,6 +1111,9 @@ TEST_F(DownloadManagerTest, progressStorageComRpcSuccess) {
     auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
     
     if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
+        // Allow downloader thread time to set up mCurrentDownload
+        waitforSignal(100);
+        
         // Check progress
         uint8_t progressPercent = 0;
         auto progressResult = downloadManagerInterface->Progress(testDownloadId, progressPercent);
@@ -1509,6 +1518,9 @@ TEST_F(DownloadManagerTest, completeDownloadLifecycleComRpc) {
     if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
         TEST_LOG("STEP 1: Download started with ID: %s", testDownloadId.c_str());
         
+        // Allow downloader thread time to set up mCurrentDownload
+        waitforSignal(100);
+        
         // Step 2: Check initial progress
         uint8_t progressPercent = 0;
         auto progressResult = downloadManagerInterface->Progress(testDownloadId, progressPercent);
@@ -1604,12 +1616,17 @@ TEST_F(DownloadManagerTest, multipleDownloadsComRpc) {
         }
     }
     
+    // Allow downloader thread time to process all downloads
+    waitforSignal(150);
+    
     // Check progress of all downloads
     for (size_t i = 0; i < downloadIds.size(); ++i) {
         uint8_t progressPercent = 0;
         auto progressResult = downloadManagerInterface->Progress(downloadIds[i], progressPercent);
         if (progressResult == Core::ERROR_NONE) {
             TEST_LOG("Download %zu progress: %u%%", i + 1, progressPercent);
+        } else {
+            TEST_LOG("Download %zu progress failed with error: %u (timing issue)", i + 1, progressResult);
         }
     }
     
@@ -1619,7 +1636,7 @@ TEST_F(DownloadManagerTest, multipleDownloadsComRpc) {
         if (cancelResult == Core::ERROR_NONE) {
             TEST_LOG("Download %zu cancelled successfully", i + 1);
         } else {
-            TEST_LOG("Download %zu cancel failed with error: %u", i + 1, cancelResult);
+            TEST_LOG("Download %zu cancel failed with error: %u (timing issue)", i + 1, cancelResult);
         }
     }
 
@@ -1744,18 +1761,22 @@ TEST_F(DownloadManagerTest, RegisterUnregisterWorkflow) {
         return;
     }
 
-    NotificationTest notificationCallback;
+    // Create notification callback on heap to avoid potential stack corruption issues
+    NotificationTest* notificationCallback = new NotificationTest();
     
     // Test complete Register-Unregister workflow through IDownloadManager interface
     // Register notification - this should call through to DownloadManagerImplementation::Register
-    auto registerResult = downloadManagerInterface->Register(&notificationCallback);
+    auto registerResult = downloadManagerInterface->Register(notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, registerResult);
     TEST_LOG("IDownloadManager Register returned: %u", registerResult);
     
     // Unregister notification - this should call through to DownloadManagerImplementation::Unregister
-    auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
+    auto unregisterResult = downloadManagerInterface->Unregister(notificationCallback);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
     TEST_LOG("IDownloadManager Unregister returned: %u", unregisterResult);
+
+    // Clean up - release the reference we hold
+    notificationCallback->Release();
 
     deinitforComRpc();
 }
@@ -1772,33 +1793,37 @@ TEST_F(DownloadManagerTest, DownloadManagerImplementationMultipleCallbacks) {
         return;
     }
 
-    NotificationTest notificationCallback1;
-    NotificationTest notificationCallback2;
+    NotificationTest* notificationCallback1 = new NotificationTest();
+    NotificationTest* notificationCallback2 = new NotificationTest();
     
     // Test Register method with first callback - hits DownloadManagerImplementation::Register
-    auto registerResult1 = downloadManagerInterface->Register(&notificationCallback1);
+    auto registerResult1 = downloadManagerInterface->Register(notificationCallback1);
     EXPECT_EQ(Core::ERROR_NONE, registerResult1);
     TEST_LOG("IDownloadManager Register (first) returned: %u", registerResult1);
     
     // Test Register with different callback - hits DownloadManagerImplementation::Register
-    auto registerResult2 = downloadManagerInterface->Register(&notificationCallback2);
+    auto registerResult2 = downloadManagerInterface->Register(notificationCallback2);
     EXPECT_EQ(Core::ERROR_NONE, registerResult2);
     TEST_LOG("IDownloadManager Register (second) returned: %u", registerResult2);
     
     // Test Unregister with valid callback - hits DownloadManagerImplementation::Unregister
-    auto unregisterResult1 = downloadManagerInterface->Unregister(&notificationCallback1);
+    auto unregisterResult1 = downloadManagerInterface->Unregister(notificationCallback1);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult1);
     TEST_LOG("IDownloadManager Unregister (valid) returned: %u", unregisterResult1);
     
     // Test Unregister with already unregistered callback - hits error path in DownloadManagerImplementation::Unregister
-    auto unregisterResult2 = downloadManagerInterface->Unregister(&notificationCallback1);
+    auto unregisterResult2 = downloadManagerInterface->Unregister(notificationCallback1);
     EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult2);
     TEST_LOG("IDownloadManager Unregister (invalid) returned: %u", unregisterResult2);
     
     // Clean up remaining registered callback
-    auto unregisterResult3 = downloadManagerInterface->Unregister(&notificationCallback2);
+    auto unregisterResult3 = downloadManagerInterface->Unregister(notificationCallback2);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult3);
     TEST_LOG("IDownloadManager Unregister (cleanup) returned: %u", unregisterResult3);
+    
+    // Release references
+    notificationCallback1->Release();
+    notificationCallback2->Release();
 
     deinitforComRpc();
 }
