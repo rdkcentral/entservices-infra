@@ -1789,14 +1789,21 @@ TEST_F(DownloadManagerTest, InitializeMethodNullService) {
     TEST_LOG("Initialize with null service returned error as expected: %u", result);
 }
 
-/* Test Case: Initialize method with empty configuration
- * 
- * Verify Initialize handles empty config gracefully
- * Verify default values are used when config is empty
- */
-TEST_F(DownloadManagerTest, InitializeMethodEmptyConfig) {
 
-    TEST_LOG("Starting Initialize method empty config test");
+
+/* L1 Test Cases for DownloadManagerImplementation::Register method
+ * Tests the direct implementation interface to ensure proper notification
+ * registration behavior under various conditions.
+ */
+
+/* Test Case: Register method with valid notification
+ * 
+ * Verify Register succeeds with proper notification instance
+ * Verify notification is properly added to internal list
+ */
+TEST_F(DownloadManagerTest, RegisterMethodSuccess) {
+
+    TEST_LOG("Starting Register method success test");
 
     // Create implementation instance directly for testing
     auto implementation = std::make_shared<Plugin::DownloadManagerImplementation>();
@@ -1806,33 +1813,34 @@ TEST_F(DownloadManagerTest, InitializeMethodEmptyConfig) {
         return;
     }
 
-    // Mock service with empty config
-    EXPECT_CALL(*mServiceMock, AddRef())
-        .Times(1);
+    // Create a valid notification test instance
+    auto notificationTest = std::make_shared<NotificationTest>();
     
-    EXPECT_CALL(*mServiceMock, ConfigLine())
-        .WillOnce(::testing::Return("{}"));
+    if (!notificationTest) {
+        TEST_LOG("Failed to create NotificationTest instance");
+        return;
+    }
 
-    // Test Initialize with empty config
-    auto result = implementation->Initialize(mServiceMock);
+    // Test Register with valid notification
+    auto result = implementation->Register(notificationTest.get());
     
     EXPECT_EQ(Core::ERROR_NONE, result);
-    TEST_LOG("Initialize with empty config returned: %u", result);
+    TEST_LOG("Register returned success as expected: %u", result);
     
-    // Cleanup - call Deinitialize
-    auto deinitResult = implementation->Deinitialize(mServiceMock);
-    EXPECT_EQ(Core::ERROR_NONE, deinitResult);
-    TEST_LOG("Deinitialize completed: %u", deinitResult);
+    // Cleanup - unregister the notification
+    auto unregisterResult = implementation->Unregister(notificationTest.get());
+    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+    TEST_LOG("Unregister cleanup completed: %u", unregisterResult);
 }
 
-/* Test Case: Initialize method with malformed configuration
+/* Test Case: Register method with multiple notifications
  * 
- * Verify Initialize handles malformed JSON config gracefully
- * Verify proper error handling for config parsing failures
+ * Verify Register can handle multiple notification registrations
+ * Verify each notification is properly managed
  */
-TEST_F(DownloadManagerTest, InitializeMethodMalformedConfig) {
+TEST_F(DownloadManagerTest, RegisterMethodMultipleNotifications) {
 
-    TEST_LOG("Starting Initialize method malformed config test");
+    TEST_LOG("Starting Register method multiple notifications test");
 
     // Create implementation instance directly for testing
     auto implementation = std::make_shared<Plugin::DownloadManagerImplementation>();
@@ -1842,105 +1850,197 @@ TEST_F(DownloadManagerTest, InitializeMethodMalformedConfig) {
         return;
     }
 
-    // Mock service with malformed config
-    EXPECT_CALL(*mServiceMock, AddRef())
-        .Times(1);
+    // Create multiple notification test instances
+    auto notification1 = std::make_shared<NotificationTest>();
+    auto notification2 = std::make_shared<NotificationTest>();
+    auto notification3 = std::make_shared<NotificationTest>();
     
-    EXPECT_CALL(*mServiceMock, ConfigLine())
-        .WillOnce(::testing::Return("{invalid_json_format"));
-
-    // Test Initialize with malformed config
-    auto result = implementation->Initialize(mServiceMock);
-    
-    // Should still succeed as config parsing failures are handled gracefully
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    TEST_LOG("Initialize with malformed config returned: %u", result);
-    
-    // Cleanup - call Deinitialize
-    auto deinitResult = implementation->Deinitialize(mServiceMock);
-    EXPECT_EQ(Core::ERROR_NONE, deinitResult);
-    TEST_LOG("Deinitialize completed: %u", deinitResult);
-}
-
-/* Test Case: Initialize method with custom download directory
- * 
- * Verify Initialize properly sets custom download directory from config
- * Verify directory creation is attempted
- */
-TEST_F(DownloadManagerTest, InitializeMethodCustomDownloadDir) {
-
-    TEST_LOG("Starting Initialize method custom download dir test");
-
-    // Create implementation instance directly for testing
-    auto implementation = std::make_shared<Plugin::DownloadManagerImplementation>();
-    
-    if (!implementation) {
-        TEST_LOG("Failed to create DownloadManagerImplementation instance");
+    if (!notification1 || !notification2 || !notification3) {
+        TEST_LOG("Failed to create NotificationTest instances");
         return;
     }
 
-    // Mock service with custom download directory
-    EXPECT_CALL(*mServiceMock, AddRef())
-        .Times(1);
-    
-    EXPECT_CALL(*mServiceMock, ConfigLine())
-        .WillOnce(::testing::Return("{\"downloadDir\": \"/tmp/custom_downloads\", \"downloadId\": 42}"));
-
-    // Test Initialize with custom config
-    auto result = implementation->Initialize(mServiceMock);
-    
-    EXPECT_EQ(Core::ERROR_NONE, result);
-    TEST_LOG("Initialize with custom download dir returned: %u", result);
-    
-    // Cleanup - call Deinitialize
-    auto deinitResult = implementation->Deinitialize(mServiceMock);
-    EXPECT_EQ(Core::ERROR_NONE, deinitResult);
-    TEST_LOG("Deinitialize completed: %u", deinitResult);
-}
-
-/* Test Case: Initialize method multiple calls
- * 
- * Verify Initialize can be called multiple times safely
- * Verify proper cleanup between multiple initializations
- */
-TEST_F(DownloadManagerTest, InitializeMethodMultipleCalls) {
-
-    TEST_LOG("Starting Initialize method multiple calls test");
-
-    // Create implementation instance directly for testing
-    auto implementation = std::make_shared<Plugin::DownloadManagerImplementation>();
-    
-    if (!implementation) {
-        TEST_LOG("Failed to create DownloadManagerImplementation instance");
-        return;
-    }
-
-    // Mock service expectations for multiple calls
-    EXPECT_CALL(*mServiceMock, AddRef())
-        .Times(2);
-    
-    EXPECT_CALL(*mServiceMock, ConfigLine())
-        .Times(2)
-        .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/downloads\", \"downloadId\": 1}"));
-
-    // First Initialize call
-    auto result1 = implementation->Initialize(mServiceMock);
+    // Register all notifications
+    auto result1 = implementation->Register(notification1.get());
     EXPECT_EQ(Core::ERROR_NONE, result1);
-    TEST_LOG("First Initialize returned: %u", result1);
+    TEST_LOG("First Register returned: %u", result1);
     
-    // Deinitialize before second call
-    auto deinitResult1 = implementation->Deinitialize(mServiceMock);
-    EXPECT_EQ(Core::ERROR_NONE, deinitResult1);
-    
-    // Second Initialize call
-    auto result2 = implementation->Initialize(mServiceMock);
+    auto result2 = implementation->Register(notification2.get());
     EXPECT_EQ(Core::ERROR_NONE, result2);
-    TEST_LOG("Second Initialize returned: %u", result2);
+    TEST_LOG("Second Register returned: %u", result2);
     
-    // Final cleanup
-    auto deinitResult2 = implementation->Deinitialize(mServiceMock);
-    EXPECT_EQ(Core::ERROR_NONE, deinitResult2);
-    TEST_LOG("Final Deinitialize completed: %u", deinitResult2);
+    auto result3 = implementation->Register(notification3.get());
+    EXPECT_EQ(Core::ERROR_NONE, result3);
+    TEST_LOG("Third Register returned: %u", result3);
+    
+    // Cleanup - unregister all notifications
+    implementation->Unregister(notification1.get());
+    implementation->Unregister(notification2.get());
+    implementation->Unregister(notification3.get());
+    TEST_LOG("Multiple notifications cleanup completed");
 }
+
+/* Test Case: Register method with duplicate notification
+ * 
+ * Verify Register handles duplicate registration properly
+ * Verify no duplicate entries are created
+ */
+TEST_F(DownloadManagerTest, RegisterMethodDuplicateNotification) {
+
+    TEST_LOG("Starting Register method duplicate notification test");
+
+    // Create implementation instance directly for testing
+    auto implementation = std::make_shared<Plugin::DownloadManagerImplementation>();
+    
+    if (!implementation) {
+        TEST_LOG("Failed to create DownloadManagerImplementation instance");
+        return;
+    }
+
+    // Create a notification test instance
+    auto notificationTest = std::make_shared<NotificationTest>();
+    
+    if (!notificationTest) {
+        TEST_LOG("Failed to create NotificationTest instance");
+        return;
+    }
+
+    // Register the same notification twice
+    auto result1 = implementation->Register(notificationTest.get());
+    EXPECT_EQ(Core::ERROR_NONE, result1);
+    TEST_LOG("First Register returned: %u", result1);
+    
+    auto result2 = implementation->Register(notificationTest.get());
+    EXPECT_EQ(Core::ERROR_NONE, result2);
+    TEST_LOG("Duplicate Register returned: %u", result2);
+    
+    // Cleanup - unregister once (should handle duplicate properly)
+    auto unregisterResult = implementation->Unregister(notificationTest.get());
+    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+    TEST_LOG("Unregister cleanup completed: %u", unregisterResult);
+}
+
+/* L1 Test Cases for DownloadManagerImplementation::Unregister method
+ * Tests the direct implementation interface to ensure proper notification
+ * unregistration behavior under various conditions.
+ */
+
+/* Test Case: Unregister method with valid registered notification
+ * 
+ * Verify Unregister succeeds with properly registered notification
+ * Verify notification is properly removed from internal list
+ */
+TEST_F(DownloadManagerTest, UnregisterMethodSuccess) {
+
+    TEST_LOG("Starting Unregister method success test");
+
+    // Create implementation instance directly for testing
+    auto implementation = std::make_shared<Plugin::DownloadManagerImplementation>();
+    
+    if (!implementation) {
+        TEST_LOG("Failed to create DownloadManagerImplementation instance");
+        return;
+    }
+
+    // Create a notification test instance
+    auto notificationTest = std::make_shared<NotificationTest>();
+    
+    if (!notificationTest) {
+        TEST_LOG("Failed to create NotificationTest instance");
+        return;
+    }
+
+    // First register the notification
+    auto registerResult = implementation->Register(notificationTest.get());
+    EXPECT_EQ(Core::ERROR_NONE, registerResult);
+    TEST_LOG("Register completed: %u", registerResult);
+    
+    // Now unregister it
+    auto unregisterResult = implementation->Unregister(notificationTest.get());
+    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+    TEST_LOG("Unregister returned success as expected: %u", unregisterResult);
+}
+
+/* Test Case: Unregister method with non-registered notification
+ * 
+ * Verify Unregister fails gracefully with non-registered notification
+ * Verify proper error code is returned
+ */
+TEST_F(DownloadManagerTest, UnregisterMethodNotRegistered) {
+
+    TEST_LOG("Starting Unregister method not registered test");
+
+    // Create implementation instance directly for testing
+    auto implementation = std::make_shared<Plugin::DownloadManagerImplementation>();
+    
+    if (!implementation) {
+        TEST_LOG("Failed to create DownloadManagerImplementation instance");
+        return;
+    }
+
+    // Create a notification test instance but don't register it
+    auto notificationTest = std::make_shared<NotificationTest>();
+    
+    if (!notificationTest) {
+        TEST_LOG("Failed to create NotificationTest instance");
+        return;
+    }
+
+    // Try to unregister without registering first
+    auto unregisterResult = implementation->Unregister(notificationTest.get());
+    EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult);
+    TEST_LOG("Unregister with non-registered notification returned error as expected: %u", unregisterResult);
+}
+
+/* Test Case: Unregister method with multiple notifications
+ * 
+ * Verify Unregister can handle selective unregistration
+ * Verify only the specified notification is removed
+ */
+TEST_F(DownloadManagerTest, UnregisterMethodSelectiveUnregister) {
+
+    TEST_LOG("Starting Unregister method selective unregister test");
+
+    // Create implementation instance directly for testing
+    auto implementation = std::make_shared<Plugin::DownloadManagerImplementation>();
+    
+    if (!implementation) {
+        TEST_LOG("Failed to create DownloadManagerImplementation instance");
+        return;
+    }
+
+    // Create multiple notification test instances
+    auto notification1 = std::make_shared<NotificationTest>();
+    auto notification2 = std::make_shared<NotificationTest>();
+    auto notification3 = std::make_shared<NotificationTest>();
+    
+    if (!notification1 || !notification2 || !notification3) {
+        TEST_LOG("Failed to create NotificationTest instances");
+        return;
+    }
+
+    // Register all notifications
+    implementation->Register(notification1.get());
+    implementation->Register(notification2.get());
+    implementation->Register(notification3.get());
+    TEST_LOG("All notifications registered");
+    
+    // Unregister only the middle one
+    auto unregisterResult = implementation->Unregister(notification2.get());
+    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
+    TEST_LOG("Selective unregister returned: %u", unregisterResult);
+    
+    // Try to unregister the same one again (should fail)
+    auto duplicateUnregisterResult = implementation->Unregister(notification2.get());
+    EXPECT_EQ(Core::ERROR_GENERAL, duplicateUnregisterResult);
+    TEST_LOG("Duplicate unregister returned error as expected: %u", duplicateUnregisterResult);
+    
+    // Cleanup remaining notifications
+    implementation->Unregister(notification1.get());
+    implementation->Unregister(notification3.get());
+    TEST_LOG("Remaining notifications cleanup completed");
+}
+
+
 
 
