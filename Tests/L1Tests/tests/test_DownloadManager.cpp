@@ -27,6 +27,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <memory>
+#include <atomic>
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
@@ -79,6 +80,7 @@ protected:
 
     Exchange::IDownloadManager* downloadManagerInterface = nullptr;
     Exchange::IDownloadManager* mockImpl = nullptr;
+    Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
     Exchange::IDownloadManager::Options options;
     string downloadId;
     uint8_t progress;
@@ -296,19 +298,52 @@ protected:
 
     void initforComRpc() 
     {
-        TEST_LOG("initforComRpc called - setting up safe COM-RPC environment");
+        TEST_LOG("initforComRpc called - setting up COM-RPC environment with direct implementation");
         
         EXPECT_CALL(*mServiceMock, AddRef())
           .Times(::testing::AnyNumber());
 
-        // Skip COM-RPC interface operations to prevent potential segfaults
-        TEST_LOG("Skipping COM-RPC interface setup to prevent interface wrapping issues");
-        TEST_LOG("COM-RPC functionality will not be available in this test run");
+        EXPECT_CALL(*mServiceMock, Release())
+          .Times(::testing::AnyNumber());
+
+        // Create a direct DownloadManagerImplementation instance for testing
+        // This bypasses the plugin wrapping that was causing segfaults
+        if (!downloadManagerInterface && !mDownloadManagerImpl.IsValid()) {
+            try {
+                // Create DownloadManagerImplementation directly
+                mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+                if (mDownloadManagerImpl.IsValid()) {
+                    // Initialize it with our service mock
+                    auto initResult = mDownloadManagerImpl->Initialize(mServiceMock);
+                    if (initResult == Core::ERROR_NONE) {
+                        downloadManagerInterface = mDownloadManagerImpl.operator->();
+                        downloadManagerInterface->AddRef(); // Keep it alive
+                        TEST_LOG("Successfully created and initialized DownloadManagerImplementation directly");
+                    } else {
+                        TEST_LOG("Failed to initialize DownloadManagerImplementation: %u", initResult);
+                        downloadManagerInterface = nullptr;
+                        mDownloadManagerImpl.Release();
+                    }
+                } else {
+                    TEST_LOG("Failed to create DownloadManagerImplementation instance");
+                    downloadManagerInterface = nullptr;
+                }
+            } catch (const std::exception& e) {
+                TEST_LOG("Exception creating DownloadManagerImplementation: %s", e.what());
+                downloadManagerInterface = nullptr;
+                mDownloadManagerImpl.Release();
+            } catch (...) {
+                TEST_LOG("Unknown exception creating DownloadManagerImplementation");
+                downloadManagerInterface = nullptr;
+                mDownloadManagerImpl.Release();
+            }
+        }
         
-        // Ensure downloadManagerInterface is null to indicate unavailability
-        downloadManagerInterface = nullptr;
-        
-        TEST_LOG("initforComRpc completed safely without attempting risky operations");
+        if (downloadManagerInterface) {
+            TEST_LOG("COM-RPC interface is available for testing");
+        } else {
+            TEST_LOG("COM-RPC interface not available - tests will be skipped");
+        }
     }
 
     void getDownloadParams()
@@ -347,15 +382,41 @@ protected:
 
     void deinitforComRpc()
     {
-        TEST_LOG("deinitforComRpc called - performing safe cleanup");
+        TEST_LOG("deinitforComRpc called - performing cleanup");
         
         EXPECT_CALL(*mServiceMock, Release())
           .Times(::testing::AnyNumber());
 
-        // No COM-RPC interface cleanup needed since we didn't set any up
-        TEST_LOG("Skipping COM-RPC interface cleanup since none were set up");
+        // Clean up the DownloadManagerImplementation interface if it exists
+        if (downloadManagerInterface && mDownloadManagerImpl.IsValid()) {
+            try {
+                // Deinitialize the implementation
+                mDownloadManagerImpl->Deinitialize(mServiceMock);
+                TEST_LOG("Successfully deinitialized DownloadManagerImplementation");
+                
+                // Release the reference we added
+                downloadManagerInterface->Release();
+                downloadManagerInterface = nullptr;
+                
+                // Release the ProxyType
+                mDownloadManagerImpl.Release();
+                TEST_LOG("Released DownloadManagerImplementation interface");
+            } catch (const std::exception& e) {
+                TEST_LOG("Exception during DownloadManagerImplementation cleanup: %s", e.what());
+                downloadManagerInterface = nullptr;
+                mDownloadManagerImpl.Release();
+            } catch (...) {
+                TEST_LOG("Unknown exception during DownloadManagerImplementation cleanup");
+                downloadManagerInterface = nullptr;
+                mDownloadManagerImpl.Release();
+            }
+        } else if (downloadManagerInterface) {
+            // Just release the interface if we don't have the implementation reference
+            downloadManagerInterface->Release();
+            downloadManagerInterface = nullptr;
+        }
         
-        TEST_LOG("COM-RPC cleanup completed safely");
+        TEST_LOG("COM-RPC cleanup completed");
     }
 
     void waitforSignal(uint32_t timeout_ms) 
@@ -378,15 +439,33 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
 
         StatusParams m_status_param;
 
-        NotificationTest()
+        NotificationTest() : m_refCount(1)
         {
         }
         
         virtual ~NotificationTest() override = default;
 
-        // Required for reference counting
-        virtual void AddRef() const override {  }
-        virtual uint32_t Release() const override { return 1; }
+        // Required for reference counting - properly implemented
+        virtual void AddRef() const override { 
+            ++m_refCount;
+        }
+        virtual uint32_t Release() const override { 
+            uint32_t result = --m_refCount;
+            if (result == 0) {
+                // Don't delete this in test - it's stack allocated
+                // delete this;
+            }
+            return result;
+        }
+
+        // Implement QueryInterface to avoid pure virtual method calls
+        virtual void* QueryInterface(const uint32_t interfaceNumber) override {
+            if (interfaceNumber == Exchange::IDownloadManager::INotification::ID) {
+                AddRef();
+                return static_cast<Exchange::IDownloadManager::INotification*>(this);
+            }
+            return nullptr;
+        }
 
         uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
         {
@@ -403,10 +482,6 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
             m_status_signal = DownloadManager_invalidStatus;
 	    return status_signal;
         }
-    private:
-        BEGIN_INTERFACE_MAP(NotificationTest)
-        INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
-        END_INTERFACE_MAP
 
         void SetStatusParams(const StatusParams& statusParam)
         {
@@ -440,6 +515,9 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
 
             m_condition_variable.notify_one();
         }
+
+    private:
+        mutable std::atomic<uint32_t> m_refCount;
     };
 
 
