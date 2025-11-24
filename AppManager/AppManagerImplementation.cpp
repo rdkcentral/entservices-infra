@@ -1590,6 +1590,12 @@ void AppManagerImplementation::getCustomValues(WPEFramework::Exchange::RuntimeCo
                     third = false;
                 }
             }
+            // Free the buffer allocated by getline
+            if (line != NULL)
+            {
+                free(line);
+                line = NULL;
+            }
             fclose(fp);
         }
         apppath.pop_back();
