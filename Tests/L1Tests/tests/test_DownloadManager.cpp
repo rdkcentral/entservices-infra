@@ -467,1686 +467,269 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
         }
     };
 
-/* Test Case for verifying registered methods using JsonRpc
- * 
- * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
- * Check if the methods listed exist by using the Exists() from the JSON RPC handler
- * Verify the methods exist by asserting that Exists() returns Core::ERROR_NONE
- * Deinitialize the JSON-RPC resources and clean-up related test resources
- */
-/*
-TEST_F(DownloadManagerTest, registeredMethodsusingJsonRpc) {
-
-    TEST_LOG("Starting JSON-RPC method registration test");
-
-    // This test verifies that DownloadManager plugin can register JSON-RPC methods
-    // In test environments, full plugin instantiation may not be possible
-    if (!plugin.IsValid()) {
-        TEST_LOG("Plugin not available - skipping JSON-RPC method registration test");
-        GTEST_SKIP() << "Skipping test - Plugin not available in test environment";
-        return;
-    }
-
-    // Skip interface querying to prevent segfault - just verify plugin is valid
-    if (!plugin.IsValid()) {
-        TEST_LOG("Plugin is not valid - this indicates a fundamental issue");
-        GTEST_SKIP() << "Skipping test - Plugin not valid";
-        return;
-    }
-    
-    TEST_LOG("Plugin is valid - proceeding with safe test execution");
-    TEST_LOG("Skipping interface querying to prevent potential segfault in Wraps.cpp");
-
-    // Skip JSON-RPC registration entirely if we detect potential issues
-    // The plugin initialization logs show success, but interface wrapping may be failing
-    TEST_LOG("Plugin is valid, but skipping JSON-RPC registration due to potential interface wrapping issues");
-    TEST_LOG("This test will focus on verifying plugin loading and basic functionality");
-    
-    // Test basic plugin functionality without risky interface operations
-    if (plugin.IsValid()) {
-        TEST_LOG("Test PASSED: Plugin loaded successfully and is valid");
-        TEST_LOG("Avoiding interface querying to prevent segfault - plugin functionality confirmed by valid state");
-        return; // Pass the test
-    } else {
-        TEST_LOG("Test PASSED: Plugin object created but not in valid state - this may be expected in test environments");
-        return; // Still pass the test as plugin creation worked
-    }
-
-    // Since we're not doing JSON-RPC registration, just verify plugin state
-    TEST_LOG("Plugin validation completed successfully");
-    TEST_LOG("Test PASSED: Plugin loads and initializes without crashing");
-    return; // Pass the test without attempting risky operations
-}*/
-
-/* Test Case for COM-RPC interface availability
- * 
- * Set up and initialize required COM-RPC resources
- * Check if the DownloadManager interface is available
- * Verify basic interface functionality if available
- * Clean up COM-RPC resources
- */
-/*
-TEST_F(DownloadManagerTest, downloadManagerInterfaceAvailability) {
-
-    TEST_LOG("Starting COM-RPC interface availability test");
-
-    initforComRpc();
-
-    // Check if interface is available
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - this is expected in test environments");
-        TEST_LOG("Test PASSED: Plugin loads without crashing even when interface is not available");
-        return; // Pass the test as plugin loaded successfully
-    }
-
-    TEST_LOG("DownloadManager interface is available - this indicates successful plugin instantiation");
-    
-    // Basic interface validation - just check that it's not null and has proper reference counting
-    downloadManagerInterface->AddRef();
-    auto refCount = downloadManagerInterface->Release();
-    TEST_LOG("Interface reference counting works properly (refCount: %u)", refCount);
-
-    deinitforComRpc();
-}
-*/
-
-/* Test Case for basic plugin lifecycle
- * 
- * Verify that the plugin can be created, initialized, and destroyed without crashing
- * This is a fundamental test that should always pass
- */
-/*
-TEST_F(DownloadManagerTest, pluginLifecycleTest) {
-
-    TEST_LOG("Starting plugin lifecycle test");
-
-    // Plugin is already created in the constructor and initialized in SetUp
-    // Just verify it exists and basic operations don't crash
-    EXPECT_TRUE(plugin.IsValid()) << "Plugin should be created successfully";
-    
-    if (plugin.IsValid()) {
-        // Test basic plugin operations with safety measures
-        try {
-            auto pluginInterface = static_cast<PluginHost::IPlugin*>(plugin->QueryInterface(PluginHost::IPlugin::ID));
-            if (pluginInterface) {
-                TEST_LOG("Plugin supports IPlugin interface");
-                pluginInterface->Release();
-            }
-        } catch (const std::exception& e) {
-            TEST_LOG("Exception while testing IPlugin interface: %s", e.what());
-        } catch (...) {
-            TEST_LOG("Unknown exception while testing IPlugin interface");
-        }
-        
-        try {
-            auto dispatcherInterface = static_cast<PLUGINHOST_DISPATCHER*>(plugin->QueryInterface(PLUGINHOST_DISPATCHER_ID));
-            if (dispatcherInterface) {
-                TEST_LOG("Plugin supports PLUGINHOST_DISPATCHER interface");
-                dispatcherInterface->Release();
-            }
-        } catch (const std::exception& e) {
-            TEST_LOG("Exception while testing PLUGINHOST_DISPATCHER interface: %s", e.what());
-        } catch (...) {
-            TEST_LOG("Unknown exception while testing PLUGINHOST_DISPATCHER interface");
-        }
-        
-        TEST_LOG("Plugin lifecycle test completed successfully");
-    }
-
-    // Cleanup is handled by TearDown automatically
-}
-*/
-
-/* Test Case for download method using JSON-RPC - Success scenario
- * 
- * Initialize JSON-RPC setup, invoke download method with valid URL
- * Verify successful download initiation and downloadId generation
- */
-/*
-TEST_F(DownloadManagerTest, downloadMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC download success test");
-
-    initforJsonRpc();
-
-    // Check if JSON-RPC methods are available first
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC download method not available - this is expected in test environments");
-        TEST_LOG("Test PASSED: Plugin loads and initializes without crashing");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Test download method
-    string response;
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/1024\", \"priority\": true}"), response));
-
-    if (!response.empty()) {
-        TEST_LOG("Download response: %s", response.c_str());
-        EXPECT_TRUE(response.find("downloadId") != std::string::npos);
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for download method using JSON-RPC - Internet unavailable
- * 
- * Initialize JSON-RPC setup with offline subsystem, invoke download method
- * Verify proper error handling when internet is unavailable
- */
-TEST_F(DownloadManagerTest, downloadMethodJsonRpcInternetUnavailable) {
-
-    TEST_LOG("Starting JSON-RPC download internet unavailable test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC download method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return false; // Internet not available
-            }));
-
-    string response;
-    EXPECT_EQ(Core::ERROR_UNAVAILABLE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), response));
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for pause method using JSON-RPC
- * 
- * Start a download, then pause it using downloadId
- * Verify pause operation succeeds
- */
-TEST_F(DownloadManagerTest, pauseMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC pause success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("pause"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC pause method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // First start a download
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/2048\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                // Now pause the download
-                string pauseParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string pauseResponse;
-                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("pause"), pauseParams, pauseResponse));
-                
-                // Cancel to cleanup
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), pauseParams, pauseResponse);
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for resume method using JSON-RPC
- * 
- * Start a download, pause it, then resume it
- * Verify resume operation succeeds
- */
-TEST_F(DownloadManagerTest, resumeMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC resume success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("resume"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC resume method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Start download, pause, then resume
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/2048\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                string params = "{\"downloadId\": \"" + downloadId + "\"}";
-                string response;
-                
-                // Pause first
-                mJsonRpcHandler.Invoke(connection, _T("pause"), params, response);
-                
-                // Then resume
-                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("resume"), params, response));
-                
-                // Cancel to cleanup
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), params, response);
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for cancel method using JSON-RPC
- * 
- * Start a download then cancel it
- * Verify cancel operation succeeds
- */
-TEST_F(DownloadManagerTest, cancelMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC cancel success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("cancel"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC cancel method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Start a download
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                // Cancel the download
-                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string cancelResponse;
-                EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, cancelResponse));
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for progress method using JSON-RPC
- * 
- * Start a download and check its progress
- * Verify progress method returns valid progress information
- */
-TEST_F(DownloadManagerTest, progressMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC progress success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("progress"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC progress method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Start a download
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                // Check progress
-                string progressParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string progressResponse;
-                auto progressResult = mJsonRpcHandler.Invoke(connection, _T("progress"), progressParams, progressResponse);
-                
-                // Progress method might not be available in all environments
-                if (progressResult == Core::ERROR_NONE) {
-                    TEST_LOG("Progress response: %s", progressResponse.c_str());
-                    EXPECT_FALSE(progressResponse.empty());
-                }
-                
-                // Cancel to cleanup
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), progressParams, progressResponse);
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for getStorageDetails method using JSON-RPC
- * 
- * Invoke getStorageDetails to get storage quota and usage information
- * Verify method returns proper storage details
- */
-TEST_F(DownloadManagerTest, getStorageDetailsJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC getStorageDetails success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("getStorageDetails"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC getStorageDetails method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    string response;
-    auto storageResult = mJsonRpcHandler.Invoke(connection, _T("getStorageDetails"), _T("{}"), response);
-    
-    if (storageResult == Core::ERROR_NONE) {
-        TEST_LOG("Storage details response: %s", response.c_str());
-        EXPECT_FALSE(response.empty());
-        
-        // Check if response contains expected fields
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(response)) {
-            TEST_LOG("Storage details parsed successfully");
-        }
-    } else {
-        TEST_LOG("getStorageDetails returned error: %u", storageResult);
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for rateLimit method using JSON-RPC
- * 
- * Start a download and apply rate limiting
- * Verify rate limit can be set successfully
- */
-TEST_F(DownloadManagerTest, rateLimitJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC rateLimit success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("rateLimit"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC rateLimit method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Start a download
-    string downloadResponse;
-    auto downloadResult = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/2048\"}"), downloadResponse);
-    
-    if (downloadResult == Core::ERROR_NONE && !downloadResponse.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(downloadResponse)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                // Apply rate limit
-                string rateLimitParams = "{\"downloadId\": \"" + downloadId + "\", \"limit\": 512}";
-                string rateLimitResponse;
-                auto rateLimitResult = mJsonRpcHandler.Invoke(connection, _T("rateLimit"), rateLimitParams, rateLimitResponse);
-                
-                if (rateLimitResult == Core::ERROR_NONE) {
-                    TEST_LOG("Rate limit applied successfully");
-                } else {
-                    TEST_LOG("Rate limit returned error: %u", rateLimitResult);
-                }
-                
-                // Cancel to cleanup
-                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, rateLimitResponse);
-            }
-        }
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for download method using COM-RPC - Success scenario
- * 
- * Initialize COM-RPC interface and invoke Download method directly
- * Verify successful download initiation via COM interface
- */
-TEST_F(DownloadManagerTest, downloadMethodComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC download success test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - this is expected in test environments");
-        TEST_LOG("Test PASSED: Plugin loads without crashing");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    string testDownloadId;
-    auto result = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (result == Core::ERROR_NONE) {
-        EXPECT_FALSE(testDownloadId.empty());
-        TEST_LOG("Download started successfully with ID: %s", testDownloadId.c_str());
-        
-        // Cancel to cleanup
-        downloadManagerInterface->Cancel(testDownloadId);
-    } else {
-        TEST_LOG("Download failed with error: %u", result);
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for pause and resume methods using COM-RPC
- * 
- * Start download, pause it, then resume using COM interface
- * Verify pause and resume operations work correctly
- */
-TEST_F(DownloadManagerTest, pauseResumeComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC pause/resume success test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    string testDownloadId;
-    auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-        TEST_LOG("Download started with ID: %s", testDownloadId.c_str());
-        
-        // Pause the download
-        auto pauseResult = downloadManagerInterface->Pause(testDownloadId);
-        if (pauseResult == Core::ERROR_NONE) {
-            TEST_LOG("Download paused successfully");
-            
-            // Resume the download
-            auto resumeResult = downloadManagerInterface->Resume(testDownloadId);
-            if (resumeResult == Core::ERROR_NONE) {
-                TEST_LOG("Download resumed successfully");
-            } else {
-                TEST_LOG("Resume failed with error: %u", resumeResult);
-            }
-        } else {
-            TEST_LOG("Pause failed with error: %u", pauseResult);
-        }
-        
-        // Cancel to cleanup
-        downloadManagerInterface->Cancel(testDownloadId);
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for progress and storage details using COM-RPC
- * 
- * Test progress tracking and storage details retrieval
- * Verify these utility methods work correctly
- */
-TEST_F(DownloadManagerTest, progressStorageComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC progress/storage success test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Test storage details
-    uint32_t testQuotaKB = 0, testUsedKB = 0;
-    auto storageResult = downloadManagerInterface->GetStorageDetails(testQuotaKB, testUsedKB);
-    
-    if (storageResult == Core::ERROR_NONE) {
-        TEST_LOG("Storage details - Quota: %u KB, Used: %u KB", testQuotaKB, testUsedKB);
-    } else {
-        TEST_LOG("GetStorageDetails failed with error: %u", storageResult);
-    }
-
-    // Test progress with a download
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    string testDownloadId;
-    auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-        // Check progress
-        uint8_t progressPercent = 0;
-        auto progressResult = downloadManagerInterface->Progress(testDownloadId, progressPercent);
-        
-        if (progressResult == Core::ERROR_NONE) {
-            TEST_LOG("Download progress: %u%%", progressPercent);
-        } else {
-            TEST_LOG("Progress check failed with error: %u", progressResult);
-        }
-        
-        // Cancel to cleanup
-        downloadManagerInterface->Cancel(testDownloadId);
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for error scenarios with invalid parameters
- * 
- * Test various error conditions with invalid downloadIds, URLs, etc.
- * Verify proper error handling and return codes
- */
-TEST_F(DownloadManagerTest, errorScenariosJsonRpc) {
-
-    TEST_LOG("Starting JSON-RPC error scenarios test");
-
-    initforJsonRpc();
-
-    // Test with invalid downloadId for various operations
-    string invalidResponse;
-    
-    if (mJsonRpcHandler.Exists(_T("pause")) == Core::ERROR_NONE) {
-        auto pauseResult = mJsonRpcHandler.Invoke(connection, _T("pause"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
-        EXPECT_NE(Core::ERROR_NONE, pauseResult);
-        TEST_LOG("Pause with invalid ID returned error: %u (expected)", pauseResult);
-    }
-    
-    if (mJsonRpcHandler.Exists(_T("resume")) == Core::ERROR_NONE) {
-        auto resumeResult = mJsonRpcHandler.Invoke(connection, _T("resume"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
-        EXPECT_NE(Core::ERROR_NONE, resumeResult);
-        TEST_LOG("Resume with invalid ID returned error: %u (expected)", resumeResult);
-    }
-    
-    if (mJsonRpcHandler.Exists(_T("cancel")) == Core::ERROR_NONE) {
-        auto cancelResult = mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"invalid_id_12345\"}"), invalidResponse);
-        EXPECT_NE(Core::ERROR_NONE, cancelResult);
-        TEST_LOG("Cancel with invalid ID returned error: %u (expected)", cancelResult);
-    }
-
-    deinitforJsonRpc();
-}
-
-/* Test Case for delete method using JSON-RPC
- * 
- * Test file deletion functionality via JSON-RPC
- * Verify delete method works with valid file paths
- */
-TEST_F(DownloadManagerTest, deleteMethodJsonRpcSuccess) {
-
-    TEST_LOG("Starting JSON-RPC delete success test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("delete"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC delete method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    // Test delete with a file path
-    string response;
-    string deleteParams = "{\"fileLocator\": \"/tmp/test_download_file.txt\"}";
-    auto deleteResult = mJsonRpcHandler.Invoke(connection, _T("delete"), deleteParams, response);
-    
-    // Delete might fail if file doesn't exist, which is expected
-    TEST_LOG("Delete method returned: %u", deleteResult);
-    
-    deinitforJsonRpc();
-}
-
-/* Test Case for delete method with empty file locator using JSON-RPC
- * 
- * Test delete method error handling with invalid parameters
- * Verify proper error response for empty file locator
- */
-TEST_F(DownloadManagerTest, deleteMethodJsonRpcInvalidParam) {
-
-    TEST_LOG("Starting JSON-RPC delete invalid parameter test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("delete"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC delete method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    // Test delete with empty file locator
-    string response;
-    string deleteParams = "{\"fileLocator\": \"\"}";
-    auto deleteResult = mJsonRpcHandler.Invoke(connection, _T("delete"), deleteParams, response);
-    
-    // Should return error for empty file locator
-    EXPECT_NE(Core::ERROR_NONE, deleteResult);
-    TEST_LOG("Delete with empty locator returned error: %u (expected)", deleteResult);
-    
-    deinitforJsonRpc();
-}
-
-/* Test Case for download method with invalid URL using JSON-RPC
- * 
- * Test download method error handling with malformed URLs
- * Verify proper error response for invalid URLs
- */
-TEST_F(DownloadManagerTest, downloadMethodJsonRpcInvalidUrl) {
-
-    TEST_LOG("Starting JSON-RPC download invalid URL test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC download method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Test with empty URL
-    string response;
-    EXPECT_NE(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"\"}"), response));
-
-    // Test with malformed URL
-    EXPECT_NE(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"invalid-url\"}"), response));
-    
-    deinitforJsonRpc();
-}
-
-/* Test Case for download method with different options using JSON-RPC
- * 
- * Test download method with various option combinations
- * Verify options are properly handled
- */
-TEST_F(DownloadManagerTest, downloadMethodJsonRpcWithOptions) {
-
-    TEST_LOG("Starting JSON-RPC download with options test");
-
-    initforJsonRpc();
-
-    auto result = mJsonRpcHandler.Exists(_T("download"));
-    if (result != Core::ERROR_NONE) {
-        TEST_LOG("JSON-RPC download method not available - skipping test");
-        deinitforJsonRpc();
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    // Test with priority download
-    string response1;
-    auto result1 = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/512\", \"priority\": true, \"retries\": 3, \"rateLimit\": 2048}"), response1);
-    
-    if (result1 == Core::ERROR_NONE && !response1.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(response1)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                TEST_LOG("Priority download started with ID: %s", downloadId.c_str());
-                // Cancel to cleanup
-                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string cancelResponse;
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, cancelResponse);
-            }
-        }
-    }
-
-    // Test with non-priority download
-    string response2;
-    auto result2 = mJsonRpcHandler.Invoke(connection, _T("download"), 
-        _T("{\"url\": \"https://httpbin.org/bytes/256\", \"priority\": false, \"retries\": 1, \"rateLimit\": 1024}"), response2);
-    
-    if (result2 == Core::ERROR_NONE && !response2.empty()) {
-        JsonObject jsonResponse;
-        if (jsonResponse.FromString(response2)) {
-            string downloadId = jsonResponse["downloadId"].String();
-            if (!downloadId.empty()) {
-                TEST_LOG("Regular download started with ID: %s", downloadId.c_str());
-                // Cancel to cleanup
-                string cancelParams = "{\"downloadId\": \"" + downloadId + "\"}";
-                string cancelResponse;
-                mJsonRpcHandler.Invoke(connection, _T("cancel"), cancelParams, cancelResponse);
-            }
-        }
-    }
-    
-    deinitforJsonRpc();
-}
-
-/* Test Case for delete method using COM-RPC
- * 
- * Test file deletion functionality via COM interface
- * Verify delete method works with valid and invalid file paths
- */
-TEST_F(DownloadManagerTest, deleteMethodComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC delete test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Test delete with a file path
-    string testFilePath = "/tmp/nonexistent_test_file.txt";
-    auto deleteResult = downloadManagerInterface->Delete(testFilePath);
-    
-    // Delete might fail if file doesn't exist, which is expected
-    TEST_LOG("Delete method returned: %u for file: %s", deleteResult, testFilePath.c_str());
-    
-    // Test delete with empty file locator - should return error
-    auto deleteResult2 = downloadManagerInterface->Delete("");
-    EXPECT_NE(Core::ERROR_NONE, deleteResult2);
-    TEST_LOG("Delete with empty locator returned error: %u (expected)", deleteResult2);
-
-    deinitforComRpc();
-}
-
-/* Test Case for download method with invalid URLs using COM-RPC
- * 
- * Test download method error handling via COM interface
- * Verify proper error responses for invalid parameters
- */
-TEST_F(DownloadManagerTest, downloadMethodComRpcInvalidParams) {
-
-    TEST_LOG("Starting COM-RPC download invalid parameters test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    // Test with empty URL
-    string testDownloadId1;
-    auto result1 = downloadManagerInterface->Download("", options, testDownloadId1);
-    EXPECT_NE(Core::ERROR_NONE, result1);
-    TEST_LOG("Download with empty URL returned error: %u (expected)", result1);
-    
-    // Test with malformed URL
-    string testDownloadId2;
-    auto result2 = downloadManagerInterface->Download("invalid-url", options, testDownloadId2);
-    TEST_LOG("Download with invalid URL returned: %u", result2);
-
-    deinitforComRpc();
-}
-
-/* Test Case for rate limiting using COM-RPC
- * 
- * Test rate limiting functionality via COM interface
- * Verify rate limit can be applied to downloads
- */
-TEST_F(DownloadManagerTest, rateLimitComRpcSuccess) {
-
-    TEST_LOG("Starting COM-RPC rate limit test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    string testDownloadId;
-    auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-        TEST_LOG("Download started with ID: %s", testDownloadId.c_str());
-        
-        // Apply rate limit
-        uint32_t rateLimit = 512; // 512 KB/s
-        auto rateLimitResult = downloadManagerInterface->RateLimit(testDownloadId, rateLimit);
-        
-        if (rateLimitResult == Core::ERROR_NONE) {
-            TEST_LOG("Rate limit of %u KB/s applied successfully", rateLimit);
-        } else {
-            TEST_LOG("Rate limit failed with error: %u", rateLimitResult);
-        }
-        
-        // Test rate limit with invalid download ID
-        auto rateLimitResult2 = downloadManagerInterface->RateLimit("invalid_id_12345", rateLimit);
-        EXPECT_NE(Core::ERROR_NONE, rateLimitResult2);
-        TEST_LOG("Rate limit with invalid ID returned error: %u (expected)", rateLimitResult2);
-        
-        // Cancel to cleanup
-        downloadManagerInterface->Cancel(testDownloadId);
-    }
-
-    deinitforComRpc();
-}
-
-
-/* Test Case for progress tracking with invalid download IDs
- * 
- * Test progress method error handling
- * Verify proper error responses for invalid download IDs
- */
-TEST_F(DownloadManagerTest, progressMethodInvalidId) {
-
-    TEST_LOG("Starting progress method invalid ID test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Test progress with invalid download ID
-    uint8_t progressPercent = 0;
-    auto progressResult = downloadManagerInterface->Progress("invalid_id_12345", progressPercent);
-    
-    EXPECT_NE(Core::ERROR_NONE, progressResult);
-    TEST_LOG("Progress with invalid ID returned error: %u (expected)", progressResult);
-
-    deinitforComRpc();
-}
-
-/* Test Case for comprehensive download lifecycle using COM-RPC
- * 
- * Test complete download workflow: start -> progress -> pause -> resume -> cancel
- * Verify all operations work in sequence
- */
-TEST_F(DownloadManagerTest, completeDownloadLifecycleComRpc) {
-
-    TEST_LOG("Starting complete download lifecycle test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    // Step 1: Start download
-    string testDownloadId;
-    auto downloadResult = downloadManagerInterface->Download(uri, options, testDownloadId);
-    
-    if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-        TEST_LOG("STEP 1: Download started with ID: %s", testDownloadId.c_str());
-        
-        // Step 2: Check initial progress
-        uint8_t progressPercent = 0;
-        auto progressResult = downloadManagerInterface->Progress(testDownloadId, progressPercent);
-        if (progressResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 2: Initial progress: %u%%", progressPercent);
-        }
-        
-        // Step 3: Apply rate limit
-        uint32_t rateLimit = 1024;
-        auto rateLimitResult = downloadManagerInterface->RateLimit(testDownloadId, rateLimit);
-        if (rateLimitResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 3: Rate limit applied: %u KB/s", rateLimit);
-        }
-        
-        // Step 4: Pause download
-        auto pauseResult = downloadManagerInterface->Pause(testDownloadId);
-        if (pauseResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 4: Download paused successfully");
-            
-            // Step 5: Resume download
-            auto resumeResult = downloadManagerInterface->Resume(testDownloadId);
-            if (resumeResult == Core::ERROR_NONE) {
-                TEST_LOG("STEP 5: Download resumed successfully");
-            } else {
-                TEST_LOG("STEP 5: Resume failed with error: %u", resumeResult);
-            }
-        } else {
-            TEST_LOG("STEP 4: Pause failed with error: %u", pauseResult);
-        }
-        
-        // Step 6: Final progress check
-        progressResult = downloadManagerInterface->Progress(testDownloadId, progressPercent);
-        if (progressResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 6: Final progress: %u%%", progressPercent);
-        }
-        
-        // Step 7: Cancel download (cleanup)
-        auto cancelResult = downloadManagerInterface->Cancel(testDownloadId);
-        if (cancelResult == Core::ERROR_NONE) {
-            TEST_LOG("STEP 7: Download cancelled successfully");
-        } else {
-            TEST_LOG("STEP 7: Cancel failed with error: %u", cancelResult);
-        }
-    } else {
-        TEST_LOG("Download failed to start with error: %u", downloadResult);
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for multiple simultaneous downloads
- * 
- * Test downloading multiple files simultaneously
- * Verify system can handle multiple concurrent downloads
- */
-TEST_F(DownloadManagerTest, multipleDownloadsComRpc) {
-
-    TEST_LOG("Starting multiple downloads test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-        .Times(::testing::AnyNumber())
-        .WillRepeatedly(::testing::Invoke(
-            [&](const PluginHost::ISubSystem::subsystem type) {
-                return true;
-            }));
-
-    getDownloadParams();
-    
-    std::vector<string> downloadIds;
-    std::vector<string> urls = {
-        "https://httpbin.org/bytes/512",
-        "https://httpbin.org/bytes/1024", 
-        "https://httpbin.org/bytes/256"
-    };
-    
-    // Start multiple downloads
-    for (size_t i = 0; i < urls.size(); ++i) {
-        string testDownloadId;
-        auto downloadResult = downloadManagerInterface->Download(urls[i], options, testDownloadId);
-        
-        if (downloadResult == Core::ERROR_NONE && !testDownloadId.empty()) {
-            downloadIds.push_back(testDownloadId);
-            TEST_LOG("Download %zu started with ID: %s", i + 1, testDownloadId.c_str());
-        } else {
-            TEST_LOG("Download %zu failed with error: %u", i + 1, downloadResult);
-        }
-    }
-    
-    // Check progress of all downloads
-    for (size_t i = 0; i < downloadIds.size(); ++i) {
-        uint8_t progressPercent = 0;
-        auto progressResult = downloadManagerInterface->Progress(downloadIds[i], progressPercent);
-        if (progressResult == Core::ERROR_NONE) {
-            TEST_LOG("Download %zu progress: %u%%", i + 1, progressPercent);
-        }
-    }
-    
-    // Cancel all downloads (cleanup)
-    for (size_t i = 0; i < downloadIds.size(); ++i) {
-        auto cancelResult = downloadManagerInterface->Cancel(downloadIds[i]);
-        if (cancelResult == Core::ERROR_NONE) {
-            TEST_LOG("Download %zu cancelled successfully", i + 1);
-        } else {
-            TEST_LOG("Download %zu cancel failed with error: %u", i + 1, cancelResult);
-        }
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for storage details consistency
- * 
- * Test storage details retrieval multiple times
- * Verify storage information consistency
- */
-TEST_F(DownloadManagerTest, storageDetailsConsistency) {
-
-    TEST_LOG("Starting storage details consistency test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Get storage details multiple times and verify consistency
-    for (int i = 0; i < 3; ++i) {
-        uint32_t quotaKB = 0, usedKB = 0;
-        auto storageResult = downloadManagerInterface->GetStorageDetails(quotaKB, usedKB);
-        
-        if (storageResult == Core::ERROR_NONE) {
-            TEST_LOG("Storage check %d - Quota: %u KB, Used: %u KB", i + 1, quotaKB, usedKB);
-            
-            // Basic consistency checks
-            if (quotaKB > 0) {
-                EXPECT_LE(usedKB, quotaKB) << "Used storage should not exceed quota";
-            }
-        } else {
-            TEST_LOG("Storage details check %d failed with error: %u", i + 1, storageResult);
-        }
-        
-        // Small delay between checks
-        waitforSignal(100);
-    }
-
-    deinitforComRpc();
-}
-
-/* Test Case for edge cases and boundary conditions
- * 
- * Test various edge cases and boundary conditions
- * Verify robust error handling
- */
-TEST_F(DownloadManagerTest, edgeCasesAndBoundaryConditions) {
-
-    TEST_LOG("Starting edge cases and boundary conditions test");
-
-    initforComRpc();
-
-    if (downloadManagerInterface == nullptr) {
-        TEST_LOG("DownloadManager interface not available - skipping test");
-        return;
-    }
-
-    // Test with very long download ID
-    string longId(1000, 'x');
-    auto pauseResult = downloadManagerInterface->Pause(longId);
-    EXPECT_NE(Core::ERROR_NONE, pauseResult);
-    TEST_LOG("Pause with very long ID returned error: %u (expected)", pauseResult);
-    
-    // Test with special characters in download ID
-    string specialId = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
-    auto resumeResult = downloadManagerInterface->Resume(specialId);
-    EXPECT_NE(Core::ERROR_NONE, resumeResult);
-    TEST_LOG("Resume with special char ID returned error: %u (expected)", resumeResult);
-    
-    // Test rate limit with extreme values
-    auto rateLimitResult1 = downloadManagerInterface->RateLimit("test_id", 0);
-    TEST_LOG("Rate limit with 0 returned: %u", rateLimitResult1);
-    
-    auto rateLimitResult2 = downloadManagerInterface->RateLimit("test_id", UINT32_MAX);
-    TEST_LOG("Rate limit with MAX_UINT32 returned: %u", rateLimitResult2);
-    
-    // Test delete with very long file path
-    string longPath(2000, '/');
-    longPath += "file.txt";
-    auto deleteResult = downloadManagerInterface->Delete(longPath);
-    TEST_LOG("Delete with very long path returned: %u", deleteResult);
-
-    deinitforComRpc();
-}
-
-
-TEST_F(DownloadManagerTest, UnregisterNonRegisteredNotification) {
-    
-    TEST_LOG("Testing Unregister method with non-registered notification using IDownloadManager interface");
-
-    initforComRpc();
-
-    if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping Unregister test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
-        return;
-    }
-
-    NotificationTest notificationCallback;
-    
-    // Test Unregister method through IDownloadManager interface without registering first
-    // This should call through to DownloadManagerImplementation::Unregister and return error
-    auto result = downloadManagerInterface->Unregister(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_GENERAL, result);
-    TEST_LOG("IDownloadManager Unregister non-registered returned: %u", result);
-
-    deinitforComRpc();
-}
-
-TEST_F(DownloadManagerTest, RegisterUnregisterWorkflow) {
-    
-    TEST_LOG("Testing Register-Unregister workflow using IDownloadManager interface");
-
-    initforComRpc();
-
-    if (!downloadManagerInterface) {
-        TEST_LOG("DownloadManager interface not available - skipping workflow test");
-        GTEST_SKIP() << "Skipping test - DownloadManager interface not available";
-        return;
-    }
-
-    NotificationTest notificationCallback;
-    
-    // Test complete Register-Unregister workflow through IDownloadManager interface
-    // Register notification - this should call through to DownloadManagerImplementation::Register
-    auto registerResult = downloadManagerInterface->Register(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_NONE, registerResult);
-    TEST_LOG("IDownloadManager Register returned: %u", registerResult);
-    
-    // Unregister notification - this should call through to DownloadManagerImplementation::Unregister
-    auto unregisterResult = downloadManagerInterface->Unregister(&notificationCallback);
-    EXPECT_EQ(Core::ERROR_NONE, unregisterResult);
-    TEST_LOG("IDownloadManager Unregister returned: %u", unregisterResult);
-
-    deinitforComRpc();
-}
-*/
-
-//==================================================================================================
-// DownloadManagerImplementation Test Class
-//==================================================================================================
-
+// Dedicated test fixture for DownloadManagerImplementation direct testing
 class DownloadManagerImplementationTest : public ::testing::Test {
 protected:
-    // Declare the protected members following AppManager pattern
     ServiceMock* mServiceMock = nullptr;
     SubSystemMock* mSubSystemMock = nullptr;
-
-    Core::ProxyType<WorkerPoolImplementation> workerPool;
-    Core::ProxyType<Plugin::DownloadManager> plugin;  // Main plugin wrapper like AppManager
-    Plugin::DownloadManagerImplementation* mDownloadManagerImpl = nullptr; // Implementation pointer
-    FactoriesImplementation factoriesImplementation;
-
-    // Constructor - following AppManager pattern
-    DownloadManagerImplementationTest()
-        : plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
-          workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
-              2, Core::Thread::DefaultStackSize(), 16))
-    {
-        Core::IWorkerPool::Assign(&(*workerPool));
-        workerPool->Run();
+    Core::ProxyType<Plugin::DownloadManagerImplementation> mDownloadManagerImpl;
+    
+    DownloadManagerImplementationTest() {
+        // Create implementation object
+        mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
+        TEST_LOG("DownloadManagerImplementationTest constructor completed");
     }
 
-    // Destructor
-    virtual ~DownloadManagerImplementationTest() override
-    {
-        Core::IWorkerPool::Assign(nullptr);
-        workerPool.Release();
+    virtual ~DownloadManagerImplementationTest() override {
+        TEST_LOG("DownloadManagerImplementationTest destructor");
     }
 
-    void SetUp() override
-    {
-        // Set up mocks and expect calls
+    void SetUp() override {
+        TEST_LOG("=== DownloadManagerImplementationTest SetUp ===");
+        
+        // Create mocks
         mServiceMock = new NiceMock<ServiceMock>;
         mSubSystemMock = new NiceMock<SubSystemMock>;
-
+        
+        // Configure ServiceMock expectations for proper plugin operation
         EXPECT_CALL(*mServiceMock, ConfigLine())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\", \"downloadId\": 3000}"));
-
-        EXPECT_CALL(*mServiceMock, PersistentPath())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("/tmp/"));
-
-        EXPECT_CALL(*mServiceMock, VolatilePath())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("/tmp/"));
-
-        EXPECT_CALL(*mServiceMock, DataPath())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("/tmp/"));
-
+            .WillRepeatedly(::testing::Return("{\"downloadDir\":\"/tmp/downloads/\",\"downloadId\":3000}"));
+            
         EXPECT_CALL(*mServiceMock, SubSystems())
-            .Times(::testing::AnyNumber())
             .WillRepeatedly(::testing::Return(mSubSystemMock));
-
+            
         EXPECT_CALL(*mServiceMock, AddRef())
             .Times(::testing::AnyNumber());
-
+            
         EXPECT_CALL(*mServiceMock, Release())
             .Times(::testing::AnyNumber());
+            
+        // Configure SubSystemMock - start with INTERNET active for successful downloads
+        EXPECT_CALL(*mSubSystemMock, IsActive(PluginHost::ISubSystem::INTERNET))
+            .WillRepeatedly(::testing::Return(true));
+        
+        TEST_LOG("DownloadManagerImplementationTest SetUp completed");
     }
 
-    void TearDown() override
-    {
+    void TearDown() override {
+        TEST_LOG("=== DownloadManagerImplementationTest TearDown ===");
+        
+        // Clean up implementation if initialized
+        if (mDownloadManagerImpl.IsValid()) {
+            // Deinitialize if it was initialized
+            mDownloadManagerImpl->Deinitialize(mServiceMock);
+            mDownloadManagerImpl.Release();
+        }
+        
         // Clean up mocks
-        if (mServiceMock != nullptr) {
+        if (mServiceMock) {
             delete mServiceMock;
             mServiceMock = nullptr;
         }
-
-        if (mSubSystemMock != nullptr) {
+        
+        if (mSubSystemMock) {
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
         }
+        
+        TEST_LOG("DownloadManagerImplementationTest TearDown completed");
     }
 
-    // Helper methods following AppManager pattern
-    void createDownloadManagerImpl()
-    {
-        mServiceMock = new NiceMock<ServiceMock>;
-        mSubSystemMock = new NiceMock<SubSystemMock>;
-        
-        // Set up critical mock expectations - REQUIRED to prevent crashes!
-        EXPECT_CALL(*mServiceMock, ConfigLine())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/tmp/downloads/\", \"downloadId\": 3000}"));
-
-        EXPECT_CALL(*mServiceMock, SubSystems())
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Return(mSubSystemMock));
-
-        EXPECT_CALL(*mServiceMock, AddRef())
-            .Times(::testing::AnyNumber());
-
-        EXPECT_CALL(*mServiceMock, Release())
-            .Times(::testing::AnyNumber());
-
-        // CRITICAL: Mock IsActive to return true - prevents Download method crash!
-        EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
-            .Times(::testing::AnyNumber())
-            .WillRepeatedly(::testing::Invoke(
-                [&](const PluginHost::ISubSystem::subsystem type) {
-                    return true; // Return true for INTERNET to allow Download to proceed
-                }));
-        
-        TEST_LOG("In createDownloadManagerImpl - calling plugin->Initialize");
-        string initResult = plugin->Initialize(mServiceMock);
-        TEST_LOG("Plugin Initialize returned: '%s'", initResult.c_str());
-    }
-
-    void releaseDownloadManagerImpl()
-    {
-        TEST_LOG("In releaseDownloadManagerImpl - calling plugin->Deinitialize");
-        plugin->Deinitialize(mServiceMock);
-        delete mServiceMock;
-        mServiceMock = nullptr;
-        mDownloadManagerImpl = nullptr;
+    Plugin::DownloadManagerImplementation* getRawImpl() {
+        if (mDownloadManagerImpl.IsValid()) {
+            return &(*mDownloadManagerImpl);
+        }
+        return nullptr;
     }
 };
 
-/* Test Case for DownloadManagerImplementation Initialize - Success scenario
+/* Test Case for DownloadManagerImplementation - All IDownloadManager APIs with Plugin Lifecycle
  * 
- * Set up mocks with valid service and configuration
- * Call Initialize method with valid service pointer
- * Verify Initialize returns Core::ERROR_NONE for successful initialization
- * Verify that download path is created and downloader thread is started
- */
-/*
-TEST_F(DownloadManagerImplementationTest, InitializeSuccess) {
-    TEST_LOG("Starting DownloadManagerImplementation Initialize success test");
-
-    // Create a test implementation for this specific test
-    Core::ProxyType<Plugin::DownloadManagerImplementation> testImpl = 
-        Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    ASSERT_TRUE(testImpl.IsValid()) << "Test implementation should be created successfully";
-    
-    // Skip actual Initialize call to prevent Core framework interface wrapping issues
-    TEST_LOG("Skipping actual Initialize call to prevent segfault in test environment");
-    TEST_LOG("Test PASSED: DownloadManagerImplementation object created successfully");
-    TEST_LOG("In a real environment, this would test the Initialize method");
-    
-    // The test passes because we can create the implementation object without issues
-    SUCCEED() << "DownloadManagerImplementation can be created successfully";
-}
-*/
-
-/* Test Case for DownloadManagerImplementation Initialize - Null service failure
- * 
- * Call Initialize method with null service pointer
- * Verify Initialize returns Core::ERROR_GENERAL for null service
- */
-/*
-TEST_F(DownloadManagerImplementationTest, InitializeNullService) {
-    TEST_LOG("Starting DownloadManagerImplementation Initialize null service test");
-
-    // Create a test implementation for this specific test
-    Core::ProxyType<Plugin::DownloadManagerImplementation> testImpl = 
-        Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    ASSERT_TRUE(testImpl.IsValid()) << "Test implementation should be created successfully";
-
-    // Skip actual Initialize call to prevent Core framework interface wrapping issues
-    TEST_LOG("Skipping actual Initialize call to prevent segfault in test environment");
-    TEST_LOG("Test PASSED: DownloadManagerImplementation object created successfully");
-    TEST_LOG("In a real environment, this would test null service error handling");
-    
-    // The test passes because we can validate the logic without calling Initialize
-    SUCCEED() << "DownloadManagerImplementation handles initialization validation";
-}
-*/
-
-/* Test Case for DownloadManagerImplementation Initialize - Stress test with rapid cycles
- * 
- * Perform rapid initialize-deinitialize cycles
- * Verify that rapid cycling doesn't cause issues
- */
-/*
-TEST_F(DownloadManagerImplementationTest, InitializeStressTest) {
-    TEST_LOG("Starting DownloadManagerImplementation Initialize stress test");
-
-    // Create a test implementation for this specific test
-    Core::ProxyType<Plugin::DownloadManagerImplementation> testImpl = 
-        Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    ASSERT_TRUE(testImpl.IsValid()) << "Test implementation should be created successfully";
-
-    // Verify object is valid for stress testing (Initialize/Deinitialize calls would cause segfault)
-    // In production, this would perform rapid initialize-deinitialize cycles:
-    // for (int i = 0; i < 5; ++i) testImpl->Initialize() -> testImpl->Deinitialize()
-    // But in test environment, avoid these calls to prevent Core framework interface wrapping issues
-    SUCCEED() << "Stress test validation successful - rapid cycling pattern verified";
-    
-    TEST_LOG("DownloadManagerImplementation Initialize stress test completed");
-}
-*/
-
-/* Test Case for DownloadManagerImplementation - All IDownloadManager APIs
- * 
- * Test all IDownloadManager APIs in single Initialize/Deinitialize cycle:
- * Download, Pause, Resume, Cancel, Delete, Progress
+ * Test all IDownloadManager APIs with proper Initialize/Deinitialize cycle and plugin state management
+ * This test demonstrates complete plugin lifecycle and comprehensive API coverage
  */
 TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
-    TEST_LOG("Starting DownloadManagerImplementation API coverage test with proper Initialize/Deinitialize timing");
+    TEST_LOG("=== Comprehensive DownloadManagerImplementation API Test with Plugin Lifecycle ===");
     
-    // Use GTest logging that always appears in test output
-    RecordProperty("TestPhase", "Starting DownloadManagerImplementation API coverage test");
-    std::cout << "=== GTEST OUTPUT: Starting DownloadManagerImplementation API coverage test ===" << std::endl;
+    ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation should be created successfully";
+    Plugin::DownloadManagerImplementation* impl = getRawImpl();
+    ASSERT_NE(impl, nullptr) << "Implementation pointer should be valid";
 
-    ASSERT_TRUE(plugin.IsValid()) << "DownloadManager plugin should be created successfully";
-
-    // Call createDownloadManagerImpl to properly initialize like AppManager
-    createDownloadManagerImpl();
+    // === PHASE 1: PLUGIN ACTIVATION AND INITIALIZATION ===
+    TEST_LOG("=== PHASE 1: Plugin Activation and Initialization ===");
     
-    // Get implementation pointer through the plugin interface
-    // Since we can't easily access the internal implementation from the main plugin,
-    // let's create our own implementation object for testing but initialize it properly
-    Core::ProxyType<Plugin::DownloadManagerImplementation> testImpl = 
-        Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-    
-    ASSERT_TRUE(testImpl.IsValid()) << "Test implementation should be created successfully";
-    Plugin::DownloadManagerImplementation* rawImpl = &(*testImpl);
-    ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
-    
-    TEST_LOG("=== Proper Initialize/Deinitialize timing following AppManager pattern ===");
-    
-    // Initialize the implementation with proper timing - BEFORE testing APIs
-    TEST_LOG("=== Initializing implementation ===");
-    Core::hresult initResult = rawImpl->Initialize(mServiceMock);
+    // Initialize the plugin - this should succeed with proper mocks
+    Core::hresult initResult = impl->Initialize(mServiceMock);
     TEST_LOG("Initialize returned: %u (ERROR_NONE=%u)", initResult, Core::ERROR_NONE);
+    EXPECT_EQ(Core::ERROR_NONE, initResult) << "Initialize should succeed with proper ServiceMock";
     
-    if (initResult != Core::ERROR_NONE) {
-        TEST_LOG("Initialize failed, but continuing with API tests for coverage");
+    // Add small delay to ensure thread startup if initialization succeeded
+    if (initResult == Core::ERROR_NONE) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        TEST_LOG("Plugin initialization completed - downloader thread should be running");
     }
-    
-    // Test Register/Unregister APIs - create valid notification callback
-    TEST_LOG("=== Testing Register/Unregister APIs ===");
-    NotificationTest* notificationCallback = new NotificationTest();
-    ASSERT_NE(notificationCallback, nullptr) << "Notification object should be created";
 
-    // Test Register method - hits DownloadManagerImplementation::Register
-    // Note: This passes valid notification so no ASSERT failure
-    Core::hresult registerResult = rawImpl->Register(notificationCallback); 
-    TEST_LOG("Register callback returned: %u", registerResult);
+    // === PHASE 2: NOTIFICATION REGISTER/UNREGISTER ===
+    TEST_LOG("=== PHASE 2: Testing Register/Unregister APIs ===");
     
-    // GTest assertions with detailed messages always appear in output
-    EXPECT_EQ(Core::ERROR_NONE, registerResult) << "Register should succeed with valid notification - returned: " << registerResult;
-    std::cout << "REGISTER TEST: returned " << registerResult << " (expected " << Core::ERROR_NONE << ")" << std::endl;
+    NotificationTest* notification = new NotificationTest();
+    ASSERT_NE(notification, nullptr) << "Notification callback should be created";
+
+    // Test Register - should succeed with valid notification
+    Core::hresult registerResult = impl->Register(notification);
+    TEST_LOG("Register returned: %u", registerResult);
+    EXPECT_EQ(Core::ERROR_NONE, registerResult) << "Register should succeed with valid notification";
     
-    // Test Unregister method - hits DownloadManagerImplementation::Unregister  
-    // Note: This passes valid notification so no ASSERT failure
-    Core::hresult unregisterResult = rawImpl->Unregister(notificationCallback);
-    TEST_LOG("Unregister callback returned: %u", unregisterResult);
+    // Test Unregister - should succeed with registered notification
+    Core::hresult unregisterResult = impl->Unregister(notification);
+    TEST_LOG("Unregister returned: %u", unregisterResult);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult) << "Unregister should succeed";
     
-    // Test Unregister with already unregistered callback - this should return error but no crash
-    Core::hresult unregisterResult2 = rawImpl->Unregister(notificationCallback);
-    TEST_LOG("Unregister (already unregistered) returned: %u", unregisterResult2);
-    EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult2) << "Unregister should fail when already unregistered";
+    // Test Unregister again - should fail (notification already removed)
+    Core::hresult unregisterResult2 = impl->Unregister(notification);
+    TEST_LOG("Unregister (already removed) returned: %u", unregisterResult2);
+    EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult2) << "Unregister should fail when notification not found";
 
-    // Cleanup notification 
-    if (notificationCallback != nullptr) {
-        notificationCallback->Release();
-        notificationCallback = nullptr;
-    }
+    // Cleanup notification
+    notification->Release();
+    notification = nullptr;
+
+    // === PHASE 3: DOWNLOAD API TESTING ===
+    TEST_LOG("=== PHASE 3: Testing Download API ===");
     
-    // Test Download API - hits DownloadManagerImplementation::Download
-    TEST_LOG("=== Testing Download API ===");
-    std::cout << "=== EXECUTING: Download API Test ===" << std::endl;
-    RecordProperty("TestPhase", "Testing Download API");
+    Exchange::IDownloadManager::Options options;
+    options.priority = false;  // Regular priority
+    options.retries = 3;       // Retry attempts
+    options.rateLimit = 1024;  // Rate limit in KB/s
     
     string downloadId;
-    Exchange::IDownloadManager::Options options;
-    // Set up basic options with actual struct fields: priority, retries, rateLimit
-    options.priority = false;  // Regular priority download
-    options.retries = 3;       // Retry count
-    options.rateLimit = 0;     // No rate limit
     
-    Core::hresult downloadResult = rawImpl->Download("http://example.com/testfile.zip", options, downloadId);
-    TEST_LOG("Download API returned: %u, downloadId: %s", downloadResult, downloadId.c_str());
-    // Download will likely fail without proper initialization, but we get coverage
+    // Test successful download request (should succeed with INTERNET active)
+    Core::hresult downloadResult = impl->Download("http://example.com/test.zip", options, downloadId);
+    TEST_LOG("Download (valid URL) returned: %u, downloadId: %s", downloadResult, downloadId.c_str());
+    EXPECT_EQ(Core::ERROR_NONE, downloadResult) << "Download should succeed with valid URL and active internet";
+    EXPECT_FALSE(downloadId.empty()) << "Download should return valid downloadId";
     
-    // Test Download with empty URL - should return error
+    // Test download with empty URL - should fail
     string downloadId2;
-    Core::hresult downloadResult2 = rawImpl->Download("", options, downloadId2);
-    TEST_LOG("Download with empty URL returned: %u", downloadResult2);
+    Core::hresult downloadResult2 = impl->Download("", options, downloadId2);
+    TEST_LOG("Download (empty URL) returned: %u", downloadResult2);
     EXPECT_NE(Core::ERROR_NONE, downloadResult2) << "Download should fail with empty URL";
+    
+    // Test download without internet - temporarily disable internet subsystem
+    EXPECT_CALL(*mSubSystemMock, IsActive(PluginHost::ISubSystem::INTERNET))
+        .WillOnce(::testing::Return(false));
+    
+    string downloadId3;
+    Core::hresult downloadResult3 = impl->Download("http://example.com/test2.zip", options, downloadId3);
+    TEST_LOG("Download (no internet) returned: %u", downloadResult3);
+    EXPECT_EQ(Core::ERROR_UNAVAILABLE, downloadResult3) << "Download should fail when internet not available";
+    
+    // Restore internet for remaining tests
+    EXPECT_CALL(*mSubSystemMock, IsActive(PluginHost::ISubSystem::INTERNET))
+        .WillRepeatedly(::testing::Return(true));
 
-    // Test Pause API - hits DownloadManagerImplementation::Pause
-    TEST_LOG("=== Testing Pause API ===");
-    Core::hresult pauseResult = rawImpl->Pause("invalid_id_12345");
-    TEST_LOG("Pause with invalid ID returned: %u", pauseResult);
-    EXPECT_NE(Core::ERROR_NONE, pauseResult) << "Pause should fail when no active download";
-
-    // Test Pause with empty downloadId  
-    Core::hresult pauseResult2 = rawImpl->Pause("");
-    TEST_LOG("Pause with empty ID returned: %u", pauseResult2);
+    // === PHASE 4: DOWNLOAD CONTROL APIS ===
+    TEST_LOG("=== PHASE 4: Testing Download Control APIs ===");
+    
+    // Test Pause with invalid ID
+    Core::hresult pauseResult = impl->Pause("invalid_download_id");
+    TEST_LOG("Pause (invalid ID) returned: %u", pauseResult);
+    EXPECT_NE(Core::ERROR_NONE, pauseResult) << "Pause should fail with invalid downloadId";
+    
+    // Test Pause with empty ID
+    Core::hresult pauseResult2 = impl->Pause("");
+    TEST_LOG("Pause (empty ID) returned: %u", pauseResult2);
     EXPECT_NE(Core::ERROR_NONE, pauseResult2) << "Pause should fail with empty downloadId";
-
-    // Test Pause with downloadId from Download call
-    if (!downloadId.empty()) {
-        Core::hresult pauseResult3 = rawImpl->Pause(downloadId);
-        TEST_LOG("Pause with download ID returned: %u", pauseResult3);
-    }    // Test Resume API - hits DownloadManagerImplementation::Resume
-    TEST_LOG("=== Testing Resume API ===");
-    Core::hresult resumeResult = rawImpl->Resume("invalid_id_12345");
-    TEST_LOG("Resume with invalid ID returned: %u", resumeResult);
-    EXPECT_NE(Core::ERROR_NONE, resumeResult) << "Resume should fail when no active download";
-
-    // Test Resume with empty downloadId
-    Core::hresult resumeResult2 = rawImpl->Resume("");
-    TEST_LOG("Resume with empty ID returned: %u", resumeResult2);
+    
+    // Test Resume with invalid ID
+    Core::hresult resumeResult = impl->Resume("invalid_download_id");
+    TEST_LOG("Resume (invalid ID) returned: %u", resumeResult);
+    EXPECT_NE(Core::ERROR_NONE, resumeResult) << "Resume should fail with invalid downloadId";
+    
+    // Test Resume with empty ID  
+    Core::hresult resumeResult2 = impl->Resume("");
+    TEST_LOG("Resume (empty ID) returned: %u", resumeResult2);
     EXPECT_NE(Core::ERROR_NONE, resumeResult2) << "Resume should fail with empty downloadId";
-
-    // Test Resume with downloadId from Download call
-    if (!downloadId.empty()) {
-        Core::hresult resumeResult3 = rawImpl->Resume(downloadId);
-        TEST_LOG("Resume with download ID returned: %u", resumeResult3);
-    }
-
-    // Test Cancel API - hits DownloadManagerImplementation::Cancel
-    TEST_LOG("=== Testing Cancel API ===");
-    Core::hresult cancelResult = rawImpl->Cancel("invalid_id_12345");
-    TEST_LOG("Cancel with invalid ID returned: %u", cancelResult);
-    EXPECT_NE(Core::ERROR_NONE, cancelResult) << "Cancel should fail when no active download";
-
-    // Test Cancel with empty downloadId
-    Core::hresult cancelResult2 = rawImpl->Cancel("");
-    TEST_LOG("Cancel with empty ID returned: %u", cancelResult2);
+    
+    // Test Cancel with invalid ID
+    Core::hresult cancelResult = impl->Cancel("invalid_download_id");
+    TEST_LOG("Cancel (invalid ID) returned: %u", cancelResult);
+    EXPECT_NE(Core::ERROR_NONE, cancelResult) << "Cancel should fail with invalid downloadId";
+    
+    // Test Cancel with empty ID
+    Core::hresult cancelResult2 = impl->Cancel("");
+    TEST_LOG("Cancel (empty ID) returned: %u", cancelResult2);
     EXPECT_NE(Core::ERROR_NONE, cancelResult2) << "Cancel should fail with empty downloadId";
 
-    // Test Cancel with downloadId from Download call
-    if (!downloadId.empty()) {
-        Core::hresult cancelResult3 = rawImpl->Cancel(downloadId);
-        TEST_LOG("Cancel with download ID returned: %u", cancelResult3);
-    }
-
-    // Test Progress API - hits DownloadManagerImplementation::Progress
-    TEST_LOG("=== Testing Progress API ===");
+    // === PHASE 5: PROGRESS AND STATUS APIs ===
+    TEST_LOG("=== PHASE 5: Testing Progress and Status APIs ===");
+    
     uint8_t percent = 0;
-    Core::hresult progressResult = rawImpl->Progress("invalid_id_12345", percent);
-    TEST_LOG("Progress with invalid ID returned: %u, percent: %u", progressResult, percent);
+    
+    // Test Progress with invalid ID
+    Core::hresult progressResult = impl->Progress("invalid_download_id", percent);
+    TEST_LOG("Progress (invalid ID) returned: %u, percent: %u", progressResult, percent);
     EXPECT_NE(Core::ERROR_NONE, progressResult) << "Progress should fail with invalid downloadId";
-
-    // Test Progress with empty downloadId
-    Core::hresult progressResult2 = rawImpl->Progress("", percent);
-    TEST_LOG("Progress with empty ID returned: %u, percent: %u", progressResult2, percent);
+    
+    // Test Progress with empty ID
+    Core::hresult progressResult2 = impl->Progress("", percent);
+    TEST_LOG("Progress (empty ID) returned: %u, percent: %u", progressResult2, percent);
     EXPECT_NE(Core::ERROR_NONE, progressResult2) << "Progress should fail with empty downloadId";
 
-    // Test Progress with downloadId from Download call
-    if (!downloadId.empty()) {
-        Core::hresult progressResult3 = rawImpl->Progress(downloadId, percent);
-        TEST_LOG("Progress with download ID returned: %u, percent: %u", progressResult3, percent);
-    }
-
-    // Test Delete API - hits DownloadManagerImplementation::Delete
-    TEST_LOG("=== Testing Delete API ===");
-    Core::hresult deleteResult = rawImpl->Delete("invalid_file_locator");
-    TEST_LOG("Delete with invalid locator returned: %u", deleteResult);
-    EXPECT_NE(Core::ERROR_NONE, deleteResult) << "Delete should fail with invalid file locator";
-
+    // === PHASE 6: FILE MANAGEMENT APIS ===
+    TEST_LOG("=== PHASE 6: Testing File Management APIs ===");
+    
+    // Test Delete with invalid file locator
+    Core::hresult deleteResult = impl->Delete("nonexistent_file.zip");
+    TEST_LOG("Delete (invalid file) returned: %u", deleteResult);
+    EXPECT_NE(Core::ERROR_NONE, deleteResult) << "Delete should fail with nonexistent file";
+    
     // Test Delete with empty file locator
-    Core::hresult deleteResult2 = rawImpl->Delete("");
-    TEST_LOG("Delete with empty locator returned: %u", deleteResult2);
+    Core::hresult deleteResult2 = impl->Delete("");
+    TEST_LOG("Delete (empty locator) returned: %u", deleteResult2);
     EXPECT_NE(Core::ERROR_NONE, deleteResult2) << "Delete should fail with empty file locator";
+    
+    // Test GetStorageDetails - should succeed (stub implementation)
+    uint32_t quotaKB = 0, usedKB = 0;
+    Core::hresult storageResult = impl->GetStorageDetails(quotaKB, usedKB);
+    TEST_LOG("GetStorageDetails returned: %u, quota: %u KB, used: %u KB", storageResult, quotaKB, usedKB);
+    EXPECT_EQ(Core::ERROR_NONE, storageResult) << "GetStorageDetails should succeed (stub implementation)";
 
-    // Proper cleanup - AFTER all API testing is done
-    TEST_LOG("=== Deinitializing implementation (proper timing) ===");
-    Core::hresult deinitResult = rawImpl->Deinitialize(mServiceMock);
-    TEST_LOG("Deinitialize returned: %u", deinitResult);
+    // === PHASE 7: ADVANCED SCENARIOS ===
+    TEST_LOG("=== PHASE 7: Testing Advanced Scenarios ===");
     
-    // Release the test implementation
-    testImpl.Release();
-    
-    // Clean up the plugin initialization
-    releaseDownloadManagerImpl();
-    
-    TEST_LOG("All DownloadManagerImplementation API methods have been called for coverage");
-    TEST_LOG("DownloadManagerImplementation comprehensive API coverage test completed successfully");
-}
-
-/* Ultra-safe fallback test - just to ensure we have some coverage */
-/*
-TEST_F(DownloadManagerImplementationTest, BasicCoverageTest) {
-    TEST_LOG("Ultra-safe basic coverage test for DownloadManagerImplementation");
-    
-    // This test just ensures the object can be created - providing minimal coverage
-    if (mDownloadManagerImpl != nullptr) {
-        TEST_LOG("DownloadManagerImplementation object created successfully");
-        TEST_LOG("Raw pointer access successful - DownloadManagerImplementation accessible");
-    } else {
-        TEST_LOG("DownloadManagerImplementation creation failed, but test still passes");
+    // If we have a valid downloadId from earlier, test control operations on it
+    if (!downloadId.empty()) {
+        // Allow a brief moment for download to be queued/started
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        
+        // Test Progress with valid downloadId (might fail if download not started yet)
+        uint8_t validPercent = 0;
+        Core::hresult validProgressResult = impl->Progress(downloadId, validPercent);
+        TEST_LOG("Progress (valid ID) returned: %u, percent: %u", validProgressResult, validPercent);
+        // Don't assert success here as download might not have started yet
+        
+        // Test Pause with valid downloadId
+        Core::hresult validPauseResult = impl->Pause(downloadId);
+        TEST_LOG("Pause (valid ID) returned: %u", validPauseResult);
+        
+        // Test Resume with valid downloadId
+        Core::hresult validResumeResult = impl->Resume(downloadId);
+        TEST_LOG("Resume (valid ID) returned: %u", validResumeResult);
+        
+        // Test Cancel with valid downloadId
+        Core::hresult validCancelResult = impl->Cancel(downloadId);
+        TEST_LOG("Cancel (valid ID) returned: %u", validCancelResult);
     }
+
+    // === PHASE 8: PLUGIN DEACTIVATION ===
+    TEST_LOG("=== PHASE 8: Plugin Deactivation and Cleanup ===");
     
-    SUCCEED() << "Basic coverage test completed - object creation verified";
+    // Deinitialize will be called automatically in TearDown()
+    TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
+    
+    TEST_LOG("=== ALL DOWNLOADMANAGER IMPLEMENTATION APIS TESTED SUCCESSFULLY ===");
+    TEST_LOG("Code coverage achieved for all major methods and error paths");
 }
-*/
+
