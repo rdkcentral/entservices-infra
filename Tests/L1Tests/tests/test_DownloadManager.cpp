@@ -16,17 +16,17 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 **/
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <mntent.h>
-#include <fstream>
+#include <gmock/gmock.h>
 #include <string>
 #include <vector>
+#include <fstream>
 #include <cstdio>
 #include <mutex>
 #include <chrono>
 #include <condition_variable>
 #include <memory>
+#include <mntent.h>
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
@@ -1868,40 +1868,130 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
 
     ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation should be created successfully";
 
-    // Skip actual Initialize/QueryInterface calls to prevent crashes in test environment
-    TEST_LOG("Skipping actual Initialize/QueryInterface calls to prevent crash in test environment");
-    TEST_LOG("Test PASSED: DownloadManagerImplementation object created successfully");
-    
-    // Validate that the implementation object is properly created
+    // Get raw implementation pointer to call methods directly and get actual coverage
     Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
     ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
     
-    TEST_LOG("=== API Coverage Documentation ===");
-    TEST_LOG("This test validates DownloadManagerImplementation API availability:");
-    TEST_LOG("  - Download(url, options, downloadId) - Core::hresult DownloadManagerImplementation::Download");
-    TEST_LOG("  - Pause(downloadId) - Core::hresult DownloadManagerImplementation::Pause");
-    TEST_LOG("  - Resume(downloadId) - Core::hresult DownloadManagerImplementation::Resume");
-    TEST_LOG("  - Cancel(downloadId) - Core::hresult DownloadManagerImplementation::Cancel");
-    TEST_LOG("  - Delete(fileLocator) - Core::hresult DownloadManagerImplementation::Delete");
-    TEST_LOG("  - Progress(downloadId, percent) - Core::hresult DownloadManagerImplementation::Progress");
-    TEST_LOG("  - Register(callback) - For notification callbacks");
-    TEST_LOG("  - Unregister(callback) - For notification callbacks");
+    TEST_LOG("=== Testing DownloadManagerImplementation APIs directly for coverage ===");
     
-    TEST_LOG("In a real environment with proper service infrastructure, this would:");
-    TEST_LOG("  1. Initialize() once to create downloader thread");
-    TEST_LOG("  2. Test Download API with http://example.com/testfile.zip");
-    TEST_LOG("  3. Test Pause API with returned downloadId and invalid IDs");
-    TEST_LOG("  4. Test Resume API with returned downloadId and invalid IDs");
-    TEST_LOG("  5. Test Cancel API with returned downloadId and invalid IDs");
-    TEST_LOG("  6. Test Progress API with returned downloadId and invalid IDs");
-    TEST_LOG("  7. Test Delete API with file locators");
-    TEST_LOG("  8. Test Register/Unregister notification callbacks");
-    TEST_LOG("  9. Deinitialize() once to cleanup downloader thread");
+    // Test Register/Unregister first since they're safer
+    TEST_LOG("=== Testing Register/Unregister APIs ===");
+    NotificationTest* notificationCallback = new NotificationTest();
+    ASSERT_NE(notificationCallback, nullptr) << "Notification object should be created";
+
+    // Test Register method - hits DownloadManagerImplementation::Register
+    Core::hresult registerResult = rawImpl->Register(notificationCallback);
+    TEST_LOG("Register callback returned: %u", registerResult);
+    // Register should succeed even without Initialize
     
-    SUCCEED() << "DownloadManagerImplementation comprehensive API validation successful";
+    // Test Unregister method - hits DownloadManagerImplementation::Unregister
+    Core::hresult unregisterResult = rawImpl->Unregister(notificationCallback);
+    TEST_LOG("Unregister callback returned: %u", unregisterResult);
+    
+    // Test Unregister with already unregistered callback
+    Core::hresult unregisterResult2 = rawImpl->Unregister(notificationCallback);
+    TEST_LOG("Unregister (already unregistered) returned: %u", unregisterResult2);
+
+    // Cleanup notification
+    if (notificationCallback != nullptr) {
+        notificationCallback->Release();
+        notificationCallback = nullptr;
+    }
+    
+    TEST_LOG("=== Testing Download API ===");
+    // Test Download API - hits DownloadManagerImplementation::Download
+    string downloadId;
+    Exchange::IDownloadManager::Options options;
+    Core::hresult downloadResult = rawImpl->Download("http://example.com/testfile.zip", options, downloadId);
+    TEST_LOG("Download API returned: %u, downloadId: %s", downloadResult, downloadId.c_str());
+    // Download will likely fail without proper initialization, but we get coverage
+
+    // Test Download with empty URL
+    string downloadId2;
+    Core::hresult downloadResult2 = rawImpl->Download("", options, downloadId2);
+    TEST_LOG("Download with empty URL returned: %u", downloadResult2);
+    EXPECT_NE(Core::ERROR_NONE, downloadResult2) << "Download should fail with empty URL";
+
+    TEST_LOG("=== Testing Pause API ===");
+    // Test Pause API - hits DownloadManagerImplementation::Pause
+    Core::hresult pauseResult = rawImpl->Pause("invalid_id_12345");
+    TEST_LOG("Pause with invalid ID returned: %u", pauseResult);
+    EXPECT_NE(Core::ERROR_NONE, pauseResult) << "Pause should fail when no active download";
+
+    // Test Pause with empty downloadId  
+    Core::hresult pauseResult2 = rawImpl->Pause("");
+    TEST_LOG("Pause with empty ID returned: %u", pauseResult2);
+    EXPECT_NE(Core::ERROR_NONE, pauseResult2) << "Pause should fail with empty downloadId";
+
+    // Test Pause with downloadId from Download call
+    if (!downloadId.empty()) {
+        Core::hresult pauseResult3 = rawImpl->Pause(downloadId);
+        TEST_LOG("Pause with download ID returned: %u", pauseResult3);
+    }
+
+    TEST_LOG("=== Testing Resume API ===");
+    // Test Resume API - hits DownloadManagerImplementation::Resume
+    Core::hresult resumeResult = rawImpl->Resume("invalid_id_12345");
+    TEST_LOG("Resume with invalid ID returned: %u", resumeResult);
+    EXPECT_NE(Core::ERROR_NONE, resumeResult) << "Resume should fail when no active download";
+
+    // Test Resume with empty downloadId
+    Core::hresult resumeResult2 = rawImpl->Resume("");
+    TEST_LOG("Resume with empty ID returned: %u", resumeResult2);
+    EXPECT_NE(Core::ERROR_NONE, resumeResult2) << "Resume should fail with empty downloadId";
+
+    // Test Resume with downloadId from Download call
+    if (!downloadId.empty()) {
+        Core::hresult resumeResult3 = rawImpl->Resume(downloadId);
+        TEST_LOG("Resume with download ID returned: %u", resumeResult3);
+    }
+
+    TEST_LOG("=== Testing Cancel API ===");
+    // Test Cancel API - hits DownloadManagerImplementation::Cancel
+    Core::hresult cancelResult = rawImpl->Cancel("invalid_id_12345");
+    TEST_LOG("Cancel with invalid ID returned: %u", cancelResult);
+    EXPECT_NE(Core::ERROR_NONE, cancelResult) << "Cancel should fail when no active download";
+
+    // Test Cancel with empty downloadId
+    Core::hresult cancelResult2 = rawImpl->Cancel("");
+    TEST_LOG("Cancel with empty ID returned: %u", cancelResult2);
+    EXPECT_NE(Core::ERROR_NONE, cancelResult2) << "Cancel should fail with empty downloadId";
+
+    // Test Cancel with downloadId from Download call
+    if (!downloadId.empty()) {
+        Core::hresult cancelResult3 = rawImpl->Cancel(downloadId);
+        TEST_LOG("Cancel with download ID returned: %u", cancelResult3);
+    }
+
+    TEST_LOG("=== Testing Progress API ===");
+    // Test Progress API - hits DownloadManagerImplementation::Progress
+    uint8_t percent = 0;
+    Core::hresult progressResult = rawImpl->Progress("invalid_id_12345", percent);
+    TEST_LOG("Progress with invalid ID returned: %u, percent: %u", progressResult, percent);
+    EXPECT_NE(Core::ERROR_NONE, progressResult) << "Progress should fail with invalid downloadId";
+
+    // Test Progress with empty downloadId
+    Core::hresult progressResult2 = rawImpl->Progress("", percent);
+    TEST_LOG("Progress with empty ID returned: %u, percent: %u", progressResult2, percent);
+    EXPECT_NE(Core::ERROR_NONE, progressResult2) << "Progress should fail with empty downloadId";
+
+    // Test Progress with downloadId from Download call
+    if (!downloadId.empty()) {
+        Core::hresult progressResult3 = rawImpl->Progress(downloadId, percent);
+        TEST_LOG("Progress with download ID returned: %u, percent: %u", progressResult3, percent);
+    }
+
+    TEST_LOG("=== Testing Delete API ===");
+    // Test Delete API - hits DownloadManagerImplementation::Delete
+    Core::hresult deleteResult = rawImpl->Delete("invalid_file_locator");
+    TEST_LOG("Delete with invalid locator returned: %u", deleteResult);
+    EXPECT_NE(Core::ERROR_NONE, deleteResult) << "Delete should fail with invalid file locator";
+
+    // Test Delete with empty file locator
+    Core::hresult deleteResult2 = rawImpl->Delete("");
+    TEST_LOG("Delete with empty locator returned: %u", deleteResult2);
+    EXPECT_NE(Core::ERROR_NONE, deleteResult2) << "Delete should fail with empty file locator";
+
+    TEST_LOG("All DownloadManagerImplementation API methods have been called for coverage");
+    SUCCEED() << "DownloadManagerImplementation comprehensive API coverage test successful";
 }
-
-
-
-
-
