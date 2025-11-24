@@ -1858,81 +1858,35 @@ TEST_F(DownloadManagerImplementationTest, InitializeStressTest) {
     TEST_LOG("DownloadManagerImplementation Initialize stress test completed");
 }
 
-/* Test Case for DownloadManagerImplementation Register/Unregister methods
+/* Test Case for DownloadManagerImplementation - All IDownloadManager APIs
  * 
- * Test notification registration and unregistration using proper initialization
- * Verify Register/Unregister return codes and actual API functionality
+ * Test all IDownloadManager APIs in single Initialize/Deinitialize cycle:
+ * Download, Pause, Resume, Cancel, Delete, Progress
  */
-/*TEST_F(DownloadManagerImplementationTest, RegisterUnregisterNotification) {
-    TEST_LOG("Starting DownloadManagerImplementation Register/Unregister test");
-
-    ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation should be created successfully";
-
-    // For now, avoid Initialize() and QueryInterface() calls that cause crashes in test environment
-    // Focus on testing what we can safely test
-    TEST_LOG("Testing DownloadManagerImplementation object creation and basic validation");
-    
-    try {
-        // Basic validation - verify object exists and can be accessed
-        Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
-        ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
-        
-        // Create notification callbacks to verify they can be created
-        NotificationTest* notification1 = new NotificationTest();
-        NotificationTest* notification2 = new NotificationTest();
-        ASSERT_NE(notification1, nullptr) << "First notification object should be created";
-        ASSERT_NE(notification2, nullptr) << "Second notification object should be created";
-        
-        // Test notification object interface mapping
-        Exchange::IDownloadManager::INotification* iface1 = 
-            static_cast<Exchange::IDownloadManager::INotification*>(
-                notification1->QueryInterface(Exchange::IDownloadManager::INotification::ID));
-        ASSERT_NE(iface1, nullptr) << "Notification interface should be available";
-        
-        TEST_LOG("DownloadManagerImplementation object validation successful");
-        TEST_LOG("Notification objects created and validated successfully");
-        TEST_LOG("In a real environment with full Thunder setup, this would test:");
-        TEST_LOG("  - mDownloadManagerImpl->Initialize(service)");
-        TEST_LOG("  - interface->Register(notification) API calls");
-        TEST_LOG("  - interface->Unregister(notification) API calls");
-        TEST_LOG("  - Error handling for invalid callbacks");
-        
-        // Cleanup
-        iface1->Release();
-        notification1->Release();
-        notification2->Release();
-        
-        // Test passes - object creation and basic validation successful
-        SUCCEED() << "DownloadManagerImplementation object and notification validation completed";
-        
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception during validation: %s", e.what());
-        EXPECT_TRUE(false) << "Basic validation should not throw exceptions";
-    } catch (...) {
-        TEST_LOG("Unknown exception during validation");
-        EXPECT_TRUE(false) << "Basic validation should not throw unknown exceptions";
-    }
-}*/
-
-/* Test Case for DownloadManagerImplementation Pause method
- * 
- * Test download pause functionality with actual API calls
- * Verify Pause returns proper error codes based on state
- */
-TEST_F(DownloadManagerImplementationTest, PauseDownload) {
-    TEST_LOG("Starting DownloadManagerImplementation Pause test");
+TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
+    TEST_LOG("Starting comprehensive DownloadManagerImplementation API test");
 
     ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation should be created successfully";
 
     try {
-        // Initialize and get interface
+        // Initialize once and get interface
         auto initResult = mDownloadManagerImpl->Initialize(mServiceMock);
         if (initResult == Core::ERROR_NONE) {
             Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
                 mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
             
             if (interface != nullptr) {
-                // Test actual Pause API with invalid downloadId (no active download)
+                string downloadId;
+                Exchange::IDownloadManager::Options options;
+                
+                TEST_LOG("=== Testing Download API ===");
+                // Test Download API with valid URL
+                auto downloadResult = interface->Download("http://example.com/testfile.zip", options, downloadId);
+                TEST_LOG("Download API returned: %u, downloadId: %s", downloadResult, downloadId.c_str());
+                // Note: Download may fail due to network/environment but API should be hit
+                
+                TEST_LOG("=== Testing Pause API ===");
+                // Test Pause API with invalid downloadId (no active download)
                 auto pauseResult = interface->Pause("invalid_id_12345");
                 TEST_LOG("Pause with invalid ID returned: %u", pauseResult);
                 EXPECT_NE(Core::ERROR_NONE, pauseResult) << "Pause should fail when no active download";
@@ -1942,47 +1896,14 @@ TEST_F(DownloadManagerImplementationTest, PauseDownload) {
                 TEST_LOG("Pause with empty ID returned: %u", pauseResult2);
                 EXPECT_NE(Core::ERROR_NONE, pauseResult2) << "Pause should fail with empty downloadId";
 
-                TEST_LOG("Pause API test completed successfully");
-                interface->Release();
-            } else {
-                TEST_LOG("Interface not available - testing object validation");
-                SUCCEED() << "Object validation successful";
-            }
-            mDownloadManagerImpl->Deinitialize(mServiceMock);
-        } else {
-            TEST_LOG("Initialize failed - testing object validation");
-            Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
-            ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
-            SUCCEED() << "Object validation successful";
-        }
-        
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception during Pause test: %s", e.what());
-        Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
-        ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
-        SUCCEED() << "Object validation successful despite API exception";
-    }
-}
+                // Test Pause with downloadId from Download call
+                if (!downloadId.empty()) {
+                    auto pauseResult3 = interface->Pause(downloadId);
+                    TEST_LOG("Pause with valid downloadId returned: %u", pauseResult3);
+                }
 
-/* Test Case for DownloadManagerImplementation Resume method
- * 
- * Test download resume functionality with actual API calls
- * Verify Resume returns proper error codes based on state
- */
-TEST_F(DownloadManagerImplementationTest, ResumeDownload) {
-    TEST_LOG("Starting DownloadManagerImplementation Resume test");
-
-    ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation should be created successfully";
-
-    try {
-        // Initialize and get interface
-        auto initResult = mDownloadManagerImpl->Initialize(mServiceMock);
-        if (initResult == Core::ERROR_NONE) {
-            Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
-                mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
-            
-            if (interface != nullptr) {
-                // Test actual Resume API with invalid downloadId (no active download)
+                TEST_LOG("=== Testing Resume API ===");
+                // Test Resume API with invalid downloadId (no active download) 
                 auto resumeResult = interface->Resume("invalid_id_12345");
                 TEST_LOG("Resume with invalid ID returned: %u", resumeResult);
                 EXPECT_NE(Core::ERROR_NONE, resumeResult) << "Resume should fail when no active download";
@@ -1992,47 +1913,14 @@ TEST_F(DownloadManagerImplementationTest, ResumeDownload) {
                 TEST_LOG("Resume with empty ID returned: %u", resumeResult2);
                 EXPECT_NE(Core::ERROR_NONE, resumeResult2) << "Resume should fail with empty downloadId";
 
-                TEST_LOG("Resume API test completed successfully");
-                interface->Release();
-            } else {
-                TEST_LOG("Interface not available - testing object validation");
-                SUCCEED() << "Object validation successful";
-            }
-            mDownloadManagerImpl->Deinitialize(mServiceMock);
-        } else {
-            TEST_LOG("Initialize failed - testing object validation");
-            Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
-            ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
-            SUCCEED() << "Object validation successful";
-        }
-        
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception during Resume test: %s", e.what());
-        Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
-        ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
-        SUCCEED() << "Object validation successful despite API exception";
-    }
-}
+                // Test Resume with downloadId from Download call
+                if (!downloadId.empty()) {
+                    auto resumeResult3 = interface->Resume(downloadId);
+                    TEST_LOG("Resume with valid downloadId returned: %u", resumeResult3);
+                }
 
-/* Test Case for DownloadManagerImplementation Cancel method
- * 
- * Test download cancel functionality with actual API calls
- * Verify Cancel returns proper error codes based on state
- */
-TEST_F(DownloadManagerImplementationTest, CancelDownload) {
-    TEST_LOG("Starting DownloadManagerImplementation Cancel test");
-
-    ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation should be created successfully";
-
-    try {
-        // Initialize and get interface
-        auto initResult = mDownloadManagerImpl->Initialize(mServiceMock);
-        if (initResult == Core::ERROR_NONE) {
-            Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
-                mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
-            
-            if (interface != nullptr) {
-                // Test actual Cancel API with invalid downloadId (no active download)
+                TEST_LOG("=== Testing Cancel API ===");
+                // Test Cancel API with invalid downloadId (no active download)
                 auto cancelResult = interface->Cancel("invalid_id_12345");
                 TEST_LOG("Cancel with invalid ID returned: %u", cancelResult);
                 EXPECT_NE(Core::ERROR_NONE, cancelResult) << "Cancel should fail when no active download";
@@ -2042,12 +1930,71 @@ TEST_F(DownloadManagerImplementationTest, CancelDownload) {
                 TEST_LOG("Cancel with empty ID returned: %u", cancelResult2);
                 EXPECT_NE(Core::ERROR_NONE, cancelResult2) << "Cancel should fail with empty downloadId";
 
-                TEST_LOG("Cancel API test completed successfully");
+                // Test Cancel with downloadId from Download call
+                if (!downloadId.empty()) {
+                    auto cancelResult3 = interface->Cancel(downloadId);
+                    TEST_LOG("Cancel with valid downloadId returned: %u", cancelResult3);
+                }
+
+                TEST_LOG("=== Testing Progress API ===");
+                // Test Progress API with invalid downloadId
+                uint8_t percent = 0;
+                auto progressResult = interface->Progress("invalid_id_12345", percent);
+                TEST_LOG("Progress with invalid ID returned: %u, percent: %u", progressResult, percent);
+                EXPECT_NE(Core::ERROR_NONE, progressResult) << "Progress should fail with invalid downloadId";
+
+                // Test Progress with empty downloadId
+                auto progressResult2 = interface->Progress("", percent);
+                TEST_LOG("Progress with empty ID returned: %u, percent: %u", progressResult2, percent);
+                EXPECT_NE(Core::ERROR_NONE, progressResult2) << "Progress should fail with empty downloadId";
+
+                // Test Progress with downloadId from Download call
+                if (!downloadId.empty()) {
+                    auto progressResult3 = interface->Progress(downloadId, percent);
+                    TEST_LOG("Progress with valid downloadId returned: %u, percent: %u", progressResult3, percent);
+                }
+
+                TEST_LOG("=== Testing Delete API ===");
+                // Test Delete API with invalid file locator
+                auto deleteResult = interface->Delete("invalid_file_locator");
+                TEST_LOG("Delete with invalid locator returned: %u", deleteResult);
+                EXPECT_NE(Core::ERROR_NONE, deleteResult) << "Delete should fail with invalid file locator";
+
+                // Test Delete with empty file locator
+                auto deleteResult2 = interface->Delete("");
+                TEST_LOG("Delete with empty locator returned: %u", deleteResult2);
+                EXPECT_NE(Core::ERROR_NONE, deleteResult2) << "Delete should fail with empty file locator";
+
+                TEST_LOG("=== Testing Register/Unregister APIs ===");
+                // Test Register/Unregister notification callbacks
+                NotificationTest* notificationCallback = new NotificationTest();
+                ASSERT_NE(notificationCallback, nullptr) << "Notification object should be created";
+
+                // Test Register method - hits DownloadManagerImplementation::Register
+                auto registerResult = interface->Register(notificationCallback);
+                TEST_LOG("Register callback returned: %u", registerResult);
+                EXPECT_EQ(Core::ERROR_NONE, registerResult) << "Register should succeed with valid callback";
+                
+                // Test Unregister method - hits DownloadManagerImplementation::Unregister
+                auto unregisterResult = interface->Unregister(notificationCallback);
+                TEST_LOG("Unregister callback returned: %u", unregisterResult);
+                EXPECT_EQ(Core::ERROR_NONE, unregisterResult) << "Unregister should succeed with valid callback";
+                
+                // Test Unregister with already unregistered callback - should fail
+                auto unregisterResult2 = interface->Unregister(notificationCallback);
+                TEST_LOG("Unregister (already unregistered) returned: %u", unregisterResult2);
+                EXPECT_NE(Core::ERROR_NONE, unregisterResult2) << "Unregister should fail with already unregistered callback";
+
+                // Cleanup
+                notificationCallback->Release();
                 interface->Release();
+                
+                TEST_LOG("All IDownloadManager API tests completed successfully");
             } else {
                 TEST_LOG("Interface not available - testing object validation");
                 SUCCEED() << "Object validation successful";
             }
+            // Deinitialize once at the end
             mDownloadManagerImpl->Deinitialize(mServiceMock);
         } else {
             TEST_LOG("Initialize failed - testing object validation");
@@ -2057,91 +2004,14 @@ TEST_F(DownloadManagerImplementationTest, CancelDownload) {
         }
         
     } catch (const std::exception& e) {
-        TEST_LOG("Exception during Cancel test: %s", e.what());
+        TEST_LOG("Exception during comprehensive API test: %s", e.what());
         Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
         ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
         SUCCEED() << "Object validation successful despite API exception";
     }
 }
 
-/* Test Case for DownloadManagerImplementation with multiple callbacks
- * 
- * Test registering multiple callbacks and various unregister scenarios
- * Verify proper error handling for already unregistered callbacks
- */
-/*TEST_F(DownloadManagerImplementationTest, MultipleCallbacksTest) {
-    
-    TEST_LOG("Starting DownloadManagerImplementation multiple callbacks test");
 
-    ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation should be created successfully";
 
-    try {
-        // Initialize and get interface
-        auto initResult = mDownloadManagerImpl->Initialize(mServiceMock);
-        if (initResult == Core::ERROR_NONE) {
-            Exchange::IDownloadManager* interface = static_cast<Exchange::IDownloadManager*>(
-                mDownloadManagerImpl->QueryInterface(Exchange::IDownloadManager::ID));
-            
-            if (interface != nullptr) {
-                // Create notification callbacks
-                NotificationTest* notificationCallback1 = new NotificationTest();
-                NotificationTest* notificationCallback2 = new NotificationTest();
-                ASSERT_NE(notificationCallback1, nullptr) << "First notification object should be created";
-                ASSERT_NE(notificationCallback2, nullptr) << "Second notification object should be created";
 
-                // Test Register method with first callback - hits DownloadManagerImplementation::Register
-                auto registerResult1 = interface->Register(notificationCallback1);
-                EXPECT_EQ(Core::ERROR_NONE, registerResult1);
-                TEST_LOG("Register (first callback) returned: %u", registerResult1);
-                
-                // Test Register with second callback - hits DownloadManagerImplementation::Register
-                auto registerResult2 = interface->Register(notificationCallback2);
-                EXPECT_EQ(Core::ERROR_NONE, registerResult2);
-                TEST_LOG("Register (second callback) returned: %u", registerResult2);
-                
-                // Test Unregister with valid callback - hits DownloadManagerImplementation::Unregister
-                auto unregisterResult1 = interface->Unregister(notificationCallback1);
-                EXPECT_EQ(Core::ERROR_NONE, unregisterResult1);
-                TEST_LOG("Unregister (valid callback) returned: %u", unregisterResult1);
-                
-                // Test Unregister with already unregistered callback - hits error path in DownloadManagerImplementation::Unregister
-                auto unregisterResult2 = interface->Unregister(notificationCallback1);
-                EXPECT_NE(Core::ERROR_NONE, unregisterResult2);
-                TEST_LOG("Unregister (already unregistered) returned: %u", unregisterResult2);
-                
-                // Clean up remaining registered callback
-                auto unregisterResult3 = interface->Unregister(notificationCallback2);
-                EXPECT_EQ(Core::ERROR_NONE, unregisterResult3);
-                TEST_LOG("Unregister (cleanup) returned: %u", unregisterResult3);
 
-                // Cleanup
-                notificationCallback1->Release();
-                notificationCallback2->Release();
-                interface->Release();
-                
-                TEST_LOG("Multiple callbacks API test completed successfully");
-            } else {
-                TEST_LOG("Interface not available - testing object validation");
-                NotificationTest* notificationCallback1 = new NotificationTest();
-                NotificationTest* notificationCallback2 = new NotificationTest();
-                ASSERT_NE(notificationCallback1, nullptr) << "First notification object should be created";
-                ASSERT_NE(notificationCallback2, nullptr) << "Second notification object should be created";
-                notificationCallback1->Release();
-                notificationCallback2->Release();
-                SUCCEED() << "Object validation successful";
-            }
-            mDownloadManagerImpl->Deinitialize(mServiceMock);
-        } else {
-            TEST_LOG("Initialize failed - testing object validation");
-            Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
-            ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
-            SUCCEED() << "Object validation successful";
-        }
-        
-    } catch (const std::exception& e) {
-        TEST_LOG("Exception in multiple callbacks test: %s", e.what());
-        Plugin::DownloadManagerImplementation* rawImpl = &(*mDownloadManagerImpl);
-        ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
-        SUCCEED() << "Object validation successful despite API exception";
-    }
-}*/
