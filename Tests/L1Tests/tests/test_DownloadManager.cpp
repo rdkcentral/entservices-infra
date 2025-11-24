@@ -28,6 +28,17 @@
 #include <memory>
 #include <mntent.h>
 
+// Windows-specific includes for TEST_LOG
+#ifdef _WIN32
+#include <process.h>
+#include <windows.h>
+#define getpid() _getpid()
+#define gettid() GetCurrentThreadId()
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#endif
+
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
 #include <interfaces/IDownloadManager.h>
@@ -41,7 +52,20 @@ using namespace WPEFramework;
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
 
-#define TEST_LOG(x, ...) fprintf(stderr, "[%s:%d](%s)<PID:%d><TID:%d>" x "\n", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
+// Enhanced TEST_LOG that prints to multiple outputs for maximum visibility
+#define TEST_LOG(x, ...) do { \
+    char buffer[1024]; \
+    snprintf(buffer, sizeof(buffer), "[TEST_LOG][%s:%d](%s)<PID:%d><TID:%d>" x, __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); \
+    fprintf(stderr, "%s\n", buffer); \
+    fflush(stderr); \
+    printf("%s\n", buffer); \
+    fflush(stdout); \
+    std::cout << buffer << std::endl; \
+    std::cout.flush(); \
+    std::cerr << buffer << std::endl; \
+    std::cerr.flush(); \
+} while(0)
+
 #define TIMEOUT   (500)
 
 using ::testing::NiceMock;
@@ -1921,6 +1945,10 @@ TEST_F(DownloadManagerImplementationTest, InitializeStressTest) {
  */
 TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     TEST_LOG("Starting DownloadManagerImplementation API coverage test with proper Initialize/Deinitialize timing");
+    
+    // Use GTest logging that always appears in test output
+    RecordProperty("TestPhase", "Starting DownloadManagerImplementation API coverage test");
+    std::cout << "=== GTEST OUTPUT: Starting DownloadManagerImplementation API coverage test ===" << std::endl;
 
     ASSERT_TRUE(plugin.IsValid()) << "DownloadManager plugin should be created successfully";
 
@@ -1957,7 +1985,10 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     // Note: This passes valid notification so no ASSERT failure
     Core::hresult registerResult = rawImpl->Register(notificationCallback); 
     TEST_LOG("Register callback returned: %u", registerResult);
-    EXPECT_EQ(Core::ERROR_NONE, registerResult) << "Register should succeed with valid notification";
+    
+    // GTest assertions with detailed messages always appear in output
+    EXPECT_EQ(Core::ERROR_NONE, registerResult) << "Register should succeed with valid notification - returned: " << registerResult;
+    std::cout << "REGISTER TEST: returned " << registerResult << " (expected " << Core::ERROR_NONE << ")" << std::endl;
     
     // Test Unregister method - hits DownloadManagerImplementation::Unregister  
     // Note: This passes valid notification so no ASSERT failure
@@ -1978,6 +2009,9 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     
     // Test Download API - hits DownloadManagerImplementation::Download
     TEST_LOG("=== Testing Download API ===");
+    std::cout << "=== EXECUTING: Download API Test ===" << std::endl;
+    RecordProperty("TestPhase", "Testing Download API");
+    
     string downloadId;
     Exchange::IDownloadManager::Options options;
     // Set up basic options with actual struct fields: priority, retries, rateLimit
