@@ -156,24 +156,33 @@ namespace Plugin {
                 // Get actual id, as it may change at any time...
                 std::ifstream input(PARTNER_ID_FILENAME);
                 string line;
-                getline(input, line);
-                return line;
+                if (input.is_open() && getline(input, line))
+                {
+                    return line;
+                }
+                return "";  // Return empty string if file read fails
             }
             string GetAccountId() const
             {
                 // Get actual id, as it may change at any time...
                 std::ifstream input(ACCOUNT_ID_FILENAME);
                 string line;
-                getline(input, line);
-                return line;
+                if (input.is_open() && getline(input, line))
+                {
+                    return line;
+                }
+                return "";  // Return empty string if file read fails
             }
             string GetDeviceId() const
             {
                 // Get actual id, as it may change at any time...
                 std::ifstream input(DEVICE_ID_FILENAME);
                 string line;
-                getline(input, line);
-                return line;
+                if (input.is_open() && getline(input, line))
+                {
+                    return line;
+                }
+                return "";  // Return empty string if file read fails
             }
 
         public:
