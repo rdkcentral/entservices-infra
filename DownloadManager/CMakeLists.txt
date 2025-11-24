@@ -60,25 +60,10 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
-#set(DOWNLOAD_MANAGER_INCLUDES $ENV{DOWNLOAD_MANAGER_INCLUDES})
-#separate_arguments(DOWNLOAD_MANAGER_INCLUDES)
-#include_directories(BEFORE ${DOWNLOAD_MANAGER_INCLUDES})
-
 if(RDK_SERVICES_L1_TEST)
-	#target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,stat)
-	#target_link_options(${PLUGIN_IMPLEMENTATION} PRIVATE -Wl,--wrap,mkdir -Wl,--wrap,access -Wl,--wrap,opendir -Wl,--wrap,readdir -Wl,--wrap,stat -Wl,--wrap,closedir)
-    #   find_package( Curl REQUIRED)
-    # if (CURL_FOUND)
-    #message("Yay, found curl inc=${CURL_INCLUDE_DIRS} lib=${CURL_LIBRARY}")
-    #endif()
     find_path(JSONCPP_INCLUDE_DIR json/json.h PATHS /usr/include/jsoncpp)
     include_directories(${JSONCPP_INCLUDE_DIR})
-    #find_package( JsonCpp REQUIRED)
-    #if (JSONCPP_FOUND)
-    #message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
-    #endif()
     target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
-    #target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
 endif(RDK_SERVICES_L1_TEST)
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION}

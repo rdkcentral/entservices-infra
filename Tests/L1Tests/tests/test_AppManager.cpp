@@ -3240,4 +3240,3 @@ TEST_F(AppManagerTest, handleOnAppUnloadedUsingComRpcSuccess)
         releaseResources();
     }
 }
-

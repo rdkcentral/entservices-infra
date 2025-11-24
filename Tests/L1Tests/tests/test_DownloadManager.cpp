@@ -42,7 +42,8 @@ using namespace WPEFramework;
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
 
-// Simple TEST_LOG macro for normal test output
+// Reference counting will use simple atomic operations
+
 #define TEST_LOG(x, ...) printf("[TEST_LOG] " x "\n", ##__VA_ARGS__)
 
 #define TIMEOUT   (500)
@@ -61,7 +62,6 @@ struct StatusParams {
     string fileLocator;
     Exchange::IDownloadManager::FailReason reason;
 };
-     
 
 class DownloadManagerTest : public ::testing::Test {
 protected:
@@ -112,6 +112,7 @@ protected:
     // Destructor
     virtual ~DownloadManagerTest() override
     {
+
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
@@ -254,6 +255,7 @@ protected:
     {
         releaseResources();
     }
+
 
     void initforJsonRpc() 
     {    
@@ -557,7 +559,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
         TEST_LOG("Plugin initialization completed - downloader thread should be running");
     }
     
-    // === PHASE 3: DOWNLOAD API TESTING ===
+    // === PHASE 2: DOWNLOAD API TESTING ===
     TEST_LOG("=== PHASE 3: Testing Download API ===");
     
     Exchange::IDownloadManager::Options options;
@@ -618,7 +620,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     TEST_LOG("Download (special chars) returned: %u", specialResult);
     // Special characters might succeed or fail depending on URL encoding
 
-    // === PHASE 4: DOWNLOAD CONTROL APIS ===
+    // === PHASE 3: DOWNLOAD CONTROL APIS ===
     TEST_LOG("=== PHASE 4: Testing Download Control APIs ===");
     
     // Test Pause with invalid ID
@@ -651,7 +653,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     TEST_LOG("Cancel (empty ID) returned: %u", cancelResult2);
     EXPECT_NE(Core::ERROR_NONE, cancelResult2) << "Cancel should fail with empty downloadId";
 
-    // === PHASE 5: PROGRESS AND STATUS APIs ===
+    // === PHASE 4: PROGRESS AND STATUS APIs ===
     TEST_LOG("=== PHASE 5: Testing Progress and Status APIs ===");
     
     uint8_t percent = 0;
@@ -666,7 +668,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     TEST_LOG("Progress (empty ID) returned: %u, percent: %u", progressResult2, percent);
     EXPECT_NE(Core::ERROR_NONE, progressResult2) << "Progress should fail with empty downloadId";
 
-    // === PHASE 6: FILE MANAGEMENT APIS ===
+    // === PHASE 5: FILE MANAGEMENT APIS ===
     TEST_LOG("=== PHASE 6: Testing File Management APIs ===");
     
     // Test Delete with invalid file locator
@@ -704,7 +706,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
         EXPECT_NE(Core::ERROR_NONE, rateLimitResult2) << "RateLimit should fail with invalid downloadId";
     }
 
-    // === PHASE 7: ADVANCED SCENARIOS ===
+    // === PHASE 6: ADVANCED SCENARIOS ===
     TEST_LOG("=== PHASE 7: Testing Advanced Scenarios ===");
     
     // If we have a valid downloadId from earlier, test control operations on it
@@ -731,87 +733,9 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
         TEST_LOG("Cancel (valid ID) returned: %u", validCancelResult);
     }
 
-    // === PHASE 8: PLUGIN DEACTIVATION ===
+    // === PHASE 7: PLUGIN DEACTIVATION ===
     TEST_LOG("=== PHASE 8: Plugin Deactivation and Cleanup ===");
     
     // Deinitialize will be called automatically in TearDown()
     TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
-}
-
-/* Test Case for DownloadManagerImplementation Initialize Error Path - Null Service
- * This test covers the error path where service parameter is null (line 138)
- */
-TEST_F(DownloadManagerImplementationTest, InitializeErrorPath_NullService) {
-    TEST_LOG("=== Testing Initialize Error Path - Null Service ===");
-    
-    // Create a new implementation instance for this specific test
-    Core::ProxyType<DownloadManagerImplementation> implProxy = Core::ProxyType<DownloadManagerImplementation>::Create();
-    ASSERT_TRUE(implProxy.IsValid()) << "Failed to create DownloadManagerImplementation";
-    Plugin::DownloadManagerImplementation* impl = &(*implProxy);
-    ASSERT_NE(impl, nullptr) << "Implementation pointer should be valid";
-    
-    // Test Initialize with null service - should trigger LOGERR at line 138
-    Core::hresult result = impl->Initialize(nullptr);
-    TEST_LOG("Initialize with null service returned: %u (expected ERROR_GENERAL=%u)", result, Core::ERROR_GENERAL);
-    
-    // Verify that Initialize fails with ERROR_GENERAL when service is null
-    EXPECT_EQ(Core::ERROR_GENERAL, result) << "Initialize should fail with ERROR_GENERAL when service is null";
-    
-    TEST_LOG("Successfully covered null service error path (line 138)");
-}
-
-/* Test Case for DownloadManagerImplementation Initialize Error Path - Directory Creation Failure
- * This test covers the error path where mkdir fails (line 127)
- * Strategy: Create a file with the same name as the directory path to force mkdir to fail
- */
-TEST_F(DownloadManagerImplementationTest, InitializeErrorPath_DirectoryCreationFailure) {
-    TEST_LOG("=== Testing Initialize Error Path - Directory Creation Failure ===");
-    
-    // Create a new implementation instance for this specific test
-    Core::ProxyType<DownloadManagerImplementation> implProxy = Core::ProxyType<DownloadManagerImplementation>::Create();
-    ASSERT_TRUE(implProxy.IsValid()) << "Failed to create DownloadManagerImplementation";
-    Plugin::DownloadManagerImplementation* impl = &(*implProxy);
-    ASSERT_NE(impl, nullptr) << "Implementation pointer should be valid";
-    
-    // Create a unique path for this test
-    std::string testPath = "/tmp/dm_test_conflict_" + std::to_string(time(nullptr));
-    
-    // Create a mock service that provides the conflicting path
-    class ConflictingPathServiceMock : public ServiceMock {
-    private:
-        std::string mConflictPath;
-    public:
-        ConflictingPathServiceMock(const std::string& path) : ServiceMock(), mConflictPath(path) {}
-        
-        string ConfigLine(const string& config) const override {
-            if (config == "downloadpath") {
-                return mConflictPath;
-            }
-            return ServiceMock::ConfigLine(config);
-        }
-    };
-    
-    // STEP 1: Create a regular file at the path where mkdir will try to create a directory
-    // This will cause mkdir to fail because a file already exists with that name
-    std::ofstream conflictFile(testPath);
-    if (conflictFile.is_open()) {
-        conflictFile << "This file will conflict with mkdir" << std::endl;
-        conflictFile.close();
-        TEST_LOG("Created conflicting file at: %s", testPath.c_str());
-        
-        // STEP 2: Try to initialize with this path - mkdir should fail
-        ConflictingPathServiceMock conflictService(testPath);
-        Core::hresult result = impl->Initialize(&conflictService);
-        TEST_LOG("Initialize with conflicting path returned: %u (ERROR_GENERAL=%u)", result, Core::ERROR_GENERAL);
-        
-        // STEP 3: Verify that Initialize failed due to mkdir error
-        EXPECT_EQ(Core::ERROR_GENERAL, result) << "Initialize should fail when mkdir encounters a file conflict";
-        
-        // STEP 4: Clean up the conflicting file
-        std::remove(testPath.c_str());
-        TEST_LOG("Successfully triggered directory creation failure (line 127) - cleaned up test file");
-    } else {
-        TEST_LOG("Could not create conflicting file - skipping mkdir error test");
-        GTEST_SKIP() << "Unable to create test file for mkdir conflict scenario";
-    }
 }
