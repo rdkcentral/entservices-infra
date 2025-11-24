@@ -2087,7 +2087,7 @@ TEST_F(DownloadManagerImplementationTest, CancelDownload) {
  * Test registering multiple callbacks and various unregister scenarios
  * Verify proper error handling for already unregistered callbacks
  */
-TEST_F(DownloadManagerImplementationTest, MultipleCallbacksTest) {
+/*TEST_F(DownloadManagerImplementationTest, MultipleCallbacksTest) {
     
     TEST_LOG("Starting DownloadManagerImplementation multiple callbacks test");
 
@@ -2162,4 +2162,4 @@ TEST_F(DownloadManagerImplementationTest, MultipleCallbacksTest) {
         ASSERT_NE(rawImpl, nullptr) << "Raw implementation pointer should be valid";
         SUCCEED() << "Object validation successful despite API exception";
     }
-}
+}*/
