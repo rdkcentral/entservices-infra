@@ -745,8 +745,10 @@ TEST_F(DownloadManagerImplementationTest, InitializeErrorPath_NullService) {
     TEST_LOG("=== Testing Initialize Error Path - Null Service ===");
     
     // Create a new implementation instance for this specific test
-    Core::ProxyType<DownloadManagerImplementation> impl = Core::ProxyType<DownloadManagerImplementation>::Create();
-    ASSERT_NE(impl, nullptr) << "Failed to create DownloadManagerImplementation";
+    Core::ProxyType<DownloadManagerImplementation> implProxy = Core::ProxyType<DownloadManagerImplementation>::Create();
+    ASSERT_TRUE(implProxy.IsValid()) << "Failed to create DownloadManagerImplementation";
+    Plugin::DownloadManagerImplementation* impl = &(*implProxy);
+    ASSERT_NE(impl, nullptr) << "Implementation pointer should be valid";
     
     // Test Initialize with null service - should trigger LOGERR at line 138
     Core::hresult result = impl->Initialize(nullptr);
@@ -766,8 +768,10 @@ TEST_F(DownloadManagerImplementationTest, InitializeErrorPath_DirectoryCreationF
     TEST_LOG("=== Testing Initialize Error Path - Directory Creation Failure ===");
     
     // Create a new implementation instance for this specific test
-    Core::ProxyType<DownloadManagerImplementation> impl = Core::ProxyType<DownloadManagerImplementation>::Create();
-    ASSERT_NE(impl, nullptr) << "Failed to create DownloadManagerImplementation";
+    Core::ProxyType<DownloadManagerImplementation> implProxy = Core::ProxyType<DownloadManagerImplementation>::Create();
+    ASSERT_TRUE(implProxy.IsValid()) << "Failed to create DownloadManagerImplementation";
+    Plugin::DownloadManagerImplementation* impl = &(*implProxy);
+    ASSERT_NE(impl, nullptr) << "Implementation pointer should be valid";
     
     // Create a unique path for this test
     std::string testPath = "/tmp/dm_test_conflict_" + std::to_string(time(nullptr));
