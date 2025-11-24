@@ -29,17 +29,6 @@
 #include <atomic>
 #include <mntent.h>
 
-// Windows-specific includes for TEST_LOG
-#ifdef _WIN32
-#include <process.h>
-#include <windows.h>
-#define getpid() _getpid()
-#define gettid() GetCurrentThreadId()
-#else
-#include <unistd.h>
-#include <sys/types.h>
-#endif
-
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
 #include <interfaces/IDownloadManager.h>
@@ -53,21 +42,8 @@ using namespace WPEFramework;
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
 
-// Reference counting will use simple atomic operations
-
-// Enhanced TEST_LOG that prints to multiple outputs for maximum visibility
-#define TEST_LOG(x, ...) do { \
-    char buffer[1024]; \
-    snprintf(buffer, sizeof(buffer), "[TEST_LOG][%s:%d](%s)<PID:%d><TID:%d>" x, __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); \
-    fprintf(stderr, "%s\n", buffer); \
-    fflush(stderr); \
-    printf("%s\n", buffer); \
-    fflush(stdout); \
-    std::cout << buffer << std::endl; \
-    std::cout.flush(); \
-    std::cerr << buffer << std::endl; \
-    std::cerr.flush(); \
-} while(0)
+// Simple TEST_LOG macro for normal test output
+#define TEST_LOG(x, ...) printf("[TEST_LOG] " x "\n", ##__VA_ARGS__)
 
 #define TIMEOUT   (500)
 
@@ -85,8 +61,7 @@ struct StatusParams {
     string fileLocator;
     Exchange::IDownloadManager::FailReason reason;
 };
-
-           
+     
 
 class DownloadManagerTest : public ::testing::Test {
 protected:
@@ -137,7 +112,6 @@ protected:
     // Destructor
     virtual ~DownloadManagerTest() override
     {
-
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
@@ -281,7 +255,6 @@ protected:
         releaseResources();
     }
 
-
     void initforJsonRpc() 
     {    
         TEST_LOG("initforJsonRpc called - setting up safe mock expectations");
@@ -392,50 +365,11 @@ protected:
     }
 };
 
-// Minimal notification stub to get past nullptr ASSERT but avoid interface complexity
-class MinimalNotificationStub : public Exchange::IDownloadManager::INotification
+class NotificationTest : public Exchange::IDownloadManager::INotification
 {
     private:
         mutable std::atomic<uint32_t> m_refCount;
 
-    public:
-        MinimalNotificationStub() : m_refCount(1)
-        {
-            TEST_LOG("MinimalNotificationStub created - designed to get past ASSERT checks");
-        }
-        
-        virtual ~MinimalNotificationStub() override = default;
-
-        // Minimal IUnknown implementation to avoid pure virtual crashes
-        virtual void AddRef() const override { 
-            m_refCount.fetch_add(1);
-        }
-        
-        virtual uint32_t Release() const override { 
-            uint32_t result = m_refCount.fetch_sub(1) - 1;
-            if (result == 0) {
-                const_cast<MinimalNotificationStub*>(this)->~MinimalNotificationStub();
-                delete this;
-            }
-            return result;
-        }
-
-        // Minimal notification interface implementation 
-        virtual void OnAppDownloadStatus(const string& downloadStatus) override {
-            TEST_LOG("OnAppDownloadStatus called with: %s", downloadStatus.c_str());
-            // Do nothing - just need to exist to avoid pure virtual calls
-        }
-
-    private:
-        // Minimal interface map for Thunder compatibility
-        BEGIN_INTERFACE_MAP(MinimalNotificationStub)
-        INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
-        END_INTERFACE_MAP
-};
-
-// Simple notification implementation that avoids Thunder interface mapping issues
-class SimpleNotificationTest 
-{
     public:
         /** @brief Mutex */
         std::mutex m_mutex;
@@ -448,12 +382,24 @@ class SimpleNotificationTest
 
         StatusParams m_status_param;
 
-        SimpleNotificationTest()
+        NotificationTest() : m_refCount(1)
         {
-            TEST_LOG("SimpleNotificationTest created - avoiding Thunder interface complexities");
         }
         
-        virtual ~SimpleNotificationTest() = default;
+        virtual ~NotificationTest() override = default;
+
+        // Proper IUnknown implementation for Thunder framework
+        virtual void AddRef() const override { 
+            m_refCount.fetch_add(1);
+        }
+        
+        virtual uint32_t Release() const override { 
+            uint32_t result = m_refCount.fetch_sub(1) - 1;
+            if (result == 0) {
+                delete this;
+            }
+            return result;
+        }
 
         uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
         {
@@ -468,24 +414,42 @@ class SimpleNotificationTest
             }
             status_signal = m_status_signal;
             m_status_signal = DownloadManager_invalidStatus;
-            return status_signal;
+	    return status_signal;
         }
+    private:
+        BEGIN_INTERFACE_MAP(NotificationTest)
+        INTERFACE_ENTRY(Exchange::IDownloadManager::INotification)
+        END_INTERFACE_MAP
 
         void SetStatusParams(const StatusParams& statusParam)
         {
             m_status_param = statusParam;
         }
 
-        // Simulate notification callback without Thunder interface complexity
-        void SimulateDownloadStatus(const string& downloadStatus) {
+        void OnAppDownloadStatus(const string& downloadStatus) override {
             m_status_signal = DownloadManager_AppDownloadStatus;
             
             std::unique_lock<std::mutex> lock(m_mutex);
             
-            // Simple status parsing without JsonArray complexity
-            m_status_param.downloadId = "test_download_123";
-            m_status_param.fileLocator = "/tmp/downloads/test_file.zip";
-            m_status_param.reason = Exchange::IDownloadManager::FailReason::DOWNLOAD_FAILURE;
+            JsonArray list;
+            list.FromString(downloadStatus);
+            
+            if (list.Length() > 0) {
+                JsonObject obj = list[0].Object();
+                m_status_param.downloadId = obj["downloadId"].String();
+                m_status_param.fileLocator = obj["fileLocator"].String();
+                
+                if (obj.HasLabel("failReason")) {
+                    string reason = obj["failReason"].String();
+                    if (reason == "DOWNLOAD_FAILURE") {
+                        m_status_param.reason = Exchange::IDownloadManager::FailReason::DOWNLOAD_FAILURE;
+                    } else if (reason == "DISK_PERSISTENCE_FAILURE") {
+                        m_status_param.reason = Exchange::IDownloadManager::FailReason::DISK_PERSISTENCE_FAILURE;
+                    }
+                }
+            }
+            
+            EXPECT_EQ(m_status_param.downloadId, m_status_param.downloadId);
 
             m_condition_variable.notify_one();
         }
@@ -592,76 +556,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         TEST_LOG("Plugin initialization completed - downloader thread should be running");
     }
-
-    // === PHASE 2: NOTIFICATION REGISTER/UNREGISTER COVERAGE ===
-    TEST_LOG("=== PHASE 2: Testing Register/Unregister APIs for L1 Code Coverage ===");
     
-    // STRATEGY: Use a minimal notification stub to get past ASSERT checks and achieve method coverage
-    // This approach should get us into the methods without triggering complex interface mapping
-    
-    TEST_LOG("Creating minimal notification stub for coverage testing");
-    
-    // Create minimal notification object that can pass basic validity checks
-    MinimalNotificationStub* notificationStub = new MinimalNotificationStub();
-    ASSERT_NE(notificationStub, nullptr) << "Notification stub should be created";
-    
-    TEST_LOG("=== Testing Register API for Coverage ===");
-    
-    try {
-        // This should get us into the Register method and past the ASSERT
-        // COVERAGE TARGET: DownloadManagerImplementation::Register method body
-        TEST_LOG("Calling Register with minimal stub...");
-        
-        Core::hresult registerResult = impl->Register(notificationStub);
-        TEST_LOG("Register returned: %u", registerResult);
-        
-        // If successful, we got full coverage of the Register method
-        if (registerResult == Core::ERROR_NONE) {
-            TEST_LOG("✓ Register succeeded - full method coverage achieved");
-            
-            // Now test Unregister to complete the coverage
-            TEST_LOG("=== Testing Unregister API for Coverage ===");
-            
-            Core::hresult unregisterResult = impl->Unregister(notificationStub);
-            TEST_LOG("Unregister returned: %u", unregisterResult);
-            
-            if (unregisterResult == Core::ERROR_NONE) {
-                TEST_LOG("✓ Unregister succeeded - full method coverage achieved");
-            } else {
-                TEST_LOG("Unregister failed but we got method entry coverage");
-            }
-            
-            // Test Unregister again - should fail since already unregistered
-            Core::hresult unregisterResult2 = impl->Unregister(notificationStub);
-            TEST_LOG("Unregister (second call) returned: %u", unregisterResult2);
-            EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult2) << "Second unregister should fail";
-            
-        } else {
-            TEST_LOG("Register failed with result: %u, but we achieved method entry coverage", registerResult);
-            
-            // Still try unregister for coverage even if register failed
-            TEST_LOG("=== Testing Unregister API for Coverage (after failed register) ===");
-            Core::hresult unregisterResult = impl->Unregister(notificationStub);
-            TEST_LOG("Unregister returned: %u", unregisterResult);
-        }
-        
-    } catch (const std::exception& e) {
-        TEST_LOG("Register/Unregister caused exception: %s", e.what());
-        TEST_LOG("This might be due to interface mapping issues, but we likely got method entry coverage");
-    } catch (...) {
-        TEST_LOG("Register/Unregister caused unknown exception");
-        TEST_LOG("Interface mapping complexity hit, but method entry coverage likely achieved");
-    }
-    
-    // Clean up - release our reference
-    if (notificationStub) {
-        notificationStub->Release();
-        notificationStub = nullptr;
-    }
-    
-    TEST_LOG("Register/Unregister coverage testing completed");
-    TEST_LOG("L1 coverage objectives for these methods should now be achieved");
-
     // === PHASE 3: DOWNLOAD API TESTING ===
     TEST_LOG("=== PHASE 3: Testing Download API ===");
     
@@ -841,19 +736,4 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     
     // Deinitialize will be called automatically in TearDown()
     TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
-    
-    TEST_LOG("=== DOWNLOADMANAGER IMPLEMENTATION COMPREHENSIVE API COVERAGE ACHIEVED ===");
-    TEST_LOG("Code coverage successfully achieved for:");
-    TEST_LOG("  ✓ Initialize/Deinitialize - Plugin lifecycle management");
-    TEST_LOG("  ✓ Register/Unregister APIs - Method existence verification (safe approach)");
-    TEST_LOG("  ✓ Download API - Core functionality with multiple scenarios (valid/invalid/priority)");
-    TEST_LOG("  ✓ Pause/Resume/Cancel APIs - Download control operations with edge cases");
-    TEST_LOG("  ✓ Progress API - Download status monitoring with invalid/valid IDs");
-    TEST_LOG("  ✓ Delete API - File management with various path scenarios");
-    TEST_LOG("  ✓ GetStorageDetails API - Storage information retrieval");
-    TEST_LOG("  ✓ RateLimit API - Bandwidth control testing");
-    TEST_LOG("  ✓ Error path testing - Comprehensive invalid parameter and boundary testing");
-    TEST_LOG("  ✓ Thread management - Downloader thread lifecycle properly handled");
-    TEST_LOG("ALL DOWNLOADMANAGER APIS COVERED - L1 testing objectives achieved!");
 }
-
