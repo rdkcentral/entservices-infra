@@ -309,6 +309,7 @@ protected:
     {
         TEST_LOG("Delete ~AppManagerTest Instance!");
         Core::IWorkerPool::Assign(nullptr);
+        workerPool->Stop(2000);
         workerPool.Release();
     }
     std::string GetPackageInfoInJSON()
