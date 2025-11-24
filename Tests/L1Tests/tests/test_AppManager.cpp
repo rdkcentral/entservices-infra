@@ -353,13 +353,13 @@ protected:
         app_1.appInstanceId = "0295effd-2883-44ed-b614-471e3f682762";
         app_1.activeSessionId = "";
         app_1.targetLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE; 
-        app_1.currentLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+        app_1.lifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
 
         app_2.appId = "uktv";
         app_2.appInstanceId = "67fa75b6-0c85-43d4-a591-fd29e7214be5";
         app_2.activeSessionId = "";
         app_2.targetLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE; 
-        app_2.currentLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+        app_2.lifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
 
         loadedAppInfoList.emplace_back(app_1);
         loadedAppInfoList.emplace_back(app_2);
@@ -3040,19 +3040,26 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
     Core::hresult status;
 
     status = createResources();
+    Plugin::AppManagerImplementation::AppInfo appInfo;
+    Plugin::AppManagerImplementation::PackageInfo pkgInfo;
+    std::string nexTennisAppId = "NexTennis";
+    appInfo.appInstanceId = nexTennisAppId;
+    pkgInfo.type = Plugin::AppManagerImplementation::ApplicationType::APPLICATION_TYPE_INTERACTIVE;
+    appInfo.packageInfo = pkgInfo;
+    mAppManagerImpl->mAppInfo[nexTennisAppId] = appInfo;
     EXPECT_EQ(Core::ERROR_NONE, status);
     EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
     ).WillOnce([&](const bool verbose, std::string &apps) {
         apps = R"([
-            {"appId":"NexTennis","type":"","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
-            {"appId":"uktv","type":"","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6}
+            {"appId":"NexTennis","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
+            {"appId":"uktv","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6}
         ])";
         return Core::ERROR_NONE;
     });        
     // Simulate a JSON-RPC call
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getLoadedApps"), _T("{}"), mJsonRpcResponse));
     EXPECT_STREQ(mJsonRpcResponse.c_str(),
-    "[{\"appId\":\"NexTennis\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"currentLifecycleState\":\"APP_STATE_HIBERNATED\"},{\"appId\":\"uktv\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"currentLifecycleState\":\"APP_STATE_HIBERNATED\"}]");
+    "[{\"appId\":\"NexTennis\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"type\":\"INTERACTIVE_APP\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"lifecycleState\":\"APP_STATE_HIBERNATED\"},{\"appId\":\"uktv\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"type\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"lifecycleState\":\"APP_STATE_HIBERNATED\"}]");
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
