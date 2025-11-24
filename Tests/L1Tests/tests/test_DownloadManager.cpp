@@ -737,3 +737,77 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     // Deinitialize will be called automatically in TearDown()
     TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
 }
+
+/* Test Case for DownloadManagerImplementation Initialize Error Path - Null Service
+ * This test covers the error path where service parameter is null (line 138)
+ */
+TEST_F(DownloadManagerImplementationTest, InitializeErrorPath_NullService) {
+    TEST_LOG("=== Testing Initialize Error Path - Null Service ===");
+    
+    // Create a new implementation instance for this specific test
+    Core::ProxyType<DownloadManagerImplementation> impl = Core::ProxyType<DownloadManagerImplementation>::Create();
+    ASSERT_NE(impl, nullptr) << "Failed to create DownloadManagerImplementation";
+    
+    // Test Initialize with null service - should trigger LOGERR at line 138
+    Core::hresult result = impl->Initialize(nullptr);
+    TEST_LOG("Initialize with null service returned: %u (expected ERROR_GENERAL=%u)", result, Core::ERROR_GENERAL);
+    
+    // Verify that Initialize fails with ERROR_GENERAL when service is null
+    EXPECT_EQ(Core::ERROR_GENERAL, result) << "Initialize should fail with ERROR_GENERAL when service is null";
+    
+    TEST_LOG("Successfully covered null service error path (line 138)");
+}
+
+/* Test Case for DownloadManagerImplementation Initialize Error Path - Directory Creation Failure
+ * This test covers the error path where mkdir fails (line 127)
+ * Strategy: Create a file with the same name as the directory path to force mkdir to fail
+ */
+TEST_F(DownloadManagerImplementationTest, InitializeErrorPath_DirectoryCreationFailure) {
+    TEST_LOG("=== Testing Initialize Error Path - Directory Creation Failure ===");
+    
+    // Create a new implementation instance for this specific test
+    Core::ProxyType<DownloadManagerImplementation> impl = Core::ProxyType<DownloadManagerImplementation>::Create();
+    ASSERT_NE(impl, nullptr) << "Failed to create DownloadManagerImplementation";
+    
+    // Create a unique path for this test
+    std::string testPath = "/tmp/dm_test_conflict_" + std::to_string(time(nullptr));
+    
+    // Create a mock service that provides the conflicting path
+    class ConflictingPathServiceMock : public ServiceMock {
+    private:
+        std::string mConflictPath;
+    public:
+        ConflictingPathServiceMock(const std::string& path) : ServiceMock(), mConflictPath(path) {}
+        
+        string ConfigLine(const string& config) const override {
+            if (config == "downloadpath") {
+                return mConflictPath;
+            }
+            return ServiceMock::ConfigLine(config);
+        }
+    };
+    
+    // STEP 1: Create a regular file at the path where mkdir will try to create a directory
+    // This will cause mkdir to fail because a file already exists with that name
+    std::ofstream conflictFile(testPath);
+    if (conflictFile.is_open()) {
+        conflictFile << "This file will conflict with mkdir" << std::endl;
+        conflictFile.close();
+        TEST_LOG("Created conflicting file at: %s", testPath.c_str());
+        
+        // STEP 2: Try to initialize with this path - mkdir should fail
+        ConflictingPathServiceMock conflictService(testPath);
+        Core::hresult result = impl->Initialize(&conflictService);
+        TEST_LOG("Initialize with conflicting path returned: %u (ERROR_GENERAL=%u)", result, Core::ERROR_GENERAL);
+        
+        // STEP 3: Verify that Initialize failed due to mkdir error
+        EXPECT_EQ(Core::ERROR_GENERAL, result) << "Initialize should fail when mkdir encounters a file conflict";
+        
+        // STEP 4: Clean up the conflicting file
+        std::remove(testPath.c_str());
+        TEST_LOG("Successfully triggered directory creation failure (line 127) - cleaned up test file");
+    } else {
+        TEST_LOG("Could not create conflicting file - skipping mkdir error test");
+        GTEST_SKIP() << "Unable to create test file for mkdir conflict scenario";
+    }
+}
