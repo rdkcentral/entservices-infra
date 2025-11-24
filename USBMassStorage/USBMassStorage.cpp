@@ -125,11 +125,8 @@ namespace WPEFramework
         {
             _usbMassStorage->Unregister(&_usbStoragesNotification);
             Exchange::JUSBMassStorage::Unregister(*this);
-            if (configure != nullptr)
-            {
-                configure->Release();
-                configure = nullptr;
-            }
+            
+            configure->Release();  
 
             // Stop processing:
             RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
