@@ -26,6 +26,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <memory>
+#include <atomic>
 #include <mntent.h>
 
 // Windows-specific includes for TEST_LOG
@@ -51,6 +52,8 @@ using namespace WPEFramework;
 #include "ThunderPortability.h"
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
+
+// Reference counting will use simple atomic operations
 
 // Enhanced TEST_LOG that prints to multiple outputs for maximum visibility
 #define TEST_LOG(x, ...) do { \
@@ -391,6 +394,9 @@ protected:
 
 class NotificationTest : public Exchange::IDownloadManager::INotification
 {
+    private:
+        mutable std::atomic<uint32_t> m_refCount;
+
     public:
         /** @brief Mutex */
         std::mutex m_mutex;
@@ -403,15 +409,24 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
 
         StatusParams m_status_param;
 
-        NotificationTest()
+        NotificationTest() : m_refCount(1)
         {
         }
         
         virtual ~NotificationTest() override = default;
 
-        // Required for reference counting
-        virtual void AddRef() const override {  }
-        virtual uint32_t Release() const override { return 1; }
+        // Proper IUnknown implementation for Thunder framework
+        virtual void AddRef() const override { 
+            m_refCount.fetch_add(1);
+        }
+        
+        virtual uint32_t Release() const override { 
+            uint32_t result = m_refCount.fetch_sub(1) - 1;
+            if (result == 0) {
+                delete this;
+            }
+            return result;
+        }
 
         uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
         {
@@ -576,11 +591,13 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     ASSERT_NE(notification, nullptr) << "Notification callback should be created";
 
     // Test Register - should succeed with valid notification
+    // Register will call AddRef internally, increasing ref count to 2
     Core::hresult registerResult = impl->Register(notification);
     TEST_LOG("Register returned: %u", registerResult);
     EXPECT_EQ(Core::ERROR_NONE, registerResult) << "Register should succeed with valid notification";
     
     // Test Unregister - should succeed with registered notification
+    // Unregister will call Release internally, decreasing ref count to 1
     Core::hresult unregisterResult = impl->Unregister(notification);
     TEST_LOG("Unregister returned: %u", unregisterResult);
     EXPECT_EQ(Core::ERROR_NONE, unregisterResult) << "Unregister should succeed";
@@ -590,7 +607,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     TEST_LOG("Unregister (already removed) returned: %u", unregisterResult2);
     EXPECT_EQ(Core::ERROR_GENERAL, unregisterResult2) << "Unregister should fail when notification not found";
 
-    // Cleanup notification
+    // Release our initial reference - this will delete the object (ref count goes to 0)
     notification->Release();
     notification = nullptr;
 
