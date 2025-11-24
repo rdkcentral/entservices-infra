@@ -37,7 +37,9 @@
 #include "FactoriesImplementation.h"
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
-#define TIMEOUT   (500)
+#define TIMEOUT_FOR_PAUSE   (50)
+#define TIMEOUT_FOR_DOWNLOAD (1000)
+#define TIMEOUT (500)
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
@@ -484,7 +486,7 @@ TEST_F(DownloadManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
@@ -550,7 +552,7 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId, "2001");
 
@@ -613,7 +615,7 @@ TEST_F(DownloadManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
@@ -681,7 +683,7 @@ TEST_F(DownloadManagerTest, resumeMethodusingComRpcSuccess) {
 
    	EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId, "2001");
     
@@ -691,6 +693,8 @@ TEST_F(DownloadManagerTest, resumeMethodusingComRpcSuccess) {
     EXPECT_EQ(Core::ERROR_NONE, interface->Resume(downloadId));
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Cancel(downloadId));
+
+	waitforSignal(TIMEOUT);
 
     deinitforComRpc();
 }
@@ -742,7 +746,7 @@ TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
@@ -750,6 +754,8 @@ TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcSuccess) {
 
     // TC-14: Cancel download via downloadId using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("cancel"), _T("{\"downloadId\": \"2001\"}"), mJsonRpcResponse));
+
+	waitforSignal(TIMEOUT);
 	
     deinitforJsonRpc();
 }
@@ -806,7 +812,7 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId, "2001");
     
@@ -869,7 +875,7 @@ TEST_F(DownloadManagerTest, deleteMethodusingJsonRpcSuccess) {
 	
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
-	waitforSignal(TIMEOUT);
+	waitforSignal(TIMEOUT_FOR_DOWNLOAD);
 	
     // TC-18: Delete download using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package2001\"}"), mJsonRpcResponse));
@@ -918,6 +924,8 @@ TEST_F(DownloadManagerTest, deleteMethodusingComRpcSuccess) {
 
     //uint32_t timeout_ms = 2000;
 
+	uri = "https://httpbin.org/bytes/1024";
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -927,7 +935,7 @@ TEST_F(DownloadManagerTest, deleteMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_DOWNLOAD);
 
     EXPECT_EQ(downloadId, "2001");
 
@@ -935,6 +943,8 @@ TEST_F(DownloadManagerTest, deleteMethodusingComRpcSuccess) {
 
     // TC-20: Delete download failure when download in progress using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, interface->Delete(fileLocator));
+
+	waitforSignal(TIMEOUT);
 
 	deinitforComRpc();
 }
@@ -988,7 +998,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcSuccess) {
             
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
@@ -1062,7 +1072,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Download(uri, options, downloadId));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId, "2001");
 
@@ -1172,7 +1182,7 @@ TEST_F(DownloadManagerTest, rateLimitusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
-    waitforSignal(TIMEOUT);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("2001"), std::string::npos);
 
@@ -1246,7 +1256,7 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId, "2001");
 
-	waitforSignal(TIMEOUT);
+	waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(Core::ERROR_NONE, interface->Pause(downloadId));
 
