@@ -94,13 +94,9 @@ namespace Plugin {
         event->eventSource = eventSource;
         event->eventSourceVersion = eventSourceVersion;
 
-        std::string entry;
-        if (cetList == nullptr)
+        if (cetList != nullptr)
         {
-            LOGINFO("     <null>");
-        }
-        else
-        {
+            std::string entry;
             while (cetList->Next(entry) == true)
             {
                 event->cetList.push_back(entry);
