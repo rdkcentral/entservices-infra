@@ -160,7 +160,7 @@ protected:
     void getDownloadParams()
     {
         // Initialize the parameters required for COM-RPC with default values
-        uri = "https://www.examplefile.com/file-download/328";
+        uri = "https://link.testfile.org/500MB";
 
         options = { 
             true,2,1024
@@ -442,6 +442,8 @@ TEST_F(DownloadManagerTest, downloadMethodsusingComRpcError) {
 
     getDownloadParams();
 
+	uri = "https://httpbin.org/bytes/1024";
+
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -480,7 +482,7 @@ TEST_F(DownloadManagerTest, pauseMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/330\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
     waitforSignal(TIMEOUT);
 
@@ -537,7 +539,7 @@ TEST_F(DownloadManagerTest, pauseMethodusingComRpcSuccess) {
 
 	//uint32_t timeout_ms = 300;
 
-	uri = "https://www.examplefile.com/file-download/330";
+	//uri = "https://www.examplefile.com/file-download/330";
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -609,7 +611,7 @@ TEST_F(DownloadManagerTest, resumeMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/330\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
     waitforSignal(TIMEOUT);
 
@@ -738,7 +740,7 @@ TEST_F(DownloadManagerTest, cancelMethodusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/330\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
     waitforSignal(TIMEOUT);
 
@@ -793,7 +795,7 @@ TEST_F(DownloadManagerTest, cancelMethodusingComRpcSuccess) {
     
     //uint32_t timeout_ms = 300;
 
-	uri = "https://www.examplefile.com/file-download/330";
+	//uri = "https://www.examplefile.com/file-download/330";
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -984,7 +986,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcSuccess) {
                 return true;
             }));
             
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/330\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
     waitforSignal(TIMEOUT);
 
@@ -1047,7 +1049,7 @@ TEST_F(DownloadManagerTest, progressMethodusingJsonRpcFailure) {
     
     //uint32_t timeout_ms = 300;
 
-	uri = "https://www.examplefile.com/file-download/330";
+	//uri = "https://www.examplefile.com/file-download/330";
 	 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
@@ -1168,7 +1170,7 @@ TEST_F(DownloadManagerTest, rateLimitusingJsonRpcSuccess) {
                 return true;
             }));
 
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/330\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://link.testfile.org/500MB\"}"), mJsonRpcResponse));
 
     waitforSignal(TIMEOUT);
 
@@ -1229,7 +1231,7 @@ TEST_F(DownloadManagerTest, rateLimitusingComRpcSuccess) {
     
     //uint32_t timeout_ms = 300;
 
-	uri = "https://www.examplefile.com/file-download/330";
+	//uri = "https://www.examplefile.com/file-download/330";
 
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
