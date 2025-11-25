@@ -797,15 +797,13 @@ public:
     
     uint32_t Id() const override { return m_id; }
     uint32_t RemoteId() const override { return 0; }
-    string LocalId() const override { return "test"; }
-    string RemoteAddress() const override { return "127.0.0.1"; }
     void Terminate() override {}
     uint32_t Launch() override { return Core::ERROR_NONE; }
-    bool IsOperational() const override { return true; }
-    void Register(INotification*) override {}
-    void Unregister(INotification*) override {}
-    void* Acquire(const uint32_t, const string&, const uint32_t&, const uint32_t&) override { return nullptr; }
+    void* Acquire(const uint32_t waitTime, const string& className, const uint32_t interfaceId, const uint32_t version) override { 
+        return nullptr; 
+    }
     void Revoke(const void*) override {}
+    void PostMortem() override {}
     
     BEGIN_INTERFACE_MAP(TestRPCConnection)
         INTERFACE_ENTRY(RPC::IRemoteConnection)
