@@ -294,9 +294,9 @@ USBMassStorageTest::~USBMassStorageTest()
     status = DeactivateService("org.rdk.UsbMassStorage");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
+	sleep(5);
     status = DeactivateService("org.rdk.UsbDevice");
     EXPECT_EQ(Core::ERROR_NONE, status);
-    sleep(5);
 
 }
 
