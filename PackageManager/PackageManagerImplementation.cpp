@@ -179,11 +179,11 @@ namespace Plugin {
         }
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
         const std::string markerFile = "/tmp/package_manager_ready"; // or your actual file path
-    if (std::remove(markerFile.c_str()) == 0) {
-        LOGINFO("Deleted marker file: %s", markerFile.c_str());
-    } else {
-        LOGERR("Failed to delete marker file: %s (errno=%d)", markerFile.c_str(), errno);
-    }
+        if (std::remove(markerFile.c_str()) == 0) {
+            LOGINFO("Deleted marker file: %s", markerFile.c_str());
+        } else {
+            LOGERR("Failed to delete marker file: %s (errno=%d)", markerFile.c_str(), errno);
+        }
 
         mCurrentservice->Release();
         mCurrentservice = nullptr;
