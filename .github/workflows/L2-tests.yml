@@ -108,6 +108,13 @@ jobs:
           ref: develop
           token: ${{ secrets.RDKCM_RDKE }}
 
+      - name: Checkout eshelpers
+        uses: actions/checkout@v3
+        with:
+          repository: rdkcentral/eshelpers
+          path: eshelpers
+          ref: develop
+
       - name: Checkout libpackage
         uses: actions/checkout@v3
         with:
@@ -422,6 +429,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
           -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DCMAKE_CXX_FLAGS="-I$GITHUB_WORKSPACE/eshelpers/packager -DBOOST_BIND_GLOBAL_PLACEHOLDERS"
           &&
           cmake --build build/libpackage -j8
           &&
