@@ -25,6 +25,12 @@ find_package(WPEFramework)
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
+# Add include directory for eshelpers to resolve IPackageImpl.h dependency
+include_directories(${CMAKE_SOURCE_DIR}/../eshelpers/packager)
+
+# Fix boost bind deprecation warnings
+add_compile_definitions(BOOST_BIND_GLOBAL_PLACEHOLDERS)
+
 # Product configuration dir
 set(PRODUCT_CONFIG_DIR "/etc/entservices")
 
