@@ -50,6 +50,8 @@
 #define TELEMETRY_MARKER_UNINSTALL_ERROR         "UninstallError_split"
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
+#define MARKER_FILE_PATH                         "/tmp/package_manager_ready"
+
 namespace WPEFramework {
 namespace Plugin {
     typedef Exchange::IPackageDownloader::Reason DownloadReason;
