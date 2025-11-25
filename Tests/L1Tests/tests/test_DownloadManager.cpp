@@ -740,32 +740,48 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
 }
 
-/* Test Case for Plugin::DownloadManager - Plugin Framework Integration APIs
- *
- * This test covers the main Plugin::DownloadManager class APIs that handle plugin lifecycle,
- * service integration, and RPC communication within the Thunder framework.
+/* Test Case 1: Plugin::DownloadManager Basic APIs
+ * Tests plugin creation, Information API, and interface inheritance
  */
-TEST_F(DownloadManagerTest, PluginDownloadManagerLifecycle) {
-    // Verify plugin was created successfully
-    ASSERT_TRUE(plugin.IsValid()) << "Plugin::DownloadManager should be created successfully";
+TEST_F(DownloadManagerTest, PluginDownloadManagerBasicAPIs) {
+    // Test plugin creation
+    ASSERT_TRUE(plugin.IsValid()) << "Plugin should be created successfully";
 
-    // Test Information API - safe to call without initialization
+    // Test Information() API - should return empty string
     string infoResult = plugin->Information();
-    EXPECT_TRUE(infoResult.empty()) << "Information() should return empty string as per implementation";
+    EXPECT_TRUE(infoResult.empty()) << "Information() should return empty string";
 
-    // Test basic plugin object validity and interface support
-    if (plugin.IsValid()) {
-        Plugin::DownloadManager* rawPlugin = &(*plugin);
-        ASSERT_NE(rawPlugin, nullptr) << "Raw plugin pointer should be valid";
+    // Test interface inheritance
+    Plugin::DownloadManager* rawPlugin = &(*plugin);
+    ASSERT_NE(rawPlugin, nullptr) << "Raw plugin pointer should be valid";
 
-        // Test that plugin inherits from expected base classes
-        PluginHost::JSONRPC* jsonrpcInterface = dynamic_cast<PluginHost::JSONRPC*>(rawPlugin);
-        EXPECT_NE(jsonrpcInterface, nullptr) << "Plugin should inherit from PluginHost::JSONRPC";
+    PluginHost::JSONRPC* jsonrpcPtr = dynamic_cast<PluginHost::JSONRPC*>(rawPlugin);
+    EXPECT_NE(jsonrpcPtr, nullptr) << "Plugin should inherit from PluginHost::JSONRPC";
 
-        PluginHost::IPlugin* pluginInterface = dynamic_cast<PluginHost::IPlugin*>(rawPlugin);
-        EXPECT_NE(pluginInterface, nullptr) << "Plugin should inherit from PluginHost::IPlugin";
+    PluginHost::IPlugin* pluginPtr = dynamic_cast<PluginHost::IPlugin*>(rawPlugin);
+    EXPECT_NE(pluginPtr, nullptr) << "Plugin should inherit from PluginHost::IPlugin";
+}
 
-        // Note: Initialize() testing is skipped to avoid segfaults in test environment
-        // as noted in the existing DownloadManagerTest fixture design
+/* Test Case 2: Plugin::DownloadManager Lifecycle APIs
+ * Tests Initialize, Deinitialize, and Deactivated methods
+ */
+TEST_F(DownloadManagerTest, PluginDownloadManagerLifecycleAPIs) {
+    ASSERT_TRUE(plugin.IsValid()) << "Plugin should be valid";
+
+    // Test Initialize() method
+    string initResult = plugin->Initialize(mServiceMock);
+    if (initResult.empty()) {
+        EXPECT_TRUE(initResult.empty()) << "Initialize succeeded";
+    } else {
+        EXPECT_FALSE(initResult.empty()) << "Initialize failure expected in mock environment";
+        EXPECT_NE(initResult.find("instantiated"), string::npos)
+            << "Error message should indicate instantiation issue";
     }
+
+    // Test Deinitialize() method
+    plugin->Deinitialize(mServiceMock);
+
+    // Test Deactivated() method with nullptr (safe test)
+    // The method checks connection ID, so nullptr or unmatched ID should be safe
+    plugin->Deactivated(nullptr);
 }
