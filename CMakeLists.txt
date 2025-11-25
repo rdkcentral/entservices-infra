@@ -25,30 +25,6 @@ find_package(WPEFramework)
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
-# Add include directory for eshelpers to resolve IPackageImpl.h dependency
-include_directories(${CMAKE_SOURCE_DIR}/../eshelpers/packager)
-
-# Fix boost bind deprecation warnings
-add_compile_definitions(BOOST_BIND_GLOBAL_PLACEHOLDERS)
-
-# Copy IPackageImpl.h to libpackage include directory before build
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-    "${CMAKE_SOURCE_DIR}/../eshelpers/packager/IPackageImpl.h" 
-    "${CMAKE_SOURCE_DIR}/../libpackage/include/IPackageImpl.h"
-    RESULT_VARIABLE COPY_RESULT
-    OUTPUT_VARIABLE COPY_OUTPUT
-    ERROR_VARIABLE COPY_ERROR
-)
-if(COPY_RESULT)
-    message(STATUS "Copy result: ${COPY_RESULT}")
-    message(STATUS "Copy output: ${COPY_OUTPUT}") 
-    message(STATUS "Copy error: ${COPY_ERROR}")
-    message(WARNING "Could not copy IPackageImpl.h to libpackage include directory")
-else()
-    message(STATUS "Successfully copied IPackageImpl.h to libpackage include directory")
-endif()
-
 # Product configuration dir
 set(PRODUCT_CONFIG_DIR "/etc/entservices")
 
