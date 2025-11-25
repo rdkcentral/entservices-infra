@@ -961,7 +961,7 @@ namespace Plugin {
             file.close();
             LOGINFO("Marker file created: %s", MARKER_FILE_PATH);
         } else {
-            LOGERR("Failed to create marker file: %s", MARKER_FILE_PATH);
+            LOGERR("Failed to create marker file: %s (errno=%d)", MARKER_FILE_PATH, errno);
         }
         LOGDBG("exit");
     }
