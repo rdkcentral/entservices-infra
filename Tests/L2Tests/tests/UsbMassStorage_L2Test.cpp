@@ -26,6 +26,8 @@
 #include <fstream>
 #include <interfaces/IUSBDevice.h>
 #include <interfaces/IUSBMassStorage.h>
+#include <thread>
+#include <chrono>
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
@@ -292,9 +294,9 @@ USBMassStorageTest::~USBMassStorageTest()
     status = DeactivateService("org.rdk.UsbMassStorage");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
-	sleep(5);
     status = DeactivateService("org.rdk.UsbDevice");
     EXPECT_EQ(Core::ERROR_NONE, status);
+	std::this_thread::sleep_for(std::chrono::seconds(2));
 
 }
 
