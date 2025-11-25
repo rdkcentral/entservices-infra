@@ -17,6 +17,7 @@
 * limitations under the License.
 **/
 
+#include <cerrno>
 #include <chrono>
 #include <inttypes.h> // Required for PRIu64
 
