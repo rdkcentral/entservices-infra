@@ -762,10 +762,20 @@ TEST_F(DownloadManagerTest, PluginDownloadManagerAPIs) {
     EXPECT_NE(pluginPtr, nullptr) << "Plugin should inherit from PluginHost::IPlugin";
     
     // Test Initialize() method - this calls real DownloadManager::Initialize() from DownloadManager.cpp
+    TEST_LOG("Testing Initialize method");
     std::string initResult = plugin->Initialize(mServiceMock);
-    TEST_LOG("Initialize result: %s", initResult.empty() ? "SUCCESS (empty string)" : initResult.c_str());
+    TEST_LOG("Initialize result: %s", initResult.empty() ? "SUCCESS" : initResult.c_str());
     
-    // Test Deinitialize() method - this calls real DownloadManager::Deinitialize() from DownloadManager.cpp
+    // Brief pause to let initialization complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    
+    // Test Deinitialize() method - this should stop background threads properly
+    TEST_LOG("Testing Deinitialize method");
     plugin->Deinitialize(mServiceMock);
     TEST_LOG("Deinitialize completed");
+    
+    // Extended wait for thread cleanup - the background thread should terminate
+    TEST_LOG("Waiting for thread cleanup...");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    TEST_LOG("Test completed");
 }
