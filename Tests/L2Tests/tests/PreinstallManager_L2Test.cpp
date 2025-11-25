@@ -55,9 +55,10 @@ public:
         std::promise<std::string>* m_promise;
         std::vector<std::string> m_receivedNotifications;
         mutable Core::CriticalSection m_lock;
+        mutable uint32_t m_refCount;
 
     public:
-        TestNotification(std::promise<std::string>* promise = nullptr) : m_promise(promise) {}
+        TestNotification(std::promise<std::string>* promise = nullptr) : m_promise(promise), m_refCount(1) {}
 
         void OnAppInstallationStatus(const string& jsonresponse) override {
             TEST_LOG("OnAppInstallationStatus received: %s", jsonresponse.c_str());
@@ -83,6 +84,24 @@ public:
         void ClearNotifications() {
             Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
             m_receivedNotifications.clear();
+        }
+
+        // Implement required IReferenceCounted methods
+        void AddRef() const override {
+            Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
+            ++m_refCount;
+        }
+
+        uint32_t Release() const override {
+            Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
+            --m_refCount;
+            uint32_t refCount = m_refCount;
+            scopedLock.Unlock();
+            
+            if (refCount == 0) {
+                delete this;
+            }
+            return refCount;
         }
 
         BEGIN_INTERFACE_MAP(TestNotification)
