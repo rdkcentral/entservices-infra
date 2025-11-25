@@ -178,7 +178,7 @@ namespace Plugin {
             mTelemetryMetricsObject = nullptr;
         }
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
-         const std::string markerFile = "/tmp/package_manager_ready"; // or your actual file path
+        const std::string markerFile = "/tmp/package_manager_ready"; // or your actual file path
     if (std::remove(markerFile.c_str()) == 0) {
         LOGINFO("Deleted marker file: %s", markerFile.c_str());
     } else {
