@@ -929,8 +929,7 @@ namespace Plugin {
         LOGDBG("entry");
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
-            // NOTE: NOT_INSTALLATION constant not available in current WPEFramework version
-            // subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
+            subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
         }
 
         #ifdef USE_LIBPACKAGE
@@ -948,8 +947,7 @@ namespace Plugin {
         #endif
 
         if (subSystem != nullptr) {
-            // NOTE: INSTALLATION constant not available in current WPEFramework version
-            // subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
+            subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
         cacheInitialized = true;
         LOGDBG("exit");
