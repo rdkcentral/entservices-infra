@@ -670,7 +670,7 @@ uint32_t USBDeviceImplementation::getUSBDeviceInfoStructFromDeviceDescriptor(lib
 {
     struct libusb_device_descriptor desc = {0};
     libusb_config_descriptor *config_desc;
-    char deviceName[1] = {0}; 
+    char deviceName[12] = {0}; 
     uint32_t status = Core::ERROR_GENERAL;
     int retValue = LIBUSB_SUCCESS;
 
