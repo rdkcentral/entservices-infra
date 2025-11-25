@@ -746,42 +746,41 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
 TEST_F(DownloadManagerTest, PluginDownloadManagerBasicAPIs) {
     // Test plugin creation
     ASSERT_TRUE(plugin.IsValid()) << "Plugin should be created successfully";
-
+    
     // Test Information() API - should return empty string
     string infoResult = plugin->Information();
     EXPECT_TRUE(infoResult.empty()) << "Information() should return empty string";
-
+    
     // Test interface inheritance
     Plugin::DownloadManager* rawPlugin = &(*plugin);
     ASSERT_NE(rawPlugin, nullptr) << "Raw plugin pointer should be valid";
-
+    
     PluginHost::JSONRPC* jsonrpcPtr = dynamic_cast<PluginHost::JSONRPC*>(rawPlugin);
     EXPECT_NE(jsonrpcPtr, nullptr) << "Plugin should inherit from PluginHost::JSONRPC";
-
+    
     PluginHost::IPlugin* pluginPtr = dynamic_cast<PluginHost::IPlugin*>(rawPlugin);
     EXPECT_NE(pluginPtr, nullptr) << "Plugin should inherit from PluginHost::IPlugin";
 }
 
 /* Test Case 2: Plugin::DownloadManager Lifecycle APIs
- * Tests Initialize, Deinitialize, and Deactivated methods
+ * Tests Initialize and Deinitialize methods
  */
 TEST_F(DownloadManagerTest, PluginDownloadManagerLifecycleAPIs) {
     ASSERT_TRUE(plugin.IsValid()) << "Plugin should be valid";
-
+    
     // Test Initialize() method
     string initResult = plugin->Initialize(mServiceMock);
     if (initResult.empty()) {
         EXPECT_TRUE(initResult.empty()) << "Initialize succeeded";
     } else {
         EXPECT_FALSE(initResult.empty()) << "Initialize failure expected in mock environment";
-        EXPECT_NE(initResult.find("instantiated"), string::npos)
+        EXPECT_NE(initResult.find("instantiated"), string::npos) 
             << "Error message should indicate instantiation issue";
     }
-
+    
     // Test Deinitialize() method
     plugin->Deinitialize(mServiceMock);
-
-    // Test Deactivated() method with nullptr (safe test)
-    // The method checks connection ID, so nullptr or unmatched ID should be safe
-    plugin->Deactivated(nullptr);
+    
+    // Note: Deactivated() method is private and called internally by NotificationHandler
+    // Cannot test it directly from external test code
 }
