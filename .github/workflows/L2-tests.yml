@@ -1,16 +1,8 @@
 name: L2-tests
 
 on:
-  workflow_call:
-    inputs:
-      caller_source:
-        description: "Specifies the source type (e.g., local or test framework) for the workflow."
-        required: true
-        type: string
-    secrets:
-      RDKCM_RDKE:
-        required: true
-
+ push:
+   branches: ['topic/RDKEMW-8858-S']
 env:
   BUILD_TYPE: Debug
   THUNDER_REF: "R4.4.1"
@@ -55,7 +47,7 @@ jobs:
         run: >
           sudo apt update
           &&
-          sudo apt install -y libsqlite3-dev libcurl4-openssl-dev valgrind lcov clang libsystemd-dev libboost-all-dev libwebsocketpp-dev meson libcunit1 libcunit1-dev curl protobuf-compiler-grpc libgrpc-dev libgrpc++-dev
+          sudo apt install -y libsqlite3-dev libcurl4-openssl-dev valgrind lcov clang libsystemd-dev libboost-all-dev libwebsocketpp-dev meson libcunit1 libcunit1-dev curl protobuf-compiler-grpc libgrpc-dev libgrpc++-dev libjsoncpp-dev libarchive-dev pkg-config
          # &&
          # apt-get install -y coreutils mtools dosfstools
 
@@ -89,7 +81,6 @@ jobs:
           ref: R4.4.3
 
       - name: Checkout entservices-infra
-        if: ${{ inputs.caller_source == 'local' }}
         uses: actions/checkout@v3
         with:
           path: entservices-infra
@@ -116,6 +107,13 @@ jobs:
           path: entservices-testframework
           ref: develop
           token: ${{ secrets.RDKCM_RDKE }}
+
+      - name: Checkout libpackage
+        uses: actions/checkout@v3
+        with:
+          repository: rdkcentral/libpackage  
+          path: libpackage
+          ref: develop
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
@@ -415,6 +413,20 @@ jobs:
           &&
           cmake --install build/entservices-deviceanddisplay
 
+      - name: Build libpackage
+        run: >
+          cmake
+          -S "$GITHUB_WORKSPACE/libpackage"
+          -B build/libpackage
+          -DCMAKE_TOOLCHAIN_FILE="${{ env.TOOLCHAIN_FILE }}"
+          -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/usr"
+          -DCMAKE_MODULE_PATH="$GITHUB_WORKSPACE/install/tools/cmake"
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          &&
+          cmake --build build/libpackage -j8
+          &&
+          cmake --install build/libpackage
+
       - name: Build entservices-infra
         run: >
           cmake
@@ -445,6 +457,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/libusb
           -I $GITHUB_WORKSPACE/install/usr/include
           -I $GITHUB_WORKSPACE/build/mocks
+          -I /usr/include/jsoncpp
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/Dobby/Public/Dobby
@@ -481,10 +494,12 @@ jobs:
           -DHAS_RBUS
           -DRDK_SERVICE_L2_TEST
           -DDISABLE_SECURITY_TOKEN
-          -DENABLE_THERMAL_PROTECTION"
+          -DENABLE_THERMAL_PROTECTION
+          -DUSE_LIBPACKAGE"
           -DPLUGIN_PERSISTENTSTORE_PATH="/tmp/secure/persistent/rdkservicestore"
           -DPLUGIN_PERSISTENTSTORE_LEGACYPATH="/tmp/persistent/rdkservicestore"
           -DPLUGIN_STORAGE_MANAGER_PATH="/tmp/persistent/storageManager"
+          -DPLUGIN_PREINSTALL_MANAGER_PATH="/opt/preinstall"
           -DCOMCAST_CONFIG=OFF
           -DCMAKE_DISABLE_FIND_PACKAGE_DS=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_IARMBus=ON
@@ -495,7 +510,7 @@ jobs:
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_PERSISTENTSTORE=ON
           -DPLUGIN_SHAREDSTORAGE=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_RESOURCEMANAGER=OFF
           -DPLUGIN_CLOUDSTORE=ON
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
@@ -508,7 +523,12 @@ jobs:
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
           -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_OCICONTAINER=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
+          -DPLUGIN_PACKAGE_MANAGER=ON
+          -DLIB_PACKAGE=ON
+          -DUSE_LIBPACKAGE=ON
+          -DLIBPACKAGE_ROOT="$GITHUB_WORKSPACE/install/usr"
+          -DPLUGIN_OCICONTAINER=OFF
           -DDS_FOUND=ON
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           &&
@@ -580,7 +600,7 @@ jobs:
           -DPLUGIN_TELEMETRY=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_PERSISTENTSTORE=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_RESOURCEMANAGER=OFF
           -DPLUGIN_SHAREDSTORAGE=ON
           -DPLUGIN_CLOUDSTORE=ON
           -DPLUGIN_USBDEVICE=ON
@@ -594,6 +614,7 @@ jobs:
           -DPLUGIN_AVOUTPUT=OFF
           -DAVOUTPUT_TV=OFF
           -DPLUGIN_STORAGE_MANAGER=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
