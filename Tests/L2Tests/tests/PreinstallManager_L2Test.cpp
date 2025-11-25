@@ -93,10 +93,12 @@ public:
         }
 
         uint32_t Release() const override {
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
-            --m_refCount;
-            uint32_t refCount = m_refCount;
-            scopedLock.Unlock();
+            uint32_t refCount = 0;
+            {
+                Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
+                --m_refCount;
+                refCount = m_refCount;
+            } // scopedLock automatically unlocks here
             
             if (refCount == 0) {
                 delete this;
