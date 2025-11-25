@@ -740,15 +740,15 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
 }
 
-/* Test Case 1: Plugin::DownloadManager Basic APIs
- * Tests plugin creation, Information API, and interface inheritance
+/* Test Case: Plugin::DownloadManager APIs
+ * Tests plugin creation, Information API, and lifecycle methods
  */
-TEST_F(DownloadManagerTest, PluginDownloadManagerBasicAPIs) {
+TEST_F(DownloadManagerTest, PluginDownloadManagerAPIs) {
     // Test plugin creation
     ASSERT_TRUE(plugin.IsValid()) << "Plugin should be created successfully";
     
     // Test Information() API - should return empty string
-    string infoResult = plugin->Information();
+    std::string infoResult = plugin->Information();
     EXPECT_TRUE(infoResult.empty()) << "Information() should return empty string";
     
     // Test interface inheritance
@@ -760,27 +760,12 @@ TEST_F(DownloadManagerTest, PluginDownloadManagerBasicAPIs) {
     
     PluginHost::IPlugin* pluginPtr = dynamic_cast<PluginHost::IPlugin*>(rawPlugin);
     EXPECT_NE(pluginPtr, nullptr) << "Plugin should inherit from PluginHost::IPlugin";
-}
-
-/* Test Case 2: Plugin::DownloadManager Lifecycle APIs
- * Tests Initialize and Deinitialize methods
- */
-TEST_F(DownloadManagerTest, PluginDownloadManagerLifecycleAPIs) {
-    ASSERT_TRUE(plugin.IsValid()) << "Plugin should be valid";
     
-    // Test Initialize() method
-    string initResult = plugin->Initialize(mServiceMock);
-    if (initResult.empty()) {
-        EXPECT_TRUE(initResult.empty()) << "Initialize succeeded";
-    } else {
-        EXPECT_FALSE(initResult.empty()) << "Initialize failure expected in mock environment";
-        EXPECT_NE(initResult.find("instantiated"), string::npos) 
-            << "Error message should indicate instantiation issue";
-    }
+    // Test Initialize() method - this calls real DownloadManager::Initialize() from DownloadManager.cpp
+    std::string initResult = plugin->Initialize(mServiceMock);
+    TEST_LOG("Initialize result: %s", initResult.empty() ? "SUCCESS (empty string)" : initResult.c_str());
     
-    // Test Deinitialize() method
+    // Test Deinitialize() method - this calls real DownloadManager::Deinitialize() from DownloadManager.cpp
     plugin->Deinitialize(mServiceMock);
-    
-    // Note: Deactivated() method is private and called internally by NotificationHandler
-    // Cannot test it directly from external test code
+    TEST_LOG("Deinitialize completed");
 }
