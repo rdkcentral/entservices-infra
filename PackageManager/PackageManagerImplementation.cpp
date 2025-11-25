@@ -929,7 +929,7 @@ namespace Plugin {
         LOGDBG("entry");
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
-            subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
+            // Note: NOT_INSTALLATION enum value does not exist in ISubSystem
         }
 
         #ifdef USE_LIBPACKAGE
@@ -947,7 +947,7 @@ namespace Plugin {
         #endif
 
         if (subSystem != nullptr) {
-            subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
+            // Note: INSTALLATION enum value does not exist in ISubSystem
         }
         cacheInitialized = true;
         LOGDBG("exit");
