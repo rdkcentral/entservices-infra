@@ -83,6 +83,11 @@ if(RDK_SERVICES_L1_TEST)
     target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
 endif()
 
+option(ENABLE_UNIT_TESTS "Enable unit tests" OFF)
+if(ENABLE_UNIT_TESTS)
+  target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
+endif()
+
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
