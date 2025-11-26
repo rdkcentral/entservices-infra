@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<widget xmlns="http://www.bskyb.com/ns/widgets" version="2.0">
+  <name short="com.xumo.ipa" version="3.5.1.0_js">Xumo Integrated Player</name>
+  <icon src="icon.png" type="image/png"/>
+  <content src="." type="application/js">
+    <platformFilters>
+      <region name="GBR"/>
+    </platformFilters>
+  </content>
+  <capabilities>
+    <capability name="local-services-4"/>
+    <capability name="wan-lan"/>
+    <capability name="storage"/>
+    <capability name="private-storage">1</capability>
+    <capability name="firebolt"/>
+    <capability name="daemon-app"/>
+    <capability name="rialto"/>
+	<capability name="pathway-app"/>
+    <capability name="log-levels">default,milestone,fatal</capability>
+  </capabilities>
+</widget>

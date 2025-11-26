@@ -129,7 +129,7 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
             static struct dirent entry;
             if (call_count == 0) {
                 // Return a valid package directory name for libpackage
-                std::strncpy(entry.d_name, "com.rdk.testapp_1.0.0", sizeof(entry.d_name) - 1);
+                std::strncpy(entry.d_name, "testPackage", sizeof(entry.d_name) - 1);
                 entry.d_name[sizeof(entry.d_name) - 1] = '\0';
                 entry.d_type = DT_DIR; // Directory
                 TEST_LOG("readdir returning entry: %s", entry.d_name);
