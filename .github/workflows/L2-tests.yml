@@ -507,7 +507,7 @@ jobs:
           -DPLUGIN_PERSISTENTSTORE_PATH="/tmp/secure/persistent/rdkservicestore"
           -DPLUGIN_PERSISTENTSTORE_LEGACYPATH="/tmp/persistent/rdkservicestore"
           -DPLUGIN_STORAGE_MANAGER_PATH="/tmp/persistent/storageManager"
-          -DPLUGIN_PREINSTALL_MANAGER_PATH="/opt/preinstall"
+          -DPLUGIN_PREINSTALL_MANAGER_PATH="entservices-infra/Tests/L2Tests/tests/testPackage"
           -DCOMCAST_CONFIG=OFF
           -DCMAKE_DISABLE_FIND_PACKAGE_DS=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_IARMBus=ON
