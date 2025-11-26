@@ -91,8 +91,8 @@ protected:
     DownloadManagerTest()
      : workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
          2, Core::Thread::DefaultStackSize(), 16)),
-       plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
-       mJsonRpcHandler(*plugin),  // This needs to be initialized even if plugin is invalid
+        plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
+        mJsonRpcHandler(*plugin),  // This needs to be initialized even if plugin is invalid
         INIT_CONX(1,0)
     {
         if (workerPool.IsValid()) {
@@ -357,7 +357,6 @@ protected:
 
         // No COM-RPC interface cleanup needed since we didn't set any up
         TEST_LOG("Skipping COM-RPC interface cleanup since none were set up");
-
         TEST_LOG("COM-RPC cleanup completed safely");
     }
 
@@ -416,7 +415,7 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
             }
             status_signal = m_status_signal;
             m_status_signal = DownloadManager_invalidStatus;
-	    return status_signal;
+        return status_signal;
         }
     private:
         BEGIN_INTERFACE_MAP(NotificationTest)
@@ -451,7 +450,14 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
                 }
             }
 
-            EXPECT_EQ(m_status_param.downloadId, m_status_param.downloadId);
+            // Validate that JSON structure was properly parsed
+            EXPECT_TRUE(list.Length() > 0) << "JSON list should contain at least one element";
+            if (list.Length() > 0) {
+                // Validate that downloadId field exists in JSON (even if empty)
+                JsonObject obj = list[0].Object();
+                EXPECT_TRUE(obj.HasLabel("downloadId")) << "JSON should contain downloadId field";
+                EXPECT_TRUE(obj.HasLabel("fileLocator")) << "JSON should contain fileLocator field";
+            }
 
             m_condition_variable.notify_one();
         }
@@ -560,7 +566,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     }
 
     // === PHASE 2: DOWNLOAD API TESTING ===
-    TEST_LOG("=== PHASE 3: Testing Download API ===");
+    TEST_LOG("=== PHASE 2: Testing Download API ===");
 
     Exchange::IDownloadManager::Options options;
     options.priority = false;  // Regular priority
@@ -621,7 +627,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     // Special characters might succeed or fail depending on URL encoding
 
     // === PHASE 3: DOWNLOAD CONTROL APIS ===
-    TEST_LOG("=== PHASE 4: Testing Download Control APIs ===");
+    TEST_LOG("=== PHASE 3: Testing Download Control APIs ===");
 
     // Test Pause with invalid ID
     Core::hresult pauseResult = impl->Pause("invalid_download_id");
@@ -654,7 +660,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     EXPECT_NE(Core::ERROR_NONE, cancelResult2) << "Cancel should fail with empty downloadId";
 
     // === PHASE 4: PROGRESS AND STATUS APIs ===
-    TEST_LOG("=== PHASE 5: Testing Progress and Status APIs ===");
+    TEST_LOG("=== PHASE 4: Testing Progress and Status APIs ===");
 
     uint8_t percent = 0;
 
@@ -669,7 +675,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     EXPECT_NE(Core::ERROR_NONE, progressResult2) << "Progress should fail with empty downloadId";
 
     // === PHASE 5: FILE MANAGEMENT APIS ===
-    TEST_LOG("=== PHASE 6: Testing File Management APIs ===");
+    TEST_LOG("=== PHASE 5: Testing File Management APIs ===");
 
     // Test Delete with invalid file locator
     Core::hresult deleteResult = impl->Delete("nonexistent_file.zip");
@@ -707,7 +713,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     }
 
     // === PHASE 6: ADVANCED SCENARIOS ===
-    TEST_LOG("=== PHASE 7: Testing Advanced Scenarios ===");
+    TEST_LOG("=== PHASE 6: Testing Advanced Scenarios ===");
 
     // If we have a valid downloadId from earlier, test control operations on it
     if (!downloadId.empty()) {
@@ -734,7 +740,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     }
 
     // === PHASE 7: PLUGIN DEACTIVATION ===
-    TEST_LOG("=== PHASE 8: Plugin Deactivation and Cleanup ===");
+    TEST_LOG("=== PHASE 7: Plugin Deactivation and Cleanup ===");
 
     // Deinitialize will be called automatically in TearDown()
     TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
