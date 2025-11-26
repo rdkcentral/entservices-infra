@@ -1,3 +1,5 @@
+// Use local preinstall directory for L2 tests
+#define USE_LOCAL_PREINSTALL_DIR
 /**
 * If not stated otherwise in this file or this component's LICENSE
 * file the following copyright and licenses apply:
@@ -80,7 +82,6 @@ PreinstallManagerTest::PreinstallManagerTest():L2TestMocks(),
     EXPECT_EQ(Core::ERROR_NONE, status);
 }
 
-// Destructor removed (unused)
 
 /**
  * @brief Create PreinstallManager Plugin Interface object using Com-RPC connection
@@ -113,7 +114,7 @@ uint32_t PreinstallManagerTest::CreatePreinstallManagerInterfaceObjectUsingComRP
 
 void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
     // Use the actual local widget file path for package discovery
-    static const std::string s_packageDir = "Tests/L2Tests/tests/testPackage/";
+    static const std::string s_packageDir = "entservices-infra/Tests/L2Tests/tests/testPackage/";
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
             TEST_LOG("opendir called with pathname: %s", pathname);
