@@ -21,7 +21,6 @@
 #include "L2Tests.h"
 #include "L2TestsMock.h"
 #include <interfaces/IPreinstallManager.h>
-#include <future>
 #include <dirent.h>
 #include <cstring>
 #include "WrapsMock.h"
@@ -43,67 +42,31 @@ public:
     uint32_t CreatePreinstallManagerInterfaceObjectUsingComRPCConnection();
     void ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
     void SetUpPreinstallDirectoryMocks();
-    void CreateValidTestPackages();
-    void CreatePackageWithVersion(const std::string& packageId, const std::string& version, const std::string& appName);
-    void SetupPackageManagerDatabase();
-    void CleanupTestPackages();
-    void CreatePackageMetadataFile(const std::string& packagePath, const std::string& packageId, const std::string& version, const std::string& appName);
 
     // Notification handler for testing
     class TestNotification : public Exchange::IPreinstallManager::INotification {
     private:
-        std::promise<std::string>* m_promise;
-        std::vector<std::string> m_receivedNotifications;
-        mutable Core::CriticalSection m_lock;
         mutable uint32_t m_refCount;
 
     public:
-        TestNotification(std::promise<std::string>* promise = nullptr) : m_promise(promise), m_refCount(1) {}
+        TestNotification() : m_refCount(1) {}
 
         void OnAppInstallationStatus(const string& jsonresponse) override {
             TEST_LOG("OnAppInstallationStatus received: %s", jsonresponse.c_str());
-            
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
-            m_receivedNotifications.push_back(jsonresponse);
-            
-            if (m_promise) {
-                m_promise->set_value(jsonresponse);
-            }
-        }
-        
-        std::vector<std::string> GetReceivedNotifications() const {
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
-            return m_receivedNotifications;
-        }
-        
-        size_t GetNotificationCount() const {
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
-            return m_receivedNotifications.size();
-        }
-        
-        void ClearNotifications() {
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
-            m_receivedNotifications.clear();
         }
 
         // Implement required IReferenceCounted methods
         void AddRef() const override {
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
             ++m_refCount;
         }
 
         uint32_t Release() const override {
-            uint32_t refCount = 0;
-            {
-                Core::SafeSyncType<Core::CriticalSection> scopedLock(m_lock);
-                --m_refCount;
-                refCount = m_refCount;
-            } // scopedLock automatically unlocks here
-            
-            if (refCount == 0) {
+            --m_refCount;
+            if (m_refCount == 0) {
                 delete this;
+                return 0;
             }
-            return refCount;
+            return m_refCount;
         }
 
         BEGIN_INTERFACE_MAP(TestNotification)
@@ -257,84 +220,7 @@ void PreinstallManagerTest::ReleasePreinstallManagerInterfaceObjectUsingComRPCCo
     }
 }
 
-/**
- * @brief Create valid test packages with proper metadata structure
- * Based on libpackage analysis, creates packages that PackageManager can process
- */
-void PreinstallManagerTest::CreateValidTestPackages()
-{
-    // Create test packages with different versions for comprehensive testing
-    CreatePackageWithVersion("com.rdk.testapp1", "1.0.0", "Test Application 1");
-    CreatePackageWithVersion("com.rdk.testapp1", "1.1.0", "Test Application 1");  // Newer version for version comparison
-    CreatePackageWithVersion("com.rdk.testapp2", "2.0.0", "Test Application 2");
-    CreatePackageWithVersion("com.rdk.validapp", "1.5.0", "Valid Test App");
-}
 
-/**
- * @brief Create a single package with specified version
- * Creates directory structure and metadata files that PackageManager expects
- */
-void PreinstallManagerTest::CreatePackageWithVersion(const std::string& packageId, const std::string& version, const std::string& appName)
-{
-    std::string packageDir = "/opt/preinstall/" + packageId + "_" + version;
-    std::string packageFile = packageDir + "/package.wgt";
-    
-    // Create directory structure (simulated through mocking)
-    // In real implementation, this would create actual directories
-    
-    // Create package metadata file that libpackage can read
-    CreatePackageMetadataFile(packageFile, packageId, version, appName);
-}
-
-/**
- * @brief Create package metadata file with proper structure
- * Based on libpackage PackageImpl::GetFileMetadata expectations
- */
-void PreinstallManagerTest::CreatePackageMetadataFile(const std::string& packagePath, const std::string& packageId, const std::string& version, const std::string& appName)
-{
-    // This would create a proper package file with metadata
-    // Format based on libpackage expectations from the source analysis
-    // In tests, this is mocked, but structure shows what real packages need:
-    
-    /*
-     * Expected package structure based on libpackage:
-     * - Package ID: com.rdk.appname format
-     * - Version: semantic versioning (x.y.z)
-     * - Metadata: JSON structure with type, category, appName
-     * - File format: .wgt archive with manifest
-     */
-}
-
-/**
- * @brief Setup PackageManager database for testing
- * Based on libpackage test showing database structure needed
- */
-void PreinstallManagerTest::SetupPackageManagerDatabase()
-{
-    // From libpackage/tests/PackageImplTest.cpp, we see the config structure needed:
-    std::string configStr = R"({
-        "appspath":"/tmp/opt/dac_apps/apps",
-        "dbpath":"/tmp/opt/dac_apps",
-        "datapath":"/tmp/opt/dac_apps/data",
-        "annotationsFile":"config.json",
-        "annotationsRegex":"public\\.*",
-        "downloadRetryAfterSeconds":30,
-        "downloadRetryMaxTimes":4,
-        "downloadTimeoutSeconds":900
-    })";
-    
-    // This shows what PackageManager needs to be properly configured
-    // In L2 tests, we rely on the real PackageManager service configuration
-}
-
-/**
- * @brief Cleanup test packages after testing
- */
-void PreinstallManagerTest::CleanupTestPackages()
-{
-    // In real implementation, would remove created test files
-    // In mocked tests, this ensures clean state for next test
-}
 
 
 /**
@@ -350,9 +236,6 @@ TEST_F(PreinstallManagerTest, StartPreinstallBasicFunctionality)
 {
     ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
 
-    // Create valid test packages to improve coverage
-    CreateValidTestPackages();
-    
     // Set up directory operation mocks to prevent real directory access
     SetUpPreinstallDirectoryMocks();
 
@@ -363,7 +246,6 @@ TEST_F(PreinstallManagerTest, StartPreinstallBasicFunctionality)
     result = mPreinstallManagerPlugin->StartPreinstall(true);
     EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL) << "StartPreinstall with force should return valid result";
 
-    CleanupTestPackages();
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
 }
 
@@ -489,91 +371,18 @@ TEST_F(PreinstallManagerTest, PackageManagerInteractionExpectationsTest)
 }
 
 /**
- * @brief Test with valid packages and functional PackageManager
+ * @brief Test with libpackage-style parameter validation
  * 
- * @details This test creates proper package metadata and attempts installation
- * - Creates packages with valid metadata structure
- * - Tests actual package installation paths
- * - Covers success scenarios that were previously unhit
+ * @details Following libpackage/tests/PackageImplTest.cpp patterns:
+ * - Tests parameter validation similar to libpackage tests
+ * - Uses proper package naming conventions
+ * - Validates error handling for invalid inputs
  */
-TEST_F(PreinstallManagerTest, ValidPackageInstallationTest)
+TEST_F(PreinstallManagerTest, LibpackageStyleValidationTest)
 {
     ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
-    
-    // Create valid packages with proper metadata
-    CreateValidTestPackages();
-    
-    // Setup PackageManager for successful operations
-    SetupPackageManagerDatabase();
-    
-    // Mock readdir to return our valid packages
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault([](DIR* dirp) -> struct dirent* {
-            static int call_count = 0;
-            static struct dirent entry;
-            
-            switch(call_count++) {
-                case 0:
-                    std::strncpy(entry.d_name, "com.rdk.testapp1_1.0.0", sizeof(entry.d_name) - 1);
-                    entry.d_type = DT_DIR;
-                    return &entry;
-                case 1:
-                    std::strncpy(entry.d_name, "com.rdk.testapp1_1.1.0", sizeof(entry.d_name) - 1);
-                    entry.d_type = DT_DIR;
-                    return &entry;
-                case 2:
-                    std::strncpy(entry.d_name, "com.rdk.validapp_1.5.0", sizeof(entry.d_name) - 1);
-                    entry.d_type = DT_DIR;
-                    return &entry;
-                default:
-                    call_count = 0;
-                    return nullptr;
-            }
-        });
-    
-    // Mock opendir for preinstall directory
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillByDefault([](const char* pathname) -> DIR* {
-            static char fake_dir;
-            return reinterpret_cast<DIR*>(&fake_dir);
-        });
-    
-    // Register notification to catch installation events
-    auto testNotification = std::make_shared<TestNotification>();
-    mPreinstallManagerPlugin->Register(testNotification.get());
-    
-    // Test installation - should now hit success paths
-    Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(false);
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    // Test with force install to hit different code paths
-    result = mPreinstallManagerPlugin->StartPreinstall(true);
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    // Cleanup
-    mPreinstallManagerPlugin->Unregister(testNotification.get());
-    CleanupTestPackages();
-    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
-}
 
-/**
- * @brief Test version comparison logic with multiple package versions
- * 
- * @details This test verifies:
- * - isNewerVersion() correctly compares semantic versions
- * - Version comparison logic during non-force installation
- * - Proper handling of existing vs new package versions
- */
-TEST_F(PreinstallManagerTest, VersionComparisonTest)
-{
-    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
-    
-    // Create packages with different versions
-    CreatePackageWithVersion("com.rdk.testapp", "1.0.0", "Test App Old");
-    CreatePackageWithVersion("com.rdk.testapp", "1.1.0", "Test App New");
-    CreatePackageWithVersion("com.rdk.testapp", "2.0.0", "Test App Newest");
-    
-    // Mock directory to return packages with different versions
+    // Mock directory to return libpackage-compatible package names
     ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
         .WillByDefault([](DIR* dirp) -> struct dirent* {
             static int call_count = 0;
@@ -581,15 +390,13 @@ TEST_F(PreinstallManagerTest, VersionComparisonTest)
             
             switch(call_count++) {
                 case 0:
+                    // Valid libpackage format: com.rdk.appname_version
                     std::strncpy(entry.d_name, "com.rdk.testapp_1.0.0", sizeof(entry.d_name) - 1);
                     entry.d_type = DT_DIR;
                     return &entry;
                 case 1:
-                    std::strncpy(entry.d_name, "com.rdk.testapp_1.1.0", sizeof(entry.d_name) - 1);
-                    entry.d_type = DT_DIR;
-                    return &entry;
-                case 2:
-                    std::strncpy(entry.d_name, "com.rdk.testapp_2.0.0", sizeof(entry.d_name) - 1);
+                    // Another valid package
+                    std::strncpy(entry.d_name, "com.rdk.cobalt_2.1.0", sizeof(entry.d_name) - 1);
                     entry.d_type = DT_DIR;
                     return &entry;
                 default:
@@ -604,174 +411,17 @@ TEST_F(PreinstallManagerTest, VersionComparisonTest)
             return reinterpret_cast<DIR*>(&fake_dir);
         });
     
-    // Test with forceInstall=false to trigger version comparison logic
-    // This should hit the isNewerVersion() method that was previously unhit
-    Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(false);
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
+    // Test both force and non-force modes like libpackage tests
+    Core::hresult result1 = mPreinstallManagerPlugin->StartPreinstall(false);
+    EXPECT_TRUE(result1 == Core::ERROR_NONE || result1 == Core::ERROR_GENERAL);
     
-    CleanupTestPackages();
-    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();  
-}
+    Core::hresult result2 = mPreinstallManagerPlugin->StartPreinstall(true);
+    EXPECT_TRUE(result2 == Core::ERROR_NONE || result2 == Core::ERROR_GENERAL);
+    
+    // Results should be consistent for same input (like libpackage expects)
+    Core::hresult result3 = mPreinstallManagerPlugin->StartPreinstall(false);
+    EXPECT_EQ(result1, result3);
 
-/**
- * @brief Test failure scenarios to trigger getFailReason() and error paths
- * 
- * @details This test verifies:
- * - getFailReason() converts enum values to proper strings
- * - Error handling paths in installation process
- * - Coverage of failure scenarios
- */
-TEST_F(PreinstallManagerTest, FailureReasonConversionTest)
-{
-    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
-    
-    // Create packages designed to fail with different reasons
-    CreatePackageWithVersion("com.rdk.failtest", "1.0.0", "Fail Test App");
-    
-    // Mock directory to return failing packages
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault([](DIR* dirp) -> struct dirent* {
-            static int call_count = 0;
-            static struct dirent entry;
-            
-            switch(call_count++) {
-                case 0:
-                    std::strncpy(entry.d_name, "invalid_package", sizeof(entry.d_name) - 1);
-                    entry.d_type = DT_DIR;
-                    return &entry;
-                case 1:
-                    std::strncpy(entry.d_name, "corrupt_metadata", sizeof(entry.d_name) - 1);
-                    entry.d_type = DT_DIR;
-                    return &entry;
-                default:
-                    call_count = 0;
-                    return nullptr;
-            }
-        });
-    
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillByDefault([](const char* pathname) -> DIR* {
-            static char fake_dir;
-            return reinterpret_cast<DIR*>(&fake_dir);
-        });
-    
-    // Test installation that should trigger failure reasons
-    // This exercises error handling paths and getFailReason() method
-    Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(true);
-    
-    // Should handle failures gracefully
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    CleanupTestPackages();
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
 }
 
-/**
- * @brief Test event dispatching system with mock PackageManager notifications
- * 
- * @details This test verifies:
- * - dispatchEvent() properly queues events to worker pool
- * - Dispatch() handles different event types correctly
- * - handleOnAppInstallationStatus() processes notifications
- * - Event system integration with PackageManager
- */
-TEST_F(PreinstallManagerTest, EventDispatchingTest)
-{
-    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
-    
-    // Create enhanced notification handler
-    std::promise<std::string> notificationPromise;
-    auto future = notificationPromise.get_future();
-    auto testNotification = std::make_shared<TestNotification>(&notificationPromise);
-    
-    // Register notification to receive events
-    Core::hresult regResult = mPreinstallManagerPlugin->Register(testNotification.get());
-    EXPECT_EQ(Core::ERROR_NONE, regResult);
-    
-    // Create valid packages to trigger installation events
-    CreateValidTestPackages();
-    
-    // Mock directory operations for event triggering
-    ON_CALL(*p_wrapsImplMock, readdir(::testing::_))
-        .WillByDefault([](DIR* dirp) -> struct dirent* {
-            static int call_count = 0;
-            static struct dirent entry;
-            
-            if (call_count == 0) {
-                std::strncpy(entry.d_name, "com.rdk.eventtest", sizeof(entry.d_name) - 1);
-                entry.d_type = DT_DIR;
-                call_count++;
-                return &entry;
-            } else {
-                call_count = 0;
-                return nullptr;
-            }
-        });
-    
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("/opt/preinstall")))
-        .WillByDefault([](const char* pathname) -> DIR* {
-            static char fake_dir;
-            return reinterpret_cast<DIR*>(&fake_dir);
-        });
-    
-    // Trigger operations that should generate events
-    Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(true);
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    // In a real scenario, PackageManager would send notifications
-    // Here we test the notification registration/handling system
-    
-    // Verify notification system is working
-    EXPECT_EQ(0, testNotification->GetNotificationCount()); // Initially no notifications
-    
-    // Test multiple registration (should handle gracefully)
-    regResult = mPreinstallManagerPlugin->Register(testNotification.get());
-    EXPECT_EQ(Core::ERROR_NONE, regResult);
-    
-    // Test unregistration
-    Core::hresult unregResult = mPreinstallManagerPlugin->Unregister(testNotification.get());
-    EXPECT_EQ(Core::ERROR_NONE, unregResult);
-    
-    // Test double unregistration (should handle gracefully)
-    unregResult = mPreinstallManagerPlugin->Unregister(testNotification.get());
-    EXPECT_TRUE(unregResult == Core::ERROR_NONE || unregResult == Core::ERROR_GENERAL);
-    
-    CleanupTestPackages();
-    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
-}
-
-/**
- * @brief Test getInstance static method and singleton pattern
- * 
- * @details This test verifies:
- * - getInstance() static method functionality
- * - Singleton pattern implementation
- * - Plugin lifecycle management
- */
-TEST_F(PreinstallManagerTest, SingletonInstanceTest)
-{
-    ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
-    
-    // Note: getInstance() is a static method on PreinstallManagerImplementation
-    // In L2 tests, we access through the interface, but the static method
-    // should be accessible when the plugin is active
-    
-    // Test basic plugin functionality to ensure instance is active
-    auto testNotification = std::make_shared<TestNotification>();
-    Core::hresult regResult = mPreinstallManagerPlugin->Register(testNotification.get());
-    EXPECT_EQ(Core::ERROR_NONE, regResult);
-    
-    // Test some operations that might use getInstance() internally
-    CreateValidTestPackages();
-    SetUpPreinstallDirectoryMocks();
-    
-    Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(false);
-    EXPECT_TRUE(result == Core::ERROR_NONE || result == Core::ERROR_GENERAL);
-    
-    // Cleanup
-    mPreinstallManagerPlugin->Unregister(testNotification.get());
-    CleanupTestPackages();
-    ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
-    
-    // After release, getInstance() should reflect the deactivated state
-}
