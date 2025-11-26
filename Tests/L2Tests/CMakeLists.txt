@@ -72,6 +72,8 @@ endif()
 
 add_library(${MODULE_NAME} SHARED ${SRC_FILES})
 
+target_compile_definitions(${MODULE_NAME} PRIVATE USE_LOCAL_PREINSTALL_DIR)
+
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 14
         CXX_STANDARD_REQUIRED YES)
