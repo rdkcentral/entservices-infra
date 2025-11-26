@@ -292,12 +292,15 @@ namespace WPEFramework
             PackageInfo packageInfo;
             packageInfo.fileLocator = filepath + "/package.wgt";
             LOGDBG("Found package folder: %s", filepath.c_str());
+            LOGDBG("fileLocator: %s", packageInfo.fileLocator.c_str());
             if (mPackageManagerInstallerObject->GetConfigForPackage(packageInfo.fileLocator, packageInfo.packageId, packageInfo.version, packageInfo.configMetadata) == Core::ERROR_NONE)
             {
                 LOGINFO("Found package: %s, version: %s", packageInfo.packageId.c_str(), packageInfo.version.c_str());
+		LOGINFO("packageInfo.version: %s", packageInfo.version.c_str());
             }
             else
             {
+ 		LOGINFO("packageInfo.version2: %s", packageInfo.version.c_str());
                 LOGINFO("Skipping invalid package file: %s", filename.c_str());
                 packageInfo.installStatus = "SKIPPED: getConfig failed for [" + filename + "]";
                 // continue; -> so that it is printed as skipped and not go undetected
