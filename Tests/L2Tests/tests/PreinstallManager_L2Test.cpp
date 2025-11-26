@@ -43,30 +43,14 @@ public:
     void ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
     void SetUpPreinstallDirectoryMocks();
 
-    // Notification handler for testing
+    // Simple notification handler for testing
     class TestNotification : public Exchange::IPreinstallManager::INotification {
-    private:
-        mutable uint32_t m_refCount;
-
     public:
-        TestNotification() : m_refCount(1) {}
+        TestNotification() = default;
+        virtual ~TestNotification() = default;
 
         void OnAppInstallationStatus(const string& jsonresponse) override {
             TEST_LOG("OnAppInstallationStatus received: %s", jsonresponse.c_str());
-        }
-
-        // Implement required IReferenceCounted methods
-        void AddRef() const override {
-            ++m_refCount;
-        }
-
-        uint32_t Release() const override {
-            --m_refCount;
-            if (m_refCount == 0) {
-                delete this;
-                return 0;
-            }
-            return m_refCount;
         }
 
         BEGIN_INTERFACE_MAP(TestNotification)
@@ -262,7 +246,8 @@ TEST_F(PreinstallManagerTest, NotificationRegisterUnregisterTest)
 {
     ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
 
-    auto testNotification = Core::ProxyType<TestNotification>::Create(nullptr);
+    Core::ProxyType<TestNotification> testNotification = Core::ProxyType<TestNotification>::Create();
+    ASSERT_TRUE(testNotification.IsValid());
 
     // Test registration and duplicate registration
     Core::hresult result = mPreinstallManagerPlugin->Register(testNotification.operator->());
@@ -424,4 +409,3 @@ TEST_F(PreinstallManagerTest, LibpackageStyleValidationTest)
 
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
 }
-
