@@ -1,5 +1,3 @@
-// Use local preinstall directory for L2 tests
-//#define USE_LOCAL_PREINSTALL_DIR
 /**
 * If not stated otherwise in this file or this component's LICENSE
 * file the following copyright and licenses apply:
@@ -115,7 +113,7 @@ uint32_t PreinstallManagerTest::CreatePreinstallManagerInterfaceObjectUsingComRP
 void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
     // Use the actual local widget file path for package discovery
     // Always use the local test widget directory for L2 tests
-    static const std::string s_packageDir = "entservices-infra/Tests/L2Tests/tests/testPackage";
+    static const std::string s_packageDir = "entservices-infra/Tests/L2Tests/tests/testPackage/";
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
             TEST_LOG("opendir called with pathname: %s", pathname);
@@ -130,9 +128,10 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
             static int call_count = 0;
             static struct dirent entry;
             if (call_count == 0) {
-                std::strncpy(entry.d_name, "package.wgt", sizeof(entry.d_name) - 1);
+                // Return a valid package directory name for libpackage
+                std::strncpy(entry.d_name, "com.rdk.testapp_1.0.0", sizeof(entry.d_name) - 1);
                 entry.d_name[sizeof(entry.d_name) - 1] = '\0';
-                entry.d_type = DT_REG; // Regular file
+                entry.d_type = DT_DIR; // Directory
                 TEST_LOG("readdir returning entry: %s", entry.d_name);
                 call_count++;
                 return &entry;
@@ -358,7 +357,7 @@ TEST_F(PreinstallManagerTest, LibpackageStyleValidationTest)
         });
     
     // Use the local test widget directory for libpackage-style validation
-    ON_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("entservices-infra/Tests/L2Tests/tests/testPackage")))
+    ON_CALL(*p_wrapsImplMock, opendir(::testing::StrEq("entservices-infra/Tests/L2Tests/tests/testPackage/")))
         .WillByDefault([](const char* pathname) -> DIR* {
             static char fake_dir;
             return reinterpret_cast<DIR*>(&fake_dir);
