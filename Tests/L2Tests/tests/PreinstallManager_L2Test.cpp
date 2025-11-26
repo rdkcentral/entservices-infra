@@ -145,6 +145,8 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks()
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
             TEST_LOG("opendir called with pathname: %s", pathname);
+            // Check that the path matches the expected test package directory
+            EXPECT_STREQ(pathname, "Tests/L2Tests/tests/testPackage/");
             // Return a valid but fake DIR pointer for mocking
             static char fake_dir;
             return reinterpret_cast<DIR*>(&fake_dir);
@@ -155,19 +157,15 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks()
             static int call_count = 0;
             static struct dirent entry;
             if (call_count == 0) {
-                std::strncpy(entry.d_name, "testapp", sizeof(entry.d_name) - 1);
+                std::strncpy(entry.d_name, "package.wgt", sizeof(entry.d_name) - 1);
                 entry.d_name[sizeof(entry.d_name) - 1] = '\0';
-                entry.d_type = DT_DIR;
-                call_count++;
-                return &entry;
-            } else if (call_count == 1) {
-                std::strncpy(entry.d_name, "preinstallApp", sizeof(entry.d_name) - 1);
-                entry.d_name[sizeof(entry.d_name) - 1] = '\0';
-                entry.d_type = DT_DIR;
+                entry.d_type = DT_REG; // Regular file
+                TEST_LOG("readdir returning entry: %s", entry.d_name);
                 call_count++;
                 return &entry;
             } else {
                 call_count = 0; // Reset for next traversal
+                TEST_LOG("readdir returning: nullptr (end of directory)");
                 return nullptr;
             }
         });
