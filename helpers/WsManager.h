@@ -583,5 +583,6 @@ private:
     AuthHandler _authHandler;
     DisconnectHandler _disconnectHandler;
     WebSocketChannel *mChannel = nullptr;
-    std::atomic<uint32_t> _automationId{0};
+    //std::atomic<uint32_t> _automationId{0};
+    uint32_t _automationId = 0;
 };
