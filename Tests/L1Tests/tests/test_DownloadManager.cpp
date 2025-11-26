@@ -416,7 +416,7 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
             }
             status_signal = m_status_signal;
             m_status_signal = DownloadManager_invalidStatus;
-	    return status_signal;
+        return status_signal;
         }
     private:
         BEGIN_INTERFACE_MAP(NotificationTest)
@@ -451,7 +451,14 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
                 }
             }
             
-            EXPECT_EQ(m_status_param.downloadId, m_status_param.downloadId);
+            // Validate that JSON structure was properly parsed
+            EXPECT_TRUE(list.Length() > 0) << "JSON list should contain at least one element";
+            if (list.Length() > 0) {
+                // Validate that downloadId field exists in JSON (even if empty)
+                JsonObject obj = list[0].Object();
+                EXPECT_TRUE(obj.HasLabel("downloadId")) << "JSON should contain downloadId field";
+                EXPECT_TRUE(obj.HasLabel("fileLocator")) << "JSON should contain fileLocator field";
+            }
 
             m_condition_variable.notify_one();
         }
@@ -560,7 +567,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     }
     
     // === PHASE 2: DOWNLOAD API TESTING ===
-    TEST_LOG("=== PHASE 3: Testing Download API ===");
+    TEST_LOG("=== PHASE 2: Testing Download API ===");
     
     Exchange::IDownloadManager::Options options;
     options.priority = false;  // Regular priority
@@ -621,7 +628,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     // Special characters might succeed or fail depending on URL encoding
 
     // === PHASE 3: DOWNLOAD CONTROL APIS ===
-    TEST_LOG("=== PHASE 4: Testing Download Control APIs ===");
+    TEST_LOG("=== PHASE 3: Testing Download Control APIs ===");
     
     // Test Pause with invalid ID
     Core::hresult pauseResult = impl->Pause("invalid_download_id");
@@ -654,7 +661,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     EXPECT_NE(Core::ERROR_NONE, cancelResult2) << "Cancel should fail with empty downloadId";
 
     // === PHASE 4: PROGRESS AND STATUS APIs ===
-    TEST_LOG("=== PHASE 5: Testing Progress and Status APIs ===");
+    TEST_LOG("=== PHASE 4: Testing Progress and Status APIs ===");
     
     uint8_t percent = 0;
     
@@ -669,7 +676,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     EXPECT_NE(Core::ERROR_NONE, progressResult2) << "Progress should fail with empty downloadId";
 
     // === PHASE 5: FILE MANAGEMENT APIS ===
-    TEST_LOG("=== PHASE 6: Testing File Management APIs ===");
+    TEST_LOG("=== PHASE 5: Testing File Management APIs ===");
     
     // Test Delete with invalid file locator
     Core::hresult deleteResult = impl->Delete("nonexistent_file.zip");
@@ -707,7 +714,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     }
 
     // === PHASE 6: ADVANCED SCENARIOS ===
-    TEST_LOG("=== PHASE 7: Testing Advanced Scenarios ===");
+    TEST_LOG("=== PHASE 6: Testing Advanced Scenarios ===");
     
     // If we have a valid downloadId from earlier, test control operations on it
     if (!downloadId.empty()) {
@@ -734,7 +741,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     }
 
     // === PHASE 7: PLUGIN DEACTIVATION ===
-    TEST_LOG("=== PHASE 8: Plugin Deactivation and Cleanup ===");
+    TEST_LOG("=== PHASE 7: Plugin Deactivation and Cleanup ===");
     
     // Deinitialize will be called automatically in TearDown()
     TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
@@ -778,64 +785,4 @@ TEST_F(DownloadManagerTest, PluginDownloadManagerAPIs) {
     TEST_LOG("Waiting for thread cleanup...");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     TEST_LOG("Test completed");
-}
-
-// Simple mock connection class for testing (outside test methods)
-class TestRPCConnection : public RPC::IRemoteConnection {
-private:
-    mutable std::atomic<uint32_t> m_refCount{1};
-    uint32_t m_id;
-public:
-    TestRPCConnection(uint32_t id) : m_id(id) {}
-    
-    void AddRef() const override { m_refCount++; }
-    uint32_t Release() const override { 
-        uint32_t count = --m_refCount;
-        if (count == 0) delete this;
-        return count;
-    }
-    
-    uint32_t Id() const override { return m_id; }
-    uint32_t RemoteId() const override { return 0; }
-    void Terminate() override {}
-    uint32_t Launch() override { return Core::ERROR_NONE; }
-    void* Acquire(const uint32_t waitTime, const string& className, const uint32_t interfaceId, const uint32_t version) override { 
-        return nullptr; 
-    }
-    void Revoke(const void*) override {}
-    void PostMortem() override {}
-    
-    BEGIN_INTERFACE_MAP(TestRPCConnection)
-        INTERFACE_ENTRY(RPC::IRemoteConnection)
-    END_INTERFACE_MAP
-};
-
-/* Test Case: Deactivated Method Coverage Test */
-TEST_F(DownloadManagerTest, DeactivatedMethodCoverageTest) {
-    ASSERT_TRUE(plugin.IsValid());
-    
-    // Initialize plugin to set up mConnectionId
-    std::string initResult = plugin->Initialize(mServiceMock);
-    EXPECT_TRUE(initResult.empty());
-    
-    // Create test connection
-    TestRPCConnection* testConn = new TestRPCConnection(0);
-    
-    // Test plugin reference
-    Plugin::DownloadManager* rawPlugin = &(*plugin);
-    ASSERT_NE(rawPlugin, nullptr);
-    
-    // The private Deactivated method cannot be called directly in L1 tests
-    // It would be triggered by: NotificationHandler::Deactivated -> mParent.Deactivated(connection)
-    // Method implementation checks: if (mConnectionId == connection->Id()) and submits deactivation job
-    
-    TEST_LOG("Plugin has private Deactivated method for RPC connection cleanup");
-    TEST_LOG("Connection ID for test: %u", testConn->Id());
-    
-    // Cleanup
-    testConn->Release();
-    plugin->Deinitialize(mServiceMock);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    TEST_LOG("Deactivated method coverage test completed");
 }
