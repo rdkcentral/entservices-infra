@@ -1,5 +1,5 @@
 // Use local preinstall directory for L2 tests
-#define USE_LOCAL_PREINSTALL_DIR
+//#define USE_LOCAL_PREINSTALL_DIR
 /**
 * If not stated otherwise in this file or this component's LICENSE
 * file the following copyright and licenses apply:
