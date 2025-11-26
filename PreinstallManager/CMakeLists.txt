@@ -75,6 +75,7 @@ if (RDK_SERVICES_L1_TEST)
 endif (RDK_SERVICES_L1_TEST)
 
 if (RDK_SERVICE_L2_TEST)
+   target_compile_definitions(${PLUGIN_IMPLEMENTATION} PRIVATE USE_LOCAL_PREINSTALL_DIR)
    find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
    if (TESTMOCKLIB_LIBRARIES)
        message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")

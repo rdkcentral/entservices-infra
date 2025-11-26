@@ -72,7 +72,8 @@ endif()
 
 add_library(${MODULE_NAME} SHARED ${SRC_FILES})
 
-target_compile_definitions(${MODULE_NAME} PRIVATE USE_LOCAL_PREINSTALL_DIR)
+# Define UNIT_TESTING compile definition for PreinstallManager libraries when building tests
+add_compile_definitions(USE_LOCAL_PREINSTALL_DIR)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 14
