@@ -33,38 +33,26 @@ using namespace WPEFramework;
 using ::WPEFramework::Exchange::IPreinstallManager;
 
 class PreinstallManagerTest : public L2TestMocks {
-protected:
-    virtual ~PreinstallManagerTest() override;
-
 public:
     PreinstallManagerTest();
-
     uint32_t CreatePreinstallManagerInterfaceObjectUsingComRPCConnection();
     void ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
-    void SetUpPreinstallDirectoryMocks(const std::string& packageDir = "Tests/L2Tests/tests/testPackage/");
-
-    // Simple notification handler for testing
+    void SetUpPreinstallDirectoryMocks();
     class TestNotification : public Exchange::IPreinstallManager::INotification {
     public:
         TestNotification() = default;
         virtual ~TestNotification() = default;
-
         void OnAppInstallationStatus(const string& jsonresponse) override {
             TEST_LOG("OnAppInstallationStatus received: %s", jsonresponse.c_str());
         }
-
         BEGIN_INTERFACE_MAP(TestNotification)
         INTERFACE_ENTRY(Exchange::IPreinstallManager::INotification)
         END_INTERFACE_MAP
     };
-
 protected:
-    /** @brief Pointer to the IShell interface */
     PluginHost::IShell *mControllerPreinstallManager;
     Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> mEnginePreinstallManager;
     Core::ProxyType<RPC::CommunicatorClient> mClientPreinstallManager;
-
-    /** @brief Pointer to the IPreinstallManager interface */
     Exchange::IPreinstallManager *mPreinstallManagerPlugin;
 };
 
@@ -92,19 +80,7 @@ PreinstallManagerTest::PreinstallManagerTest():L2TestMocks(),
     EXPECT_EQ(Core::ERROR_NONE, status);
 }
 
-PreinstallManagerTest::~PreinstallManagerTest()
-{
-    uint32_t status = Core::ERROR_GENERAL;
-
-    status = DeactivateService(PREINSTALLMANAGER_CALLSIGN);
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    // Clean up PackageManager service if it was activated
-    status = DeactivateService("org.rdk.PackageManagerRDKEMS");
-
-    status = DeactivateService("org.rdk.PersistentStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
-}
+// Destructor removed (unused)
 
 /**
  * @brief Create PreinstallManager Plugin Interface object using Com-RPC connection
@@ -135,15 +111,9 @@ uint32_t PreinstallManagerTest::CreatePreinstallManagerInterfaceObjectUsingComRP
     return return_value;
 }
 
-/**
- * @brief Set up directory operation mocks for preinstall directory testing
- * Following the exact same pattern as L1 test
- */
-void PreinstallManagerTest::SetUpPreinstallDirectoryMocks()
-{
-    // Mock directory operations for preinstall directory - same as L1 test
-    // Use configurable local test path for package discovery in tests
-    static std::string s_packageDir = "Tests/L2Tests/tests/testPackage/";
+void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
+    // Use the actual local widget file path for package discovery
+    static const std::string s_packageDir = "Tests/L2Tests/tests/testPackage/";
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
             TEST_LOG("opendir called with pathname: %s", pathname);
@@ -172,7 +142,6 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks()
 
     ON_CALL(*p_wrapsImplMock, closedir(::testing::_))
         .WillByDefault([](DIR* dirp) {
-            // Simulate success
             return 0;
         });
 }
@@ -202,9 +171,6 @@ void PreinstallManagerTest::ReleasePreinstallManagerInterfaceObjectUsingComRPCCo
     }
 }
 
-
-
-
 /**
  * @brief Test StartPreinstall method with valid parameters
  *
@@ -219,7 +185,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallBasicFunctionality)
     ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
 
     // Set up directory operation mocks to prevent real directory access
-    SetUpPreinstallDirectoryMocks("Tests/L2Tests/tests/testPackage/");
+    SetUpPreinstallDirectoryMocks();
 
     // Test with force install disabled and enabled
     Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(false);
@@ -309,7 +275,7 @@ TEST_F(PreinstallManagerTest, StartPreinstallErrorPathsTest)
     ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
     
     // Set up directory operation mocks to prevent real directory access
-    SetUpPreinstallDirectoryMocks("Tests/L2Tests/tests/testPackage/");
+    SetUpPreinstallDirectoryMocks();
     
     // Test multiple consecutive calls for consistency  
     Core::hresult result1 = mPreinstallManagerPlugin->StartPreinstall(false);
@@ -342,7 +308,7 @@ TEST_F(PreinstallManagerTest, PackageManagerInteractionExpectationsTest)
     ASSERT_EQ(Core::ERROR_NONE, CreatePreinstallManagerInterfaceObjectUsingComRPCConnection());
 
     // Set up directory operation mocks
-    SetUpPreinstallDirectoryMocks("Tests/L2Tests/tests/testPackage/");
+    SetUpPreinstallDirectoryMocks();
     
     // Test StartPreinstall - this will attempt PackageManager interactions
     Core::hresult result = mPreinstallManagerPlugin->StartPreinstall(false);
@@ -407,5 +373,3 @@ TEST_F(PreinstallManagerTest, LibpackageStyleValidationTest)
 
     ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
 }
-
-
