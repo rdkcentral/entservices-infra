@@ -26,6 +26,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <fstream>
+#include <cstdio>
 
 #ifdef USE_LIBPACKAGE
 #include <IPackageImpl.h>
