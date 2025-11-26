@@ -508,6 +508,7 @@ namespace Plugin {
                         state.blockedInstallData.version = version;
                         state.blockedInstallData.keyValues = keyValues;
                         state.blockedInstallData.fileLocator = fileLocator;
+                        NotifyInstallStatus(packageId, version, state);
                     }
                 }
             }
@@ -848,7 +849,7 @@ namespace Plugin {
         return result;
     }
 
-    // XXX: right way to do this is via copy ctor, when we move to Thunder 5.2 and have commone struct RuntimeConfig
+    // XXX: right way to do this is via copy ctor, when we move to Thunder 5.2 and have common struct RuntimeConfig
     void PackageManagerImplementation::getRuntimeConfig(const Exchange::RuntimeConfig &config, Exchange::RuntimeConfig &runtimeConfig)
     {
         runtimeConfig.dial = config.dial;
@@ -935,7 +936,7 @@ namespace Plugin {
                                 LOGDBG("Blocked package installed. id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                                 state.installState = InstallState::UNINSTALLED;
                             } else {
-                                LOGERR("Blocked package installion failed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
+                                LOGERR("Blocked package installtion failed id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                             }
                         } else if (stateBlocked.installState == InstallState::UNINSTALL_BLOCKED) {
                             string errorReason;
