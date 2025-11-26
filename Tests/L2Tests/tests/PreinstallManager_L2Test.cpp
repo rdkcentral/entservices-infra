@@ -113,7 +113,7 @@ uint32_t PreinstallManagerTest::CreatePreinstallManagerInterfaceObjectUsingComRP
 void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
     // Use the actual local widget file path for package discovery
     // Always use the local test widget directory for L2 tests
-    static const std::string s_packageDir = "entservices-infra/Tests/L2Tests/tests/testPackage/";
+    static const std::string s_packageDir = "entservices-infra/Tests/L2Tests/tests";
     ON_CALL(*p_wrapsImplMock, opendir(::testing::_))
         .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
             TEST_LOG("opendir called with pathname: %s", pathname);

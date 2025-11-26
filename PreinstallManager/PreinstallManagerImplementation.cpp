@@ -22,7 +22,7 @@
 #include "PreinstallManagerImplementation.h"
 
 #ifdef USE_LOCAL_PREINSTALL_DIR
-#define AI_PREINSTALL_DIRECTORY "entservices-infra/Tests/L2Tests/tests/testPackage" // Local test directory for L2 tests
+#define AI_PREINSTALL_DIRECTORY "entservices-infra/Tests/L2Tests/tests" // Local test directory for L2 tests
 #else
 #define AI_PREINSTALL_DIRECTORY "/opt/preinstall" // Production directory
 #endif
