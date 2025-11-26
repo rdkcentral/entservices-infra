@@ -363,6 +363,7 @@ TEST_F(MigrationTest, SetMigrationStatus_InvalidStatus_APIBehavior)
     JsonObject jsonResponse;
     if (jsonResponse.FromString(response) && jsonResponse.HasLabel("success")) {
         bool success = jsonResponse["success"].Boolean();
+        EXPECT_TRUE(success);
         TEST_LOG("SetMigrationStatus with invalid status returned success=%s (current API behavior)", 
                  success ? "true" : "false");
     }
@@ -384,7 +385,7 @@ TEST_F(MigrationTest, SetMigrationStatus_MissingParameter_APIBehavior)
         JsonObject jsonResponse;
         if (jsonResponse.FromString(response) && jsonResponse.HasLabel("success")) {
             bool success = jsonResponse["success"].Boolean();
-            EXPECT_TRUE(success || !success) << "Response should have valid success field. Response: " << response;
+            EXPECT_TRUE(success) << "Response should have valid success field. Response: " << response;
         }
     } else {
         TEST_LOG("SetMigrationStatus with empty request failed as expected. Error code: %d, Response: %s", result, response.c_str());
@@ -406,6 +407,7 @@ TEST_F(MigrationTest, SetMigrationStatus_MalformedJSON_APIBehavior)
     if (jsonResponse.FromString(response)) {
         if (jsonResponse.HasLabel("success")) {
             bool success = jsonResponse["success"].Boolean();
+            EXPECT_TRUE(success);
             TEST_LOG("SetMigrationStatus with malformed JSON returned success=%s (very lenient API behavior)", 
                      success ? "true" : "false");
         }
@@ -428,7 +430,7 @@ TEST_F(MigrationTest, SetMigrationStatus_InvalidParameterStructure)
         JsonObject jsonResponse;
         if (jsonResponse.FromString(response) && jsonResponse.HasLabel("success")) {
             bool success = jsonResponse["success"].Boolean();
-            EXPECT_TRUE(success || !success) << "Response should have valid success field. Response: " << response;
+            EXPECT_TRUE(success) << "Response should have valid success field. Response: " << response;
         }
     } else {
         TEST_LOG("SetMigrationStatus with wrong parameter structure failed. Error code: %d, Response: %s", result, response.c_str());
