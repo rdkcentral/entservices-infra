@@ -193,8 +193,4 @@ target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
 #install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
-<<<<<<< HEAD
 write_config(${PLUGIN_NAME})
-=======
-write_config(${PLUGIN_NAME})
->>>>>>> c57a3c09d5d5404ce83b00358067ea36ddfd6a6d
