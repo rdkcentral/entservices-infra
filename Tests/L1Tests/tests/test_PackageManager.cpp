@@ -1303,7 +1303,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
     initforJsonRpc();
     
     // TC-32: Error on install due to invalid signature using JsonRpc
-    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
@@ -1312,16 +1312,16 @@ TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Invoke the install method using the JSON RPC handler, passing the required parameters
- * Verify that the install method fails by asserting that it returns Core::ERROR_GENERAL
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
+TEST_F(PackageManagerTest, installusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
     // TC-33: Failure on install using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
@@ -1338,13 +1338,15 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
     initforComRpc();
 
-    string packageId = "testPackage";
-    string version = "2.0";
+    string packageId = "YouTube";
+    string version = "100.1.24";
     string fileLocator = "";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
 
     auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+
+	waitforSignal(200);
 
     // TC-34: Error on install due to invalid signature using ComRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
@@ -1360,14 +1362,14 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
- TEST_F(PackageManagerTest, installusingComRpcFailure) {
+ TEST_F(PackageManagerTest, installusingComRpcSuccess) {
 
     initforComRpc();
 
     uint32_t timeout_ms = 3000;
 
-    string packageId = "testPackage";
-    string version = "2.0";
+    string packageId = "YouTube";
+    string version = "100.1.24";
     string fileLocator = "/opt/CDL/package1001";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
@@ -1381,8 +1383,10 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
                 return Core::ERROR_NONE;
             }));
 
+    waitforSignal(200);
+
     // TC-35: Failure on install using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     waitforSignal(timeout_ms);
 
@@ -1399,14 +1403,14 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
+TEST_F(PackageManagerTest, uninstallusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-36: Failure on uninstall using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"YouTube\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
@@ -1421,15 +1425,15 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
+TEST_F(PackageManagerTest, uninstallusingComRpcSuccess) {
 
     initforComRpc();
 
     uint32_t timeout_ms = 3000;
 
-    string packageId = "testPackage";
+    string packageId = "YouTube";
     string errorReason = "no error";
-    string version = "2.0";
+    string version = "100.1.24";
     string fileLocator = "/opt/CDL/package1001";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
@@ -1450,12 +1454,14 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    waitforSignal(200);
+
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     waitforSignal(timeout_ms);
 
 	// TC-37: Failure on uninstall using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Uninstall(packageId, errorReason));
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Uninstall(packageId, errorReason));
     
 	waitforSignal(timeout_ms);
 
@@ -1496,6 +1502,8 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
     auto packages = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
 
+	waitforSignal(200);
+
 	// TC-39: list packages using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
 
@@ -1516,10 +1524,10 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-40: Failure in package state using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
@@ -1540,8 +1548,8 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
     uint32_t timeout_ms = 3000;
 
-    string packageId = "testPackage";
-    string version = "2.0";
+    string packageId = "YouTube";
+    string version = "100.1.24";
     string fileLocator = "/opt/CDL/package1001";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
@@ -1556,7 +1564,9 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+	waitforSignal(200);
+
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     waitforSignal(timeout_ms);
 
@@ -1584,7 +1594,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
     initforJsonRpc();
 
 	// TC-42: Error on unlock using JsonRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
@@ -1601,8 +1611,10 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
 
     initforComRpc();
 
-    string packageId = "testPackage";
-    string version = "2.0";
+    string packageId = "YouTube";
+    string version = "100.1.24";
+
+	waitforSignal(200);
 
     // TC-43: Error on unlock using ComRpc
     EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Unlock(packageId, version));
