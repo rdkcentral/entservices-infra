@@ -39,8 +39,6 @@
 #include <unistd.h>
 #include <sys/vfs.h> 
 #include <linux/fs.h>
-#include <thread>
-#include <chrono>
 
 //extern "C" int __real_open(const char* pathname, int flags,int mode=0);
 
@@ -277,17 +275,6 @@ USBMassStorageTest::~USBMassStorageTest()
             }
             // No return value needed as function returns void
         }));
-
-	// Release COM-RPC interface objects if they were created
-    if (m_usbmassstorageplugin != nullptr) {
-        m_usbmassstorageplugin->Release();
-        m_usbmassstorageplugin = nullptr;
-    }
-    
-    if (m_controller_usbmassstorage != nullptr) {
-        m_controller_usbmassstorage->Release();
-        m_controller_usbmassstorage = nullptr;
-    }
 	
     TEST_LOG("DeActivate USBDevice plugin");
 
@@ -296,7 +283,7 @@ USBMassStorageTest::~USBMassStorageTest()
 
     status = DeactivateService("org.rdk.UsbDevice");
     EXPECT_EQ(Core::ERROR_NONE, status);
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    sleep(5);
 
 }
 
