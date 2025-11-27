@@ -295,6 +295,7 @@ namespace WPEFramework
             packageInfo.version = "2.0";
             LOGDBG("Found package folder: %s", filepath.c_str());
             LOGDBG("fileLocator: %s", packageInfo.fileLocator.c_str());
+			LOGDBG("fileLocator: %s, packageId: %s, version: %s", packageInfo.fileLocator.c_str(), packageInfo.packageId.c_str(), packageInfo.version.c_str());
             if (mPackageManagerInstallerObject->GetConfigForPackage(packageInfo.fileLocator, packageInfo.packageId, packageInfo.version, packageInfo.configMetadata) == Core::ERROR_NONE)
             {
                 LOGINFO("Found package: %s, version: %s", packageInfo.packageId.c_str(), packageInfo.version.c_str());
