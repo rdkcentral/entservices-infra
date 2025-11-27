@@ -111,6 +111,14 @@ uint32_t PreinstallManagerTest::CreatePreinstallManagerInterfaceObjectUsingComRP
 }
 
 void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
+        // Mock GetConfigForPackage to set packageId and version for widget files
+        ON_CALL(*p_packageManagerInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+            .WillByDefault([](const std::string& fileLocator, std::string& packageId, std::string& version, std::string& configMetadata) {
+                packageId = "com.rdk.testapp";
+                version = "1.0.0";
+                configMetadata = "{}";
+                return Core::ERROR_NONE;
+            });
     // Use the actual local widget file path for package discovery
     // Always use the local test widget directory for L2 tests
     static const std::string s_packageDir = "entservices-infra/Tests/L2Tests/tests/testPackage";
@@ -133,14 +141,6 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
                 entry.d_name[sizeof(entry.d_name) - 1] = '\0';
                 entry.d_type = DT_DIR; // Directory
                 TEST_LOG("readdir returning entry: %s (DT_DIR)", entry.d_name);
-                call_count++;
-                return &entry;
-            } else if (call_count == 1) {
-                // Simulate a .wgt file inside 'app1' as a regular file
-                std::strncpy(entry.d_name, "package.wgt", sizeof(entry.d_name) - 1);
-                entry.d_name[sizeof(entry.d_name) - 1] = '\0';
-                entry.d_type = DT_REG; // Regular file
-                TEST_LOG("readdir returning entry: %s (DT_REG)", entry.d_name);
                 call_count++;
                 return &entry;
             } else {
