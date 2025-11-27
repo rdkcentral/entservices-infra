@@ -1038,31 +1038,21 @@ Core::hresult USBDeviceImplementation::GetDeviceInfo(const string &deviceName, U
                 status = USBDeviceImplementation::instance()->getUSBDeviceInfoStructFromDeviceDescriptor(devs[index], &deviceInfo);
                 if (Core::ERROR_NONE != status)
                 {
-                    int actualLevel = libusb_get_port_numbers(devs[index], portPath, sizeof(portPath));
-					if (actualLevel > 0)
+                    deviceInfo.deviceLevel = libusb_get_port_numbers(devs[index], portPath, sizeof(portPath));
+                    if ( 1 < deviceInfo.deviceLevel )
                     {
-                        deviceInfo.deviceLevel = actualLevel;
-	                    if ( 1 < deviceInfo.deviceLevel )
-	                    {
-	                        for (ssize_t j = 0; j < devCount; j++)
-	                        {
-	                            libusb_device *device = devs[j];
-	                            uint8_t portNo = libusb_get_port_number(device);
-	                            if (portPath[deviceInfo.deviceLevel - 2] == portNo)
-	                            {
-	                                deviceInfo.parentId = j;
-	                            }
-	                        }
-	                    }
-	                    else
-	                    {
-	                        deviceInfo.parentId = 0;
-	                    }
-					}
+                        for (ssize_t j = 0; j < devCount; j++)
+                        {
+                            libusb_device *device = devs[j];
+                            uint8_t portNo = libusb_get_port_number(device);
+                            if (portPath[deviceInfo.deviceLevel - 2] == portNo)
+                            {
+                                deviceInfo.parentId = j;
+                            }
+                        }
+                    }
                     else
                     {
-                        LOGWARN("libusb_get_port_numbers failed with return value: %d", actualLevel);
-                        deviceInfo.deviceLevel = 0;
                         deviceInfo.parentId = 0;
                     }
                 }
