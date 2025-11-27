@@ -1301,6 +1301,8 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
 
     initforJsonRpc();
+
+	waitforSignal(200);
     
     // TC-32: Error on install due to invalid signature using JsonRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"\"}"), mJsonRpcResponse));
@@ -1319,6 +1321,8 @@ TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
 TEST_F(PackageManagerTest, installusingJsonRpcSuccess) {
 
     initforJsonRpc();
+
+    waitforSignal(200);
 
     // TC-33: Failure on install using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
@@ -1407,6 +1411,8 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+    waitforSignal(200);
+
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
     // TC-36: Failure on uninstall using JsonRpc
@@ -1480,6 +1486,8 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+	waitforSignal(200);
+
 	// TC-38: list packages using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("listPackages"), _T("{\"packages\": {}}"), mJsonRpcResponse));
 
@@ -1523,6 +1531,8 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
     initforJsonRpc();
+
+	waitforSignal(200);
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
@@ -1592,6 +1602,8 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 TEST_F(PackageManagerTest, unlockmethodusingJsonRpcFailure) {
 
     initforJsonRpc();
+
+    waitforSignal(200);
 
 	// TC-42: Error on unlock using JsonRpc
     EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\"}"), mJsonRpcResponse));
