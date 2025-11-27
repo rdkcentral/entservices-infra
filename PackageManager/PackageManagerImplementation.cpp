@@ -629,6 +629,8 @@ namespace Plugin {
 
         packages = (Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList));
 
+        printf("Package: %s ", packages.c_str());
+        
         LOGTRACE("exit");
 
         return result;
@@ -667,6 +669,8 @@ namespace Plugin {
             LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
             result = Core::ERROR_GENERAL;
         }
+
+        printf("Install State: %s ", installState.c_str());
 
         return result;
     }
