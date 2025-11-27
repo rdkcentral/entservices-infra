@@ -128,11 +128,11 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
             static int call_count = 0;
             static struct dirent entry;
             if (call_count == 0) {
-                // Return a valid package directory name for libpackage
+                // Simulate a .wgt file as a regular file, not a directory
                 std::strncpy(entry.d_name, "package.wgt", sizeof(entry.d_name) - 1);
                 entry.d_name[sizeof(entry.d_name) - 1] = '\0';
-                entry.d_type = DT_DIR; // Directory
-                TEST_LOG("readdir returning entry: %s", entry.d_name);
+                entry.d_type = DT_REG; // Regular file
+                TEST_LOG("readdir returning entry: %s (DT_REG)", entry.d_name);
                 call_count++;
                 return &entry;
             } else {
