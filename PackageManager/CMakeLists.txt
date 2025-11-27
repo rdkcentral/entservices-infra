@@ -64,7 +64,6 @@ target_include_directories(${MODULE_NAME} PRIVATE
     ../helpers
     ${CURL_INCLUDE_DIR}
     ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/${NAMESPACE}/interfaces
-    ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks
     )
 
 target_link_libraries(${MODULE_NAME} PRIVATE
@@ -79,6 +78,7 @@ if(RDK_SERVICES_L1_TEST)
     if (JSONCPP_FOUND)
     message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
     endif()
+    target_include_directories(${MODULE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks)
     target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
     target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
 endif()
