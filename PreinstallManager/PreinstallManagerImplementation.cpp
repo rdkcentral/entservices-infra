@@ -291,6 +291,8 @@ namespace WPEFramework
 
             PackageInfo packageInfo;
             packageInfo.fileLocator = filepath + "/package.wgt";
+			packageInfo.packageId = "2.0";
+            packageInfo.version = "2.0";
             LOGDBG("Found package folder: %s", filepath.c_str());
             LOGDBG("fileLocator: %s", packageInfo.fileLocator.c_str());
             if (mPackageManagerInstallerObject->GetConfigForPackage(packageInfo.fileLocator, packageInfo.packageId, packageInfo.version, packageInfo.configMetadata) == Core::ERROR_NONE)
