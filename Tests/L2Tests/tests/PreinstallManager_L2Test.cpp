@@ -35,11 +35,9 @@ using ::WPEFramework::Exchange::IPreinstallManager;
 class PreinstallManagerTest : public L2TestMocks {
 public:
     PreinstallManagerTest();
-    ~PreinstallManagerTest();
     uint32_t CreatePreinstallManagerInterfaceObjectUsingComRPCConnection();
     void ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
     void SetUpPreinstallDirectoryMocks();
-    ::testing::NiceMock<PackageManagerInstallerMock>* p_packageManagerInstallerMock;
     class TestNotification : public Exchange::IPreinstallManager::INotification {
     public:
         TestNotification() = default;
@@ -60,11 +58,7 @@ protected:
 
 PreinstallManagerTest::PreinstallManagerTest():L2TestMocks(),
     mControllerPreinstallManager(nullptr),
-    mPreinstallManagerPlugin(nullptr),
-    p_packageManagerInstallerMock(new ::testing::NiceMock<PackageManagerInstallerMock>())
-PreinstallManagerTest::~PreinstallManagerTest() {
-    delete p_packageManagerInstallerMock;
-}
+    mPreinstallManagerPlugin(nullptr)
 {
     uint32_t status = Core::ERROR_GENERAL;
 
@@ -117,14 +111,6 @@ uint32_t PreinstallManagerTest::CreatePreinstallManagerInterfaceObjectUsingComRP
 }
 
 void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
-        // Mock GetConfigForPackage to set packageId and version for widget files
-        ON_CALL(*p_packageManagerInstallerMock, GetConfigForPackage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-            .WillByDefault([](const std::string& fileLocator, std::string& packageId, std::string& version, std::string& configMetadata) {
-                packageId = "com.rdk.testapp";
-                version = "1.0.0";
-                configMetadata = "{}";
-                return Core::ERROR_NONE;
-            });
     // Use the actual local widget file path for package discovery
     // Always use the local test widget directory for L2 tests
     static const std::string s_packageDir = "entservices-infra/Tests/L2Tests/tests/testPackage";
