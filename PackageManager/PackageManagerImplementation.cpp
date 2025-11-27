@@ -952,11 +952,7 @@ namespace Plugin {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
         }
         #endif
-<<<<<<< HEAD
         
-=======
-
->>>>>>> c57a3c09d5d5404ce83b00358067ea36ddfd6a6d
         #ifdef USE_LIBPACKAGE
         packageImpl = packagemanager::IPackageImpl::instance();
         #else 
