@@ -674,7 +674,8 @@ Core::hresult UserSettingsImplementation::SetPrivacyMode(const string& privacyMo
         LOGINFO("oldPrivacyMode: %s", oldPrivacyMode.c_str());
         if (status == Core::ERROR_NONE && privacyMode != oldPrivacyMode)
         { 
-            status = _remotStoreObject->SetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, USERSETTINGS_PRIVACY_MODE_KEY, privacyMode, 0);
+           status = _remotStoreObject->GetValue(Exchange::IStore2::ScopeType::DEVICE, USERSETTINGS_NAMESPACE, USERSETTINGS_PRIVACY_MODE_KEY, oldPrivacyMode, ttl);
+           LOGINFO("oldPrivacyMode: %s", oldPrivacyMode.c_str());
         }
         else
         {
