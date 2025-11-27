@@ -29,11 +29,11 @@ namespace WPEFramework {
 namespace Plugin {
 
     SERVICE_REGISTRATION(PackageManagerImplementation, 1, 0);
-    #ifdef USE_LIBPACKAGE
+
     #define CHECK_CACHE() { if ((packageImpl.get() == nullptr) || (!cacheInitialized)) { \
         return Core::ERROR_UNAVAILABLE; \
     }}
-    #endif
+
     PackageManagerImplementation::PackageManagerImplementation()
         : mDownloaderNotifications()
         , mInstallNotifications()
@@ -169,7 +169,7 @@ namespace Plugin {
         done = true;
         cv.notify_one();
         mDownloadThreadPtr->join();
-
+        
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         if (nullptr != mTelemetryMetricsObject)
         {
@@ -449,9 +449,7 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("Installing '%s' ver:'%s' fileLocator: '%s'", packageId.c_str(), version.c_str(), fileLocator.c_str());
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
         if (fileLocator.empty()) {
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             recordAndPublishTelemetryData(TELEMETRY_MARKER_INSTALL_ERROR, packageId, requestTime, PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE);
@@ -459,18 +457,15 @@ namespace Plugin {
             return Core::ERROR_INVALID_SIGNATURE;
         }
 
-        #ifdef USE_LIBPACKAGE
+
         packagemanager::NameValues keyValues;
-        #endif
         struct IPackageInstaller::KeyValue kv;
         if (additionalMetadata != nullptr)
         {
             while (additionalMetadata->Next(kv) == true)
             {
                 LOGDBG("name: %s val: %s", kv.name.c_str(), kv.value.c_str());
-                #ifdef USE_LIBPACKAGE
                 keyValues.push_back(std::make_pair(kv.name, kv.value));
-                #endif
             }
         }
         else
@@ -502,7 +497,7 @@ namespace Plugin {
                     LOGINFO("CreateStorage path [%s]", path.c_str());
                     state.installState = InstallState::INSTALLING;
                     NotifyInstallStatus(packageId, version, state);
-                    #ifdef USE_LIBPACKAGE
+                    #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
                     packagemanager::ConfigMetaData config;
                     packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                     if (pmResult == packagemanager::SUCCESS) {
@@ -558,9 +553,8 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("Uninstalling id: '%s' ver: '%s'", packageId.c_str(), version.c_str());
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
+
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
@@ -577,7 +571,7 @@ namespace Plugin {
                     LOGINFO("DeleteStorage done");
                     state.installState = InstallState::UNINSTALLING;
                     NotifyInstallStatus(packageId, version, state);
-                    #ifdef USE_LIBPACKAGE
+                    #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
                     // XXX: what if DeleteStorage() fails, who Uninstall the package
                     packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
                     if (pmResult == packagemanager::SUCCESS) {
@@ -619,9 +613,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages)
     {
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
         LOGTRACE("entry");
         Core::hresult result = Core::ERROR_NONE;
         std::list<Exchange::IPackageInstaller::Package> packageList;
@@ -636,7 +628,7 @@ namespace Plugin {
         }
 
         packages = (Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList));
-
+        
         LOGTRACE("exit");
 
         return result;
@@ -644,9 +636,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::Config(const string &packageId, const string &version, Exchange::RuntimeConfig& runtimeConfig)
     {
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
@@ -665,9 +655,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::PackageState(const string &packageId, const string &version,
         Exchange::IPackageInstaller::InstallState &installState)
     {
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
         LOGDBG();
         Core::hresult result = Core::ERROR_NONE;
 
@@ -733,13 +721,12 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("id: %s ver: %s reason=%d", packageId.c_str(), version.c_str(), lockReason);
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
+
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-            #ifdef USE_LIBPACKAGE
+            #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
             string gatewayMetadataPath;
             bool locked = (state.mLockCount > 0);
             LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
@@ -814,7 +801,6 @@ namespace Plugin {
         runtimeConfig.runtimePath = config.runtimePath;
     }
 
-    #ifdef USE_LIBPACKAGE
     void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig)
     {
         runtimeConfig.dial = config.dial;
@@ -846,7 +832,6 @@ namespace Plugin {
         runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
     }
-    #endif
 
     Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version)
     {
@@ -858,13 +843,12 @@ namespace Plugin {
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
+
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-            #ifdef USE_LIBPACKAGE
+            #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
             if (state.mLockCount) {
                 if (--state.mLockCount == 0) {
                     packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
@@ -900,9 +884,7 @@ namespace Plugin {
     Core::hresult PackageManagerImplementation::GetLockedInfo(const string &packageId, const string &version,
         string &unpackedPath, Exchange::RuntimeConfig& runtimeConfig, string& gatewayMetadataPath, bool &locked)
     {
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
         Core::hresult result = Core::ERROR_NONE;
 
         LOGDBG("id: %s ver: %s", packageId.c_str(), version.c_str());
@@ -922,9 +904,7 @@ namespace Plugin {
 
     Core::hresult PackageManagerImplementation::GetConfigForPackage(const string &fileLocator, string& id, string &version, Exchange::RuntimeConfig& config)
     {
-        #ifdef USE_LIBPACKAGE
         CHECK_CACHE()
-        #endif
         Core::hresult result = Core::ERROR_GENERAL;
 
         if (fileLocator.empty())
@@ -932,7 +912,7 @@ namespace Plugin {
             return Core::ERROR_INVALID_SIGNATURE;
         }
 
-        #ifdef USE_LIBPACKAGE
+        #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
         packagemanager::ConfigMetaData metadata;
         packagemanager::Result pmResult = packageImpl->GetFileMetadata(fileLocator, id, version, metadata);
         if (pmResult == packagemanager::SUCCESS)
@@ -953,9 +933,14 @@ namespace Plugin {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
         }
         #endif
-
+        
         #ifdef USE_LIBPACKAGE
         packageImpl = packagemanager::IPackageImpl::instance();
+        #else 
+          #ifdef UNIT_TEST
+          packageImpl = packagemanager::IPackageImplDummy::instance();
+          #endif
+        #endif
 
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
@@ -966,7 +951,7 @@ namespace Plugin {
             state.installState = InstallState::INSTALLED;
             mState.insert( { key, state } );
         }
-        #endif
+ //       #endif
 
         #ifdef USE_THUNDER_R443
         if (subSystem != nullptr) {

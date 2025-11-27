@@ -39,6 +39,9 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 #define TIMEOUT   (500)
+#define TIMEOUT_FOR_PAUSE (200)
+#define TIMEOUT_FOR_INIT (200)
+#define TIMEOUT_FOR_INSTALL (200)
 
 using ::testing::NiceMock;
 using namespace WPEFramework;
@@ -522,7 +525,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforSignal(200);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -571,8 +574,6 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-	uint32_t timeout_ms = 300;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -582,7 +583,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -643,7 +644,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforSignal(200);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -696,8 +697,6 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-    uint32_t timeout_ms = 300;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -707,7 +706,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
    	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -768,7 +767,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforSignal(200);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -817,8 +816,6 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     getDownloadParams();
     
-    uint32_t timeout_ms = 300;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -828,7 +825,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1013,7 +1010,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcSuccess) {
             
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforSignal(200);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1068,8 +1065,6 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     getDownloadParams();
     
-    uint32_t timeout_ms = 200;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1081,7 +1076,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1185,7 +1180,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://www.examplefile.com/file-download/328\"}"), mJsonRpcResponse));
 
-    waitforSignal(200);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
@@ -1238,8 +1233,6 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     getDownloadParams();
     
-    uint32_t timeout_ms = 200;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1251,7 +1244,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1301,27 +1294,43 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 TEST_F(PackageManagerTest, installusingJsonRpcInvalidSignature) {
 
     initforJsonRpc();
+
+	waitforSignal(TIMEOUT_FOR_INIT);
     
     // TC-32: Error on install due to invalid signature using JsonRpc
-    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
 
-/* Test Case for install failure using JsonRpc
+/* Test Case for install success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the download method using the JSON RPC handler, passing the required parameters, verify successful download and wait 
  * Invoke the install method using the JSON RPC handler, passing the required parameters
- * Verify that the install method fails by asserting that it returns Core::ERROR_GENERAL
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
+TEST_F(PackageManagerTest, installusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    // TC-33: Failure on install using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    waitforSignal(TIMEOUT_FOR_INIT);
+
+	EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+        	}));
+
+	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+
+	waitforSignal(TIMEOUT);
+	
+    // TC-33: Install using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
@@ -1329,7 +1338,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcFailure) {
  /* Test Case for error on install due to invalid signature using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
- * Call the install method using the COM RPC interface, passing required parameters, keeping the fileLocator parameter as empty
+ * Call the install method using the COM RPC interface, passing required parameters, keeping the fileLocator parameter as empty and wait
  * Verify error on install by asserting that it returns Core::ERROR_INVALID_SIGNATURE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
@@ -1338,13 +1347,15 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
     initforComRpc();
 
-    string packageId = "testPackage";
-    string version = "2.0";
+    string packageId = "YouTube";
+    string version = "100.1.24";
     string fileLocator = "";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
 
     auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+
+	waitforSignal(TIMEOUT_FOR_INIT);
 
     // TC-34: Error on install due to invalid signature using ComRpc
     EXPECT_EQ(Core::ERROR_INVALID_SIGNATURE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
@@ -1352,27 +1363,39 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 	deinitforComRpc();
 }
 
-/* Test Case for install failure using ComRpc
+/* Test Case for install success using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
- * Call the install method using the COM RPC interface, passing required parameters and wait for onAppInstallationStatus signal
- * Verify that the install method fails by asserting that it returns Core::ERROR_GENERAL
+ * Call the download method using the COM-RPC interface, passing required parameters for download, verify and wait
+ * Call the install method using the COM RPC interface, passing required parameters and wait
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
- TEST_F(PackageManagerTest, installusingComRpcFailure) {
+ TEST_F(PackageManagerTest, installusingComRpcSuccess) {
 
     initforComRpc();
 
+	getDownloadParams();
+
+	uri = "https://httpbin.org/bytes/1024";
+
     uint32_t timeout_ms = 3000;
 
-    string packageId = "testPackage";
-    string version = "2.0";
+    string packageId = "YouTube";
+    string version = "100.1.24";
     string fileLocator = "/opt/CDL/package1001";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
 
     auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+
+	EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+        	}));
 
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1381,60 +1404,96 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
                 return Core::ERROR_NONE;
             }));
 
-    // TC-35: Failure on install using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    waitforSignal(TIMEOUT_FOR_INIT);
+
+	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+	EXPECT_EQ(downloadId.downloadId, "1001");
+
+ 	waitforSignal(TIMEOUT);
+	 
+    // TC-35: Install using ComRpc
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     waitforSignal(timeout_ms);
 
 	deinitforComRpc();   
 }
 
-/* Test Case for uninstall failure using JsonRpc
+/* Test Case for uninstall success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
- * Invoke the install method using the JSON RPC handler, passing the required parameters
- * Verify that the install method fails by asserting that it returns Core::ERROR_GENERAL
+ * Invoke the download method using the JSON RPC handler, passing the required parameters, verify successful download and wait
+ * Invoke the install method using the JSON RPC handler, passing the required parameters and wait
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
  * Invoke the uninstall method using the JSON RPC handler, passing the required parameters
- * Verify that the uninstall method fails by asserting that it returns Core::ERROR_GENERAL
+ * Verify successful uninstall by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, uninstallusingJsonRpcFailure) {
+TEST_F(PackageManagerTest, uninstallusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    waitforSignal(TIMEOUT_FOR_INIT);
 
-    // TC-36: Failure on uninstall using JsonRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"testPackage\"}"), mJsonRpcResponse));
+	EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+        	}));
+
+	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+
+	waitforSignal(TIMEOUT);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+
+	waitforSignal(TIMEOUT_FOR_INSTALL);
+	
+    // TC-36: Uninstall using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("uninstall"), _T("{\"packageId\": \"YouTube\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
 
-/* Test Case for uninstall failure using ComRpc
+/* Test Case for uninstall success using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
- * Call the install method using the COM RPC interface, passing required parameters and wait for onAppInstallationStatus signal
- * Verify that the install method fails by asserting that it returns Core::ERROR_GENERAL
- * Call the uninstall method using the COM RPC interface, passing required parameters and wait for onAppInstallationStatus signal
- * Verify that the uninstall method fails by asserting that it returns Core::ERROR_GENERAL
+ * Call the download method using the COM-RPC interface, passing required parameters for download, verify and wait
+ * Call the install method using the COM RPC interface, passing required parameters and wait 
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
+ * Call the uninstall method using the COM RPC interface, passing required parameters and wait 
+ * Verify successful uninstall by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
+TEST_F(PackageManagerTest, uninstallusingComRpcSuccess) {
 
     initforComRpc();
 
+	getDownloadParams();
+
+	uri = "https://httpbin.org/bytes/1024";
+
     uint32_t timeout_ms = 3000;
 
-    string packageId = "testPackage";
+    string packageId = "YouTube";
     string errorReason = "no error";
-    string version = "2.0";
+    string version = "100.1.24";
     string fileLocator = "/opt/CDL/package1001";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
 
     auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+
+	EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+        	}));
     
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
@@ -1450,12 +1509,20 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+    waitforSignal(TIMEOUT_FOR_INIT);
+
+	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+	EXPECT_EQ(downloadId.downloadId, "1001");
+
+	waitforSignal(TIMEOUT);
+
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     waitforSignal(timeout_ms);
 
-	// TC-37: Failure on uninstall using ComRpc
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Uninstall(packageId, errorReason));
+	// TC-37: Uninstall using ComRpc
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Uninstall(packageId, errorReason));
     
 	waitforSignal(timeout_ms);
 
@@ -1465,6 +1532,9 @@ TEST_F(PackageManagerTest, uninstallusingComRpcFailure) {
 /* Test Case for list packages method success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
+ * Invoke the download method using the JSON RPC handler, passing the required parameters, verify successful download and wait
+ * Invoke the install method using the JSON RPC handler, passing the required parameters and wait
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
  * Invoke the listPackages method using the JSON RPC handler, passing the required parameters
  * Verify that the listPackages method is successful by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
@@ -1474,8 +1544,27 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
+	EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+        	}));
+
+	waitforSignal(TIMEOUT_FOR_INIT);
+	
+	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+
+	waitforSignal(TIMEOUT);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+
+	waitforSignal(TIMEOUT_FOR_INSTALL);
+	
 	// TC-38: list packages using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("listPackages"), _T("{\"packages\": {}}"), mJsonRpcResponse));
+
+	EXPECT_NE(mJsonRpcResponse, "");
 
 	deinitforJsonRpc();   
 }
@@ -1483,6 +1572,9 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
 /* Test Case for list packages method success using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
+ * Call the download method using the COM-RPC interface, passing required parameters for download, verify and wait
+ * Call the install method using the COM RPC interface, passing required parameters and wait 
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
  * Call the ListPackages method using the COM RPC interface, passing the required parameters
  * Verify that the ListPackages method is successful by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
@@ -1492,9 +1584,47 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
     initforComRpc();
 
+	getDownloadParams();
+
+	uri = "https://httpbin.org/bytes/1024";
+
+	string packageId = "YouTube";
+	string version = "100.1.24";
+    string fileLocator = "/opt/CDL/package1001";
+    Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
+	list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
+	
     list<Exchange::IPackageInstaller::Package> packageList = { {} };
 
     auto packages = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
+
+	auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
+
+	EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+        	}));
+
+    EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce(::testing::Invoke(
+            [&](const string& appId, const uint32_t &size, string& path, string &errorReason) {
+                return Core::ERROR_NONE;
+            }));
+
+	waitforSignal(TIMEOUT_FOR_INIT);
+
+	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+	EXPECT_EQ(downloadId.downloadId, "1001");
+
+	waitforSignal(TIMEOUT);
+
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+
+    waitforSignal(TIMEOUT_FOR_INSTALL);
 
 	// TC-39: list packages using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->ListPackages(packages));
@@ -1505,10 +1635,11 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
- * Invoke the install method using the JSON RPC handler, passing the required parameters
- * Verify install method failure by asserting that it returns Core::ERROR_GENERAL
+ * Invoke the download method using the JSON RPC handler, passing the required parameters, verify successful download and wait
+ * Invoke the install method using the JSON RPC handler, passing the required parameters and wait
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
  * Invoke the packageState method using the JSON RPC handler, passing the required parameters
- * Verify packageState method failure by asserting that it returns Core::ERROR_GENERAL
+ * Verify packageState method success by asserting that it returns Core::ERROR_NONE 
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
@@ -1516,10 +1647,25 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
     initforJsonRpc();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+	EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+        	}));
 
-    // TC-40: Failure in package state using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
+	waitforSignal(TIMEOUT_FOR_INIT);
+
+	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
+
+	waitforSignal(TIMEOUT);
+
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("install"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\", \"additionalMetadata\": [{\"name\": \"testApp\", \"value\": \"2\"}], \"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+
+	waitforSignal(TIMEOUT_FOR_INSTALL);
+	
+    // TC-40: Package state using JsonRpc
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("packageState"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
@@ -1527,10 +1673,11 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 /* Test Case for package state failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
- * Call the install method using the COM RPC interface, passing the required parameters and wait for onAppInstallationStatus signal
- * Verify install method failure by asserting that it returns Core::ERROR_GENERAL
+ * Call the download method using the COM-RPC interface, passing required parameters for download, verify and wait
+ * Call the install method using the COM RPC interface, passing the required parameters and wait 
+ * Verify successful install by asserting that it returns Core::ERROR_NONE
  * Call the PackageState method using the COM RPC interface, passing the required parameters and wait
- * Verify package state method failure by asserting that it returns Core::ERROR_GENERAL
+ * Verify package state method success by asserting that it returns Core::ERROR_NONE and state is 3 - INSTALLED
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
@@ -1538,10 +1685,14 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
     initforComRpc();
 
+	getDownloadParams();
+
+	uri = "https://httpbin.org/bytes/1024";
+
     uint32_t timeout_ms = 3000;
 
-    string packageId = "testPackage";
-    string version = "2.0";
+    string packageId = "YouTube";
+    string version = "100.1.24";
     string fileLocator = "/opt/CDL/package1001";
     Exchange::IPackageInstaller::FailReason reason = Exchange::IPackageInstaller::FailReason::NONE;
     list<Exchange::IPackageInstaller::KeyValue> kv = { {"testapp", "2"} };
@@ -1549,6 +1700,13 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
     auto additionalMetadata = Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IKeyValueIterator>>::Create<Exchange::IPackageInstaller::IKeyValueIterator>(kv);
 
+	EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Invoke(
+            [&](const PluginHost::ISubSystem::subsystem type) {
+                return true;
+        	}));
+	
     EXPECT_CALL(*mStorageManagerMock, CreateStorage(::testing::_, ::testing::_, ::testing::_, ::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1556,12 +1714,22 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
                 return Core::ERROR_NONE;
             }));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
+	waitforSignal(TIMEOUT_FOR_INIT);
+
+	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
+
+	EXPECT_EQ(downloadId.downloadId, "1001");
+
+	waitforSignal(TIMEOUT);	
+
+    EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->Install(packageId, version, additionalMetadata, fileLocator, reason));
 
     waitforSignal(timeout_ms);
 
-    // TC-41: Failure in package state using ComRpc
+    // TC-41: Package state using ComRpc
     EXPECT_EQ(Core::ERROR_NONE, pkginstallerInterface->PackageState(packageId, version, state));
+
+	EXPECT_EQ(static_cast<int>(state), 3);
 
 	timeout_ms = 1000;
     waitforSignal(timeout_ms);
@@ -1575,37 +1743,41 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
  * Invoke the unlock method using the JSON RPC handler, passing the required parameters
- * Verify unlock method error by asserting that it returns Core::ERROR_BAD_REQUEST
+ * Verify unlock method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
+TEST_F(PackageManagerTest, unlockmethodusingJsonRpcFailure) {
 
     initforJsonRpc();
 
-	// TC-42: Error on unlock using JsonRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"testPackage\", \"version\": \"2.0\"}"), mJsonRpcResponse));
+    waitforSignal(TIMEOUT_FOR_INIT);
+
+	// TC-42: Failure on unlock using JsonRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
 
-/* Test Case for unlock error using ComRpc
+/* Test Case for unlock failure using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
  * Call the Unlock method using the COM RPC interface, passing required parameters
- * Verify Unlock method error by asserting that it returns Core::ERROR_BAD_REQUEST
+ * Verify Unlock method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
+TEST_F(PackageManagerTest, unlockmethodusingComRpcFailure) {
 
     initforComRpc();
 
-    string packageId = "testPackage";
-    string version = "2.0";
+    string packageId = "YouTube";
+    string version = "100.1.24";
 
-    // TC-43: Error on unlock using ComRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Unlock(packageId, version));
+	waitforSignal(TIMEOUT_FOR_INIT);
+
+    // TC-43: Failure on unlock using ComRpc
+    EXPECT_EQ(Core::ERROR_GENERAL, pkghandlerInterface->Unlock(packageId, version));
 
 	deinitforComRpc();
 }
