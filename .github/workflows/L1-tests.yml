@@ -1,15 +1,8 @@
 name: L1-tests
 
 on:
-  workflow_call:
-    inputs:
-      caller_source:
-        description: "Specifies the source type (e.g., local or test framework) for the workflow."
-        required: true
-        type: string
-    secrets:
-      RDKCM_RDKE:
-        required: true
+  push:
+    branches: ['topic/RDKEMW-2803_debug24']
 
 env:
   BUILD_TYPE: Debug
@@ -498,6 +491,7 @@ jobs:
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
           -DPLUGIN_PREINSTALL_MANAGER=ON
+          -DPLUGIN_PACKAGE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
@@ -583,6 +577,7 @@ jobs:
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
           -DPLUGIN_PREINSTALL_MANAGER=ON
+          -DPLUGIN_PACKAGE_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
