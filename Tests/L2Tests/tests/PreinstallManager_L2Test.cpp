@@ -35,9 +35,11 @@ using ::WPEFramework::Exchange::IPreinstallManager;
 class PreinstallManagerTest : public L2TestMocks {
 public:
     PreinstallManagerTest();
+    ~PreinstallManagerTest();
     uint32_t CreatePreinstallManagerInterfaceObjectUsingComRPCConnection();
     void ReleasePreinstallManagerInterfaceObjectUsingComRPCConnection();
     void SetUpPreinstallDirectoryMocks();
+    ::testing::NiceMock<PackageManagerInstallerMock>* p_packageManagerInstallerMock;
     class TestNotification : public Exchange::IPreinstallManager::INotification {
     public:
         TestNotification() = default;
@@ -58,7 +60,11 @@ protected:
 
 PreinstallManagerTest::PreinstallManagerTest():L2TestMocks(),
     mControllerPreinstallManager(nullptr),
-    mPreinstallManagerPlugin(nullptr)
+    mPreinstallManagerPlugin(nullptr),
+    p_packageManagerInstallerMock(new ::testing::NiceMock<PackageManagerInstallerMock>())
+PreinstallManagerTest::~PreinstallManagerTest() {
+    delete p_packageManagerInstallerMock;
+}
 {
     uint32_t status = Core::ERROR_GENERAL;
 
