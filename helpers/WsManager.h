@@ -21,7 +21,6 @@
 
 #include <mutex>
 #include <memory>
-#include <atomic>
 #include <plugins/plugins.h>
 #include "UtilsLogging.h"
 #include "WebSocketLink.h"
