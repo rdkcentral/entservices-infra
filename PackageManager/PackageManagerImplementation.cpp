@@ -628,8 +628,6 @@ namespace Plugin {
         }
 
         packages = (Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList));
-
-         printf("Iterator ptr - Packages: %p\n", static_cast<void*>(packages));
         
         LOGTRACE("exit");
 
@@ -670,8 +668,6 @@ namespace Plugin {
             result = Core::ERROR_GENERAL;
         }
 
-        printf("InstallState = %d\n", static_cast<int>(installState));
-    
         return result;
     }
 
