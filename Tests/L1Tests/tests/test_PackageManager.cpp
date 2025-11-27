@@ -1589,12 +1589,12 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
+TEST_F(PackageManagerTest, unlockmethodusingJsonRpcFailure) {
 
     initforJsonRpc();
 
 	// TC-42: Error on unlock using JsonRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_GENERAL, mJsonRpcHandler.Invoke(connection, _T("unlock"), _T("{\"packageId\": \"YouTube\", \"version\": \"100.1.24\"}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
@@ -1607,7 +1607,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcError) {
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
+TEST_F(PackageManagerTest, unlockmethodusingComRpcFailure) {
 
     initforComRpc();
 
@@ -1617,7 +1617,7 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcError) {
 	waitforSignal(200);
 
     // TC-43: Error on unlock using ComRpc
-    EXPECT_EQ(Core::ERROR_BAD_REQUEST, pkghandlerInterface->Unlock(packageId, version));
+    EXPECT_EQ(Core::ERROR_GENERAL, pkghandlerInterface->Unlock(packageId, version));
 
 	deinitforComRpc();
 }
