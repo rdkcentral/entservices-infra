@@ -118,7 +118,7 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
         .WillByDefault(::testing::Invoke([](const char* pathname) -> DIR* {
             TEST_LOG("opendir called with pathname: %s", pathname);
             // Accept both relative and absolute paths for CI compatibility
-            EXPECT_TRUE(std::string(pathname) == s_packageDir || std::string(pathname).find("testPackage") != std::string::npos);
+            EXPECT_TRUE(std::string(pathname) == s_packageDir || std::string(pathname).find("testPackage") != std::string::npos || std::string(pathname).find("app1") != std::string::npos);
             static char fake_dir;
             return reinterpret_cast<DIR*>(&fake_dir);
         }));
@@ -128,7 +128,15 @@ void PreinstallManagerTest::SetUpPreinstallDirectoryMocks() {
             static int call_count = 0;
             static struct dirent entry;
             if (call_count == 0) {
-                // Simulate a .wgt file as a regular file, not a directory
+                // Simulate a directory entry for 'app1'
+                std::strncpy(entry.d_name, "app1", sizeof(entry.d_name) - 1);
+                entry.d_name[sizeof(entry.d_name) - 1] = '\0';
+                entry.d_type = DT_DIR; // Directory
+                TEST_LOG("readdir returning entry: %s (DT_DIR)", entry.d_name);
+                call_count++;
+                return &entry;
+            } else if (call_count == 1) {
+                // Simulate a .wgt file inside 'app1' as a regular file
                 std::strncpy(entry.d_name, "package.wgt", sizeof(entry.d_name) - 1);
                 entry.d_name[sizeof(entry.d_name) - 1] = '\0';
                 entry.d_type = DT_REG; // Regular file
