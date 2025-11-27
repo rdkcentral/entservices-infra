@@ -574,8 +574,6 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-	uint32_t timeout_ms = 300;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -585,7 +583,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -699,8 +697,6 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     getDownloadParams();
 
-    uint32_t timeout_ms = 200;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -710,7 +706,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
    	EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -820,8 +816,6 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     getDownloadParams();
     
-    uint32_t timeout_ms = 300;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -831,7 +825,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1071,8 +1065,6 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     getDownloadParams();
     
-    uint32_t timeout_ms = 200;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1084,7 +1076,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1241,8 +1233,6 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     getDownloadParams();
     
-    uint32_t timeout_ms = 200;
-
     EXPECT_CALL(*mSubSystemMock, IsActive(::testing::_))
         .Times(::testing::AnyNumber())
         .WillOnce(::testing::Invoke(
@@ -1254,7 +1244,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Download(uri, options, downloadId));
 
-    waitforSignal(timeout_ms);
+    waitforSignal(TIMEOUT_FOR_PAUSE);
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
@@ -1335,7 +1325,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcSuccess) {
                 return true;
         	}));
 
-	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://new-downloads.ytdesktop.com/linux.zip\"}"), mJsonRpcResponse));
+	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
 	waitforSignal(TIMEOUT);
 	
@@ -1388,7 +1378,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
 	getDownloadParams();
 
-	uri = "https://new-downloads.ytdesktop.com/linux.zip";
+	uri = "https://httpbin.org/bytes/1024";
 
     uint32_t timeout_ms = 3000;
 
@@ -1454,7 +1444,7 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcSuccess) {
                 return true;
         	}));
 
-	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://new-downloads.ytdesktop.com/linux.zip\"}"), mJsonRpcResponse));
+	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
 	waitforSignal(TIMEOUT);
 
@@ -1485,7 +1475,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcSuccess) {
 
 	getDownloadParams();
 
-	uri = "https://new-downloads.ytdesktop.com/linux.zip";
+	uri = "https://httpbin.org/bytes/1024";
 
     uint32_t timeout_ms = 3000;
 
@@ -1563,7 +1553,7 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
 
 	waitforSignal(TIMEOUT_FOR_INIT);
 	
-	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://new-downloads.ytdesktop.com/linux.zip\"}"), mJsonRpcResponse));
+	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
 	waitforSignal(TIMEOUT);
 
@@ -1596,7 +1586,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
 	getDownloadParams();
 
-	uri = "https://new-downloads.ytdesktop.com/linux.zip";
+	uri = "https://httpbin.org/bytes/1024";
 
 	string packageId = "YouTube";
 	string version = "100.1.24";
@@ -1666,7 +1656,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
 
 	waitforSignal(TIMEOUT_FOR_INIT);
 
-	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://new-downloads.ytdesktop.com/linux.zip\"}"), mJsonRpcResponse));
+	EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("download"), _T("{\"url\": \"https://httpbin.org/bytes/1024\"}"), mJsonRpcResponse));
 
 	waitforSignal(TIMEOUT);
 
@@ -1697,7 +1687,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
 	getDownloadParams();
 
-	uri = "https://new-downloads.ytdesktop.com/linux.zip";
+	uri = "https://httpbin.org/bytes/1024";
 
     uint32_t timeout_ms = 3000;
 
