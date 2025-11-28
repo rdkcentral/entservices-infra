@@ -1363,7 +1363,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for install success using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
@@ -1420,7 +1420,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
 	deinitforComRpc();   
 }
-
+#endif
 /* Test Case for uninstall success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
