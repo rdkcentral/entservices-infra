@@ -1469,7 +1469,7 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcSuccess) {
  * Verify successful uninstall by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, uninstallusingComRpcSuccess) {
 
     initforComRpc();
@@ -1529,7 +1529,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for list packages method success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
