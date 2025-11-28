@@ -446,7 +446,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
  * Verify successful download request by asserting that it returns Core::ERROR_NONE and checking the downloadId
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     initforComRpc();
@@ -471,7 +471,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for checking download request error when internet is unavailable using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
