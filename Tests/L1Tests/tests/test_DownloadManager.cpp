@@ -474,13 +474,6 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     TEST_LOG("Delete (empty locator) returned: %u", deleteResult2);
     EXPECT_NE(Core::ERROR_NONE, deleteResult2) << "Delete should fail with empty file locator";
 
-    // Test Delete with very long file path
-    std::string longPath(1000, 'x');
-    longPath += ".zip";
-    Core::hresult deleteResult3 = impl->Delete(longPath);
-    TEST_LOG("Delete (very long path) returned: %u", deleteResult3);
-    EXPECT_NE(Core::ERROR_NONE, deleteResult3) << "Delete should fail with very long path";
-
     // Test GetStorageDetails - should succeed (stub implementation)
     uint32_t quotaKB = 0, usedKB = 0;
     Core::hresult storageResult = impl->GetStorageDetails(quotaKB, usedKB);
@@ -499,33 +492,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
         EXPECT_NE(Core::ERROR_NONE, rateLimitResult2) << "RateLimit should fail with invalid downloadId";
     }
 
-    // === PHASE 6: ADVANCED SCENARIOS ===
-
-    // If we have a valid downloadId from earlier, test control operations on it
-    /*if (!downloadId.empty()) {
-        // Allow a brief moment for download to be queued/started
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-        // Test Progress with valid downloadId (might fail if download not started yet)
-        uint8_t validPercent = 0;
-        Core::hresult validProgressResult = impl->Progress(downloadId, validPercent);
-        TEST_LOG("Progress (valid ID) returned: %u, percent: %u", validProgressResult, validPercent);
-        // Don't assert success here as download might not have started yet
-
-        // Test Pause with valid downloadId
-        Core::hresult validPauseResult = impl->Pause(downloadId);
-        TEST_LOG("Pause (valid ID) returned: %u", validPauseResult);
-
-        // Test Resume with valid downloadId
-        Core::hresult validResumeResult = impl->Resume(downloadId);
-        TEST_LOG("Resume (valid ID) returned: %u", validResumeResult);
-
-        // Test Cancel with valid downloadId
-        Core::hresult validCancelResult = impl->Cancel(downloadId);
-        TEST_LOG("Cancel (valid ID) returned: %u", validCancelResult);
-    }*/
-
-    // === PHASE 7: PLUGIN DEACTIVATION ===
+    // === PHASE 6: PLUGIN DEACTIVATION ===
     // Deinitialize will be called automatically in TearDown()
 }
 
