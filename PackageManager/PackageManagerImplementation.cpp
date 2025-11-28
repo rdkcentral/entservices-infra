@@ -951,8 +951,7 @@ namespace Plugin {
             state.installState = InstallState::INSTALLED;
             mState.insert( { key, state } );
         }
-        #endif
-
+    
         #ifdef USE_THUNDER_R443
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
