@@ -19,15 +19,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <string>
-#include <vector>
-#include <fstream>
-#include <cstdio>
-#include <mutex>
 #include <chrono>
 #include <condition_variable>
 #include <memory>
 #include <atomic>
-#include <mntent.h>
 
 #include "DownloadManager.h"
 #include "DownloadManagerImplementation.h"
@@ -42,14 +37,9 @@ using namespace WPEFramework;
 #include "WorkerPoolImplementation.h"
 #include "FactoriesImplementation.h"
 
-// Reference counting will use simple atomic operations
-
 #define TEST_LOG(x, ...) printf("[TEST_LOG] " x "\n", ##__VA_ARGS__)
 
-#define TIMEOUT   (500)
-
 using ::testing::NiceMock;
-//using namespace WPEFramework;
 using namespace std;
 
 typedef enum : uint32_t {
@@ -71,48 +61,27 @@ protected:
 
     Core::ProxyType<WorkerPoolImplementation> workerPool; 
     Core::ProxyType<Plugin::DownloadManager> plugin;
-    Core::JSONRPC::Handler& mJsonRpcHandler;
-    Core::JSONRPC::Message message;
-    DECL_CORE_JSONRPC_CONX connection;
-    string mJsonRpcResponse;
-    string uri;
-
-    PLUGINHOST_DISPATCHER *dispatcher;
     FactoriesImplementation factoriesImplementation;
-
-    Exchange::IDownloadManager* downloadManagerInterface = nullptr;
-    Exchange::IDownloadManager* mockImpl = nullptr;
-    Exchange::IDownloadManager::Options options;
-    string downloadId;
-    uint8_t progress;
-    uint32_t quotaKB, usedKB;
 
     // Constructor
     DownloadManagerTest()
      : workerPool(Core::ProxyType<WorkerPoolImplementation>::Create(
          2, Core::Thread::DefaultStackSize(), 16)),
-        plugin(Core::ProxyType<Plugin::DownloadManager>::Create()),
-        mJsonRpcHandler(*plugin),  // This needs to be initialized even if plugin is invalid
-        INIT_CONX(1,0)
+        plugin(Core::ProxyType<Plugin::DownloadManager>::Create())
     {
         if (workerPool.IsValid()) {
             Core::IWorkerPool::Assign(&(*workerPool));
             workerPool->Run();
-        } else {
-            TEST_LOG("WARNING: Worker pool creation failed in constructor");
         }
 
         if (!plugin.IsValid()) {
-            TEST_LOG("WARNING: Plugin creation failed in constructor - tests may be limited");
-        } else {
-            TEST_LOG("Plugin created successfully in constructor");
+            TEST_LOG("WARNING: Plugin creation failed - tests may be limited");
         }
     }
 
     // Destructor
     virtual ~DownloadManagerTest() override
     {
-
         Core::IWorkerPool::Assign(nullptr);
         workerPool.Release();
     }
@@ -152,32 +121,12 @@ protected:
             EXPECT_CALL(*mServiceMock, Release())
               .Times(::testing::AnyNumber());
 
-            // Skip all risky plugin operations that trigger interface wrapping
-            TEST_LOG("Skipping plugin activation and initialization to prevent Wraps.cpp:387 segfault");
-            TEST_LOG("The segfault occurs during interface wrapping when (impl) is nullptr");
-            TEST_LOG("Tests will work with basic plugin object only");
-
-            // Initialize plugin following established patterns but skip risky operations
+            // Initialize plugin factories for L1 testing
             PluginHost::IFactories::Assign(&factoriesImplementation);
 
             if (!plugin.IsValid()) {
-                TEST_LOG("Plugin is null - cannot proceed");
                 return Core::ERROR_GENERAL;
-            } else {
-                TEST_LOG("Plugin is valid, but skipping activation/initialization");
             }
-
-            // Skip dispatcher operations entirely
-            dispatcher = nullptr;
-            TEST_LOG("Dispatcher set to null to avoid interface wrapping issues");
-
-            // Skip IDownloadManager interface querying to prevent segmentation fault
-            // The interface wrapping mechanism in Wraps.cpp:387 is failing with null implementation
-            TEST_LOG("Skipping IDownloadManager interface querying to prevent segfault in Wraps.cpp");
-            downloadManagerInterface = nullptr;
-            TEST_LOG("DownloadManager interface set to null - individual tests will handle unavailability");
-
-            TEST_LOG("createResources - All done!");
             status = Core::ERROR_NONE;
         } catch (const std::exception& e) {
             TEST_LOG("Exception in createResources: %s", e.what());
@@ -192,30 +141,7 @@ protected:
 
     void releaseResources()
     {
-        TEST_LOG("In releaseResources!");
-
         try {
-            if (downloadManagerInterface) {
-                downloadManagerInterface->Release();
-                downloadManagerInterface = nullptr;
-            }
-
-            if (dispatcher) {
-                TEST_LOG("Deactivating and releasing dispatcher");
-                dispatcher->Deactivate();
-                dispatcher->Release();
-                dispatcher = nullptr;
-            } else {
-                TEST_LOG("Dispatcher was null, no cleanup needed");
-            }
-
-            // Skip plugin deinitialization since we didn't initialize it to prevent segfaults
-            if (plugin.IsValid()) {
-                TEST_LOG("Plugin is valid but skipping deinitialize to prevent segfaults");
-            } else {
-                TEST_LOG("Plugin is not valid");
-            }
-
             if (mServiceMock) {
                 delete mServiceMock;
                 mServiceMock = nullptr;
@@ -234,19 +160,13 @@ protected:
 
     void SetUp() override
     {
-        TEST_LOG("Starting SetUp");
         try {
             Core::hresult status = createResources();
-            if (status != Core::ERROR_NONE) {
-                TEST_LOG("createResources failed with status: %u", status);
-            }
             EXPECT_EQ(status, Core::ERROR_NONE);
-            TEST_LOG("SetUp completed successfully");
         } catch (const std::exception& e) {
             TEST_LOG("Exception in SetUp: %s", e.what());
             FAIL() << "SetUp failed with exception: " << e.what();
         } catch (...) {
-            TEST_LOG("Unknown exception in SetUp");
             FAIL() << "SetUp failed with unknown exception";
         }
     }
@@ -254,115 +174,6 @@ protected:
     void TearDown() override
     {
         releaseResources();
-    }
-
-
-    void initforJsonRpc() 
-    {    
-        TEST_LOG("initforJsonRpc called - setting up safe mock expectations");
-
-        EXPECT_CALL(*mServiceMock, Register(::testing::_))
-          .Times(::testing::AnyNumber());
-
-        EXPECT_CALL(*mServiceMock, AddRef())
-          .Times(::testing::AnyNumber());
-
-        EXPECT_CALL(*mServiceMock, ConfigLine())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("{\"downloadDir\": \"/opt/downloads/\"}"));
-
-        EXPECT_CALL(*mServiceMock, PersistentPath())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("/tmp/"));
-
-        EXPECT_CALL(*mServiceMock, VolatilePath())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("/tmp/"));
-
-        EXPECT_CALL(*mServiceMock, DataPath())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return("/tmp/"));
-
-        EXPECT_CALL(*mServiceMock, SubSystems())
-          .Times(::testing::AnyNumber())
-          .WillRepeatedly(::testing::Return(mSubSystemMock));
-
-        // Skip all risky JSON-RPC registration operations to prevent segfault
-        TEST_LOG("Skipping JSON-RPC registration to prevent interface wrapping issues");
-        TEST_LOG("Mock expectations set up successfully");
-
-        // Set mockImpl to null to indicate JSON-RPC functionality is not available
-        mockImpl = nullptr;
-
-        TEST_LOG("initforJsonRpc completed safely without attempting risky operations");
-    }
-
-    void initforComRpc() 
-    {
-        TEST_LOG("initforComRpc called - setting up safe COM-RPC environment");
-
-        EXPECT_CALL(*mServiceMock, AddRef())
-          .Times(::testing::AnyNumber());
-
-        // Skip COM-RPC interface operations to prevent potential segfaults
-        TEST_LOG("Skipping COM-RPC interface setup to prevent interface wrapping issues");
-        TEST_LOG("COM-RPC functionality will not be available in this test run");
-
-        // Ensure downloadManagerInterface is null to indicate unavailability
-        downloadManagerInterface = nullptr;
-
-        TEST_LOG("initforComRpc completed safely without attempting risky operations");
-    }
-
-    void getDownloadParams()
-    {
-        // Initialize the parameters required for COM-RPC with default values
-        uri = "https://httpbin.org/bytes/1024";
-
-        options.priority = true;
-        options.retries = 2; 
-        options.rateLimit = 1024;
-
-        downloadId = {};
-    }
-
-    void deinitforJsonRpc() 
-    {
-        TEST_LOG("deinitforJsonRpc called - performing safe cleanup");
-
-        EXPECT_CALL(*mServiceMock, Unregister(::testing::_))
-          .Times(::testing::AnyNumber());
-
-        EXPECT_CALL(*mServiceMock, Release())
-          .Times(::testing::AnyNumber());
-
-        // Skip JSON-RPC unregistration since we didn't register in the first place
-        TEST_LOG("Skipping JSON-RPC unregistration since registration was skipped");
-
-        // Clean up mockImpl safely
-        if (mockImpl) {
-            TEST_LOG("Cleaning up mockImpl pointer");
-            mockImpl = nullptr;
-        }
-
-        TEST_LOG("JSON-RPC cleanup completed safely");
-    }
-
-    void deinitforComRpc()
-    {
-        TEST_LOG("deinitforComRpc called - performing safe cleanup");
-
-        EXPECT_CALL(*mServiceMock, Release())
-          .Times(::testing::AnyNumber());
-
-        // No COM-RPC interface cleanup needed since we didn't set any up
-        TEST_LOG("Skipping COM-RPC interface cleanup since none were set up");
-        TEST_LOG("COM-RPC cleanup completed safely");
-    }
-
-    void waitforSignal(uint32_t timeout_ms) 
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
     }
 };
 
@@ -402,20 +213,19 @@ class NotificationTest : public Exchange::IDownloadManager::INotification
             return result;
         }
 
-        uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t status)
+        uint32_t WaitForStatusSignal(uint32_t timeout_ms, DownloadManagerTest_status_t /* status */)
         {
-            uint32_t status_signal = DownloadManager_invalidStatus;
             std::unique_lock<std::mutex> lock(m_mutex);
             auto now = std::chrono::steady_clock::now();
             auto timeout = std::chrono::milliseconds(timeout_ms);
             if (m_condition_variable.wait_until(lock, now + timeout) == std::cv_status::timeout)
             {
-                 TEST_LOG("Timeout waiting for request status event");
-                 return m_status_signal;
+                TEST_LOG("Timeout waiting for request status event");
+                return DownloadManager_invalidStatus;
             }
-            status_signal = m_status_signal;
+            uint32_t status_signal = m_status_signal;
             m_status_signal = DownloadManager_invalidStatus;
-        return status_signal;
+            return status_signal;
         }
     private:
         BEGIN_INTERFACE_MAP(NotificationTest)
@@ -473,16 +283,11 @@ protected:
     DownloadManagerImplementationTest() {
         // Create implementation object
         mDownloadManagerImpl = Core::ProxyType<Plugin::DownloadManagerImplementation>::Create();
-        TEST_LOG("DownloadManagerImplementationTest constructor completed");
     }
 
-    virtual ~DownloadManagerImplementationTest() override {
-        TEST_LOG("DownloadManagerImplementationTest destructor");
-    }
+    virtual ~DownloadManagerImplementationTest() override = default;
 
     void SetUp() override {
-        TEST_LOG("=== DownloadManagerImplementationTest SetUp ===");
-
         // Create mocks
         mServiceMock = new NiceMock<ServiceMock>;
         mSubSystemMock = new NiceMock<SubSystemMock>;
@@ -503,13 +308,9 @@ protected:
         // Configure SubSystemMock - start with INTERNET active for successful downloads
         EXPECT_CALL(*mSubSystemMock, IsActive(PluginHost::ISubSystem::INTERNET))
             .WillRepeatedly(::testing::Return(true));
-
-        TEST_LOG("DownloadManagerImplementationTest SetUp completed");
     }
 
     void TearDown() override {
-        TEST_LOG("=== DownloadManagerImplementationTest TearDown ===");
-
         // Clean up implementation if initialized
         if (mDownloadManagerImpl.IsValid()) {
             // Deinitialize if it was initialized
@@ -527,8 +328,6 @@ protected:
             delete mSubSystemMock;
             mSubSystemMock = nullptr;
         }
-
-        TEST_LOG("DownloadManagerImplementationTest TearDown completed");
     }
 
     Plugin::DownloadManagerImplementation* getRawImpl() {
@@ -545,29 +344,21 @@ protected:
  * This test demonstrates complete plugin lifecycle and comprehensive API coverage
  */
 TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
-    TEST_LOG("=== Comprehensive DownloadManagerImplementation API Test with Plugin Lifecycle ===");
-
     ASSERT_TRUE(mDownloadManagerImpl.IsValid()) << "DownloadManagerImplementation should be created successfully";
     Plugin::DownloadManagerImplementation* impl = getRawImpl();
     ASSERT_NE(impl, nullptr) << "Implementation pointer should be valid";
 
-    // === PHASE 1: PLUGIN ACTIVATION AND INITIALIZATION ===
-    TEST_LOG("=== PHASE 1: Plugin Activation and Initialization ===");
-
+    // === PHASE 1: PLUGIN INITIALIZATION ===
     // Initialize the plugin - this should succeed with proper mocks
     Core::hresult initResult = impl->Initialize(mServiceMock);
-    TEST_LOG("Initialize returned: %u (ERROR_NONE=%u)", initResult, Core::ERROR_NONE);
     EXPECT_EQ(Core::ERROR_NONE, initResult) << "Initialize should succeed with proper ServiceMock";
 
     // Add small delay to ensure thread startup if initialization succeeded
     if (initResult == Core::ERROR_NONE) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        TEST_LOG("Plugin initialization completed - downloader thread should be running");
     }
 
     // === PHASE 2: DOWNLOAD API TESTING ===
-    TEST_LOG("=== PHASE 2: Testing Download API ===");
-
     Exchange::IDownloadManager::Options options;
     options.priority = false;  // Regular priority
     options.retries = 3;       // Retry attempts
@@ -595,39 +386,35 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     Core::hresult downloadResult3 = impl->Download("http://example.com/test2.zip", options, downloadId3);
     TEST_LOG("Download (no internet) returned: %u", downloadResult3);
     EXPECT_EQ(Core::ERROR_UNAVAILABLE, downloadResult3) << "Download should fail when internet not available";
+    EXPECT_TRUE(downloadId3.empty()) << "DownloadId should be empty on failure";
 
     // Restore internet for remaining tests
     EXPECT_CALL(*mSubSystemMock, IsActive(PluginHost::ISubSystem::INTERNET))
         .WillRepeatedly(::testing::Return(true));
 
-    // Test priority download
+    // Test priority download - should succeed and return valid downloadId
     Exchange::IDownloadManager::Options priorityOptions;
     priorityOptions.priority = true;   // High priority
-    priorityOptions.retries = 5;       // More retries
-    priorityOptions.rateLimit = 2048;  // Higher rate limit
+    priorityOptions.retries = 3;
+    priorityOptions.rateLimit = 1024;
 
     string priorityDownloadId;
     Core::hresult priorityResult = impl->Download("http://example.com/priority.zip", priorityOptions, priorityDownloadId);
     TEST_LOG("Download (priority) returned: %u, downloadId: %s", priorityResult, priorityDownloadId.c_str());
     EXPECT_EQ(Core::ERROR_NONE, priorityResult) << "Priority download should succeed";
+    EXPECT_FALSE(priorityDownloadId.empty()) << "Priority download should return valid downloadId";
 
-    // Test download with very long URL
-    std::string longUrl = "http://example.com/";
-    longUrl += std::string(500, 'x');
-    longUrl += ".zip";
-    string longUrlDownloadId;
-    Core::hresult longUrlResult = impl->Download(longUrl, options, longUrlDownloadId);
-    TEST_LOG("Download (very long URL) returned: %u", longUrlResult);
-    // Long URL might succeed or fail depending on implementation limits
+    // Test regular download - should succeed and return different downloadId
+    string regularDownloadId;
+    Core::hresult regularResult = impl->Download("http://example.com/regular.zip", options, regularDownloadId);
+    TEST_LOG("Download (regular) returned: %u, downloadId: %s", regularResult, regularDownloadId.c_str());
+    EXPECT_EQ(Core::ERROR_NONE, regularResult) << "Regular download should succeed";
+    EXPECT_FALSE(regularDownloadId.empty()) << "Regular download should return valid downloadId";
 
-    // Test download with special characters in URL
-    string specialDownloadId;
-    Core::hresult specialResult = impl->Download("http://example.com/file with spaces & symbols.zip", options, specialDownloadId);
-    TEST_LOG("Download (special chars) returned: %u", specialResult);
-    // Special characters might succeed or fail depending on URL encoding
+    // Verify downloadIds are different (incremented)
+    EXPECT_NE(priorityDownloadId, regularDownloadId) << "Each download should get unique downloadId";
 
     // === PHASE 3: DOWNLOAD CONTROL APIS ===
-    TEST_LOG("=== PHASE 3: Testing Download Control APIs ===");
 
     // Test Pause with invalid ID
     Core::hresult pauseResult = impl->Pause("invalid_download_id");
@@ -660,7 +447,6 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     EXPECT_NE(Core::ERROR_NONE, cancelResult2) << "Cancel should fail with empty downloadId";
 
     // === PHASE 4: PROGRESS AND STATUS APIs ===
-    TEST_LOG("=== PHASE 4: Testing Progress and Status APIs ===");
 
     uint8_t percent = 0;
 
@@ -675,7 +461,6 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     EXPECT_NE(Core::ERROR_NONE, progressResult2) << "Progress should fail with empty downloadId";
 
     // === PHASE 5: FILE MANAGEMENT APIS ===
-    TEST_LOG("=== PHASE 5: Testing File Management APIs ===");
 
     // Test Delete with invalid file locator
     Core::hresult deleteResult = impl->Delete("nonexistent_file.zip");
@@ -713,7 +498,6 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     }
 
     // === PHASE 6: ADVANCED SCENARIOS ===
-    TEST_LOG("=== PHASE 6: Testing Advanced Scenarios ===");
 
     // If we have a valid downloadId from earlier, test control operations on it
     if (!downloadId.empty()) {
@@ -740,10 +524,7 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
     }
 
     // === PHASE 7: PLUGIN DEACTIVATION ===
-    TEST_LOG("=== PHASE 7: Plugin Deactivation and Cleanup ===");
-
     // Deinitialize will be called automatically in TearDown()
-    TEST_LOG("Plugin deactivation will be handled by test fixture TearDown");
 }
 
 /* Test Case: Plugin::DownloadManager APIs
@@ -752,10 +533,6 @@ TEST_F(DownloadManagerImplementationTest, AllIDownloadManagerAPIs) {
 TEST_F(DownloadManagerTest, PluginDownloadManagerAPIs) {
     // Test plugin creation
     ASSERT_TRUE(plugin.IsValid()) << "Plugin should be created successfully";
-
-    // Test Information() API - should return empty string
-    std::string infoResult = plugin->Information();
-    EXPECT_TRUE(infoResult.empty()) << "Information() should return empty string";
 
     // Test interface inheritance
     Plugin::DownloadManager* rawPlugin = &(*plugin);
@@ -767,21 +544,24 @@ TEST_F(DownloadManagerTest, PluginDownloadManagerAPIs) {
     PluginHost::IPlugin* pluginPtr = dynamic_cast<PluginHost::IPlugin*>(rawPlugin);
     EXPECT_NE(pluginPtr, nullptr) << "Plugin should inherit from PluginHost::IPlugin";
 
-    // Test Initialize() method - this calls real DownloadManager::Initialize() from DownloadManager.cpp
-    TEST_LOG("Testing Initialize method");
+    // Test Information() API - should always return empty string
+    std::string infoResult = plugin->Information();
+    EXPECT_TRUE(infoResult.empty()) << "Information() should always return empty string";
+
+    // Test Initialize() method - Returns string (empty = success, non-empty = error message)
     std::string initResult = plugin->Initialize(mServiceMock);
-    TEST_LOG("Initialize result: %s", initResult.empty() ? "SUCCESS" : initResult.c_str());
+    bool initSucceeded = initResult.empty();
 
-    // Brief pause to let initialization complete
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    if (initSucceeded) {
+        TEST_LOG("Plugin Initialize: SUCCESS");
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    } else {
+        TEST_LOG("Plugin Initialize: FAILED (expected in L1) - %s", initResult.c_str());
+    }
 
-    // Test Deinitialize() method - this should stop background threads properly
-    TEST_LOG("Testing Deinitialize method");
-    plugin->Deinitialize(mServiceMock);
-    TEST_LOG("Deinitialize completed");
+    // Test Deinitialize() method - returns void, should not crash
+    EXPECT_NO_THROW(plugin->Deinitialize(mServiceMock)) << "Deinitialize should not throw exceptions";
 
-    // Extended wait for thread cleanup - the background thread should terminate
-    TEST_LOG("Waiting for thread cleanup...");
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    TEST_LOG("Test completed");
+    // Allow time for cleanup
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
