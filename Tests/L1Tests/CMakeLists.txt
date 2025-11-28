@@ -161,6 +161,11 @@ set (PREINSTALL_MANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PreinstallM
 set (PREINSTALL_MANAGER_LIBS ${NAMESPACE}PreinstallManager ${NAMESPACE}PreinstallManagerImplementation)
 add_plugin_test_ex(PLUGIN_PREINSTALL_MANAGER tests/test_PreinstallManager.cpp "${PREINSTALL_MANAGER_INC}" "${PREINSTALL_MANAGER_LIBS}")
 
+# PLUGIN_PACKAGE_MANAGER
+set (PACKAGEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PackageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
+set (PACKAGEMANAGER_LIBS ${NAMESPACE}PackageManagerRDKEMS)
+add_plugin_test_ex(PLUGIN_PACKAGE_MANAGER tests/test_PackageManager.cpp "${PACKAGEMANAGER_INC}" "${PACKAGEMANAGER_LIBS}")
+
 add_library(${MODULE_NAME} SHARED ${TEST_SRC})
 
 if (RDK_SERVICES_L1_TEST)
@@ -189,5 +194,3 @@ target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
 
 install(TARGETS ${MODULE_NAME} DESTINATION lib)
 write_config(${PLUGIN_NAME})
-
-

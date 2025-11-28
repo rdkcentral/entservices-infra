@@ -32,6 +32,10 @@ if (LIB_PACKAGE)
     set(LIB_PACKAGE_LIBRARY "${SYSROOT_PATH}/${CMAKE_INSTALL_PREFIX}/lib/libPackage.so")
 endif()
 
+if(DEFINED ENV{THUNDER_R443} AND "$ENV{THUNDER_R443}" STREQUAL "ON")
+    add_compile_options(-DUSE_THUNDER_R443)
+endif()
+
 option(AIMANAGERS_TELEMETRY_METRICS_SUPPORT "AIMANAGERS_TELEMETRY_METRICS_SUPPORT" OFF)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -68,6 +72,21 @@ target_link_libraries(${MODULE_NAME} PRIVATE
     ${CURL_LIBRARY}
     ${LIB_PACKAGE_LIBRARY}
     )
+
+if(RDK_SERVICES_L1_TEST)
+    find_package( JsonCpp REQUIRED)
+    if (JSONCPP_FOUND)
+    message("Yay, found jsoncpp inc=${JSONCPP_INCLUDE_DIRS} lib=${JSONCPP_LIBRARY}")
+    endif()
+    target_include_directories(${MODULE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/../entservices-testframework/Tests/mocks)
+    target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
+    target_link_libraries(${MODULE_NAME} PUBLIC ${JSONCPP_LIBRARY})
+endif()
+
+option(ENABLE_UNIT_TESTS "Enable unit tests" OFF)
+if(ENABLE_UNIT_TESTS)
+  target_compile_definitions(${MODULE_NAME} PRIVATE UNIT_TEST)
+endif()
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)

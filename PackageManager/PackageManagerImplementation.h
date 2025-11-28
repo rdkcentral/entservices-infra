@@ -28,6 +28,8 @@
 
 #ifdef USE_LIBPACKAGE
 #include <IPackageImpl.h>
+#else
+#include "IPackageImplDummy.h"
 #endif
 #include <json/json.h>
 
@@ -276,6 +278,8 @@ namespace Plugin {
 
         #ifdef USE_LIBPACKAGE
         std::shared_ptr<packagemanager::IPackageImpl> packageImpl;
+        #else
+        std::shared_ptr<packagemanager::IPackageImplDummy> packageImpl;
         #endif
         PluginHost::IShell* mCurrentservice;
         Exchange::IStorageManager* mStorageManagerObject;
