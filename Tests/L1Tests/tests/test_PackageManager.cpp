@@ -597,7 +597,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
 	deinitforComRpc();    
 }
-#endif
+
 /* Test Case for pausing failed using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -617,7 +617,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for resuming download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
