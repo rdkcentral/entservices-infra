@@ -60,6 +60,12 @@ set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
+if(RDK_SERVICES_L1_TEST)
+    find_path(JSONCPP_INCLUDE_DIR json/json.h PATHS /usr/include/jsoncpp)
+    include_directories(${JSONCPP_INCLUDE_DIR})
+    target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
+endif(RDK_SERVICES_L1_TEST)
+
 target_link_libraries(${PLUGIN_IMPLEMENTATION}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
