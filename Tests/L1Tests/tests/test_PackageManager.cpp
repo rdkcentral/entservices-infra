@@ -471,7 +471,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for checking download request error when internet is unavailable using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -499,6 +499,7 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
 
 	deinitforComRpc();   
 }
+#endif
 
 /* Test Case for pausing download via ID using JsonRpc
  * 
