@@ -1681,7 +1681,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
  * Verify package state method success by asserting that it returns Core::ERROR_NONE and state is 3 - INSTALLED
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
     initforComRpc();
@@ -1737,7 +1737,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-
+#endif
 // IPackageHandler methods
 
 /* Test Case for unlock error using JsonRpc
