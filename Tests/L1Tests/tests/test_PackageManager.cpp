@@ -839,7 +839,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for cancelling failed using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -859,7 +859,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for delete download using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, notifications/events, mocks and expectations
