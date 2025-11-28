@@ -28,11 +28,20 @@
 #include <streambuf>
 #include "UtilsCallsign.h"
 #include "UtilsFirebolt.h"
-#define APPGATEWAY_SOCKET_ADDRESS "0.0.0.0:3473"
+#include "StringUtils.h"
+
 #define DEFAULT_CONFIG_PATH "/etc/app-gateway/resolution.base.json"
 #define RESOLUTIONS_PATH_CFG "/etc/app-gateway/resolutions.json"
 
-//#define APPGATEWAY_SOCKET_ADDRESS "0.0.0.0:3473"
+// Build and vendor config paths are defined via CMake
+// These should be set in the platform-specific .bbappend file
+#ifndef BUILD_CONFIG_PATH
+#define BUILD_CONFIG_PATH ""
+#endif
+
+#ifndef VENDOR_CONFIG_PATH
+#define VENDOR_CONFIG_PATH ""
+#endif
 
 namespace WPEFramework
 {
@@ -40,31 +49,104 @@ namespace WPEFramework
     {
         SERVICE_REGISTRATION(AppGatewayImplementation, 1, 0, 0);
 
-        class ResolutionPaths : public Core::JSON::Container
+        class RegionalResolutionConfig : public Core::JSON::Container
         {
         private:
-            ResolutionPaths(const ResolutionPaths &) = delete;
-            ResolutionPaths &operator=(const ResolutionPaths &) = delete;
+            RegionalResolutionConfig(const RegionalResolutionConfig &) = delete;
+            RegionalResolutionConfig &operator=(const RegionalResolutionConfig &) = delete;
+
         public:
-            ResolutionPaths()
+            class Region : public Core::JSON::Container
+            {
+            public:
+                Region()
+                : Core::JSON::Container()
+                {
+                    Add(_T("countryCodes"), &countryCodes);
+                    Add(_T("paths"), &paths);
+                }
+
+                Region(const Region& other)
+                : Core::JSON::Container(),
+                  countryCodes(other.countryCodes),
+                  paths(other.paths)
+                {
+                    Add(_T("countryCodes"), &countryCodes);
+                    Add(_T("paths"), &paths);
+                }
+                Region& operator=(const Region& other)
+                {
+                    if (this != &other) {
+                        countryCodes = other.countryCodes;
+                        paths = other.paths;
+                    }
+                    return *this;
+                }
+                ~Region() {}
+
+                Core::JSON::ArrayType<Core::JSON::String> countryCodes;
+                Core::JSON::ArrayType<Core::JSON::String> paths;
+
+                bool HasCountryCode(const std::string& country) const {
+                    auto index = countryCodes.Elements();
+                    while (index.Next()) {
+                        std::string code = index.Current().Value();
+                        // Case-insensitive equality using StringUtils::toLower
+                        if (StringUtils::toLower(code) == StringUtils::toLower(country)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                std::vector<std::string> GetPaths() const {
+                    std::vector<std::string> result;
+                    auto index = paths.Elements();
+                    while (index.Next()) {
+                        result.push_back(index.Current().Value().c_str());
+                    }
+                    return result;
+                }
+            };
+
+            RegionalResolutionConfig()
             : Core::JSON::Container()
             {
-                Add(_T("paths"), &paths);
+                Add(_T("defaultCountryCode"), &defaultCountryCode);
+                Add(_T("regions"), &regions);
             }
-            ~ResolutionPaths()
-            {}
-            std::vector<std::string> GetConfigPaths() {
-                std::vector<std::string> configPaths;
-                auto index = paths.Elements();
+            ~RegionalResolutionConfig() {}
+
+            std::vector<std::string> GetPathsForCountry(const std::string& country) const {
+                std::vector<std::string> result;
+
+                // Search through regions for matching country code
+                auto index = regions.Elements();
                 while (index.Next()) {
-                    configPaths.push_back(index.Current().Value().c_str());
+                    const Region& region = index.Current();
+                    if (region.HasCountryCode(country)) {
+                        result = region.GetPaths();
+                        LOGINFO("Found %zu paths for country '%s'", result.size(), country.c_str());
+                        return result;
+                    }
                 }
-                return configPaths;
+
+                // If no match found and we have a default country, try that
+                if (!country.empty() && defaultCountryCode.IsSet()) {
+                    std::string defaultCode = defaultCountryCode.Value();
+                    if (!defaultCode.empty() && country != defaultCode) {
+                        LOGWARN("Country '%s' not found, trying default country '%s'",
+                                country.c_str(), defaultCode.c_str());
+                        return GetPathsForCountry(defaultCode);
+                    }
+                }
+
+                return result;
             }
 
         public:
-            Core::JSON::ArrayType<Core::JSON::String> paths;
-
+            Core::JSON::String defaultCountryCode;
+            Core::JSON::ArrayType<Region> regions;
         };
 
         AppGatewayImplementation::AppGatewayImplementation()
@@ -140,11 +222,20 @@ namespace WPEFramework
                 return Core::ERROR_GENERAL;
             }
 
-            ResolutionPaths paths;
-            Core::OptionalType<Core::JSON::Error> error;
-            std::ifstream resolutionPathsFile(RESOLUTIONS_PATH_CFG);
+            // Read country from build config
+            std::string country = ReadCountryFromConfigFile();
+            if (country.empty()) {
+                LOGWARN("No country found in build config, will use default from resolutions config");
+            } else {
+                LOGINFO("Device country code: %s", country.c_str());
+            }
 
-            if(!resolutionPathsFile.is_open())
+            // Load the regional resolutions configuration
+            RegionalResolutionConfig regionalConfig;
+            Core::OptionalType<Core::JSON::Error> error;
+            std::ifstream resolutionConfigFile(RESOLUTIONS_PATH_CFG);
+
+            if (!resolutionConfigFile.is_open())
             {
                 LOGWARN("Failed to open resolutions config file: %s, falling back to default config", RESOLUTIONS_PATH_CFG);
 
@@ -157,30 +248,51 @@ namespace WPEFramework
                     LOGERR("Failed to configure resolutions from fallback path");
                     return configResult;
                 }
+                return Core::ERROR_NONE;
             }
-            else
+
+            // Parse the regional config file
+            std::string configContent((std::istreambuf_iterator<char>(resolutionConfigFile)), std::istreambuf_iterator<char>());
+            resolutionConfigFile.close();
+
+            if (regionalConfig.FromString(configContent, error) == false)
             {
-                std::string resolutionPathsContent((std::istreambuf_iterator<char>(resolutionPathsFile)), std::istreambuf_iterator<char>());
-                if (paths.FromString(resolutionPathsContent, error) == false)
-                {
-                    LOGERR("Failed to parse resolutions config file, error: '%s', content: '%s'.",
-                           (error.IsSet() ? error.Value().Message().c_str() : "Unknown"),
-                           resolutionPathsContent.c_str());
-                    return Core::ERROR_GENERAL;
-                } else {
-                    auto configPaths = paths.GetConfigPaths();
-                    if (configPaths.empty()) {
-                        LOGERR("No configuration paths found in resolutions config file");
-                        return Core::ERROR_BAD_REQUEST;
-                    }
-                    LOGINFO("Found %zu configuration paths in resolutions config file", configPaths.size());
-                    Core::hresult configResult = InternalResolutionConfigure(std::move(configPaths));
-                    if (configResult != Core::ERROR_NONE) {
-                        LOGERR("Failed to configure resolutions from provided paths");
-                        return configResult;
-                    }
+                LOGERR("Failed to parse regional resolutions config file, error: '%s'",
+                       (error.IsSet() ? error.Value().Message().c_str() : "Unknown"));
+                LOGWARN("Falling back to default config path: %s", DEFAULT_CONFIG_PATH);
+                std::vector<std::string> fallbackPaths = { DEFAULT_CONFIG_PATH };
+                Core::hresult configResult = InternalResolutionConfigure(std::move(fallbackPaths));
+                if (configResult != Core::ERROR_NONE) {
+                    LOGERR("Failed to configure resolutions from fallback path after parse error");
+                    return configResult;
                 }
+                return Core::ERROR_NONE;
             }
+
+            // If country is empty, use the default from config
+            if (country.empty() && regionalConfig.defaultCountryCode.IsSet()) {
+                country = regionalConfig.defaultCountryCode.Value();
+                LOGINFO("Using default country code from config: %s", country.c_str());
+            }
+
+            // Get paths for the country
+            std::vector<std::string> configPaths = regionalConfig.GetPathsForCountry(country);
+
+            if (configPaths.empty()) {
+                LOGERR("No configuration paths found for country '%s' and no fallback available", country.c_str());
+
+                // Last resort fallback
+                configPaths = {DEFAULT_CONFIG_PATH};
+                LOGWARN("Using last resort fallback: %s", DEFAULT_CONFIG_PATH);
+            }
+
+            LOGINFO("Loading %zu configuration paths for country '%s'", configPaths.size(), country.c_str());
+            Core::hresult configResult = InternalResolutionConfigure(std::move(configPaths));
+            if (configResult != Core::ERROR_NONE) {
+                LOGERR("Failed to configure resolutions from country-specific paths");
+                return configResult;
+            }
+
             return Core::ERROR_NONE;
         }
 
@@ -460,6 +572,76 @@ namespace WPEFramework
             return true;
         }
 
+        std::string AppGatewayImplementation::ReadCountryFromConfigFile() {
+            std::string country;
+
+            // Skip if paths not configured (empty strings from CMake)
+            if (strlen(VENDOR_CONFIG_PATH) == 0 && strlen(BUILD_CONFIG_PATH) == 0) {
+                LOGINFO("Platform config paths not set, will use default country from resolutions.json");
+                return country;
+            }
+
+            // Try VENDOR_CONFIG_PATH first (if configured)
+            if (strlen(VENDOR_CONFIG_PATH) > 0) {
+                std::ifstream vendorConfigFile(VENDOR_CONFIG_PATH);
+                if (vendorConfigFile.is_open()) {
+                try {
+                    std::string vendorConfigContent((std::istreambuf_iterator<char>(vendorConfigFile)), std::istreambuf_iterator<char>());
+                    vendorConfigFile.close();
+
+                    JsonObject vendorConfig;
+                    if (vendorConfig.FromString(vendorConfigContent)) {
+                        if (vendorConfig.HasLabel("country")) {
+                            country = vendorConfig["country"].String();
+                            LOGINFO("Country read from vendor config: %s", country.c_str());
+                            return country;
+                        } else {
+                            LOGWARN("No 'country' field found in vendor config: %s", VENDOR_CONFIG_PATH);
+                        }
+                    } else {
+                        LOGERR("Failed to parse vendor config JSON from: %s", VENDOR_CONFIG_PATH);
+                    }
+                } catch (const std::exception& e) {
+                    LOGERR("Exception reading vendor config: %s", e.what());
+                }
+                } else {
+                    LOGINFO("Vendor config file not found: %s, trying build config", VENDOR_CONFIG_PATH);
+                }
+            }
+
+            // Fallback to BUILD_CONFIG_PATH if vendor config didn't provide country (if configured)
+            if (strlen(BUILD_CONFIG_PATH) == 0) {
+                LOGINFO("Build config path not set");
+                return country;
+            }
+
+            std::ifstream buildConfigFile(BUILD_CONFIG_PATH);
+            if (!buildConfigFile.is_open()) {
+                LOGINFO("Build config file not found: %s", BUILD_CONFIG_PATH);
+                return country;
+            }
+
+            try {
+                std::string buildConfigContent((std::istreambuf_iterator<char>(buildConfigFile)), std::istreambuf_iterator<char>());
+                buildConfigFile.close();
+
+                JsonObject buildConfig;
+                if (buildConfig.FromString(buildConfigContent)) {
+                    if (buildConfig.HasLabel("country")) {
+                        country = buildConfig["country"].String();
+                        LOGINFO("Country read from build config: %s", country.c_str());
+                    } else {
+                        LOGWARN("No 'country' field found in build config");
+                    }
+                } else {
+                    LOGERR("Failed to parse build config JSON from: %s", BUILD_CONFIG_PATH);
+                }
+            } catch (const std::exception& e) {
+                LOGERR("Exception reading build config: %s", e.what());
+            }
+
+            return country;
+        }
+
     } // namespace Plugin
 } // namespace WPEFramework
-
