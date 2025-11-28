@@ -96,10 +96,6 @@ namespace Plugin {
         ASSERT(notification != nullptr);
         Core::hresult result = Core::ERROR_NONE;
 
-        done = true;
-        cv.notify_one();
-        mDownloadThreadPtr->join();
-
         mAdminLock.Lock();
         auto item = std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification);
         if (item != mDownloaderNotifications.end()) {
@@ -169,6 +165,10 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
+
+        done = true;
+        cv.notify_one();
+        mDownloadThreadPtr->join();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         if (nullptr != mTelemetryMetricsObject)
