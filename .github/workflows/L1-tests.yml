@@ -498,8 +498,8 @@ jobs:
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
-          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DPLUGIN_PACKAGE_MANAGER=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-infra -j8
@@ -584,8 +584,8 @@ jobs:
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
-          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DPLUGIN_PACKAGE_MANAGER=ON
+          -DPLUGIN_PREINSTALL_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
           cmake --build build/entservices-testframework -j8
