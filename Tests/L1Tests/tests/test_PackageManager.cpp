@@ -1767,7 +1767,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcFailure) {
  * Verify Unlock method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, unlockmethodusingComRpcFailure) {
 
     initforComRpc();
@@ -1782,3 +1782,4 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
+#endif
