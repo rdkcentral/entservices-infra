@@ -446,7 +446,7 @@ TEST_F(PackageManagerTest, downloadMethodusingJsonRpcError) {
  * Verify successful download request by asserting that it returns Core::ERROR_NONE and checking the downloadId
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, downloadMethodsusingComRpcSuccess) {
 
     initforComRpc();
@@ -499,7 +499,6 @@ TEST_F(PackageManagerTest, downloadMethodsusingComRpcError) {
 
 	deinitforComRpc();   
 }
-#endif
 
 /* Test Case for pausing download via ID using JsonRpc
  * 
@@ -568,7 +567,7 @@ TEST_F(PackageManagerTest, pauseMethodusingJsonRpcFailure) {
  * Verify successful cancel by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     initforComRpc();
@@ -617,7 +616,7 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for resuming download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -691,7 +690,7 @@ TEST_F(PackageManagerTest, resumeMethodusingJsonRpcSuccess) {
  * Verify successful cancel by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     initforComRpc();
@@ -742,7 +741,7 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for cancelling download via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -810,7 +809,7 @@ TEST_F(PackageManagerTest, cancelMethodusingJsonRpcSuccess) {
  * Verify successful cancel by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     initforComRpc();
@@ -859,7 +858,7 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for delete download using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, notifications/events, mocks and expectations
@@ -934,7 +933,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
  * Verify successful delete by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     initforComRpc();
@@ -983,7 +982,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for download progress via ID using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1059,7 +1058,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
  * Verify successful cancel by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
- #if 0
+
  TEST_F(PackageManagerTest, progressMethodusingComRpcSuccess) {
 
     initforComRpc();
@@ -1114,7 +1113,7 @@ TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for getting storage details using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1227,7 +1226,7 @@ TEST_F(PackageManagerTest, rateLimitusingJsonRpcFailure) {
  * Verify successful cancel by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     initforComRpc();
@@ -1281,7 +1280,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 // IPackageInstaller methods
 
 /* Test Case for error on install due to invalid signature using JsonRpc
@@ -1343,7 +1342,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcSuccess) {
  * Verify error on install by asserting that it returns Core::ERROR_INVALID_SIGNATURE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
     initforComRpc();
@@ -1420,7 +1419,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
 	deinitforComRpc();   
 }
-#endif
+
 /* Test Case for uninstall success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1469,7 +1468,7 @@ TEST_F(PackageManagerTest, uninstallusingJsonRpcSuccess) {
  * Verify successful uninstall by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, uninstallusingComRpcSuccess) {
 
     initforComRpc();
@@ -1529,7 +1528,7 @@ TEST_F(PackageManagerTest, uninstallusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for list packages method success using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1580,7 +1579,7 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
  * Verify that the ListPackages method is successful by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
     initforComRpc();
@@ -1632,7 +1631,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
@@ -1681,7 +1680,7 @@ TEST_F(PackageManagerTest, packageStateusingJsonRpcSuccess) {
  * Verify package state method success by asserting that it returns Core::ERROR_NONE and state is 3 - INSTALLED
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
     initforComRpc();
@@ -1737,7 +1736,7 @@ TEST_F(PackageManagerTest, packageStateusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-#endif
+
 // IPackageHandler methods
 
 /* Test Case for unlock error using JsonRpc
@@ -1767,7 +1766,7 @@ TEST_F(PackageManagerTest, unlockmethodusingJsonRpcFailure) {
  * Verify Unlock method failure by asserting that it returns Core::ERROR_GENERAL
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-#if 0
+
 TEST_F(PackageManagerTest, unlockmethodusingComRpcFailure) {
 
     initforComRpc();
@@ -1782,4 +1781,3 @@ TEST_F(PackageManagerTest, unlockmethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-#endif
