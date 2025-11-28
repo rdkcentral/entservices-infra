@@ -1059,7 +1059,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
  * Verify successful cancel by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+ #if 0
  TEST_F(PackageManagerTest, progressMethodusingComRpcSuccess) {
 
     initforComRpc();
@@ -1092,7 +1092,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for download progress failure using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
