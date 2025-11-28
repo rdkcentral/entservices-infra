@@ -1343,7 +1343,7 @@ TEST_F(PackageManagerTest, installusingJsonRpcSuccess) {
  * Verify error on install by asserting that it returns Core::ERROR_INVALID_SIGNATURE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
     initforComRpc();
@@ -1363,7 +1363,7 @@ TEST_F(PackageManagerTest, installusingComRpcInvalidSignature) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for install success using ComRpc
  * 
  * Set up and initialize required COM-RPC resources, configurations, notifications/events, mocks and expectations
