@@ -1092,7 +1092,7 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
     
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for download progress failure using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -1114,7 +1114,7 @@ TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for getting storage details using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
