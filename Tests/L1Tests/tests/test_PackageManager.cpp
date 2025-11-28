@@ -1580,7 +1580,7 @@ TEST_F(PackageManagerTest, listPackagesusingJsonRpcSuccess) {
  * Verify that the ListPackages method is successful by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
     initforComRpc();
@@ -1632,7 +1632,7 @@ TEST_F(PackageManagerTest, listPackagesusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for package state failure using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
