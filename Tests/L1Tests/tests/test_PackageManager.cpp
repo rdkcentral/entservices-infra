@@ -1260,7 +1260,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
     
 	deinitforComRpc();
 }
-#endif
+
 /* Test Case for failure in setting rateLimit using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
@@ -1281,7 +1281,7 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-
+#endif
 // IPackageInstaller methods
 
 /* Test Case for error on install due to invalid signature using JsonRpc
