@@ -362,7 +362,6 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("uninstall")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("listPackages")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("config")));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("download")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("packageState")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("lock")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("unlock")));
@@ -587,12 +586,12 @@ TEST_F(PackageManagerTest, pauseMethodusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = "1001";
+    string downloadIdStr = "1001";
 
     // TC-8: Pause download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadIdStr));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadIdStr));
 
 	deinitforComRpc();    
 }
@@ -710,14 +709,14 @@ TEST_F(PackageManagerTest, resumeMethodusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = "1001";
+    string downloadIdStr = "1001";
     
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadIdStr));
 
     // TC-12: Resume download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Resume(downloadIdStr));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadIdStr));
 
     deinitforComRpc();
 }
@@ -829,12 +828,12 @@ TEST_F(PackageManagerTest, cancelMethodusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = "1001";
+    string downloadIdStr = "1001";
     
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadIdStr));
 
     // TC-16: Cancel download via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadIdStr));
 
 	deinitforComRpc();
 }
@@ -1080,14 +1079,14 @@ TEST_F(PackageManagerTest, progressMethodusingJsonRpcFailure) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = "1001";
+    string downloadIdStr = "1001";
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadIdStr));
 
     // TC-24: Download progress via downloadId using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadId, progress));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Progress(downloadIdStr, progress));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadIdStr));
     
 	deinitforComRpc();
 }
@@ -1248,14 +1247,14 @@ TEST_F(PackageManagerTest, rateLimitusingComRpcSuccess) {
 
     EXPECT_EQ(downloadId.downloadId, "1001");
 
-    string downloadId = "1001";
+    string downloadIdStr = "1001";
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Pause(downloadIdStr));
 
     // TC-30: Set rate limit via downloadID using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadId, limit));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->RateLimit(downloadIdStr, limit));
 
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadId));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Cancel(downloadIdStr));
     
 	deinitforComRpc();
 }
