@@ -572,76 +572,51 @@ namespace WPEFramework
             return true;
         }
 
+        // Helper: read a string key from a JSON file; returns empty if any step fails.
+        static std::string ReadJsonStringKey(const std::string& filePath, const std::string& key, const char* tag) {
+            if (filePath.empty()) {
+                return "";
+            }
+            std::ifstream file(filePath);
+            if (!file.is_open()) {
+                LOGINFO("%s file not found: %s", tag, filePath.c_str());
+                return "";
+            }
+            std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            file.close();
+            JsonObject json;
+            if (!json.FromString(content)) {
+                LOGERR("Failed to parse %s JSON: %s", tag, filePath.c_str());
+                return "";
+            }
+            if (!json.HasLabel(key.c_str())) {
+                LOGWARN("No '%s' field found in %s: %s", key.c_str(), tag, filePath.c_str());
+                return "";
+            }
+            std::string value = json[key.c_str()].String();
+            LOGINFO("%s '%s' read: %s", tag, key.c_str(), value.c_str());
+            return value;
+        }
+
         std::string AppGatewayImplementation::ReadCountryFromConfigFile() {
-            std::string country;
-
-            // Skip if paths not configured (empty strings from CMake)
+            // Both config paths empty: rely on defaultCountryCode in resolutions.json later.
             if (strlen(VENDOR_CONFIG_PATH) == 0 && strlen(BUILD_CONFIG_PATH) == 0) {
-                LOGINFO("Platform config paths not set, will use default country from resolutions.json");
+                LOGINFO("Platform config paths not set; will use defaultCountryCode from resolutions.json if present");
+                return "";
+            }
+
+            // Try vendor first, then build.
+            const std::string vendorPath = VENDOR_CONFIG_PATH;
+            const std::string buildPath  = BUILD_CONFIG_PATH;
+
+            std::string country = ReadJsonStringKey(vendorPath, "country", "Vendor config");
+            if (!country.empty()) {
                 return country;
             }
-
-            // Try VENDOR_CONFIG_PATH first (if configured)
-            if (strlen(VENDOR_CONFIG_PATH) > 0) {
-                std::ifstream vendorConfigFile(VENDOR_CONFIG_PATH);
-                if (vendorConfigFile.is_open()) {
-                try {
-                    std::string vendorConfigContent((std::istreambuf_iterator<char>(vendorConfigFile)), std::istreambuf_iterator<char>());
-                    vendorConfigFile.close();
-
-                    JsonObject vendorConfig;
-                    if (vendorConfig.FromString(vendorConfigContent)) {
-                        if (vendorConfig.HasLabel("country")) {
-                            country = vendorConfig["country"].String();
-                            LOGINFO("Country read from vendor config: %s", country.c_str());
-                            return country;
-                        } else {
-                            LOGWARN("No 'country' field found in vendor config: %s", VENDOR_CONFIG_PATH);
-                        }
-                    } else {
-                        LOGERR("Failed to parse vendor config JSON from: %s", VENDOR_CONFIG_PATH);
-                    }
-                } catch (const std::exception& e) {
-                    LOGERR("Exception reading vendor config: %s", e.what());
-                }
-                } else {
-                    LOGINFO("Vendor config file not found: %s, trying build config", VENDOR_CONFIG_PATH);
-                }
-            }
-
-            // Fallback to BUILD_CONFIG_PATH if vendor config didn't provide country (if configured)
-            if (strlen(BUILD_CONFIG_PATH) == 0) {
-                LOGINFO("Build config path not set");
-                return country;
-            }
-
-            std::ifstream buildConfigFile(BUILD_CONFIG_PATH);
-            if (!buildConfigFile.is_open()) {
-                LOGINFO("Build config file not found: %s", BUILD_CONFIG_PATH);
-                return country;
-            }
-
-            try {
-                std::string buildConfigContent((std::istreambuf_iterator<char>(buildConfigFile)), std::istreambuf_iterator<char>());
-                buildConfigFile.close();
-
-                JsonObject buildConfig;
-                if (buildConfig.FromString(buildConfigContent)) {
-                    if (buildConfig.HasLabel("country")) {
-                        country = buildConfig["country"].String();
-                        LOGINFO("Country read from build config: %s", country.c_str());
-                    } else {
-                        LOGWARN("No 'country' field found in build config");
-                    }
-                } else {
-                    LOGERR("Failed to parse build config JSON from: %s", BUILD_CONFIG_PATH);
-                }
-            } catch (const std::exception& e) {
-                LOGERR("Exception reading build config: %s", e.what());
-            }
-
-            return country;
+            country = ReadJsonStringKey(buildPath, "country", "Build config");
+            return country; // may be empty; caller handles fallback
         }
 
     } // namespace Plugin
 } // namespace WPEFramework
+
