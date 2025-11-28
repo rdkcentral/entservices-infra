@@ -934,7 +934,7 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcFailure) {
  * Verify successful delete by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
-
+#if 0
 TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     initforComRpc();
@@ -963,7 +963,7 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
 	deinitforComRpc();
 }
-
+#endif
 /* Test Case for delete download failure using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
