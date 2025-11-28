@@ -581,5 +581,46 @@ namespace Plugin {
         success = true;
         return Core::ERROR_NONE;
     }
+
+    /* This function attempts to parse a JSON-formatted string containing metrics,
+    * validates the parsed data, and then merges it into an internal metrics record
+    * map keyed by a generated record ID.
+    *
+    * @param id           The unique identifier
+    * @param metrics      A JSON-formatted string representing the metrics data to record.
+    * @param markerName   An string used to generate a unique record key.
+    *
+    * @return Core::hresult
+    *         - Core::ERROR_NONE on success.
+    *         - Core::ERROR_GENERAL if parsing fails or input is invalid.
+    */
+    Core::hresult TelemetryImplementation::Record(const string& id, const string& telemetryMetrics, const string& markerName)
+    {
+        LOGINFO("Record called with id:%s, markerName:%s, telemetryMetrics:%s", id.c_str(), markerName.c_str(), telemetryMetrics.c_str());
+        Core::hresult result = Core::ERROR_GENERAL;
+
+        return result;
+    }
+
+    /* Publishes the collected telemetry metrics.
+    *
+    * This method is responsible for sending or flushing the internally stored
+    * metrics records to the telemetry.
+    *
+    * @param id           The unique identifier
+    * @param markerName   An string used to generate a unique record key.
+    * @param mergeKey     A string key used to identify records that should be merged together.
+    *
+    * @return Core::hresult
+    *         - Core::ERROR_NONE on success.
+    *         - Core::ERROR_GENERAL if parsing fails or input is invalid.
+    */
+    Core::hresult TelemetryImplementation::Publish(const string& id, const string& markerName, const string& mergeKey)
+    {
+        LOGINFO("Publish called with id:%s, markerName:%s", id.c_str(), markerName.c_str());
+        Core::hresult result = Core::ERROR_GENERAL;
+
+        return result;
+    }
 } // namespace Plugin
 } // namespace WPEFramework

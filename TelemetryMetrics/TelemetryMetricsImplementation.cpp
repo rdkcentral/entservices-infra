@@ -143,7 +143,7 @@ namespace Plugin {
 
         std::string recordId = generateRecordId(id, markerName);
         Json::Value filteredMetrics =Json::objectValue;
-        std::string appInstanceId = "";
+        std::string appInstanceId = ""; // todo pass appInstanceId as filter key
         std::string matchedOtherRecordId = "";
         std::unordered_set<std::string> filterKeys ={};
 
