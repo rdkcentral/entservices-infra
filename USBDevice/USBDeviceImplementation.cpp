@@ -4,7 +4,7 @@
 *
 * Copyright 2024 RDK Management
 *
-* Licensed under the Apache License, Version 2.0 (the "License");
+* Licensed under the Apache License, Version 2.0 the "License";
 * you may not use this file except in compliance with the License.
 * You may obtain a copy of the License at
 *
@@ -670,7 +670,7 @@ uint32_t USBDeviceImplementation::getUSBDeviceInfoStructFromDeviceDescriptor(lib
 {
     struct libusb_device_descriptor desc = {0};
     libusb_config_descriptor *config_desc;
-    char deviceName[16] = {0}; 
+    char deviceName[12] = {0}; 
     uint32_t status = Core::ERROR_GENERAL;
     int retValue = LIBUSB_SUCCESS;
 
