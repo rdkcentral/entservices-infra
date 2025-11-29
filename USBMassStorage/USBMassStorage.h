@@ -98,7 +98,7 @@ namespace Plugin {
             uint32_t _connectionId{};
             Exchange::IUSBMassStorage* _usbMassStorage{};
             Core::Sink<Notification> _usbStoragesNotification;
-            Exchange::IConfiguration* configure;
+            Exchange::IConfiguration* configure{nullptr};
     };
 
 } // namespace Plugin
