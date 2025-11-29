@@ -18,6 +18,7 @@
  */
 #include "AnalyticsImplementation.h"
 #include "UtilsLogging.h"
+#include "UtilsTelemetry.h"
 #include "LocalStore.h"
 
 #include <fstream>
@@ -64,12 +65,16 @@ namespace Plugin {
         mSysTimeValid(false),
         mShell(nullptr)
     {
+        LOGINFO("AnalyticsImplementation::AnalyticsImplementation()");
+        Utils::Telemetry::init();
+        Utils::Telemetry::sendMessage("AnalyticsImplementation::Init");
         mThread = std::thread(&AnalyticsImplementation::ActionLoop, this);
     }
 
     AnalyticsImplementation::~AnalyticsImplementation()
     {
         LOGINFO("AnalyticsImplementation::~AnalyticsImplementation()");
+        Utils::Telemetry::sendMessage("AnalyticsImplementation::Shutdown");
         std::unique_lock<std::mutex> lock(mQueueMutex);
         mActionQueue.push({ACTION_TYPE_SHUTDOWN, nullptr});
         lock.unlock();
@@ -126,6 +131,8 @@ namespace Plugin {
 
         if (valid == false)
         {
+            Utils::Telemetry::sendError("AnalyticsImplementation::SendEvent: Invalid event parameters for event '%s' from source '%s' with version '%s'",
+                                        eventName.c_str(), eventSource.c_str(), eventSourceVersion.c_str());
             return Core::ERROR_GENERAL;
         }
 
@@ -153,6 +160,7 @@ namespace Plugin {
         if(mSysTime == nullptr)
         {
             LOGERR("Failed to create SystemTime instance");
+            Utils::Telemetry::sendError("AnalyticsImplementation::Configure - Failed to create SystemTime instance");
         }
 
 
@@ -166,6 +174,8 @@ namespace Plugin {
                    (_T("Failed to parse config line, error: '%s', config line: '%s'."),
                     (error.IsSet() ? error.Value().Message().c_str() : "Unknown"),
                     configLine.c_str()));
+            Utils::Telemetry::sendError("AnalyticsImplementation::Configure - Failed to parse config line, error: '%s', config line: '%s'.",
+                                        (error.IsSet() ? error.Value().Message().c_str() : "Unknown"), configLine.c_str());
         }
 
         LOGINFO("EventsMap: %s", config.EventsMap.Value().c_str());
@@ -177,6 +187,8 @@ namespace Plugin {
         {
             LOGERR("Failed to load backend library: %s, error code: %u",
                    config.BackendLib.Value().c_str(), ret);
+            Utils::Telemetry::sendError("AnalyticsImplementation::Configure - Failed to load backend library: %s, error code: %u",
+                                        config.BackendLib.Value().c_str(), ret);
         }
         else
         {
@@ -190,11 +202,14 @@ namespace Plugin {
                 if (localStore == nullptr)
                 {
                     LOGERR("Failed to create LocalStore instance");
+                    Utils::Telemetry::sendError("AnalyticsImplementation::Configure - Failed to create LocalStore instance");
                     result = Core::ERROR_GENERAL;
                 }
                 if (backend->Configure(mShell, mSysTime, std::move(localStore)) != Core::ERROR_NONE)
                 {
                     LOGERR("Failed to configure backend: %s", backend->Name().c_str());
+                    Utils::Telemetry::sendError("AnalyticsImplementation::Configure - Failed to configure backend: %s",
+                                                backend->Name().c_str());
                     result = Core::ERROR_GENERAL;
                 }
                 else
@@ -205,6 +220,7 @@ namespace Plugin {
             else
             {
                 LOGERR("Failed to get backend from loader");
+                Utils::Telemetry::sendError("AnalyticsImplementation::Configure - Failed to get backend from loader");
                 result = Core::ERROR_GENERAL;
             }
         }
@@ -412,6 +428,7 @@ namespace Plugin {
         if (jsonArrayStr.empty())
         {
             LOGERR("Empty events map json array string");
+            Utils::Telemetry::sendError("AnalyticsImplementation::EventMapper::FromString - Empty events map json array string");
             return;
         }
 
@@ -421,6 +438,7 @@ namespace Plugin {
         if (array.Length() == 0)
         {
             LOGERR("Empty or corrupted events map json array");
+            Utils::Telemetry::sendError("AnalyticsImplementation::EventMapper::FromString - Empty or corrupted events map json array");
             return;
         }
 
@@ -442,6 +460,7 @@ namespace Plugin {
             else
             {
                 LOGERR("Invalid entry in events map file at index %d", i);
+                Utils::Telemetry::sendError("AnalyticsImplementation::EventMapper::FromString - Invalid entry in events map file at index %d", i);
             }
         }
     }
