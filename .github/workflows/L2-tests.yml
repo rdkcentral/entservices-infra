@@ -100,7 +100,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: RDK-57739_final
 
       - name: Checkout entservices-deviceanddisplay
         uses: actions/checkout@v3
