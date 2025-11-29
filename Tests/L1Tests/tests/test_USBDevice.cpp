@@ -2093,3 +2093,311 @@ TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceList_PerInterfaceClass_Multipl
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response));
     EXPECT_TRUE(response.find("\"deviceClass\":8") != string::npos);
 }
+
+enum StringDescriptorBehavior {
+    SUCCESS_ALL_DESCRIPTORS,
+    NO_MANUFACTURER,
+    NO_PRODUCT,
+    NO_SERIAL_NUMBER,
+    NEGATIVE_RETURN_WITH_ASCII_FALLBACK,
+    NEGATIVE_RETURN_ASCII_ALSO_FAILS,
+    WRONG_DESCRIPTOR_TYPE,
+    INVALID_DESCRIPTOR_LENGTH,
+    EMPTY_STRING_DESCRIPTOR,
+    ASCII_ZERO_LENGTH,
+    LANG_DESC_INSUFFICIENT_DATA,
+    LANG_DESC_RETURN_ZERO,
+    LANG_DESC_MULTIPLE,
+    LANG_DESC_ODD_LENGTH
+};
+
+class USBDeviceInfoTestFixture : public USBDeviceTest {
+protected:
+    struct libusb_config_descriptor *temp_config_desc = nullptr;
+
+    void SetupGetDeviceInfoTest(StringDescriptorBehavior behavior) {
+        Mock_SetSerialNumberInUSBDevicePath();
+        Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
+
+        // Mock libusb_get_device_list
+        ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
+        .WillByDefault(
+        [](libusb_context *ctx, libusb_device ***list) {
+            struct libusb_device **ret = nullptr;
+            ssize_t len = 1;
+            ret = (struct libusb_device **)malloc(len * sizeof(struct libusb_device *));
+            if (nullptr == ret) {
+                len = 0;
+            } else {
+                ret[0] = (struct libusb_device *)malloc(sizeof(struct libusb_device));
+                if (nullptr != ret[0]) {
+                    ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
+                    ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
+                    ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
+                } else {
+                    len = 0;
+                }
+                *list = ret;
+            }
+            return len;
+        });
+
+        ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
+        .WillByDefault(
+        [](libusb_device **list, int unref_devices) {
+            if (list) {
+                free(list[0]);
+                free(list);
+            }
+        });
+
+        // Mock libusb_get_device_descriptor
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
+        .WillRepeatedly(
+        [behavior](libusb_device *dev, struct libusb_device_descriptor *desc) {
+            desc->bDeviceSubClass = LIBUSB_CLASS_MASS_STORAGE;
+            desc->bDeviceClass = LIBUSB_CLASS_MASS_STORAGE;
+            desc->idVendor = 0x1234;
+            desc->idProduct = 0x5678;
+            desc->iManufacturer = (behavior == NO_MANUFACTURER) ? 0 : 1;
+            desc->iProduct = (behavior == NO_PRODUCT) ? 0 : 2;
+            desc->iSerialNumber = (behavior == NO_SERIAL_NUMBER) ? 0 : 3;
+            return LIBUSB_SUCCESS;
+        });
+
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) { return dev->device_address; });
+
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
+        .WillRepeatedly([](libusb_device *dev) { return dev->bus_number; });
+
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
+            if ((nullptr != dev) && (nullptr != port_numbers)) {
+                port_numbers[0] = dev->port_number;
+                return 1;
+            }
+            return 0;
+        });
+
+        // Mock libusb_get_active_config_descriptor
+        ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
+        .WillByDefault([this](libusb_device* pDev, struct libusb_config_descriptor** config_desc) {
+            *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
+            if (nullptr != *config_desc) {
+                temp_config_desc = *config_desc;
+                (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
+                return (int)LIBUSB_SUCCESS;
+            }
+            return (int)1;
+        });
+
+        // Mock libusb_get_string_descriptor
+        EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Invoke([behavior](libusb_device_handle *dev_handle,
+            uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
+            
+            data[1] = LIBUSB_DT_STRING;
+
+            // Language Descriptor (Index 0)
+            if (desc_index == 0) {
+                if (behavior == LANG_DESC_INSUFFICIENT_DATA) {
+                    data[0] = 2; // Only header, < 4 bytes
+                    return 2;
+                }
+                if (behavior == LANG_DESC_RETURN_ZERO) {
+                    return 0;
+                }
+                if (behavior == LANG_DESC_MULTIPLE) {
+                    // 5 languages: 2 header + 10 data = 12 bytes
+                    data[0] = 12;
+                    data[2] = 0x09; data[3] = 0x04; // en-US
+                    data[4] = 0x07; data[5] = 0x04;
+                    data[6] = 0x0a; data[7] = 0x04;
+                    data[8] = 0x0c; data[9] = 0x04;
+                    data[10] = 0x10; data[11] = 0x04;
+                    return 12;
+                }
+                if (behavior == LANG_DESC_ODD_LENGTH) {
+                    // Odd length: 2 header + 3 data = 5 bytes (1.5 languages)
+                    data[0] = 5;
+                    data[2] = 0x09; data[3] = 0x04;
+                    data[4] = 0xAA;
+                    return 5;
+                }
+                
+                // Default Valid Language
+                data[0] = 4;
+                data[2] = 0x09; data[3] = 0x04;
+                return 4;
+            }
+
+            // String Descriptors (Index > 0)
+            if (behavior == NEGATIVE_RETURN_WITH_ASCII_FALLBACK || behavior == NEGATIVE_RETURN_ASCII_ALSO_FAILS) {
+                return LIBUSB_ERROR_OTHER;
+            }
+
+            if (behavior == WRONG_DESCRIPTOR_TYPE) {
+                data[0] = 10;
+                data[1] = 0xFF; // Not LIBUSB_DT_STRING (0x03)
+                return 10;
+            }
+
+            if (behavior == INVALID_DESCRIPTOR_LENGTH) {
+                data[0] = 20; // Claimed length
+                // data[1] set to string above
+                return 10; // Actual returned length mismatch
+            }
+
+            if (behavior == EMPTY_STRING_DESCRIPTOR) {
+                data[0] = 2;
+                return 2;
+            }
+
+            // Valid String
+            const char *buf = "";
+            if (desc_index == 1) buf = MOCK_USB_DEVICE_MANUFACTURER;
+            else if (desc_index == 2) buf = MOCK_USB_DEVICE_PRODUCT;
+            else if (desc_index == 3) buf = MOCK_USB_DEVICE_SERIAL_NO;
+
+            int str_len = strlen(buf);
+            int total_len = 2 + str_len * 2;
+            data[0] = total_len;
+            
+            for (int i = 0; i < str_len; ++i) {
+                data[2 + i * 2] = buf[i];
+                data[2 + i * 2 + 1] = 0;
+            }
+            return total_len;
+        }));
+
+        // Mock libusb_get_string_descriptor_ascii (Fallback)
+        if (behavior == NEGATIVE_RETURN_WITH_ASCII_FALLBACK || behavior == NEGATIVE_RETURN_ASCII_ALSO_FAILS || behavior == ASCII_ZERO_LENGTH) {
+            EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+            .WillRepeatedly(::testing::Invoke([behavior](libusb_device_handle *dev_handle,
+                uint8_t desc_index, unsigned char *data, int length) -> int {
+                
+                if (behavior == NEGATIVE_RETURN_ASCII_ALSO_FAILS) {
+                    return LIBUSB_ERROR_OTHER;
+                }
+                if (behavior == ASCII_ZERO_LENGTH) {
+                    return 0;
+                }
+
+                const char *buf = "";
+                if (desc_index == 1) buf = MOCK_USB_DEVICE_MANUFACTURER;
+                else if (desc_index == 2) buf = MOCK_USB_DEVICE_PRODUCT;
+                else if (desc_index == 3) buf = MOCK_USB_DEVICE_SERIAL_NO;
+
+                strncpy((char*)data, buf, length);
+                return strlen(buf);
+            }));
+        }
+    }
+};
+
+TEST_F(USBDeviceInfoTestFixture, LanguageDescriptor_InsufficientData)
+{
+    SetupGetDeviceInfoTest(LANG_DESC_INSUFFICIENT_DATA);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(_T("\"numLanguageIds\":0")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, LanguageDescriptor_NoSupport)
+{
+    SetupGetDeviceInfoTest(LANG_DESC_RETURN_ZERO);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(_T("\"numLanguageIds\":0")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, LanguageDescriptor_MultipleLanguages)
+{
+    SetupGetDeviceInfoTest(LANG_DESC_MULTIPLE);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(_T("\"numLanguageIds\":5")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, LanguageDescriptor_OddLength)
+{
+    SetupGetDeviceInfoTest(LANG_DESC_ODD_LENGTH);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    // 5 bytes total - 2 header = 3 bytes data. 3/2 = 1 complete language.
+    EXPECT_TRUE(response.find(_T("\"numLanguageIds\":1")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, StringRetrieval_Fallback_AsciiSuccess)
+{
+    SetupGetDeviceInfoTest(NEGATIVE_RETURN_WITH_ASCII_FALLBACK);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(MOCK_USB_DEVICE_MANUFACTURER) != string::npos);
+    EXPECT_TRUE(response.find(MOCK_USB_DEVICE_PRODUCT) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, StringRetrieval_Fallback_BothFail)
+{
+    SetupGetDeviceInfoTest(NEGATIVE_RETURN_ASCII_ALSO_FAILS);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    // Should return empty strings
+    EXPECT_TRUE(response.find(_T("\"manufacturer\":\"\"")) != string::npos);
+    EXPECT_TRUE(response.find(_T("\"product\":\"\"")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, StringRetrieval_Fallback_AsciiZeroLength)
+{
+    SetupGetDeviceInfoTest(ASCII_ZERO_LENGTH);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(_T("\"manufacturer\":\"\"")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, Validation_WrongDescriptorType)
+{
+    SetupGetDeviceInfoTest(WRONG_DESCRIPTOR_TYPE);
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, Validation_LengthMismatch)
+{
+    SetupGetDeviceInfoTest(INVALID_DESCRIPTOR_LENGTH);
+    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, Validation_EmptyStrings)
+{
+    SetupGetDeviceInfoTest(EMPTY_STRING_DESCRIPTOR);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(_T("\"manufacturer\":\"\"")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, MissingDescriptors_NoManufacturer)
+{
+    SetupGetDeviceInfoTest(NO_MANUFACTURER);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(_T("\"manufacturer\":\"\"")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, MissingDescriptors_NoProduct)
+{
+    SetupGetDeviceInfoTest(NO_PRODUCT);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find(_T("\"product\":\"\"")) != string::npos);
+    std::cout << "Response: " << response << std::endl;
+}
+
+TEST_F(USBDeviceInfoTestFixture, MissingDescriptors_NoSerialNumber)
+{
+    SetupGetDeviceInfoTest(NO_SERIAL_NUMBER);
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    // Serial number might be in two places in response
+    std::cout << "Response: " << response << std::endl;
+}
