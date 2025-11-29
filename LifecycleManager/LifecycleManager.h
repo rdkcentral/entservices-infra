@@ -24,7 +24,6 @@
 #include <interfaces/json/JsonData_LifecycleManagerState.h>
 #include <interfaces/json/JLifecycleManagerState.h>
 #include <interfaces/ILifecycleManagerState.h>
-#include "UtilsLogging.h"
 #include "tracing/Logging.h"
 #include <mutex>
 
@@ -60,12 +59,10 @@ namespace WPEFramework
 
                     void Activated(RPC::IRemoteConnection*) override
                     {
-                        LOGINFO("LifecycleManagerState Notification Activated");
                     }
 
                     void Deactivated(RPC::IRemoteConnection *connection) override
                     {
-                        LOGINFO("LifecycleManagerState Notification Deactivated");
                     }
 
                     void OnAppLifecycleStateChanged(const string& appId,
@@ -74,7 +71,6 @@ namespace WPEFramework
                                                 const Exchange::ILifecycleManager::LifecycleState newState,
                                                 const string& navigationIntent) override
                     {
-                        LOGINFO("LifecycleManagerState onAppLifecycleStateChanged");
                         Exchange::JLifecycleManagerState::Event::OnAppLifecycleStateChanged(_parent, appId,appInstanceId,oldState, newState, navigationIntent);
                     }
 
