@@ -37,6 +37,8 @@
 #include "WorkerPoolImplementation.h"
 #include "WrapsMock.h"
 #include "FactoriesImplementation.h"
+#include <thread>
+#include <chrono>
 
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
@@ -126,6 +128,7 @@ protected:
     void releaseAppManagerImpl()
     {
         TEST_LOG("In releaseAppManagerImpl!");
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
         plugin->Deinitialize(mServiceMock);
         delete mServiceMock;
         mAppManagerImpl = nullptr;
@@ -291,6 +294,7 @@ protected:
         dispatcher->Deactivate();
         dispatcher->Release();
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
         plugin->Deinitialize(mServiceMock);
         delete mServiceMock;
         mAppManagerImpl = nullptr;
@@ -309,6 +313,7 @@ protected:
     {
         TEST_LOG("Delete ~AppManagerTest Instance!");
         Core::IWorkerPool::Assign(nullptr);
+        workerPool->Stop();
         workerPool.Release();
     }
     std::string GetPackageInfoInJSON()
