@@ -20,7 +20,7 @@
 #pragma once
 
 #include "ApplicationContext.h"
-#include <interfaces/ITelemetryMetrics.h>
+#include <interfaces/ITelemetry.h>
 
 #define TELEMETRY_MARKER_LAUNCH_TIME                         "OverallLaunchTime_split"
 #define TELEMETRY_MARKER_CLOSE_TIME                          "AppCloseTime_split"
@@ -47,11 +47,11 @@ class LifecycleManagerTelemetryReporting
     private /*methods*/:
         LifecycleManagerTelemetryReporting();
         ~LifecycleManagerTelemetryReporting();
-        Core::hresult createTelemetryMetricsPluginObject();
+        Core::hresult createTelemetryPluginObject();
 
     private /*members*/:
         mutable Core::CriticalSection mAdminLock;
-        Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
+        Exchange::ITelemetry* mTelemetryPluginObject;
         PluginHost::IShell* mCurrentservice;
 };
 
