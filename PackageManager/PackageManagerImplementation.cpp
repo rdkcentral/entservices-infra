@@ -927,6 +927,7 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
+        printf("Compilation entry------------------------"\n);
         #ifdef USE_THUNDER_R443
         printf("Compilation target------------------------"\n);
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
