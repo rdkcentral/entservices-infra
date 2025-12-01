@@ -927,15 +927,15 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
-        printf("Compilation entry------------------------"\n);
+        printf("Compilation entry------------------------\n");
         #ifdef USE_THUNDER_R443
-        printf("Compilation target------------------------"\n);
+        printf("Compilation target------------------------\n");
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
-            printf("Compilation target------------------------"\n);
+            printf("Compilation target------------------------\n");
         }
-        printf("Compilation target------------------------"\n);
+        printf("Compilation target------------------------\n");
         #endif
 
         #ifdef USE_LIBPACKAGE
@@ -957,12 +957,12 @@ namespace Plugin {
         }
     
         #ifdef USE_THUNDER_R443
-        printf("Compilation target------------------------"\n);
+        printf("Compilation target------------------------\n");
         if (subSystem != nullptr) {
-            printf("Compilation target------------------------"\n);
+            printf("Compilation target------------------------\n");
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
-        printf("Compilation target------------------------"\n);
+        printf("Compilation target------------------------\n");
         #endif
         cacheInitialized = true;
         LOGDBG("exit");
