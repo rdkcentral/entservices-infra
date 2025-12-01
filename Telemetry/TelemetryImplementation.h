@@ -25,6 +25,8 @@
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IPowerManager.h>
 #include "PowerManagerInterface.h"
+#include <mutex>
+#include <json/json.h>
 
 #ifdef HAS_RBUS
 #include <interfaces/IUserSettings.h>
@@ -199,6 +201,8 @@ namespace Plugin {
         std::list<Exchange::ITelemetry::INotification*> _telemetryNotification;
         PowerManagerInterfaceRef _powerManagerPlugin;
         Core::Sink<PowerManagerNotification> _pwrMgrNotification;
+        std::unordered_map<std::string, Json::Value> mMetricsRecord;
+        std::mutex mMetricsMutex;
 #ifdef HAS_RBUS
         Exchange::IUserSettings* _userSettingsPlugin;
         Core::Sink<UserSettingsNotification> _userSettingsNotification;
@@ -214,3 +218,39 @@ namespace Plugin {
     };
 } // namespace Plugin
 } // namespace WPEFramework
+
+//temporary todo remove
+#define TELEMETRY_MARKER_DOWNLOAD_TIME                  "DownloadTime_split"
+#define TELEMETRY_MARKER_DOWNLOAD_ERROR               "DownloadError_split"
+#define TELEMETRY_MARKER_INSTALL_TIME                       "InstallTime_split"
+#define TELEMETRY_MARKER_INSTALL_ERROR                    "InstallError_split"
+#define TELEMETRY_MARKER_UNINSTALL_TIME                  "UninstallTime_split"
+#define TELEMETRY_MARKER_UNINSTALL_ERROR               "UninstallError_split"
+#define TELEMETRY_MARKER_LAUNCH_TIME                       "OverallLaunchTime_split"
+#define TELEMETRY_MARKER_LAUNCH_ERROR                    "AppLaunchError_split"
+#define TELEMETRY_MARKER_CLOSE_TIME                         "AppCloseTime_split"
+#define TELEMETRY_MARKER_CLOSE_ERROR                      "AppCloseError_split"
+#define TELEMETRY_MARKER_SUSPEND_TIME                     "SuspendTime_split"
+#define TELEMETRY_MARKER_RESUME_TIME                      "ResumeTime_split"
+#define TELEMETRY_MARKER_HIBERNATE_TIME                 "HibernateTime_split"
+#define TELEMETRY_MARKER_WAKE_TIME                          "WakeTime_split"
+#define TELEMETRY_MARKER_APP_CRASHED                      "AppCrashed_split"
+
+
+static const std::unordered_map<std::string, std::unordered_set<std::string>> markerFilters = {
+    {TELEMETRY_MARKER_DOWNLOAD_TIME, {"downloadTime", "markerName"}},
+    {TELEMETRY_MARKER_DOWNLOAD_ERROR, {"errorCode", "markerName"}},
+    {TELEMETRY_MARKER_INSTALL_TIME, {"installTime", "markerName"}},
+    {TELEMETRY_MARKER_INSTALL_ERROR, {"errorCode", "markerName"}},
+    {TELEMETRY_MARKER_UNINSTALL_TIME, {"uninstallTime", "markerName"}},
+    {TELEMETRY_MARKER_UNINSTALL_ERROR, {"errorCode", "markerName"}},
+    {TELEMETRY_MARKER_LAUNCH_TIME, {"totalLaunchTime", "appManagerLaunchTime", "packageManagerLockTime", "lifecycleManagerSpawnTime", "windowManagerCreateDisplayTime", "runtimeManagerRunTime", "storageManagerLaunchTime", "fireboltGatewayLaunchTime", "appId", "appInstanceId", "appVersion", "runtimeId", "runtimeVersion", "launchType", "markerName"}},
+    {TELEMETRY_MARKER_LAUNCH_ERROR, {"errorCode", "markerName"}},
+    {TELEMETRY_MARKER_CLOSE_TIME, {"totalCloseTime", "appManagerCloseTime", "packageManagerUnlockTime", "lifecycleManagerSetTargetStateTime", "windowManagerDestroyTime", "runtimeManagerTerminateTime", "storageManagerTime", "fireboltGatewayTerminateTime", "appId", "appInstanceId", "appVersion", "closeType", "markerName"}},
+    {TELEMETRY_MARKER_CLOSE_ERROR, {"errorCode", "markerName"}},
+    {TELEMETRY_MARKER_SUSPEND_TIME, {"lifecycleManagerSetTargetStateTime", "runtimeManagerSuspendTime", "appId", "appInstanceId", "markerName"}},
+    {TELEMETRY_MARKER_RESUME_TIME, {"lifecycleManagerSetTargetStateTime", "runtimeManagerResumeTime", "appId", "appInstanceId", "markerName"}},
+    {TELEMETRY_MARKER_HIBERNATE_TIME, {"lifecycleManagerSetTargetStateTime", "runtimeManagerHibernateTime", "appId", "appInstanceId", "markerName"}},
+    {TELEMETRY_MARKER_WAKE_TIME, {"lifecycleManagerSetTargetStateTime", "runtimeManagerWakeTime", "appId", "appInstanceId", "markerName"}},
+    {TELEMETRY_MARKER_APP_CRASHED, {"crashReason", "appId", "appInstanceId", "markerName"}},
+};
