@@ -28,7 +28,7 @@
 
 #ifdef USE_LIBPACKAGE
 #include <IPackageImpl.h>
-#else
+#elif defined(UNIT_TEST)
 #include "IPackageImplDummy.h"
 #endif
 #include <json/json.h>
@@ -278,7 +278,7 @@ namespace Plugin {
 
         #ifdef USE_LIBPACKAGE
         std::shared_ptr<packagemanager::IPackageImpl> packageImpl;
-        #else
+        #elif defined(UNIT_TEST)
         std::shared_ptr<packagemanager::IPackageImplDummy> packageImpl;
         #endif
         PluginHost::IShell* mCurrentservice;

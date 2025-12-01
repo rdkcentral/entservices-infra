@@ -83,10 +83,10 @@ jobs:
 
       - name: Set Thunder version flags
         run: |
-          if [ "${{ env.THUNDER_REF }}" = "R4.4.3" ]; then
-          echo "THUNDER_R443=ON" >> $GITHUB_ENV
+          if [ "${{ env.THUNDER_REF }}" = "R4.4.1" ]; then
+          echo "THUNDER_R441=ON" >> $GITHUB_ENV
           else
-          echo "THUNDER_R443=OFF" >> $GITHUB_ENV
+          echo "THUNDER_R441=OFF" >> $GITHUB_ENV
           fi
 
       - name: Install packages

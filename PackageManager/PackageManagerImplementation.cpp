@@ -927,7 +927,7 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
-        #ifdef USE_THUNDER_R443
+        #ifdef USE_THUNDER_R441
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
@@ -940,7 +940,6 @@ namespace Plugin {
           #ifdef UNIT_TEST
           packageImpl = packagemanager::IPackageImplDummy::instance();
           #endif
-        #endif
         
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
@@ -951,8 +950,9 @@ namespace Plugin {
             state.installState = InstallState::INSTALLED;
             mState.insert( { key, state } );
         }
+        #endif
     
-        #ifdef USE_THUNDER_R443
+        #ifdef USE_THUNDER_R441
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
