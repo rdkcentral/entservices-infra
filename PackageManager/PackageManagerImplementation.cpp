@@ -279,7 +279,7 @@ namespace Plugin {
                         if (publish) {
                             LOGINFO("Publish appId %s marker %s", appId.c_str(), marker.c_str());
 
-                            if (mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId"); != Core::ERROR_NONE) {
+                            if (mTelemetryPluginObject->Publish(appId, marker, "appInstanceId") != Core::ERROR_NONE) {
                                 LOGERR("Telemetry Publish Failed");
                             }
                         }
