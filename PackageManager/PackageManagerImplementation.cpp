@@ -929,13 +929,16 @@ namespace Plugin {
         LOGDBG("entry");
         printf("Compilation entry------------------------\n");
         #ifndef USE_THUNDER_R441
-        printf("Compilation target------------------------\n");
+        printf("Compilation target [1]------------------------\n");
+        fflush(stdout);
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
-            printf("Compilation target------------------------\n");
+            printf("Compilation target [2] ------------------------\n");
+            fflush(stdout);
         }
-        printf("Compilation target------------------------\n");
+        printf("Compilation target [3] ------------------------\n");
+        fflush(stdout);
         #endif
 
         #ifdef USE_LIBPACKAGE
@@ -957,12 +960,15 @@ namespace Plugin {
         #endif
     
         #ifndef USE_THUNDER_R441
-        printf("Compilation target------------------------\n");
+        printf("Compilation target [4] ------------------------\n");
+        fflush(stdout);
         if (subSystem != nullptr) {
-            printf("Compilation target------------------------\n");
+            printf("Compilation target [5] ------------------------\n");
+            fflush(stdout);
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
-        printf("Compilation target------------------------\n");
+        printf("Compilation target [6] ------------------------\n");
+        fflush(stdout);
         #endif
         cacheInitialized = true;
         LOGDBG("exit");
