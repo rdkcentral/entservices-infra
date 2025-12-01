@@ -232,7 +232,7 @@ namespace Plugin {
         else {
             if (mTelemetryPluginObject == nullptr) {
                 LOGINFO("mTelemetryPluginObject is null, recreate it");
-                mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics");
+                mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetry>("org.rdk.Telemetry");
 
                 if (mTelemetryPluginObject == nullptr) {
                     LOGERR("mTelemetryPluginObject is still null");
