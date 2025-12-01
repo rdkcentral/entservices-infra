@@ -39,7 +39,7 @@
 #include "HttpClient.h"
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-#include <interfaces/ITelemetryMetrics.h>
+#include <interfaces/ITelemetry.h>
 
 #define TELEMETRY_MARKER_LAUNCH_TIME             "OverallLaunchTime_split"
 #define TELEMETRY_MARKER_CLOSE_TIME              "AppCloseTime_split"
@@ -280,7 +280,7 @@ namespace Plugin {
         PluginHost::IShell* mCurrentservice;
         Exchange::IStorageManager* mStorageManagerObject;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-        Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
+        Exchange::ITelemetry* mTelemetryPluginObject;
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
     };
 } // namespace Plugin
