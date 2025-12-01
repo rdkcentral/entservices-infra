@@ -687,7 +687,7 @@ namespace Plugin {
 
         std::string recordId = generateRecordId(id, markerName);
         Json::Value filteredMetrics =Json::objectValue;
-        std::string appInstanceId = ""; // todo pass appInstanceId as filter key
+        std::string keyFilterValue = ""; // todo pass appInstanceId as filter key
         std::string keyFilter = mergeKey; // replacement for appInstanceId , make filter process generic
         std::string matchedOtherRecordId = "";
         std::unordered_set<std::string> filterKeys ={};
@@ -712,7 +712,7 @@ namespace Plugin {
 
         if (!error)
         {
-            /* Filter current recordMetrics and extract appInstanceId */
+            /* Filter current recordMetrics and extract value of keyFilter */
             auto currentRecordIt = mMetricsRecord.find(recordId);
             if (currentRecordIt == mMetricsRecord.end())
             {
@@ -728,9 +728,9 @@ namespace Plugin {
                     if (filterKeys.count(key))
                     {
                         filteredMetrics[key] = currentMetrics[key];
-                        if (key == "appInstanceId")
+                        if (key == keyFilter)
                         {
-                            appInstanceId = currentMetrics[key].asString();
+                            keyFilterValue = currentMetrics[key].asString();
                         }
                     }
                     else 
@@ -741,10 +741,10 @@ namespace Plugin {
             }
         }
 
-        /* Merge other recordMetrics with the same appInstanceId and markerName */
-        if (!error && !appInstanceId.empty())
+        /* Merge other recordMetrics with the same keyFilterValue and markerName */
+        if (!error && !keyFilterValue.empty())
         {
-            std::string appInstancePrefix = appInstanceId + ":";
+            std::string keyFilterPrefix = keyFilterValue + ":";
 
             for (const auto& entry : mMetricsRecord)
             {
@@ -752,9 +752,9 @@ namespace Plugin {
                 if (otherRecordId == recordId)
                     continue;
 
-                if (otherRecordId.compare(0, appInstancePrefix.size(), appInstancePrefix) == 0)
+                if (otherRecordId.compare(0, keyFilterPrefix.size(), keyFilterPrefix) == 0)
                 {
-                    const std::string otherMarkerName = otherRecordId.substr(appInstancePrefix.size());
+                    const std::string otherMarkerName = otherRecordId.substr(keyFilterPrefix.size());
 
                     /* Merge if markerName Matches */
                     if (otherMarkerName == markerName)
