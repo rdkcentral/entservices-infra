@@ -944,8 +944,7 @@ namespace Plugin {
           #ifdef UNIT_TEST
           packageImpl = packagemanager::IPackageImplDummy::instance();
           #endif
-        #endif
-        
+    
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
@@ -955,6 +954,7 @@ namespace Plugin {
             state.installState = InstallState::INSTALLED;
             mState.insert( { key, state } );
         }
+        #endif
     
         #ifndef USE_THUNDER_R441
         printf("Compilation target------------------------\n");
