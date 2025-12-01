@@ -125,6 +125,17 @@ namespace WPEFramework
                     if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
                         LOGINFO("APP ID %s", appId.c_str());
                         mAppIdRegistry.Add(connectionId, appId);
+                        
+                        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+                        // Check if this is the automation client
+                        #ifdef AUTOMATION_APP_ID
+                        if (appId == AUTOMATION_APP_ID) {
+                            mWsManager.SetAutomationId(connectionId);
+                            LOGINFO("Automation server connected with ID: %d, appId: %s", connectionId, appId.c_str());
+                        }
+                        #endif
+                        #endif
+                        
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
 
                         return true;
@@ -143,7 +154,8 @@ namespace WPEFramework
                     } else {
                         LOGINFO("App ID %s found for connection %d during disconnect", appId.c_str(), connectionId);
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, false));
-                    }    
+                    }
+                    
                     mAppIdRegistry.Remove(connectionId);
                     Exchange::IAppNotifications* appNotifications = mService->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
                     if (appNotifications != nullptr) {
@@ -274,6 +286,11 @@ namespace WPEFramework
             {
                 notification->OnAppConnectionChanged(appId, connectionId, connected);
             }
+
+            #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+            // Notify automation server of connection status change
+            mWsManager.UpdateConnection(connectionId, appId, connected);
+            #endif
         }
 
     } // namespace Plugin
