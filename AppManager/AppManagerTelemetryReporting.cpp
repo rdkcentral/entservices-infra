@@ -25,7 +25,7 @@ namespace WPEFramework
 {
 namespace Plugin
 {
-    AppManagerTelemetryReporting::AppManagerTelemetryReporting(): mTelemetryMetricsObject(nullptr), mCurrentservice(nullptr)
+    AppManagerTelemetryReporting::AppManagerTelemetryReporting(): mTelemetryPluginObject(nullptr), mCurrentservice(nullptr)
     {
     }
 
@@ -46,9 +46,9 @@ namespace Plugin
         mAdminLock.Lock();
         mCurrentservice = service;
         mAdminLock.Unlock();
-        if(Core::ERROR_NONE != createTelemetryMetricsPluginObject())
+        if(Core::ERROR_NONE != createTelemetryPluginObject())
         {
-            LOGERR("Failed to create TelemetryMetricsObject\n");
+            LOGERR("Failed to create TelemetryObject\n");
         }
     }
 
@@ -59,7 +59,7 @@ namespace Plugin
         return ((time_t)(ts.tv_sec * 1000) + ((time_t)ts.tv_nsec/1000000));
     }
 
-    Core::hresult AppManagerTelemetryReporting::createTelemetryMetricsPluginObject()
+    Core::hresult AppManagerTelemetryReporting::createTelemetryPluginObject()
     {
         Core::hresult status = Core::ERROR_GENERAL;
 
@@ -68,14 +68,14 @@ namespace Plugin
         {
                 LOGERR("mCurrentservice is null \n");
         }
-        else if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+        else if (nullptr == (mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetry>("org.rdk.Telemetry")))
         {
-                LOGERR("Failed to create TelemetryMetricsObject\n");
+                LOGERR("Failed to create TelemetryObject\n");
         }
         else
         {
             status = Core::ERROR_NONE;
-            LOGINFO("created TelemetryMetrics Object");
+            LOGINFO("created Telemetry Object");
         }
         mAdminLock.Unlock();
         return status;
@@ -89,16 +89,16 @@ namespace Plugin
         time_t currentTime = getCurrentTimestamp();
         AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
 
-        if(nullptr == mTelemetryMetricsObject) /*mTelemetryMetricsObject is null retry to create*/
+        if(nullptr == mTelemetryPluginObject) /*mTelemetryPluginObject is null retry to create*/
         {
-            if(Core::ERROR_NONE != createTelemetryMetricsPluginObject())
+            if(Core::ERROR_NONE != createTelemetryPluginObject())
             {
-                LOGERR("Failed to create TelemetryMetricsObject\n");
+                LOGERR("Failed to create TelemetryObject\n");
             }
         }
 
         auto it = appManagerImplInstance->mAppInfo.find(appId);
-        if((it != appManagerImplInstance->mAppInfo.end()) && (currentAction == it->second.currentAction) && (nullptr != mTelemetryMetricsObject))
+        if((it != appManagerImplInstance->mAppInfo.end()) && (currentAction == it->second.currentAction) && (nullptr != mTelemetryPluginObject))
         {
             LOGINFO("Received data for appId %s current action %d ",appId.c_str(), currentAction);
 
@@ -132,13 +132,13 @@ namespace Plugin
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {
-                    mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
+                    mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
                 }
             }
         }
         else
         {
-            LOGERR("Failed to report telemetry data as appId/currentAction or mTelemetryMetricsObject is not valid");
+            LOGERR("Failed to report telemetry data as appId/currentAction or mTelemetryPluginObject is not valid");
         }
     }
 
@@ -150,16 +150,16 @@ namespace Plugin
         time_t currentTime = getCurrentTimestamp();
         AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
 
-        if(nullptr == mTelemetryMetricsObject) /*mTelemetryMetricsObject is null retry to create*/
+        if(nullptr == mTelemetryPluginObject) /*mTelemetryPluginObject is null retry to create*/
         {
-            if(Core::ERROR_NONE != createTelemetryMetricsPluginObject())
+            if(Core::ERROR_NONE != createTelemetryPluginObject())
             {
-                LOGERR("Failed to create TelemetryMetricsObject\n");
+                LOGERR("Failed to create TelemetryObject\n");
             }
         }
 
         auto it = appManagerImplInstance->mAppInfo.find(appId);
-        if((it != appManagerImplInstance->mAppInfo.end()) && (nullptr != mTelemetryMetricsObject))
+        if((it != appManagerImplInstance->mAppInfo.end()) && (nullptr != mTelemetryPluginObject))
         {
             switch(it->second.currentAction)
             {
@@ -202,14 +202,14 @@ namespace Plugin
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {
-                    mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
-                    mTelemetryMetricsObject->Publish(appId, markerName);
+                    mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
+                    mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId");
                 }
             }
         }
         else
         {
-            LOGERR("Failed to report telemetry data as appId/mTelemetryMetricsObject is not valid");
+            LOGERR("Failed to report telemetry data as appId/mTelemetryPluginObject is not valid");
         }
     }
 
@@ -221,11 +221,11 @@ namespace Plugin
 
         LOGINFO("Received data for appId %s current action %d app errorCode %d",appId.c_str(), currentAction, errorCode);
 
-        if(nullptr == mTelemetryMetricsObject) /*mTelemetryMetricsObject is null retry to create*/
+        if(nullptr == mTelemetryPluginObject) /*mTelemetryPluginObject is null retry to create*/
         {
-            if(Core::ERROR_NONE != createTelemetryMetricsPluginObject())
+            if(Core::ERROR_NONE != createTelemetryPluginObject())
             {
-                LOGERR("Failed to create TelemetryMetricsObject\n");
+                LOGERR("Failed to create TelemetryObject\n");
             }
         }
 
@@ -245,14 +245,14 @@ namespace Plugin
             break;
         }
 
-        if(!markerName.empty() && (nullptr != mTelemetryMetricsObject))
+        if(!markerName.empty() && (nullptr != mTelemetryPluginObject))
         {
             jsonParam["errorCode"] = (int)errorCode;
             jsonParam.ToString(telemetryMetrics);
             if(!telemetryMetrics.empty())
             {
-                mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
-                mTelemetryMetricsObject->Publish(appId, markerName);
+                mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
+                mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId");
             }
         }
     }
