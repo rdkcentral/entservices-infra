@@ -928,7 +928,7 @@ namespace Plugin {
     {
         LOGDBG("entry");
         printf("Compilation entry------------------------\n");
-        #ifdef USE_THUNDER_R443
+        #ifndef USE_THUNDER_R441
         printf("Compilation target------------------------\n");
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
@@ -956,7 +956,7 @@ namespace Plugin {
             mState.insert( { key, state } );
         }
     
-        #ifdef USE_THUNDER_R443
+        #ifndef USE_THUNDER_R441
         printf("Compilation target------------------------\n");
         if (subSystem != nullptr) {
             printf("Compilation target------------------------\n");
