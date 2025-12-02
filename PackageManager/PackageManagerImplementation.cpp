@@ -928,10 +928,16 @@ namespace Plugin {
     {
         LOGDBG("entry");
         #ifndef UNIT_TEST
+        printf("Compilation target distinguish [1]------------------------\n");
+        fflush(stdout);
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
+        printf("Compilation target [2]------------------------\n");
+        fflush(stdout);
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
         }
+        printf("Compilation target [3]------------------------\n");
+        fflush(stdout);
         #endif
 
         #ifdef USE_LIBPACKAGE
@@ -953,9 +959,15 @@ namespace Plugin {
         #endif
     
         #ifndef UNIT_TEST
+        printf("Compilation target [4]------------------------\n");
+        fflush(stdout);
         if (subSystem != nullptr) {
+            printf("Compilation target [5]------------------------\n");
+            fflush(stdout);
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
+        printf("Compilation target [6]------------------------\n");
+        fflush(stdout);
         #endif
         cacheInitialized = true;
         LOGDBG("exit");
