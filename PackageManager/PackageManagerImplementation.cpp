@@ -221,6 +221,7 @@ namespace Plugin {
                                                                      time_t requestTime, PackageManagerImplementation::PackageFailureErrorCode errorCode)
     {
         std::string telemetryMetrics = "";
+        std::string markerFilters = "";
         JsonObject jsonParam;
         int duration = 0;
         bool shouldProcessMarker = true;
@@ -246,20 +247,25 @@ namespace Plugin {
 
                 if (marker == TELEMETRY_MARKER_LAUNCH_TIME) {
                     jsonParam["packageManagerLockTime"] = duration;
+                    markerFilters = TELEMETRY_MARKER_LAUNCH_TIME_FILTERS;
                     publish = false;
                 }
                 else if (marker == TELEMETRY_MARKER_CLOSE_TIME) {
                     jsonParam["packageManagerUnlockTime"] = duration;
+                    markerFilters = TELEMETRY_MARKER_CLOSE_TIME_FILTERS;
                     publish = false;
                 }
                 else if (marker == TELEMETRY_MARKER_INSTALL_TIME) {
                     jsonParam["installTime"] = duration;
+                    markerFilters = TELEMETRY_MARKER_INSTALL_TIME_FILTERS;
                 }
                 else if (marker == TELEMETRY_MARKER_UNINSTALL_TIME) {
                     jsonParam["uninstallTime"] = duration;
+                    markerFilters = TELEMETRY_MARKER_UNINSTALL_TIME_FILTERS;
                 }
                 else if (marker == TELEMETRY_MARKER_INSTALL_ERROR || marker == TELEMETRY_MARKER_UNINSTALL_ERROR) {
                     jsonParam["errorCode"] = static_cast<int>(errorCode);
+                    markerFilters = TELEMETRY_MARKER_ERROR_FILTERS;
                 }
                 else {
                     LOGERR("Unknown telemetry marker: %s", marker.c_str());
@@ -279,7 +285,7 @@ namespace Plugin {
                         if (publish) {
                             LOGINFO("Publish appId %s marker %s", appId.c_str(), marker.c_str());
 
-                            if (mTelemetryPluginObject->Publish(appId, marker, "appInstanceId") != Core::ERROR_NONE) {
+                            if (mTelemetryPluginObject->Publish(appId, marker, "appInstanceId", markerFilters) != Core::ERROR_NONE) {
                                 LOGERR("Telemetry Publish Failed");
                             }
                         }

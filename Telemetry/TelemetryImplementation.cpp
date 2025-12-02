@@ -675,20 +675,20 @@ namespace Plugin {
     *
     * @param id           The unique identifier
     * @param markerName   An string used to generate a unique record key.
-    * @param mergeKey     A string key used to identify records that should be merged together.
+    * @param mergeKey     A string key to decide which field to use for merging records.
+    * @param markerFilters A comma separated string of allowed metric keys for filtering.
     *
     * @return Core::hresult
     *         - Core::ERROR_NONE on success.
     *         - Core::ERROR_GENERAL if parsing fails or input is invalid.
     */
-    Core::hresult TelemetryImplementation::Publish(const string& id, const string& markerName, const string& mergeKey)
+    Core::hresult TelemetryImplementation::Publish(const string& id, const string& markerName, const string& mergeKey, const string& markerFilters)
     {
         Core::hresult status = Core::ERROR_GENERAL;
 
         std::string recordId = generateRecordId(id, markerName);
         Json::Value filteredMetrics =Json::objectValue;
-        std::string keyFilterValue = ""; // todo pass appInstanceId as filter key
-        std::string keyFilter = mergeKey; // replacement for appInstanceId , make filter process generic
+        std::string mergeKeyValue = ""; // To store value of the merge key from current record for eg appInstanceId value
         std::string matchedOtherRecordId = "";
         std::unordered_set<std::string> filterKeys ={};
 
@@ -712,7 +712,7 @@ namespace Plugin {
 
         if (!error)
         {
-            /* Filter current recordMetrics and extract value of keyFilter */
+            /* Filter current recordMetrics and extract value of mergeKey */
             auto currentRecordIt = mMetricsRecord.find(recordId);
             if (currentRecordIt == mMetricsRecord.end())
             {
@@ -728,12 +728,12 @@ namespace Plugin {
                     if (filterKeys.count(key))
                     {
                         filteredMetrics[key] = currentMetrics[key];
-                        if (key == keyFilter)
+                        if (key == mergeKeyValue)
                         {
-                            keyFilterValue = currentMetrics[key].asString();
+                            mergeKeyValue = currentMetrics[key].asString();
                         }
                     }
-                    else 
+                    else
                     {
                         LOGWARN("Key '%s' not allowed by filter for marker '%s'", key.c_str(), markerName.c_str());
                     }
@@ -741,10 +741,10 @@ namespace Plugin {
             }
         }
 
-        /* Merge other recordMetrics with the same keyFilterValue and markerName */
-        if (!error && !keyFilterValue.empty())
+        /* Merge other recordMetrics with the same mergeKeyValue and markerName */
+        if (!error && !mergeKeyValue.empty())
         {
-            std::string keyFilterPrefix = keyFilterValue + ":";
+            std::string mergeKeyPrefix = mergeKeyValue + ":";
 
             for (const auto& entry : mMetricsRecord)
             {
@@ -752,9 +752,9 @@ namespace Plugin {
                 if (otherRecordId == recordId)
                     continue;
 
-                if (otherRecordId.compare(0, keyFilterPrefix.size(), keyFilterPrefix) == 0)
+                if (otherRecordId.compare(0, mergeKeyPrefix.size(), mergeKeyPrefix) == 0)
                 {
-                    const std::string otherMarkerName = otherRecordId.substr(keyFilterPrefix.size());
+                    const std::string otherMarkerName = otherRecordId.substr(mergeKeyPrefix.size());
 
                     /* Merge if markerName Matches */
                     if (otherMarkerName == markerName)

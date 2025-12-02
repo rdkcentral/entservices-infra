@@ -178,7 +178,7 @@ namespace Plugin {
         Core::hresult SetOptOutTelemetry(const bool optOut, TelemetrySuccess& successResult) override;
         Core::hresult IsOptOutTelemetry(bool& optOut, bool& success) override;
         Core::hresult Record(const string& id, const string& telemetryMetrics, const string& markerName) override;
-        Core::hresult Publish(const string& id, const string& markerName , const string& mergeKey) override;
+        Core::hresult Publish(const string& id, const string& markerName, const string& mergeKey, const string& markerFilters) override;
 
         void InitializePowerManager();
         void onPowerModeChanged(const PowerState currentState, const PowerState newState);

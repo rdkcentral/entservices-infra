@@ -147,6 +147,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
+        std::string markerFilters = "";
         time_t currentTime = getCurrentTimestamp();
         AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
 
@@ -168,6 +169,7 @@ namespace Plugin
                     {
                         jsonParam["totalLaunchTime"] = (int)(currentTime - it->second.currentActionTime);
                         jsonParam["launchType"] = ((AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE == it->second.packageInfo.type)?"LAUNCH_INTERACTIVE":"START_SYSTEM");
+                        markerFilters = TELEMETRY_MARKER_LAUNCH_TIME_FILTER;
                         markerName = TELEMETRY_MARKER_LAUNCH_TIME;
                     }
                 break;
@@ -176,6 +178,7 @@ namespace Plugin
                     {
                         jsonParam["totalLaunchTime"] = (int)(currentTime - it->second.currentActionTime);
                         jsonParam["launchType"] = ((AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE == it->second.packageInfo.type)?"PRELOAD_INTERACTIVE":"START_SYSTEM");
+                        markerFilters = TELEMETRY_MARKER_LAUNCH_TIME_FILTER;
                         markerName = TELEMETRY_MARKER_LAUNCH_TIME;
                     }
                 break;
@@ -186,6 +189,7 @@ namespace Plugin
                         {
                             jsonParam["totalCloseTime"] = (int)(currentTime - it->second.currentActionTime);
                             jsonParam["closeType"] = ((AppManagerImplementation::APP_ACTION_CLOSE == it->second.currentAction)?"CLOSE":((AppManagerImplementation::APP_ACTION_TERMINATE == it->second.currentAction)?"TERMINATE":"KILL"));
+                            markerFilters = TELEMETRY_MARKER_CLOSE_TIME_FILTER;
                             markerName = TELEMETRY_MARKER_CLOSE_TIME;
                         }
                 break;
@@ -203,7 +207,7 @@ namespace Plugin
                 if(!telemetryMetrics.empty())
                 {
                     mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
-                    mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId");
+                    mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId", markerFilters);
                 }
             }
         }
@@ -218,6 +222,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
+        std::string markerFilters = "";
 
         LOGINFO("Received data for appId %s current action %d app errorCode %d",appId.c_str(), currentAction, errorCode);
 
@@ -233,11 +238,13 @@ namespace Plugin
         {
             case AppManagerImplementation::APP_ACTION_LAUNCH:
             case AppManagerImplementation::APP_ACTION_PRELOAD:
+                markerFilters = TELEMETRY_MARKER_LAUNCH_ERROR_FILTER;
                 markerName = TELEMETRY_MARKER_LAUNCH_ERROR;
             break;
             case AppManagerImplementation::APP_ACTION_CLOSE:
             case AppManagerImplementation::APP_ACTION_TERMINATE:
             case AppManagerImplementation::APP_ACTION_KILL:
+                markerFilters = TELEMETRY_MARKER_CLOSE_ERROR_FILTER;
                 markerName = TELEMETRY_MARKER_CLOSE_ERROR;
             break;
             default:
@@ -252,7 +259,7 @@ namespace Plugin
             if(!telemetryMetrics.empty())
             {
                 mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
-                mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId");
+                mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId", markerFilters);
             }
         }
     }

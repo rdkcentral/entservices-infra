@@ -47,6 +47,13 @@
 #define TELEMETRY_MARKER_INSTALL_ERROR           "InstallError_split"
 #define TELEMETRY_MARKER_UNINSTALL_TIME          "UninstallTime_split"
 #define TELEMETRY_MARKER_UNINSTALL_ERROR         "UninstallError_split"
+
+#define TELEMETRY_MARKER_LAUNCH_TIME_FILTERS     "totalLaunchTime,appManagerLaunchTime,packageManagerLockTime,lifecycleManagerSpawnTime,windowManagerCreateDisplayTime,runtimeManagerRunTime,storageManagerLaunchTime,fireboltGatewayLaunchTime,appId,appInstanceId,appVersion,runtimeId,runtimeVersion,launchType,markerName"
+#define TELEMETRY_MARKER_CLOSE_TIME_FILTERS      "totalCloseTime,appManagerCloseTime,packageManagerUnlockTime,lifecycleManagerSetTargetStateTime,windowManagerDestroyTime,runtimeManagerTerminateTime,storageManagerTime,fireboltGatewayTerminateTime,appId,appInstanceId,appVersion,closeType,markerName"
+#define TELEMETRY_MARKER_INSTALL_TIME_FILTERS    "installTime,markerName"
+#define TELEMETRY_MARKER_UNINSTALL_TIME_FILTERS  "uninstallTime,markerName"
+#define TELEMETRY_MARKER_ERROR_FILTERS           "errorCode,markerName"
+
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
 namespace WPEFramework {

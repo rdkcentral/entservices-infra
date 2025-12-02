@@ -102,6 +102,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
+        std::string markerFilters = "";
         bool shouldPublish = false;
 
         if(nullptr == mTelemetryPluginObject) /*mTelemetryPluginObject is null retry to create*/
@@ -143,6 +144,7 @@ namespace Plugin
                         jsonParam["lifecycleManagerSpawnTime"] = (int)(currentTime - requestTime);
                         jsonParam.ToString(telemetryMetrics);
                         markerName = TELEMETRY_MARKER_LAUNCH_TIME;
+                        markerFilters = TELEMETRY_MARKER_LAUNCH_TIME_FILTER;
                         mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
                     }
                 break;
@@ -152,6 +154,7 @@ namespace Plugin
                         /*Telemetry reporting - close case*/
                         jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
                         jsonParam.ToString(telemetryMetrics);
+                        markerFilters = TELEMETRY_MARKER_CLOSE_TIME_FILTER;
                         markerName = TELEMETRY_MARKER_CLOSE_TIME;
                         mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
                     }
@@ -159,6 +162,7 @@ namespace Plugin
                     {
                         /*Telemetry reporting - wake case, wake is called during app terminate*/
                         markerName = TELEMETRY_MARKER_WAKE_TIME;
+                        markerFilters = TELEMETRY_MARKER_WAKE_TIME_FILTER;
                         shouldPublish = true;
                     }
                 break;
@@ -167,6 +171,7 @@ namespace Plugin
                     if(Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState)
                     {
                         markerName = TELEMETRY_MARKER_SUSPEND_TIME;
+                        markerFilters = TELEMETRY_MARKER_SUSPEND_TIME_FILTER;
                         shouldPublish = true;
                     }
                 break;
@@ -175,6 +180,7 @@ namespace Plugin
                     if(Exchange::ILifecycleManager::LifecycleState::ACTIVE == newLifecycleState)
                     {
                         markerName = TELEMETRY_MARKER_RESUME_TIME;
+                        markerFilters = TELEMETRY_MARKER_RESUME_TIME_FILTER;
                         shouldPublish = true;
                     }
                 break;
@@ -183,6 +189,7 @@ namespace Plugin
                     if(Exchange::ILifecycleManager::LifecycleState::HIBERNATED == newLifecycleState)
                     {
                         markerName = TELEMETRY_MARKER_HIBERNATE_TIME;
+                        markerFilters = TELEMETRY_MARKER_HIBERNATE_TIME_FILTER;
                         shouldPublish = true;
                     }
                 break;
@@ -200,7 +207,7 @@ namespace Plugin
                 if(!telemetryMetrics.empty())
                 {
                     mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
-                    mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId");
+                    mTelemetryPluginObject->Publish(appId, markerName, "appInstanceId", markerFilters);
                 }
             }
         }
