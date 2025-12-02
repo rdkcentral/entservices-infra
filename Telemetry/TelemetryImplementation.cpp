@@ -738,10 +738,11 @@ namespace Plugin {
                     if (filterKeys.count(key))
                     {
                         filteredMetrics[key] = currentMetrics[key];
-                        if (key == mergeKeyValue)
+                        if (key == mergeKey)
                         {
                             mergeKeyValue = currentMetrics[key].asString();
                         }
+                        LOGDBG("Filtering on basis of key - '%s' - '%s'" , mergeKey.c_str(), mergeKeyValue.c_str());
                     }
                     else
                     {
