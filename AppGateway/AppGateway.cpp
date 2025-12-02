@@ -48,7 +48,7 @@ namespace Plugin {
     SERVICE_REGISTRATION(AppGateway, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
 
     AppGateway::AppGateway()
-            : PluginHost::JSONRPC(), mService(nullptr), mAppGateway(nullptr), mConnectionId(0)
+            : PluginHost::JSONRPC(), mService(nullptr), mAppGateway(nullptr), mResponder(nullptr), mConnectionId(0)
         {
 
         LOGINFO("AppGateway Constructor");
@@ -109,12 +109,22 @@ namespace Plugin {
     {
         ASSERT(service == mService);
 
+        RPC::IRemoteConnection *connection = nullptr;
+        uint32_t result = Core::ERROR_NONE;
+
         if (mAppGateway != nullptr) {
             Exchange::JAppGatewayResolver::Unregister(*this);
-            RPC::IRemoteConnection *connection(service->RemoteConnection(mConnectionId));
-            VARIABLE_IS_NOT_USED uint32_t result = mAppGateway->Release();
+            connection = service->RemoteConnection(mConnectionId);
+            VARIABLE_IS_NOT_USED result = mAppGateway->Release();
             mAppGateway = nullptr;
 
+            // It should have been the last reference we are releasing,
+            // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+        }
+
+        if (mResponder != nullptr) {
             result = mResponder->Release();
             mResponder = nullptr;
 
@@ -122,17 +132,17 @@ namespace Plugin {
             // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
             // are leaking...
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+        }
 
-            // If this was running in a (container) process...
-            if (connection != nullptr)
-            {
-                // Lets trigger a cleanup sequence for
-                // out-of-process code. Which will guard
-                // that unwilling processes, get shot if
-                // not stopped friendly :~)
-                connection->Terminate();
-                connection->Release();
-            }
+        // If this was running in a (container) process...
+        if (connection != nullptr)
+        {
+            // Lets trigger a cleanup sequence for
+            // out-of-process code. Which will guard
+            // that unwilling processes, get shot if
+            // not stopped friendly :~)
+            connection->Terminate();
+            connection->Release();
         }
 
         mConnectionId = 0;
@@ -152,4 +162,3 @@ namespace Plugin {
 
 } // namespace Plugin
 } // namespace WPEFramework
-
