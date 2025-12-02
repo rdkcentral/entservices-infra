@@ -927,7 +927,7 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
-        #ifdef USE_THUNDER_R441
+        #ifndef USE_THUNDER_R441
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
@@ -952,7 +952,7 @@ namespace Plugin {
         }
         #endif
     
-        #ifdef USE_THUNDER_R441
+        #ifndef USE_THUNDER_R441
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
