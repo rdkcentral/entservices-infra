@@ -594,6 +594,20 @@ namespace Plugin {
         return id +":" +  name;
     }
 
+    //helper function to generate set from comma separated string
+    std::unordered_set<std::string> generateFilterSet(const std::string& filterStr)
+    {
+        std::unordered_set<std::string> filterSet;
+        std::stringstream ss(filterStr);
+        std::string item;
+
+        while (std::getline(ss, item, ','))
+        {
+            filterSet.insert(item);
+        }
+
+        return filterSet;
+    }
     /* This function attempts to parse a JSON-formatted string containing metrics,
     * validates the parsed data, and then merges it into an internal metrics record
     * map keyed by a generated record ID.
@@ -699,14 +713,10 @@ namespace Plugin {
 
         /* Retrieve filter Names for the given markerName*/
         //TODO initialize markerFilters somewhere
-        auto filterIt = markerFilters.find(markerName);
-        if (filterIt != markerFilters.end())
+        filterKeys = generateFilterSet(markerFilters);
+        if (filterKeys.empty())
         {
-            filterKeys = filterIt->second;
-        }
-        else
-        {
-            LOGERR("Filter list not found for marker: %s", markerName.c_str());
+            LOGERR("Filter list error for marker: %s", markerName.c_str());
             error = true;
         }
 
