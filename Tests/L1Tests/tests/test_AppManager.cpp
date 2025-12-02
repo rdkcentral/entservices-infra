@@ -1748,7 +1748,7 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcFailureWrongAppID)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
-/*TEST_F(AppManagerTest, CloseAppUsingComRpcFailureSetTargetAppStateReturnError)
+TEST_F(AppManagerTest, CloseAppUsingComRpcFailureSetTargetAppStateReturnError)
 {
     Core::hresult status;
 
@@ -1780,7 +1780,7 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcFailureWrongAppID)
     {
         releaseResources();
     }
-}*/
+}
 
 /*
  * Test Case for CloseAppUsingComRpcFailureLifecycleManagerRemoteObjectIsNull
