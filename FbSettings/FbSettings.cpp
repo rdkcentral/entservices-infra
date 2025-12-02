@@ -779,7 +779,7 @@ namespace Plugin {
                 transformedRate = 0.1;
             }
 
-            LOGINFO("SetSpeed: transforming speed %f to rate %f", speed, transformedRate);
+            LOGTRACE("SetSpeed: transforming speed %f to rate %f", speed, transformedRate);
 
             return userSettingsDelegate->SetVoiceGuidanceRate(transformedRate);
         }
@@ -829,7 +829,7 @@ namespace Plugin {
                 speed = 0.5;
             }
 
-            LOGINFO("GetSpeed: transforming rate %f to speed %f", rate, speed);
+            LOGTRACE("GetSpeed: transforming rate %f to speed %f", rate, speed);
 
             return Core::ERROR_NONE;
         }
@@ -1008,7 +1008,6 @@ namespace Plugin {
 
         Core::hresult FbSettings::GetScreenResolution(string &result)
         {
-            LOGINFO("GetScreenResolution FbSettings");
             if (!mDelegate) {
                 result = "[1920,1080]";
                 return Core::ERROR_UNAVAILABLE;
@@ -1023,7 +1022,6 @@ namespace Plugin {
 
         Core::hresult FbSettings::GetVideoResolution(string &result)
         {
-            LOGINFO("GetVideoResolution FbSettings");
             if (!mDelegate) {
                 result = "[1920,1080]";
                 return Core::ERROR_UNAVAILABLE;
@@ -1038,7 +1036,6 @@ namespace Plugin {
 
         Core::hresult FbSettings::GetHdcp(string &result)
         {
-            LOGINFO("GetHdcp FbSettings");
             if (!mDelegate) {
                 result = "{\"hdcp1.4\":false,\"hdcp2.2\":false}";
                 return Core::ERROR_UNAVAILABLE;
@@ -1053,7 +1050,6 @@ namespace Plugin {
 
         Core::hresult FbSettings::GetHdr(string &result)
         {
-            LOGINFO("GetHdr FbSettings");
             if (!mDelegate) {
                 result = "{\"hdr10\":false,\"dolbyVision\":false,\"hlg\":false,\"hdr10Plus\":false}";
                 return Core::ERROR_UNAVAILABLE;
@@ -1068,7 +1064,6 @@ namespace Plugin {
 
         Core::hresult FbSettings::GetAudio(string &result)
         {
-            LOGINFO("GetAudio FbSettings");
             if (!mDelegate) {
                 result = "{\"stereo\":true,\"dolbyDigital5.1\":false,\"dolbyDigital5.1+\":false,\"dolbyAtmos\":false}";
                 return Core::ERROR_UNAVAILABLE;

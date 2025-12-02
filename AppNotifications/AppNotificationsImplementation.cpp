@@ -110,7 +110,6 @@ namespace WPEFramework
 
         uint32_t AppNotificationsImplementation::Configure(PluginHost::IShell *shell)
         {
-            LOGINFO("Configuring AppNotifications");
             uint32_t result = Core::ERROR_NONE;
             ASSERT(shell != nullptr);
             mShell = shell;
