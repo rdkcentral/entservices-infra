@@ -81,14 +81,6 @@ jobs:
         with:
           cmake-version: '3.16.x'
 
-      - name: Set Thunder version flags
-        run: |
-          if [ "${{ env.THUNDER_REF }}" = "R4.4.1" ]; then
-          echo "THUNDER_R441=ON" >> $GITHUB_ENV
-          else
-          echo "THUNDER_R441=OFF" >> $GITHUB_ENV
-          fi
-
       - name: Install packages
         run: >
           sudo apt update
