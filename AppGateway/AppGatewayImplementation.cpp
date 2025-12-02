@@ -134,7 +134,7 @@ namespace WPEFramework
                 // If no match found and we have a default country, try that
                 if (!country.empty() && defaultCountryCode.IsSet()) {
                     std::string defaultCode = defaultCountryCode.Value();
-                    if (!defaultCode.empty() && country != defaultCode) {
+                    if (!defaultCode.empty() && StringUtils::toLower(country) != StringUtils::toLower(defaultCode)) {
                         LOGWARN("Country '%s' not found, trying default country '%s'",
                                 country.c_str(), defaultCode.c_str());
                         return GetPathsForCountry(defaultCode);
