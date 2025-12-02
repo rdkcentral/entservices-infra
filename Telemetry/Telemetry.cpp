@@ -119,6 +119,7 @@ namespace WPEFramework
 
             if (configure != nullptr) {
                 configure->Release();
+                configure = nullptr;
             }
 
             // Stop processing:
