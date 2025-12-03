@@ -2343,7 +2343,8 @@ TEST_F(USBDevicePerInterfaceTestFixture, OnDevicePluggedIn_ViaJobDispatch_Succes
     
     // Submit to worker pool (natural workflow)
     TEST_LOG("Submitting OnDevicePluggedIn job to worker pool");
-    Core::IWorkerPool::Instance().Submit(job);
+    job->Dispatch();
+    //job->Dispatch();
     
     // Wait for the job to be processed by worker pool and notification to be triggered
     EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedIn));
@@ -2387,7 +2388,7 @@ TEST_F(USBDevicePerInterfaceTestFixture, OnDevicePluggedOut_ViaJobDispatch_Succe
     
     // Submit to worker pool (natural workflow)
     TEST_LOG("Submitting OnDevicePluggedOut job to worker pool");
-    Core::IWorkerPool::Instance().Submit(job);
+    job->Dispatch();
     
     // Wait for the job to be processed by worker pool and notification to be triggered
     EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedOut));
@@ -2531,7 +2532,7 @@ TEST_F(USBDevicePerInterfaceTestFixture, NotificationRegistration_MultipleHandle
     );
     
     // Submit to worker pool (natural workflow)
-    Core::IWorkerPool::Instance().Submit(job);
+    job->Dispatch();
     
     // Verify both handlers received notification
     EXPECT_TRUE(notification1.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedIn));
