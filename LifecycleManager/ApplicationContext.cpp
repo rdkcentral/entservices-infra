@@ -34,7 +34,7 @@ namespace WPEFramework
         , mPendingEventName("")
         , mAppInstanceId("")
         , mAppId(std::move(appId))
-        , mLastLifecycleStateChangeTime()
+        , mLastLifecycleStateChangeTime{0, 0}
         , mActiveSessionId("")
         , mTargetLifecycleState()
         , mMostRecentIntent("")
