@@ -1,0 +1,227 @@
+{
+    "ociVersion": "1.0.1",
+    "platform": {
+        "os": "linux",
+        "arch": "arm"
+    },
+    "process": {
+        "terminal": false,
+        "user": {
+            "uid": 0,
+            "gid": 0,
+            "additionalGids": []
+        },
+        "args": [],
+        "cwd": "/home",
+        "env": [
+            "PATH=/usr/sbin:/usr/bin:/sbin:/bin"
+        ],
+        "capabilities": {
+            "bounding": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+                "CAP_NET_BIND_SERVICE"
+            ],
+            "effective": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+                "CAP_NET_BIND_SERVICE"
+            ],
+            "inheritable": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+                "CAP_NET_BIND_SERVICE"
+            ],
+            "permitted": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+                "CAP_NET_BIND_SERVICE"
+            ],
+            "ambient": [
+                "CAP_AUDIT_WRITE",
+                "CAP_KILL",
+                "CAP_NET_BIND_SERVICE"
+            ]
+        },
+        "rlimits": [
+            {
+                "type": "RLIMIT_NOFILE",
+                "hard": 4096,
+                "soft": 4096
+            },
+            {
+                "type": "RLIMIT_NPROC",
+                "hard": 300,
+                "soft": 300
+            },
+            {
+                "type": "RLIMIT_RTPRIO",
+                "hard": 0,
+                "soft": 0
+            }
+        ],
+        "noNewPrivileges": true
+    },
+    "root": {
+        "path": "rootfs",
+        "readonly": true
+    },
+    "hostname": "rdkdobby",
+    "mounts": [
+        {
+            "destination": "/tmp",
+            "type": "tmpfs",
+            "source": "tmpfs",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev",
+                "nr_inodes=8k"
+            ]
+        },
+        {
+            "destination": "/dev",
+            "type": "tmpfs",
+            "source": "tmpfs",
+            "options": [
+                "nosuid",
+                "noexec",
+                "strictatime",
+                "mode=755",
+                "size=65536k"
+            ]
+        },
+        {
+            "destination": "/dev/pts",
+            "type": "devpts",
+            "source": "devpts",
+            "options": [
+                "nosuid",
+                "noexec",
+                "newinstance",
+                "ptmxmode=0666",
+                "mode=0620",
+                "gid=5"
+            ]
+        },
+        {
+            "destination": "/dev/shm",
+            "type": "tmpfs",
+            "source": "shm",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev",
+                "mode=1777",
+                "nr_inodes=8k"
+            ]
+        },
+        {
+            "destination": "/proc",
+            "type": "proc",
+            "source": "proc",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev"
+            ]
+        },
+        {
+            "destination": "/sys",
+            "type": "sysfs",
+            "source": "sysfs",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev",
+                "ro"
+            ]
+        },
+        {
+            "destination": "/sys/fs/cgroup",
+            "type": "cgroup",
+            "source": "cgroup",
+            "options": [
+                "nosuid",
+                "noexec",
+                "nodev",
+                "relatime"
+            ]
+        },
+        {
+            "destination": "/etc/ssl/certs",
+            "type": "bind",
+            "source": "/etc/ssl/certs",
+            "options": [
+                "bind",
+                "ro",
+                "nosuid",
+                "nodev",
+                "noexec"
+            ]
+        }
+    ],
+    "linux": {
+        "uidMappings": [
+            {
+                "hostID": 30000,
+                "containerID": 0,
+                "size": 1
+            }
+        ],
+        "gidMappings": [
+            {
+                "hostID": 30000,
+                "containerID": 0,
+                "size": 10
+            }
+        ],
+        "devices": [],
+        "resources": {
+            "devices": [
+                {
+                    "allow": false,
+                    "access": "rwm"
+                }
+            ],
+            "memory": {
+                "limit": 209715200
+            },
+            "cpu": {
+                "cpus": "1,2,3"
+            }
+        },
+        "namespaces": [
+            {
+                "type": "pid"
+            },
+            {
+                "type": "ipc"
+            },
+            {
+                "type": "uts"
+            },
+            {
+                "type": "user"
+            },
+            {
+                "type": "mount"
+            }
+        ],
+        "maskedPaths": [
+            "/proc/kcore",
+            "/proc/latency_stats",
+            "/proc/timer_stats",
+            "/proc/sched_debug"
+        ],
+        "readonlyPaths": [
+            "/proc/asound",
+            "/proc/bus",
+            "/proc/fs",
+            "/proc/irq",
+            "/proc/sys",
+            "/proc/sysrq-trigger"
+        ],
+        "rootfsPropagation": "slave"
+    }
+}
