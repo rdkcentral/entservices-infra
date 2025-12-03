@@ -1033,7 +1033,7 @@ Core::hresult USBDeviceImplementation::GetDeviceInfo(const string &deviceName, U
             }
             else
             {
-                uint8_t portPath[8]; // Maximum 8 levels (depends on USB architecture)
+                uint8_t portPath[8] = {0}; // Maximum 8 levels (depends on USB architecture)
 
                 status = USBDeviceImplementation::instance()->getUSBDeviceInfoStructFromDeviceDescriptor(devs[index], &deviceInfo);
                 if (Core::ERROR_NONE != status)
