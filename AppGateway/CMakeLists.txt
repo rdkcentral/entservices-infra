@@ -59,9 +59,6 @@ if(ENABLE_APP_GATEWAY_AUTOMATION)
     if(AUTOMATION_APP_ID)
         target_compile_definitions(${MODULE_NAME} PRIVATE AUTOMATION_APP_ID=${AUTOMATION_APP_ID})
     endif()
-    if(BOLT_ENABLED_FILE)
-        target_compile_definitions(${MODULE_NAME} PRIVATE BOLT_ENABLED_FILE="${BOLT_ENABLED_FILE}")
-    endif()
 endif()
 
 target_link_libraries(${MODULE_NAME} 

@@ -42,24 +42,14 @@ namespace WPEFramework
             mWsManager(),
             mAuthenticator(nullptr),
             mResolver(nullptr),
-            mConnectionStatusImplLock(),
-            mAutomationLoggingEnabled(false)
+            mConnectionStatusImplLock()
         {
-#ifdef ENABLE_APP_GATEWAY_AUTOMATION
-            // Check if bolt enabled file exists
-            struct stat buffer;
-        #ifdef BOLT_ENABLED_FILE
-            mAutomationLoggingEnabled = (stat(BOLT_ENABLED_FILE, &buffer) == 0);
-            LOGINFO("Automation logging enabled: %s (file: %s)", mAutomationLoggingEnabled ? "true" : "false", BOLT_ENABLED_FILE);
-        #else
-            mAutomationLoggingEnabled = (stat("/opt/boltenabled", &buffer) == 0);
-            LOGINFO("Automation logging enabled: %s (file: /opt/boltenabled)", mAutomationLoggingEnabled ? "true" : "false");
-        #endif
-#endif
+            LOGINFO("AppGatewayResponderImplementation constructor");
         }
 
         AppGatewayResponderImplementation::~AppGatewayResponderImplementation()
         {
+            LOGINFO("AppGatewayResponderImplementation destructor");
             if (nullptr != mService)
             {
                 mService->Release();
@@ -82,6 +72,7 @@ namespace WPEFramework
 
         uint32_t AppGatewayResponderImplementation::Configure(PluginHost::IShell *shell)
         {
+            LOGINFO("Configuring AppGatewayResponderImplementation");
             uint32_t result = Core::ERROR_NONE;
             ASSERT(shell != nullptr);
             mService = shell;
@@ -103,9 +94,9 @@ namespace WPEFramework
                        configLine.c_str());
             }
 
-            LOGTRACE("Connector: %s", config.Connector.Value().c_str());
+            LOGINFO("Connector: %s", config.Connector.Value().c_str());
             Core::NodeId source(config.Connector.Value().c_str());
-            LOGTRACE("Parsed port: %d", source.PortNumber());
+            LOGINFO("Parsed port: %d", source.PortNumber());
             mWsManager.SetMessageHandler(
                 [this](const std::string &method, const std::string &params, const int requestId, const uint32_t connectionId)
                 {
@@ -132,7 +123,7 @@ namespace WPEFramework
 
                     string appId;
                     if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
-                        LOGTRACE("APP ID %s", appId.c_str());
+                        LOGINFO("APP ID %s", appId.c_str());
                         mAppIdRegistry.Add(connectionId, appId);
                         
                         #ifdef ENABLE_APP_GATEWAY_AUTOMATION
@@ -156,12 +147,12 @@ namespace WPEFramework
             mWsManager.SetDisconnectHandler(
                 [this](const uint32_t connectionId)
                 {
-                    LOGTRACE("Connection disconnected: %d", connectionId);
+                    LOGINFO("Connection disconnected: %d", connectionId);
                     string appId;
                     if (!mAppIdRegistry.Get(connectionId, appId)) {
                         LOGERR("No App ID found for connection %d during disconnect", connectionId);
                     } else {
-                        LOGTRACE("App ID %s found for connection %d during", appId.c_str(), connectionId);
+                        LOGINFO("App ID %s found for connection %d during disconnect", appId.c_str(), connectionId);
                         Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, false));
                     }
                     
@@ -216,10 +207,9 @@ namespace WPEFramework
 
             if (mAppIdRegistry.Get(connectionId, appId)) {
 
-                if (mAutomationLoggingEnabled) {
-                    LOGDBG("%s-->[[a-%d-%d]] method=%s, params=%s",
-                           appId.c_str(),connectionId, requestId, method.c_str(), params.c_str());
-                }
+                LOGDBG("%s-->[[a-%d-%d]] method=%s, params=%s",
+                    appId.c_str(),connectionId, requestId, method.c_str(), params.c_str());
+
                 // App Id is available
                 Context context = {
                     requestId,
@@ -256,6 +246,7 @@ namespace WPEFramework
             /* Make sure we can't register the same notification callback multiple times */
             if (std::find(mConnectionStatusNotification.begin(), mConnectionStatusNotification.end(), notification) == mConnectionStatusNotification.end())
             {
+                LOGINFO("Register notification");
                 mConnectionStatusNotification.push_back(notification);
                 notification->AddRef();
             }
@@ -276,6 +267,7 @@ namespace WPEFramework
             if (itr != mConnectionStatusNotification.end())
             {
                 (*itr)->Release();
+                LOGINFO("Unregister notification");
                 mConnectionStatusNotification.erase(itr);
                 status = Core::ERROR_NONE;
             }

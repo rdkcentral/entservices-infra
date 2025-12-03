@@ -34,10 +34,12 @@ namespace WPEFramework
         Resolver::Resolver(PluginHost::IShell *shell)
             : mService(shell), mResolutions(), mMutex()
         {
+            LOGINFO("[Resolver] Constructor - configurations will be loaded via LoadConfig");
         }
 
         Resolver::~Resolver()
         {
+            LOGINFO("Call Resolver destructor");
             if (nullptr != mService)
             {
                 mService->Release();
@@ -107,12 +109,14 @@ namespace WPEFramework
                     r.includeContext = ExtractBooleanField(resolutionObj, "includeContext", hasAdditionalContext);
                     r.useComRpc = ExtractBooleanField(resolutionObj, "useComRpc", hasAdditionalContext);
 
-                    LOGTRACE("[Resolver] Loaded resolution: %s -> %s", key.c_str(), r.alias.c_str());
+                    LOGINFO("[Resolver] Loaded resolution for key: %s -> alias: %s, event: %s, permissionGroup: %s, includeContext: %s, useComRpc: %s",
+                           key.c_str(), r.alias.c_str(), r.event.c_str(), r.permissionGroup.c_str(),
+                           r.includeContext ? "true" : "false", r.useComRpc ? "true" : "false");
 
                     // Check if this resolution already exists (will be overridden)
                     if (mResolutions.find(key) != mResolutions.end())
                     {
-                        LOGTRACE("[Resolver] Overriding resolution for key: %s", key.c_str());
+                        LOGINFO("[Resolver] Overriding resolution for key: %s", key.c_str());
                         overriddenCount++;
                     }
 
@@ -130,6 +134,7 @@ namespace WPEFramework
         {
             std::lock_guard<std::mutex> lock(mMutex);
             mResolutions.clear();
+            LOGINFO("[Resolver] Cleared all resolutions");
         }
 
         bool Resolver::IsConfigured()

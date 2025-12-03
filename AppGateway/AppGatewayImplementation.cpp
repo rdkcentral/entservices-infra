@@ -75,10 +75,12 @@ namespace WPEFramework
             mInternalGatewayResponder(nullptr),
             mAuthenticator(nullptr)
         {
+            LOGINFO("AppGatewayImplementation constructor");
         }
 
         AppGatewayImplementation::~AppGatewayImplementation()
         {
+            LOGINFO("AppGatewayImplementation destructor");
             if (nullptr != mService)
             {
                 mService->Release();
@@ -116,6 +118,7 @@ namespace WPEFramework
 
         uint32_t AppGatewayImplementation::Configure(PluginHost::IShell *shell)
         {
+            LOGINFO("Configuring AppGateway");
             uint32_t result = Core::ERROR_NONE;
             ASSERT(shell != nullptr);
             mService = shell;
@@ -147,6 +150,7 @@ namespace WPEFramework
 
                 // Fallback: Load only the base resolution file
                 std::vector<std::string> fallbackPaths = {DEFAULT_CONFIG_PATH};
+                LOGINFO("Using fallback: loading default config path: %s", DEFAULT_CONFIG_PATH);
 
                 Core::hresult configResult = InternalResolutionConfigure(std::move(fallbackPaths));
                 if (configResult != Core::ERROR_NONE) {
@@ -169,7 +173,7 @@ namespace WPEFramework
                         LOGERR("No configuration paths found in resolutions config file");
                         return Core::ERROR_BAD_REQUEST;
                     }
-                    LOGTRACE("Found %zu configuration paths", configPaths.size());
+                    LOGINFO("Found %zu configuration paths in resolutions config file", configPaths.size());
                     Core::hresult configResult = InternalResolutionConfigure(std::move(configPaths));
                     if (configResult != Core::ERROR_NONE) {
                         LOGERR("Failed to configure resolutions from provided paths");
@@ -182,6 +186,7 @@ namespace WPEFramework
 
         Core::hresult AppGatewayImplementation::Configure(Exchange::IAppGatewayResolver::IStringIterator *const &paths)
         {
+            LOGINFO("Call AppGatewayImplementation::Configure");
 
             if (paths == nullptr)
             {
@@ -205,7 +210,7 @@ namespace WPEFramework
             while (paths->Next(currentPath) == true)
             {
                 configPaths.push_back(currentPath);
-                LOGTRACE("Config path: %s", currentPath.c_str());
+                LOGINFO("Found config path: %s", currentPath.c_str());
             }
 
             if (configPaths.empty())
@@ -214,7 +219,7 @@ namespace WPEFramework
                 return Core::ERROR_BAD_REQUEST;
             }
 
-            LOGTRACE("Processing %zu configuration paths", configPaths.size());
+            LOGINFO("Processing %zu configuration paths in override order", configPaths.size());
             return InternalResolutionConfigure(std::move(configPaths));
             
         }
@@ -225,11 +230,11 @@ namespace WPEFramework
             for (size_t i = 0; i < configPaths.size(); i++)
             {
                 const std::string &configPath = configPaths[i];
-                LOGTRACE("Processing config path %zu/%zu: %s", i + 1, configPaths.size(), configPath.c_str());
+                LOGINFO("Processing config path %zu/%zu: %s", i + 1, configPaths.size(), configPath.c_str());
 
                 if (mResolverPtr->LoadConfig(configPath))
                 {
-                    LOGTRACE("Loaded config: %s", configPath.c_str());
+                    LOGINFO("Successfully loaded configuration from: %s", configPath.c_str());
                     anyConfigLoaded = true;
                 }
                 else
@@ -244,6 +249,8 @@ namespace WPEFramework
                 LOGERR("Failed to load configuration from any provided path");
                 return Core::ERROR_GENERAL;
             }
+
+            LOGINFO("Configuration complete. Final resolutions loaded with override priority (later paths take precedence)");
             return Core::ERROR_NONE;
 
         }

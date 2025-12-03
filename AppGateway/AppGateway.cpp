@@ -50,6 +50,8 @@ namespace Plugin {
     AppGateway::AppGateway()
             : PluginHost::JSONRPC(), mService(nullptr), mAppGateway(nullptr), mConnectionId(0)
         {
+
+        LOGINFO("AppGateway Constructor");
     }
 
     AppGateway::~AppGateway()
