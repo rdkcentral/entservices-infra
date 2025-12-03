@@ -42,9 +42,20 @@ namespace WPEFramework
             mWsManager(),
             mAuthenticator(nullptr),
             mResolver(nullptr),
-            mConnectionStatusImplLock()
+            mConnectionStatusImplLock(),
+            mEnhancedLoggingEnabled(false)
         {
             LOGINFO("AppGatewayResponderImplementation constructor");
+#ifdef ENABLE_APP_GATEWAY_AUTOMATION
+            struct stat buffer;
+        #ifdef APP_GATEWAY_ENHANCED_LOGGING_INDICATOR
+            mEnhancedLoggingEnabled = (stat(APP_GATEWAY_ENHANCED_LOGGING_INDICATOR, &buffer) == 0);
+            LOGINFO("Enhanced logging enabled: %s (indicator: %s)", mEnhancedLoggingEnabled ? "true" : "false", APP_GATEWAY_ENHANCED_LOGGING_INDICATOR);
+        #else
+            mEnhancedLoggingEnabled = (stat("/opt/appgateway_enhanced_logging", &buffer) == 0);
+            LOGINFO("Enhanced logging enabled: %s (indicator: /opt/appgateway_enhanced_logging)", mEnhancedLoggingEnabled ? "true" : "false");
+        #endif
+#endif
         }
 
         AppGatewayResponderImplementation::~AppGatewayResponderImplementation()
@@ -207,9 +218,10 @@ namespace WPEFramework
 
             if (mAppIdRegistry.Get(connectionId, appId)) {
 
-                LOGDBG("%s-->[[a-%d-%d]] method=%s, params=%s",
-                    appId.c_str(),connectionId, requestId, method.c_str(), params.c_str());
-
+                if (mEnhancedLoggingEnabled) {
+                    LOGDBG("%s-->[[a-%d-%d]] method=%s, params=%s",
+                           appId.c_str(),connectionId, requestId, method.c_str(), params.c_str());
+                }
                 // App Id is available
                 Context context = {
                     requestId,

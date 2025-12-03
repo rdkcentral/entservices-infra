@@ -110,15 +110,18 @@ public:
         _id(0),
         _parent(static_cast<WebSocketConnectionManager::WebSocketChannel &>(*parent)),
         _queue(10){
-            LOGINFO("Connector value: %d", static_cast<int>(connector));
-            LOGINFO("Remote host: %s", remoteNode.HostAddress().c_str());
+            if (mEnhancedLoggingEnabled) {
+                LOGINFO("Connector value: %d", static_cast<int>(connector));
+                LOGINFO("Remote host: %s", remoteNode.HostAddress().c_str());
+            }
         }
         ~WebSocketServer() {
             _qLock.Lock();
             _queue.Clear();
             _qLock.Unlock();
-            LOGINFO("WebSocketServer destructed for connectionId: %d", _id);
-
+            if (mEnhancedLoggingEnabled) {
+                LOGINFO("WebSocketServer destructed for connectionId: %d", _id);
+            }
         }
 
     public:
@@ -150,7 +153,9 @@ public:
         void StateChange(){
             if (this->IsOpen())
             {
-                LOGINFO("Open - OK");
+                if (mEnhancedLoggingEnabled) {
+                    LOGINFO("Open - OK");
+                }
                 const std::string &query = Link().Query();
                 if (_parent.Interface()._authHandler != nullptr) {
                     bool authResult = _parent.Interface()._authHandler(_id, query);
@@ -159,14 +164,18 @@ public:
                         this->Close(0);
                         return;
                     }
-                    LOGINFO("Authentication succeeded");
+                    if (mEnhancedLoggingEnabled) {
+                        LOGINFO("Authentication succeeded");
+                    }
                 } else {
                     LOGWARN("No authentication handler set, proceeding without authentication");
                 }
             }
             else if(this->IsSuspended())
             {
-                LOGINFO("Closed - %s", this->IsSuspended() ? _T("SUSPENDED") : _T("OK"));
+                if (mEnhancedLoggingEnabled) {
+                    LOGINFO("Closed - %s", this->IsSuspended() ? _T("SUSPENDED") : _T("OK"));
+                }
                 if (_parent.Interface()._disconnectHandler != nullptr) {
                     _parent.Interface()._disconnectHandler(Id());
                 }
@@ -198,7 +207,9 @@ public:
         }
 
         void Id(const uint32_t id){
-            LOGINFO("Assigning connectionId: %d", id);
+            if (mEnhancedLoggingEnabled) {
+                LOGINFO("Assigning connectionId: %d", id);
+            }
             _id = id;
 
             // Process any pending messages for this connection
