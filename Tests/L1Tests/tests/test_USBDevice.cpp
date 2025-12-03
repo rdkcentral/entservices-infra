@@ -2345,6 +2345,7 @@ TEST_F(USBDevicePerInterfaceTestFixture, OnDevicePluggedIn_ViaJobDispatch_Succes
     TEST_LOG("Submitting OnDevicePluggedIn job to worker pool");
     job->Dispatch();
     //job->Dispatch();
+    TEST_LOG("Job dispatched, waiting for notification");
     
     // Wait for the job to be processed by worker pool and notification to be triggered
     EXPECT_TRUE(notification.WaitForRequestStatus(3000, USBDevice_OnDevicePluggedIn));
@@ -2352,6 +2353,7 @@ TEST_F(USBDevicePerInterfaceTestFixture, OnDevicePluggedIn_ViaJobDispatch_Succes
     EXPECT_EQ("/dev/sda", notification.GetLastPluggedInDevicePath());
     EXPECT_EQ(8, notification.GetLastPluggedInDeviceClass());
     EXPECT_EQ(6, notification.GetLastPluggedInDeviceSubclass());
+    TEST_LOG("Notification received and parameters verified");
     
     USBDeviceImpl->Unregister(&notification);
     p_usbDeviceMock->Release();
