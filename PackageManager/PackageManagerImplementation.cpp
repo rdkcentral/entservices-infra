@@ -17,6 +17,7 @@
 * limitations under the License.
 **/
 
+#include <cerrno>
 #include <chrono>
 #include <inttypes.h> // Required for PRIu64
 
@@ -178,6 +179,11 @@ namespace Plugin {
             mTelemetryMetricsObject = nullptr;
         }
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+    if (std::remove(MARKER_FILE_PATH) == 0) {
+        LOGINFO("Deleted marker file: %s", MARKER_FILE_PATH);
+    } else {
+        LOGERR("Failed to delete marker file: %s (errno=%d)", MARKER_FILE_PATH, errno);
+    }
 
         mCurrentservice->Release();
         mCurrentservice = nullptr;
@@ -950,6 +956,14 @@ namespace Plugin {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
         cacheInitialized = true;
+        std::ofstream file(MARKER_FILE_PATH);
+        if (file.is_open()) {
+            file << "PackageManager initialized successfully\n";
+            file.close();
+            LOGINFO("Marker file created: %s", MARKER_FILE_PATH);
+        } else {
+            LOGERR("Failed to create marker file: %s (errno=%d)", MARKER_FILE_PATH, errno);
+        }
         LOGDBG("exit");
     }
 
