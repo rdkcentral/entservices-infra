@@ -2056,194 +2056,8 @@ TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_GetUSBExtInfoStruct_AsciiDescript
  * @return      :  ERROR_NONE with appropriate device class based on interfaces
  */
 
-class USBDevicePerInterfaceTestFixture : public USBDeviceTest {
-protected:
-    void SetupPerInterfaceDeviceBase(uint8_t num_interfaces, const std::vector<std::pair<uint8_t, uint8_t>>& interface_classes) {
-        Mock_SetSerialNumberInUSBDevicePath();
-        
-        ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-            .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-                libusb_device **ret = (libusb_device **)malloc(1 * sizeof(libusb_device *));
-                ret[0] = (libusb_device *)malloc(sizeof(libusb_device));
-                ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-                ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-                ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-                *list = ret;
-                return (ssize_t)1;
-            });
 
-        ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-            .WillByDefault([](libusb_device **list, int unref_devices) {
-                free(list[0]);
-                free(list);
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-            .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-                desc->bDeviceClass = LIBUSB_CLASS_PER_INTERFACE;
-                desc->bDeviceSubClass = 0;
-                desc->idVendor = 0x1234;
-                desc->idProduct = 0x5678;
-                desc->iManufacturer = 1;
-                desc->iProduct = 2;
-                desc->iSerialNumber = 3;
-                desc->bDeviceProtocol = 0;
-                return LIBUSB_SUCCESS;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
-            .WillRepeatedly([](libusb_device *dev) {
-                return dev->device_address;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
-            .WillRepeatedly([](libusb_device *dev) {
-                return dev->bus_number;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
-            .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
-                if((nullptr != dev) && (nullptr != port_numbers)) {
-                    port_numbers[0] = dev->port_number;
-                    return 1;
-                }
-                return 0;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_config_descriptor(::testing::_, ::testing::_, ::testing::_))
-            .WillOnce([num_interfaces, interface_classes](libusb_device *dev, uint8_t config_index, libusb_config_descriptor **config) {
-                libusb_config_descriptor *cfg = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-                cfg->bNumInterfaces = num_interfaces;
-                
-                libusb_interface *interfaces = (libusb_interface *)malloc(num_interfaces * sizeof(libusb_interface));
-                
-                for (uint8_t i = 0; i < num_interfaces; i++) {
-                    interfaces[i].num_altsetting = 1;
-                    
-                    libusb_interface_descriptor *altsetting = (libusb_interface_descriptor *)malloc(sizeof(libusb_interface_descriptor));
-                    
-                    if (i < interface_classes.size()) {
-                        altsetting->bInterfaceClass = interface_classes[i].first;
-                        altsetting->bInterfaceSubClass = interface_classes[i].second;
-                    } else {
-                        altsetting->bInterfaceClass = LIBUSB_CLASS_HID;
-                        altsetting->bInterfaceSubClass = 0;
-                    }
-                    
-                    interfaces[i].altsetting = altsetting;
-                }
-                
-                cfg->interface = interfaces;
-                *config = cfg;
-                
-                return LIBUSB_SUCCESS;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_free_config_descriptor(::testing::_))
-            .WillOnce([num_interfaces](libusb_config_descriptor *config) {
-                if (config) {
-                    if (config->interface) {
-                        for (uint8_t i = 0; i < num_interfaces; i++) {
-                            if (config->interface[i].altsetting) {
-                                free((void*)config->interface[i].altsetting);
-                            }
-                        }
-                        free((void*)config->interface);
-                    }
-                    free(config);
-                }
-            });
-    }
-
-    void SetupGetDeviceInfoMocks() {
-        Mock_SetDeviceDesc(MOCK_USB_DEVICE_BUS_NUMBER_1, MOCK_USB_DEVICE_ADDRESS_1);
-
-        ON_CALL(*p_libUSBImplMock, libusb_get_active_config_descriptor(::testing::_, ::testing::_))
-            .WillByDefault([](libusb_device* pDev, libusb_config_descriptor** config_desc) {
-                *config_desc = (libusb_config_descriptor *)malloc(sizeof(libusb_config_descriptor));
-                (*config_desc)->bmAttributes = LIBUSB_CONFIG_ATT_BUS_POWERED;
-                return (int)LIBUSB_SUCCESS;
-            });
-
-        ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-            .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
-                data[1] = LIBUSB_DT_STRING;
-                if (desc_index == 0) {
-                    data[0] = 4;
-                    data[2] = 0x09;
-                    data[3] = 0x04;
-                } else {
-                    data[0] = 10;
-                    for (int i = 2; i < 10; i += 2) {
-                        data[i] = 'T';
-                        data[i+1] = 0;
-                    }
-                }
-                return (int)data[0];
-            });
-    }
-
-    void SetupPerInterfaceDevice(uint8_t num_interfaces, const std::vector<std::pair<uint8_t, uint8_t>>& interface_classes) {
-        SetupPerInterfaceDeviceBase(num_interfaces, interface_classes);
-    }
-
-    void SetupPerInterfaceDeviceConfigFailure() {
-        Mock_SetSerialNumberInUSBDevicePath();
-        
-        ON_CALL(*p_libUSBImplMock, libusb_get_device_list(::testing::_, ::testing::_))
-            .WillByDefault([](libusb_context *ctx, libusb_device ***list) {
-                libusb_device **ret = (libusb_device **)malloc(1 * sizeof(libusb_device *));
-                ret[0] = (libusb_device *)malloc(sizeof(libusb_device));
-                ret[0]->bus_number = MOCK_USB_DEVICE_BUS_NUMBER_1;
-                ret[0]->device_address = MOCK_USB_DEVICE_ADDRESS_1;
-                ret[0]->port_number = MOCK_USB_DEVICE_PORT_1;
-                *list = ret;
-                return (ssize_t)1;
-            });
-
-        ON_CALL(*p_libUSBImplMock, libusb_free_device_list(::testing::_, ::testing::_))
-            .WillByDefault([](libusb_device **list, int unref_devices) {
-                free(list[0]);
-                free(list);
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_descriptor(::testing::_, ::testing::_))
-            .WillRepeatedly([](libusb_device *dev, struct libusb_device_descriptor *desc) {
-                desc->bDeviceClass = LIBUSB_CLASS_PER_INTERFACE;
-                desc->bDeviceSubClass = 0;
-                return LIBUSB_SUCCESS;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_device_address(::testing::_))
-            .WillRepeatedly([](libusb_device *dev) {
-                return dev->device_address;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_bus_number(::testing::_))
-            .WillRepeatedly([](libusb_device *dev) {
-                return dev->bus_number;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_port_numbers(::testing::_, ::testing::_, ::testing::_))
-            .WillRepeatedly([](libusb_device *dev, uint8_t *port_numbers, int port_numbers_len) {
-                if((nullptr != dev) && (nullptr != port_numbers)) {
-                    port_numbers[0] = dev->port_number;
-                    return 1;
-                }
-                return 0;
-            });
-
-        EXPECT_CALL(*p_libUSBImplMock, libusb_get_config_descriptor(::testing::_, ::testing::_, ::testing::_))
-            .WillOnce(::testing::Return(LIBUSB_ERROR_NOT_FOUND));
-    }
-
-    void SetupPerInterfaceDeviceForGetDeviceInfo(uint8_t num_interfaces, const std::vector<std::pair<uint8_t, uint8_t>>& interface_classes) {
-        SetupPerInterfaceDeviceBase(num_interfaces, interface_classes);
-        SetupGetDeviceInfoMocks();
-    }
-};
-
-TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceList_PerInterfaceClass_MassStorage_Success)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceList_PerInterfaceClass_MassStorage_Success)
 {
     std::vector<std::pair<uint8_t, uint8_t>> interfaces = {{LIBUSB_CLASS_MASS_STORAGE, 6}};
     SetupPerInterfaceDevice(1, interfaces);
@@ -2253,7 +2067,7 @@ TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceList_PerInterfaceClass_MassSto
     EXPECT_TRUE(response.find("\"deviceSubclass\":6") != string::npos);
 }
 
-TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceList_PerInterfaceClass_NoMassStorage_Success)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceList_PerInterfaceClass_NoMassStorage_Success)
 {
     std::vector<std::pair<uint8_t, uint8_t>> interfaces = {{LIBUSB_CLASS_HID, 0}};
     SetupPerInterfaceDevice(1, interfaces);
@@ -2263,7 +2077,7 @@ TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceList_PerInterfaceClass_NoMassS
     EXPECT_TRUE(response.find("\"devicePath\":\"\"") != string::npos);
 }
 
-TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceList_PerInterfaceClass_GetConfigDescriptorFailure)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceList_PerInterfaceClass_GetConfigDescriptorFailure)
 {
     SetupPerInterfaceDeviceConfigFailure();
 
@@ -2271,7 +2085,7 @@ TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceList_PerInterfaceClass_GetConf
     EXPECT_TRUE(response.find("\"deviceClass\":0") != string::npos);
 }
 
-TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceInfo_PerInterfaceClass_MassStorage_Success)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceInfo_PerInterfaceClass_MassStorage_Success)
 {
     std::vector<std::pair<uint8_t, uint8_t>> interfaces = {{LIBUSB_CLASS_MASS_STORAGE, 6}};
     SetupPerInterfaceDeviceForGetDeviceInfo(1, interfaces);
@@ -2281,7 +2095,7 @@ TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceInfo_PerInterfaceClass_MassSto
     EXPECT_TRUE(response.find("\"deviceSubclass\":6") != string::npos);
 }
 
-TEST_F(USBDevicePerInterfaceTestFixture, GetDeviceList_PerInterfaceClass_MultipleInterfaces_Success)
+TEST_F(USBDeviceInfoTestFixture, GetDeviceList_PerInterfaceClass_MultipleInterfaces_Success)
 {
     std::vector<std::pair<uint8_t, uint8_t>> interfaces = {
         {LIBUSB_CLASS_HID, 0},
