@@ -90,9 +90,13 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
             }
             else
             {
-                LOGERR("Download %s Failed error: %s code: %ld", fileName.c_str(), curl_easy_strerror(cc), httpCode);
-                status = Status::HttpError;
-            }
+                LOGERR("Download %s Failed error: %s code: %ld", fileName.c_str(), curl_easy_strerror(cc), httpCode); 
+                if ( cc == CURLE_WRITE_ERROR ) {
+                    status = Status::DiskError;
+                } else {
+                    status = Status::HttpError;
+                }
+	    }
             fclose(fp);
         }
         else
