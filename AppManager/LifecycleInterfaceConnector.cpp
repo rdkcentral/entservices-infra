@@ -364,6 +364,11 @@ namespace WPEFramework
 
             LOGINFO("AppId retrieved: %s", appId.c_str());
 
+	    Exchange::IPackageInstaller::InstallState installState;
+            Core::hresult pkgStatus = Core::ERROR_GENERAL;
+            PluginHost::IShell* shell = mCurrentservice;
+            Exchange::IPackageInstaller* packageInstaller = nullptr;
+
             mAdminLock.Lock();
 
             if(nullptr != appManagerImplInstance)
@@ -405,6 +410,35 @@ namespace WPEFramework
                                     auto retryIt = appManagerImplInstance->mAppInfo.find(appId);
                                     if (retryIt != appManagerImplInstance->mAppInfo.end())
                                     {
+					    //Check install state from PackageManager
+					LOGINFO("5171-test Check install state from PackageManager");
+					if (shell != nullptr) {
+                                    packageInstaller = shell->QueryInterfaceByCallsign<Exchange::IPackageInstaller>("org.rdk.PackageManagerRDKEMS");
+                                }
+
+                                if (packageInstaller != nullptr) {
+                                    string version = ""; // Version can be empty or fetched if needed
+				    if (!retryIt->second.packageInfo.version.empty()) {
+     					version = retryIt->second.packageInfo.version;
+    				    }
+                                    pkgStatus = packageInstaller->PackageState(appId, version, installState);
+                                    packageInstaller->Release();
+				    //packageInstaller = nullptr;
+                                }
+
+                                if (pkgStatus == Core::ERROR_NONE &&
+                                    (installState == Exchange::IPackageInstaller::InstallState::INSTALLATION_BLOCKED ||
+                                     installState == Exchange::IPackageInstaller::InstallState::UNINSTALL_BLOCKED))
+                                {
+                                    LOGINFO("AppId: %s has blocked install/uninstall state. Moving to TERMINATE.", appId.c_str());
+                                    retryIt->second.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
+                                    status = mLifecycleManagerRemoteObject->SetTargetAppState(appInstanceId,
+                                                Exchange::ILifecycleManager::LifecycleState::TERMINATING, appIntent);
+                                    if (status != Core::ERROR_NONE) {
+                                        LOGERR("Failed to set TERMINATE state for AppId: %s", appId.c_str());
+                                    }
+                                }
+
                                         /* Found the AppInfo; apply suspend/hibernate/unload logic */
                                         if (fileExists(SUSPEND_POLICY_FILE))
                                         {
