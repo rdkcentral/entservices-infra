@@ -275,7 +275,7 @@ USBMassStorageTest::~USBMassStorageTest()
             }
             // No return value needed as function returns void
         }));
-
+	
     TEST_LOG("DeActivate USBDevice plugin");
 
     status = DeactivateService("org.rdk.UsbMassStorage");
