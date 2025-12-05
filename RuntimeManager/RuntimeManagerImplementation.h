@@ -56,6 +56,26 @@ namespace WPEFramework
     {
         class RuntimeManagerImplementation : public Exchange::IRuntimeManager, public Exchange::IConfiguration, public IEventHandler
         {
+            private:
+                class Configuration : public Core::JSON::Container {
+                    public:
+                        Configuration()
+                            : Core::JSON::Container()
+                            , runtimeAppPortal()
+                        {
+                            Add(_T("runtimeAppPortal"), &runtimeAppPortal);
+                        }
+                        ~Configuration() = default;
+
+                        Configuration(Configuration&&) = delete;
+                        Configuration(const Configuration&) = delete;
+                        Configuration& operator=(Configuration&&) = delete;
+                        Configuration& operator=(const Configuration&) = delete;
+
+                    public:
+                        Core::JSON::String runtimeAppPortal;
+                };
+
             public:
                 enum RuntimeEventType
                 {
@@ -207,6 +227,7 @@ namespace WPEFramework
                 WindowManagerConnector* mWindowManagerConnector;
                 DobbyEventListener *mDobbyEventListener;
                 UserIdManager* mUserIdManager;
+                std::string mRuntimeAppPortal;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
 #endif
