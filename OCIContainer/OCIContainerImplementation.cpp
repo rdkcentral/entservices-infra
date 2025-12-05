@@ -121,29 +121,37 @@ namespace WPEFramework
                  case OCICONTAINER_EVENT_CONTAINER_STARTED:
                     while (index != mOCIContainerNotification.end())
                     {
-                         (*index)->OnContainerStarted(containerId, name);
+                         if (*index != nullptr) {
+                             (*index)->OnContainerStarted(containerId, name);
+                         }
                          ++index;
                     }
                     break;
                  case OCICONTAINER_EVENT_CONTAINER_STOPPED:
                     while (index != mOCIContainerNotification.end())
                     {
-                         (*index)->OnContainerStopped(containerId, name);
+                         if (*index != nullptr) {
+                             (*index)->OnContainerStopped(containerId, name);
+                         }
                          ++index;
                     }
                     break;
                  case OCICONTAINER_EVENT_CONTAINER_FAILED:
                     while (index != mOCIContainerNotification.end())
                     {
-                         (*index)->OnContainerFailed(containerId, name, error);
+                         if (*index != nullptr) {
+                             (*index)->OnContainerFailed(containerId, name, error);
+                         }
                          ++index;
                     }
                     break;
                  case OCICONTAINER_EVENT_STATE_CHANGED:
                     while (index != mOCIContainerNotification.end())
                     {
-                        ContainerState containerState = static_cast<ContainerState>(state);
-                        (*index)->OnContainerStateChanged(containerId, containerState);
+                        if (*index != nullptr) {
+                            ContainerState containerState = static_cast<ContainerState>(state);
+                            (*index)->OnContainerStateChanged(containerId, containerState);
+                        }
                         ++index;
                     }
                     break;
