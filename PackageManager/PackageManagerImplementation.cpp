@@ -515,7 +515,7 @@ namespace Plugin {
                             case packagemanager::Result::VERSION_MISMATCH:
                                 state.failReason = FailReason::PACKAGE_MISMATCH_FAILURE;
                                 break;
-                           case packagemanager::Result::PERSISTENCE_FAILURE:
+                            case packagemanager::Result::PERSISTENCE_FAILURE:
                                 state.failReason = FailReason::PERSISTENCE_FAILURE;
                                 break;
                             default:
