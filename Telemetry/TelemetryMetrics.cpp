@@ -1,6 +1,6 @@
-/*
-* If not stated otherwise in this file or this component's LICENSE file the
-* following copyright and licenses apply:
+/**
+* If not stated otherwise in this file or this component's LICENSE
+* file the following copyright and licenses apply:
 *
 * Copyright 2025 RDK Management
 *
@@ -15,31 +15,19 @@
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 * See the License for the specific language governing permissions and
 * limitations under the License.
-*/
+**/
 
-#include <telemetry_busmessage_sender.h>
-#include "TelemetryMetricsImplementation.h"
+#include "Module.h"
+#include "TelemetryMetrics.h"
 #include "UtilsLogging.h"
-#include "TelemetryFilters.h"
-
+#include "UtilsTelemetry.h"
+#include <sstream>
+#include <memory>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(TelemetryMetricsImplementation, 1, 0);
-
-    TelemetryMetricsImplementation::TelemetryMetricsImplementation()
-    {
-        LOGINFO("Create TelemetryMetricsImplementation Instance");
-        t2_init((char *) "TelemetryMetrics");
-    }
-
-    TelemetryMetricsImplementation::~TelemetryMetricsImplementation()
-    {
-        t2_uninit();
-        LOGINFO("Delete TelemetryMetricsImplementation Instance");
-    }
-
+    //helper function to generate recordId
     std::string generateRecordId(const std::string& id, const std::string& name)
     {
         if (id.empty() || name.empty())
@@ -48,22 +36,30 @@ namespace Plugin {
             return "";
         }
 
-        return id +":" +  name;
+        return id + ":" + name;
     }
 
-/* This function attempts to parse a JSON-formatted string containing metrics,
- * validates the parsed data, and then merges it into an internal metrics record
- * map keyed by a generated record ID.
- *
- * @param id           The unique identifier
- * @param metrics      A JSON-formatted string representing the metrics data to record.
- * @param markerName   An string used to generate a unique record key.
- *
- * @return Core::hresult
- *         - Core::ERROR_NONE on success.
- *         - Core::ERROR_GENERAL if parsing fails or input is invalid.
- */
-    Core::hresult TelemetryMetricsImplementation::Record(const std::string& id, const std::string& metrics, const std::string& markerName)
+    //helper function to generate set from comma separated string
+    std::unordered_set<std::string> generateFilterSet(const std::string& filterStr)
+    {
+        std::unordered_set<std::string> filterSet;
+        std::stringstream ss(filterStr);
+        std::string item;
+
+        while (std::getline(ss, item, ','))
+        {
+            filterSet.insert(item);
+        }
+
+        return filterSet;
+    }
+
+    Core::hresult RecordMetrics(
+        const std::string& id,
+        const std::string& metrics,
+        const std::string& markerName,
+        std::unordered_map<std::string, Json::Value>& metricsRecord,
+        std::mutex& metricsMutex)
     {
         Core::hresult status = Core::ERROR_GENERAL;
 
@@ -85,14 +81,14 @@ namespace Plugin {
         }
         else
         {
-            std::lock_guard<std::mutex> lock(mMetricsMutex);
+            std::lock_guard<std::mutex> lock(metricsMutex);
             std::string recordId = generateRecordId(id, markerName);
-            if(!recordId.empty())
+            if (!recordId.empty())
             {
-                bool isNewRecord = (mMetricsRecord.find(recordId) == mMetricsRecord.end());
+                bool isNewRecord = (metricsRecord.find(recordId) == metricsRecord.end());
 
                 /* Get existing metrics for the key or creates new entry if not exist */
-                Json::Value& existing = mMetricsRecord[recordId];
+                Json::Value &existing = metricsRecord[recordId];
 
                 /* store markerName inside JSON value the first time */
                 if (isNewRecord)
@@ -106,7 +102,7 @@ namespace Plugin {
                 }
 
                 /* Merge each metric from newMetrics into existing record */
-                for (const std::string& metricKey : newMetrics.getMemberNames())
+                for (const std::string &metricKey : newMetrics.getMemberNames())
                 {
                     if (existing.isMember(metricKey))
                     {
@@ -125,90 +121,94 @@ namespace Plugin {
         return status;
     }
 
- /* Publishes the collected telemetry metrics.
- *
- * This method is responsible for sending or flushing the internally stored
- * metrics records to the telemetry.
- *
- * @param id           The unique identifier
- * @param markerName   An string used to generate a unique record key.
- *
- * @return Core::hresult
- *         - Core::ERROR_NONE on success.
- *         - Core::ERROR_GENERAL if parsing fails or input is invalid.
- */
-    Core::hresult TelemetryMetricsImplementation::Publish(const std::string& id, const std::string& markerName)
+    Core::hresult PublishMetrics(
+        const std::string& id,
+        const std::string& markerName,
+        std::unordered_map<std::string, Json::Value>& metricsRecord,
+        std::mutex& metricsMutex)
     {
         Core::hresult status = Core::ERROR_GENERAL;
 
         std::string recordId = generateRecordId(id, markerName);
-        Json::Value filteredMetrics =Json::objectValue;
-        std::string appInstanceId = "";
+        Json::Value filteredMetrics = Json::objectValue;
+        std::string alternateId = ""; // To store value of the secondary ID field from current record (e.g, instanceID)
+        std::string markerFilters = "";
+        std::string secondaryIdField = "";
         std::string matchedOtherRecordId = "";
-        std::unordered_set<std::string> filterKeys ={};
+        std::unordered_set<std::string> filterKeys = {};
 
         bool error = false;
+        bool useFilter = false;
 
         /* Lock mutex once for the entire critical section */
-        std::lock_guard<std::mutex> lock(mMetricsMutex);
+        std::lock_guard<std::mutex> lock(metricsMutex);
 
-        /* Retrieve filter Names for the given markerName*/
-        auto filterIt = markerFilters.find(markerName);
-        if (filterIt != markerFilters.end())
+
+        /* Filter current recordMetrics and extract value of mergeKey */
+        auto currentRecordIt = metricsRecord.find(recordId);
+        if (currentRecordIt == metricsRecord.end())
         {
-            filterKeys = filterIt->second;
+            LOGERR("Current record not found: %s", recordId.c_str());
+            error = true;
         }
         else
         {
-            LOGERR("Filter list not found for marker: %s", markerName.c_str());
-            error = true;
-        }
+            Json::Value& currentMetrics = currentRecordIt->second;
 
-        if (!error)
-        {
-            /* Filter current recordMetrics and extract appInstanceId */
-            auto currentRecordIt = mMetricsRecord.find(recordId);
-            if (currentRecordIt == mMetricsRecord.end())
-            {
-                LOGERR("Current record not found: %s", recordId.c_str());
-                error = true;
-            }
-            else
-            {
-                const Json::Value& currentMetrics = currentRecordIt->second;
+        // secondaryIdField  Field name used to merge other records with this key as its identifier
+        // markerFilters     A comma separated string of allowed metric keys for filtering.
+            secondaryIdField = currentMetrics.get("secondaryId", "").asString(); //get alternate id value if present
+            markerFilters = currentMetrics.get("markerFilters", "").asString(); //get marker filters if present
+            useFilter = !markerFilters.empty();
 
-                for (const std::string& key : currentMetrics.getMemberNames())
+            currentMetrics.removeMember("secondaryId");
+            currentMetrics.removeMember("markerFilters"); // to prevent from it being published
+
+            /* Generate filter keys if filters are provided */
+            if (useFilter)
+            {
+                filterKeys = generateFilterSet(markerFilters);
+                if (filterKeys.empty())
                 {
-                    if (filterKeys.count(key))
-                    {
-                        filteredMetrics[key] = currentMetrics[key];
-                        if (key == "appInstanceId")
-                        {
-                            appInstanceId = currentMetrics[key].asString();
-                        }
-                    }
-                    else 
-                    {
-                        LOGWARN("Key '%s' not allowed by filter for marker '%s'", key.c_str(), markerName.c_str());
-                    }
+                    LOGERR("Filter list error for marker: %s", markerName.c_str());
+                    useFilter = false; // skip filtering in case of error
+                }
+            }
+
+            for (const std::string &key : currentMetrics.getMemberNames())
+            {
+                if (!useFilter || filterKeys.count(key)) //bypass filtering if no filters are set
+                {
+                    filteredMetrics[key] = currentMetrics[key];
+                }
+                else
+                {
+                    LOGWARN("Key '%s' not allowed by filter for marker '%s'", key.c_str(), markerName.c_str());
+                }
+
+                if (!secondaryIdField.empty() && key == secondaryIdField && alternateId.empty())
+                {
+                    alternateId = currentMetrics[key].asString();
+                    LOGDBG("Populated alternate identifier value as %s for %s", alternateId.c_str(), secondaryIdField.c_str());
                 }
             }
         }
 
-        /* Merge other recordMetrics with the same appInstanceId and markerName */
-        if (!error && !appInstanceId.empty())
-        {
-            std::string appInstancePrefix = appInstanceId + ":";
 
-            for (const auto& entry : mMetricsRecord)
+        /* Merge other recordMetrics with the same id as alternate identifier and markerName */
+        if (!error && !alternateId.empty())
+        {
+            std::string alternateIdPrefix = alternateId + ":";
+
+            for (const auto& entry : metricsRecord)
             {
                 const std::string& otherRecordId = entry.first;
                 if (otherRecordId == recordId)
                     continue;
 
-                if (otherRecordId.compare(0, appInstancePrefix.size(), appInstancePrefix) == 0)
+                if (otherRecordId.compare(0, alternateIdPrefix.size(), alternateIdPrefix) == 0)
                 {
-                    const std::string otherMarkerName = otherRecordId.substr(appInstancePrefix.size());
+                    const std::string otherMarkerName = otherRecordId.substr(alternateIdPrefix.size());
 
                     /* Merge if markerName Matches */
                     if (otherMarkerName == markerName)
@@ -217,7 +217,7 @@ namespace Plugin {
 
                         for (const std::string& key : otherMetrics.getMemberNames())
                         {
-                            if (filterKeys.count(key))
+                            if (!useFilter || filterKeys.count(key))
                             {
                                 filteredMetrics[key] = otherMetrics[key];
                                 LOGINFO("Merged key '%s' from '%s' into current record", key.c_str(), otherRecordId.c_str());
@@ -231,7 +231,7 @@ namespace Plugin {
             }
         }
 
-       /*Publish metrics if no errors occurred */
+        /* Publish metrics if no errors occurred */
         if (!error)
         {
             Json::StreamWriterBuilder writerBuilder;
@@ -242,10 +242,10 @@ namespace Plugin {
             t2_event_s((char*)markerName.c_str(), (char*)publishMetrics.c_str());
 
             /* Remove Published Record */
-            mMetricsRecord.erase(recordId);
+            metricsRecord.erase(recordId);
             if (!matchedOtherRecordId.empty())
             {
-                mMetricsRecord.erase(matchedOtherRecordId);
+                metricsRecord.erase(matchedOtherRecordId);
             }
             LOGINFO("Cleared published record: %s", recordId.c_str());
 
@@ -254,5 +254,6 @@ namespace Plugin {
 
         return status;
     }
-} /* namespace Plugin */
-} /* namespace WPEFramework */
+
+} // namespace Plugin
+} // namespace WPEFramework
