@@ -215,10 +215,10 @@ namespace WPEFramework
         
         uint32_t AppGatewayImplementation::InitializeResolver() {
             // Initialize resolver after setting mService
-            mResolverPtr = std::make_shared<Resolver>(mService);
-            if (mResolverPtr == nullptr)
-            {
-                LOGERR("Failed to create Resolver instance");
+            try {
+                mResolverPtr = std::make_shared<Resolver>(mService);
+            } catch (const std::bad_alloc& e) {
+                LOGERR("Failed to create Resolver instance: %s", e.what());
                 return Core::ERROR_GENERAL;
             }
 
