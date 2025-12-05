@@ -34,10 +34,12 @@ namespace WPEFramework
         Resolver::Resolver(PluginHost::IShell *shell)
             : mService(shell), mResolutions(), mMutex()
         {
+            LOGINFO("[Resolver] Constructor - configurations will be loaded via LoadConfig");
         }
 
         Resolver::~Resolver()
         {
+            LOGINFO("Call Resolver destructor");
             if (nullptr != mService)
             {
                 mService->Release();
@@ -123,6 +125,9 @@ namespace WPEFramework
                 }
             }
 
+            LOGINFO("[Resolver] Loaded %zu resolutions from %s (%zu new, %zu overridden). Total resolutions: %zu",
+                    loadedCount, path.c_str(), loadedCount - overriddenCount, overriddenCount, mResolutions.size());
+
             return true;
         }
 
@@ -130,6 +135,7 @@ namespace WPEFramework
         {
             std::lock_guard<std::mutex> lock(mMutex);
             mResolutions.clear();
+            LOGINFO("[Resolver] Cleared all resolutions");
         }
 
         bool Resolver::IsConfigured()
