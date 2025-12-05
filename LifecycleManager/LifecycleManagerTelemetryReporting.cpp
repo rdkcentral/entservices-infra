@@ -26,16 +26,16 @@ namespace WPEFramework
 {
 namespace Plugin
 {
-    LifecycleManagerTelemetryReporting::LifecycleManagerTelemetryReporting(): mTelemetryMetricsObject(nullptr), mCurrentservice(nullptr)
+    LifecycleManagerTelemetryReporting::LifecycleManagerTelemetryReporting(): mTelemetryPluginObject(nullptr), mCurrentservice(nullptr)
     {
     }
 
     LifecycleManagerTelemetryReporting::~LifecycleManagerTelemetryReporting()
     {
-        if(mTelemetryMetricsObject )
+        if(mTelemetryPluginObject )
         {
-            mTelemetryMetricsObject ->Release();
-            mTelemetryMetricsObject = nullptr;
+            mTelemetryPluginObject ->Release();
+            mTelemetryPluginObject = nullptr;
             mCurrentservice = nullptr;
         }
     }
@@ -53,9 +53,9 @@ namespace Plugin
         mAdminLock.Lock();
         mCurrentservice = service;
         mAdminLock.Unlock();
-        if(Core::ERROR_NONE != createTelemetryMetricsPluginObject())
+        if(Core::ERROR_NONE != createTelemetryPluginObject())
         {
-            LOGERR("Failed to create TelemetryMetricsObject\n");
+            LOGERR("Failed to create TelemetryObject\n");
         }
     }
 
@@ -67,9 +67,9 @@ namespace Plugin
     }
 
 /*
-* Creates TelemetryMetrics plugin object to access interface methods
+* Creates Telemetry plugin object to access interface methods
 */
-    Core::hresult LifecycleManagerTelemetryReporting::createTelemetryMetricsPluginObject()
+    Core::hresult LifecycleManagerTelemetryReporting::createTelemetryPluginObject()
     {
         Core::hresult status = Core::ERROR_GENERAL;
 
@@ -78,14 +78,14 @@ namespace Plugin
         {
                 LOGERR("mCurrentservice is null \n");
         }
-        else if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+        else if (nullptr == (mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetry>("org.rdk.Telemetry")))
         {
-                LOGERR("Failed to create TelemetryMetricsObject\n");
+                LOGERR("Failed to create TelemetryObject\n");
         }
         else
         {
             status = Core::ERROR_NONE;
-            LOGINFO("created TelemetryMetrics Object");
+            LOGINFO("created Telemetry Object");
         }
         mAdminLock.Unlock();
         return status;
@@ -104,11 +104,11 @@ namespace Plugin
         std::string markerName = "";
         bool shouldPublish = false;
 
-        if(nullptr == mTelemetryMetricsObject) /*mTelemetryMetricsObject is null retry to create*/
+        if(nullptr == mTelemetryPluginObject) /*mTelemetryPluginObject is null retry to create*/
         {
-            if(Core::ERROR_NONE != createTelemetryMetricsPluginObject())
+            if(Core::ERROR_NONE != createTelemetryPluginObject())
             {
-                LOGERR("Failed to create TelemetryMetricsObject\n");
+                LOGERR("Failed to create TelemetryObject\n");
             }
         }
 
@@ -116,9 +116,9 @@ namespace Plugin
         {
             LOGERR("context is nullptr");
         }
-        else if (nullptr == mTelemetryMetricsObject)
+        else if (nullptr == mTelemetryPluginObject)
         {
-            LOGERR("mTelemetryMetricsObject is not valid");
+            LOGERR("mTelemetryPluginObject is not valid");
         }
         else if (!data.HasLabel("appId") || (appId = data["appId"].String()).empty())
         {
@@ -141,9 +141,10 @@ namespace Plugin
                     {
                         /*Telemetry reporting - launch case*/
                         jsonParam["lifecycleManagerSpawnTime"] = (int)(currentTime - requestTime);
+                        jsonParam["markerFilters"] = TELEMETRY_MARKER_LAUNCH_TIME_FILTER;
                         jsonParam.ToString(telemetryMetrics);
                         markerName = TELEMETRY_MARKER_LAUNCH_TIME;
-                        mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
+                        mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
                     }
                 break;
                 case REQUEST_TYPE_TERMINATE:
@@ -151,14 +152,16 @@ namespace Plugin
                     {
                         /*Telemetry reporting - close case*/
                         jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
+                        jsonParam["markerFilters"] = TELEMETRY_MARKER_CLOSE_TIME_FILTER;
                         jsonParam.ToString(telemetryMetrics);
                         markerName = TELEMETRY_MARKER_CLOSE_TIME;
-                        mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
+                        mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
                     }
                     else if(Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState)
                     {
                         /*Telemetry reporting - wake case, wake is called during app terminate*/
                         markerName = TELEMETRY_MARKER_WAKE_TIME;
+                        jsonParam["markerFilters"] = TELEMETRY_MARKER_WAKE_TIME_FILTER;
                         shouldPublish = true;
                     }
                 break;
@@ -167,6 +170,7 @@ namespace Plugin
                     if(Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState)
                     {
                         markerName = TELEMETRY_MARKER_SUSPEND_TIME;
+                        jsonParam["markerFilters"] = TELEMETRY_MARKER_SUSPEND_TIME_FILTER;
                         shouldPublish = true;
                     }
                 break;
@@ -175,6 +179,7 @@ namespace Plugin
                     if(Exchange::ILifecycleManager::LifecycleState::ACTIVE == newLifecycleState)
                     {
                         markerName = TELEMETRY_MARKER_RESUME_TIME;
+                        jsonParam["markerFilters"] = TELEMETRY_MARKER_RESUME_TIME_FILTER;
                         shouldPublish = true;
                     }
                 break;
@@ -183,6 +188,7 @@ namespace Plugin
                     if(Exchange::ILifecycleManager::LifecycleState::HIBERNATED == newLifecycleState)
                     {
                         markerName = TELEMETRY_MARKER_HIBERNATE_TIME;
+                        jsonParam["markerFilters"] = TELEMETRY_MARKER_HIBERNATE_TIME_FILTER;
                         shouldPublish = true;
                     }
                 break;
@@ -196,11 +202,12 @@ namespace Plugin
                 jsonParam["appId"] = appId;
                 jsonParam["appInstanceId"] = context->getAppInstanceId();
                 jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
+                jsonParam["secondaryId"] = "appInstanceId";
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {
-                    mTelemetryMetricsObject->Record(appId, telemetryMetrics, markerName);
-                    mTelemetryMetricsObject->Publish(appId, markerName);
+                    mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
+                    mTelemetryPluginObject->Publish(appId, markerName);
                 }
             }
         }

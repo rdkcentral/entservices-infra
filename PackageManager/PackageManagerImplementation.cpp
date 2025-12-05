@@ -42,7 +42,7 @@ namespace Plugin {
         , mCurrentservice(nullptr)
         , mStorageManagerObject(nullptr)
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-        , mTelemetryMetricsObject(nullptr)
+        , mTelemetryPluginObject(nullptr)
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
     {
         LOGINFO("ctor PackageManagerImplementation: %p", this);
@@ -130,13 +130,13 @@ namespace Plugin {
             }
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-            if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+            if (nullptr == (mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetry>("org.rdk.Telemetry")))
             {
-                LOGERR("mTelemetryMetricsObject is null \n");
+                LOGERR("mTelemetryPluginObject is null \n");
             }
             else
             {
-                LOGINFO("created TelemetryMetrics Object");
+                LOGINFO("created Telemetry Object");
             }
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
@@ -172,11 +172,11 @@ namespace Plugin {
         LOGINFO();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-        if (nullptr != mTelemetryMetricsObject)
+        if (nullptr != mTelemetryPluginObject)
         {
-            LOGINFO("TelemetryMetrics object released\n");
-            mTelemetryMetricsObject->Release();
-            mTelemetryMetricsObject = nullptr;
+            LOGINFO("Telemetry object released\n");
+            mTelemetryPluginObject->Release();
+            mTelemetryPluginObject = nullptr;
         }
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
          const std::string markerFile = PACKAGE_MANAGER_MARKER_FILE;
@@ -237,36 +237,41 @@ namespace Plugin {
             LOGERR("Telemetry marker is empty");
         }
         else {
-            if (mTelemetryMetricsObject == nullptr) {
-                LOGINFO("mTelemetryMetricsObject is null, recreate it");
-                mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics");
+            if (mTelemetryPluginObject == nullptr) {
+                LOGINFO("mTelemetryPluginObject is null, recreate it");
+                mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetry>("org.rdk.Telemetry");
 
-                if (mTelemetryMetricsObject == nullptr) {
-                    LOGERR("mTelemetryMetricsObject is still null");
+                if (mTelemetryPluginObject == nullptr) {
+                    LOGERR("mTelemetryPluginObject is still null");
                 }
             }
 
-            if (mTelemetryMetricsObject != nullptr) {
+            if (mTelemetryPluginObject != nullptr) {
                 time_t currentTime = getCurrentTimestamp();
                 duration = static_cast<int>(currentTime - requestTime);
                 LOGINFO("End time for %s: %lu", marker.c_str(), currentTime);
 
                 if (marker == TELEMETRY_MARKER_LAUNCH_TIME) {
                     jsonParam["packageManagerLockTime"] = duration;
+                    jsonParam["markerFilters"] = TELEMETRY_MARKER_LAUNCH_TIME_FILTERS;
                     publish = false;
                 }
                 else if (marker == TELEMETRY_MARKER_CLOSE_TIME) {
                     jsonParam["packageManagerUnlockTime"] = duration;
+                    jsonParam["markerFilters"] = TELEMETRY_MARKER_CLOSE_TIME_FILTERS;
                     publish = false;
                 }
                 else if (marker == TELEMETRY_MARKER_INSTALL_TIME) {
                     jsonParam["installTime"] = duration;
+                    jsonParam["markerFilters"] = TELEMETRY_MARKER_INSTALL_TIME_FILTERS;
                 }
                 else if (marker == TELEMETRY_MARKER_UNINSTALL_TIME) {
                     jsonParam["uninstallTime"] = duration;
+                    jsonParam["markerFilters"] = TELEMETRY_MARKER_UNINSTALL_TIME_FILTERS;
                 }
                 else if (marker == TELEMETRY_MARKER_INSTALL_ERROR || marker == TELEMETRY_MARKER_UNINSTALL_ERROR) {
                     jsonParam["errorCode"] = static_cast<int>(errorCode);
+                    jsonParam["markerFilters"] = TELEMETRY_MARKER_ERROR_FILTERS;
                 }
                 else {
                     LOGERR("Unknown telemetry marker: %s", marker.c_str());
@@ -275,18 +280,19 @@ namespace Plugin {
 
                 if (true == shouldProcessMarker) {
                     jsonParam["appId"] = appId;
+                    jsonParam["secondaryId"] = "appInstanceId";
 
                     if (jsonParam.ToString(telemetryMetrics)) {
                         LOGINFO("Record appId %s marker %s duration %d", appId.c_str(), marker.c_str(), duration);
 
-                        if (mTelemetryMetricsObject->Record(appId, telemetryMetrics, marker) != Core::ERROR_NONE) {
+                        if (mTelemetryPluginObject->Record(appId, telemetryMetrics, marker) != Core::ERROR_NONE) {
                             LOGERR("Telemetry Record Failed");
                         }
 
                         if (publish) {
                             LOGINFO("Publish appId %s marker %s", appId.c_str(), marker.c_str());
 
-                            if (mTelemetryMetricsObject->Publish(appId, marker) != Core::ERROR_NONE) {
+                            if (mTelemetryPluginObject->Publish(appId, marker) != Core::ERROR_NONE) {
                                 LOGERR("Telemetry Publish Failed");
                             }
                         }

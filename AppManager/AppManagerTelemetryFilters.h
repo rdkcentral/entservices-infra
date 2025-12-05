@@ -17,6 +17,8 @@
 * limitations under the License.
 **/
 
+//Kept here for legacy reference from TelemetryMetrics Plugin
+
 #pragma once
 
 #include <string>
