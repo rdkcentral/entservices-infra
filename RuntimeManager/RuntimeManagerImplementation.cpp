@@ -529,7 +529,7 @@ err_ret:
 
             mRuntimeManagerImplLock.Lock();
 
-            uid_t uid = mUserIdManager->getUserId(appInstanceId);
+            uid_t uid = mUserIdManager->getUserId(appId);
             gid_t gid = mUserIdManager->getAppsGid();
 
             std::ifstream inFile("/tmp/specchange");
