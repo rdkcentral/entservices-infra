@@ -37,7 +37,7 @@ namespace Plugin {
     StorageManagerImplementation::StorageManagerImplementation()
     : mCurrentservice(nullptr)
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-    , mTelemetryMetricsObject(nullptr)
+    , mTelemetryPluginObject(nullptr)
 #endif
     {
         LOGINFO("Create StorageManagerImplementation Instance");
@@ -90,13 +90,13 @@ namespace Plugin {
                 }
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+                if (nullptr == (mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetry>("org.rdk.Telemetry")))
                 {
-                    LOGERR("mTelemetryMetricsObject is null \n");
+                    LOGERR("mTelemetryPluginObject is null \n");
                 }
                 else
                 {
-                    LOGINFO("created TelemetryMetrics Object");
+                    LOGINFO("created Telemetry Object");
                 }
 #endif
 
@@ -192,10 +192,10 @@ namespace Plugin {
             jsonParam["storageManagerLaunchTime"] = duration;
             jsonParam["appId"] = appId;
             jsonParam.ToString(telemetryMetrics);
-            if(nullptr != mTelemetryMetricsObject)
+            if(nullptr != mTelemetryPluginObject)
             {
 		LOGINFO("Record appId %s storageManagerLaunchTime %d",appId.c_str(),duration);
-                mTelemetryMetricsObject->Record(appId, telemetryMetrics, TELEMETRY_MARKER_LAUNCH_TIME);
+                mTelemetryPluginObject->Record(appId, telemetryMetrics, TELEMETRY_MARKER_LAUNCH_TIME);
             }
         #endif
         return status;

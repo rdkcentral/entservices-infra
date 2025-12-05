@@ -25,6 +25,8 @@
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IPowerManager.h>
 #include "PowerManagerInterface.h"
+#include <mutex>
+#include <json/json.h>
 
 #ifdef HAS_RBUS
 #include <interfaces/IUserSettings.h>
@@ -175,6 +177,8 @@ namespace Plugin {
         Core::hresult AbortReport() override;
         Core::hresult SetOptOutTelemetry(const bool optOut, TelemetrySuccess& successResult) override;
         Core::hresult IsOptOutTelemetry(bool& optOut, bool& success) override;
+        Core::hresult Record(const string& id, const string& telemetryMetrics, const string& markerName) override;
+        Core::hresult Publish(const string& id, const string& markerName) override;
 
         void InitializePowerManager();
         void onPowerModeChanged(const PowerState currentState, const PowerState newState);
@@ -197,6 +201,8 @@ namespace Plugin {
         std::list<Exchange::ITelemetry::INotification*> _telemetryNotification;
         PowerManagerInterfaceRef _powerManagerPlugin;
         Core::Sink<PowerManagerNotification> _pwrMgrNotification;
+        std::unordered_map<std::string, Json::Value> mMetricsRecord;
+        std::mutex mMetricsMutex;
 #ifdef HAS_RBUS
         Exchange::IUserSettings* _userSettingsPlugin;
         Core::Sink<UserSettingsNotification> _userSettingsNotification;

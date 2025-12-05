@@ -41,7 +41,7 @@ namespace WPEFramework
         , mDobbyEventListener(nullptr)
         , mUserIdManager(nullptr)
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-        , mTelemetryMetricsObject(nullptr)
+        , mTelemetryPluginObject(nullptr)
 #endif
         {
             LOGINFO("Create RuntimeManagerImplementation Instance");
@@ -251,13 +251,13 @@ namespace WPEFramework
                 mCurrentservice->AddRef();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+                if (nullptr == (mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetry>("org.rdk.Telemetry")))
                 {
-                    LOGERR("mTelemetryMetricsObject is null \n");
+                    LOGERR("mTelemetryPluginObject is null \n");
                 }
                 else
                 {
-                    LOGINFO("created TelemetryMetrics Object");
+                    LOGINFO("created Telemetry Object");
                 }
 #endif
                 /* Create Storage Manager Plugin Object */
@@ -1277,10 +1277,10 @@ err_ret:
             jsonParam["appId"] = appId;
             jsonParam.ToString(telemetryMetrics);
 
-            if(nullptr != mTelemetryMetricsObject)
+            if(nullptr != mTelemetryPluginObject)
             {
                 LOGINFO("Record appId %s marker %s start time %d",appId.c_str(), marker.c_str(), duration);
-                mTelemetryMetricsObject->Record(appId, telemetryMetrics, marker);
+                mTelemetryPluginObject->Record(appId, telemetryMetrics, marker);
             }
         }
 #endif
