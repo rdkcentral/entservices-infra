@@ -20,7 +20,7 @@
 #pragma once
 
 #include "ApplicationContext.h"
-#include <interfaces/ITelemetryMetrics.h>
+#include <interfaces/ITelemetry.h>
 
 #define TELEMETRY_MARKER_LAUNCH_TIME                         "OverallLaunchTime_split"
 #define TELEMETRY_MARKER_CLOSE_TIME                          "AppCloseTime_split"
@@ -28,6 +28,13 @@
 #define TELEMETRY_MARKER_RESUME_TIME                         "ResumeTime_split"
 #define TELEMETRY_MARKER_HIBERNATE_TIME                      "HibernateTime_split"
 #define TELEMETRY_MARKER_WAKE_TIME                           "WakeTime_split"
+
+#define TELEMETRY_MARKER_LAUNCH_TIME_FILTER                  "totalLaunchTime,appManagerLaunchTime,packageManagerLockTime,lifecycleManagerSpawnTime,windowManagerCreateDisplayTime,runtimeManagerRunTime,storageManagerLaunchTime,fireboltGatewayLaunchTime,appId,appInstanceId,appVersion,runtimeId,runtimeVersion,launchType,markerName"
+#define TELEMETRY_MARKER_CLOSE_TIME_FILTER                   "totalCloseTime,appManagerCloseTime,packageManagerUnlockTime,lifecycleManagerSetTargetStateTime,windowManagerDestroyTime,runtimeManagerTerminateTime,storageManagerTime,fireboltGatewayTerminateTime,appId,appInstanceId,appVersion,closeType,markerName"
+#define TELEMETRY_MARKER_SUSPEND_TIME_FILTER                 "lifecycleManagerSetTargetStateTime,runtimeManagerSuspendTime,appId,appInstanceId,markerName"
+#define TELEMETRY_MARKER_RESUME_TIME_FILTER                  "lifecycleManagerSetTargetStateTime,runtimeManagerResumeTime,appId,appInstanceId,markerName"
+#define TELEMETRY_MARKER_HIBERNATE_TIME_FILTER               "lifecycleManagerSetTargetStateTime,runtimeManagerHibernateTime,appId,appInstanceId,markerName"
+#define TELEMETRY_MARKER_WAKE_TIME_FILTER                    "lifecycleManagerSetTargetStateTime,runtimeManagerWakeTime,appId,appInstanceId,markerName"
 
 namespace WPEFramework
 {
@@ -47,11 +54,11 @@ class LifecycleManagerTelemetryReporting
     private /*methods*/:
         LifecycleManagerTelemetryReporting();
         ~LifecycleManagerTelemetryReporting();
-        Core::hresult createTelemetryMetricsPluginObject();
+        Core::hresult createTelemetryPluginObject();
 
     private /*members*/:
         mutable Core::CriticalSection mAdminLock;
-        Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
+        Exchange::ITelemetry* mTelemetryPluginObject;
         PluginHost::IShell* mCurrentservice;
 };
 
