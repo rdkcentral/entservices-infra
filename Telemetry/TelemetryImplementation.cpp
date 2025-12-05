@@ -18,6 +18,7 @@
 **/
 
 #include "TelemetryImplementation.h"
+#include "TelemetryMetrics.h"
 
 #include "UtilsJsonRpc.h"
 #include "UtilsTelemetry.h"
@@ -580,6 +581,16 @@ namespace Plugin {
         }
         success = true;
         return Core::ERROR_NONE;
+    }
+
+    Core::hresult TelemetryImplementation::Record(const string& id, const string& metrics, const string& markerName)
+    {
+        return RecordMetrics(id, metrics, markerName, mMetricsRecord, mMetricsMutex);
+    }
+
+    Core::hresult TelemetryImplementation::Publish(const string& id, const string& markerName)
+    {
+        return PublishMetrics(id, markerName, mMetricsRecord, mMetricsMutex);
     }
 } // namespace Plugin
 } // namespace WPEFramework

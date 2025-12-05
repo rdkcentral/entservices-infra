@@ -28,7 +28,7 @@
 #include <interfaces/IOCIContainer.h>
 #include <interfaces/IStorageManager.h>
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-#include <interfaces/ITelemetryMetrics.h>
+#include <interfaces/ITelemetry.h>
 #endif
 #include <condition_variable>
 #include "ApplicationConfiguration.h"
@@ -208,7 +208,7 @@ namespace WPEFramework
                 DobbyEventListener *mDobbyEventListener;
                 UserIdManager* mUserIdManager;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
+                Exchange::ITelemetry* mTelemetryPluginObject;
 #endif
 #ifdef  RIALTO_IN_DAC_FEATURE_ENABLED
                 std::shared_ptr<RialtoConnector>  mRialtoConnector;
