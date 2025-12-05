@@ -512,10 +512,10 @@ namespace Plugin {
                     } else {
                         state.installState = InstallState::INSTALL_FAILURE;
                         switch (pmResult) {
-                            case packagemanager::VERSION_MISMATCH:
-                                 state.failReason = FailReason::PACKAGE_MISMATCH_FAILURE;
+                            case packagemanager::Result::VERSION_MISMATCH:
+                                state.failReason = FailReason::PACKAGE_MISMATCH_FAILURE;
                                 break;
-                           case packagemanager::PERSISTENCE_FAILURE:
+                           case packagemanager::Result::PERSISTENCE_FAILURE:
                                 state.failReason = FailReason::PERSISTENCE_FAILURE;
                                 break;
                             default:
