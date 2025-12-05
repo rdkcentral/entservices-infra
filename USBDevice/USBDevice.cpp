@@ -152,7 +152,7 @@ namespace WPEFramework
         if (connection->Id() == _connectionId)
         {
             SYSLOG(Logging::Shutdown, (string(_T("USBDevice Deactivated"))));
-            ASSERT(nullptr != _service)
+            ASSERT(nullptr != _service);
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }

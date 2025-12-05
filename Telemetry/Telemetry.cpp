@@ -117,7 +117,10 @@ namespace WPEFramework
             _telemetry->Unregister(&_telemetryNotification);
             Exchange::JTelemetry::Unregister(*this);
 
-	    configure->Release();
+            if (configure != nullptr) {
+                configure->Release();
+                configure = nullptr;
+            }
 
             // Stop processing:
             RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
