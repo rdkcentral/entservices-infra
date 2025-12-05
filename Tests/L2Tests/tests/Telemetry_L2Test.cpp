@@ -204,13 +204,16 @@ Telemetry_L2test::Telemetry_L2test()
     .WillByDefault(::testing::Invoke(
     [](char* pcCallerID, const char* pcParameterName, RFC_ParamData_t* pstParamData) {
        if (strcmp("RFC_DATA_ThermalProtection_POLL_INTERVAL", pcParameterName) == 0) {
-           strcpy(pstParamData->value, "2");
+           strncpy(pstParamData->value, "2", sizeof(pstParamData->value) - 1);
+           pstParamData->value[sizeof(pstParamData->value) - 1] = '\0';
            return WDMP_SUCCESS;
        } else if (strcmp("RFC_ENABLE_ThermalProtection", pcParameterName) == 0) {
-           strcpy(pstParamData->value, "true");
+           strncpy(pstParamData->value, "true", sizeof(pstParamData->value) - 1);
+           pstParamData->value[sizeof(pstParamData->value) - 1] = '\0';
            return WDMP_SUCCESS;
        } else if (strcmp("RFC_DATA_ThermalProtection_DEEPSLEEP_GRACE_INTERVAL", pcParameterName) == 0) {
-           strcpy(pstParamData->value, "6");
+           strncpy(pstParamData->value, "6", sizeof(pstParamData->value) - 1);
+           pstParamData->value[sizeof(pstParamData->value) - 1] = '\0';
            return WDMP_SUCCESS;
        } else {
            /* The default threshold values will assign, if RFC call failed */
