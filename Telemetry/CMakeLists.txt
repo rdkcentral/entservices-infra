@@ -43,13 +43,22 @@ install(TARGETS ${MODULE_NAME}
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
         TelemetryImplementation.cpp
+        TelemetryMetrics.cpp
         Module.cpp)
 
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
+if(RDK_SERVICES_L1_TEST)
+    find_path(JSONCPP_INCLUDE_DIR json/json.h PATHS /usr/include/jsoncpp)
+    include_directories(${JSONCPP_INCLUDE_DIR})
+    target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
+endif(RDK_SERVICES_L1_TEST)
 
 if (RDK_SERVICE_L2_TEST)
+    find_path(JSONCPP_INCLUDE_DIR json/json.h PATHS /usr/include/jsoncpp)
+    include_directories(${JSONCPP_INCLUDE_DIR})
+    target_include_directories(${MODULE_NAME} PUBLIC ${JSONCPP_INCLUDE_DIR})
    find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
    if (TESTMOCKLIB_LIBRARIES)
        message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")
