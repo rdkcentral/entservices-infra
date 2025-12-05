@@ -2054,6 +2054,37 @@ Core::hresult RDKWindowManagerImplementation::EnableDisplayRender(const string& 
     return retStatus;
 }
 
+/***
+ * @brief Get the last keyinformation.
+ *
+ * This function retrieves information about the last key info including key code, modifiers, and timestamp.
+ *
+ * @param[out] keyCode            : Returns the key code of the last pressed key
+ * @param[out] modifiers          : Returns the modifiers flags of the last pressed key
+ * @param[out] timestampInSeconds : Returns the timestamp of the last key press in seconds
+ * @return    Core::hresult       : Core::ERROR_NONE on success, Core::ERROR_GENERAL on failure
+ */
+Core::hresult RDKWindowManagerImplementation::GetLastKeyInfo(uint32_t &keyCode, uint32_t &modifiers, uint64_t &timestampInSeconds) const
+{
+    Core::hresult retStatus = Core::ERROR_NONE;
+    
+    LOGINFO("RDKWindowManager GetLastKeyInfo called");
+    
+    if (RdkWindowManager::CompositorController::getLastKeyPress(keyCode, modifiers, timestampInSeconds))
+    {
+        LOGINFO("GetLastKeyInfo successful - keyCode: %u, modifiers: %u, timestamp: %llu", keyCode, modifiers, timestampInSeconds);
+    }
+    else
+    {
+        LOGERR("Failed to get last keyinfo information");
+        retStatus = Core::ERROR_GENERAL;
+    }
+    
+    return retStatus;
+}
+} /* namespace Plugin */
+} /* namespace WPEFramework */
+
 /**
  * @brief Starts the VNC server to allow remote desktop access.
  *
