@@ -96,10 +96,6 @@ namespace Plugin {
         ASSERT(notification != nullptr);
         Core::hresult result = Core::ERROR_NONE;
 
-        done = true;
-        cv.notify_one();
-        mDownloadThreadPtr->join();
-
         mAdminLock.Lock();
         auto item = std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification);
         if (item != mDownloaderNotifications.end()) {
@@ -169,6 +165,10 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
+
+        done = true;
+        cv.notify_one();
+        mDownloadThreadPtr->join();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         if (nullptr != mTelemetryMetricsObject)
@@ -503,7 +503,7 @@ namespace Plugin {
                     LOGINFO("CreateStorage path [%s]", path.c_str());
                     state.installState = InstallState::INSTALLING;
                     NotifyInstallStatus(packageId, version, state);
-                    #ifdef USE_LIBPACKAGE
+                    #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
                     packagemanager::ConfigMetaData config;
                     packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                     if (pmResult == packagemanager::SUCCESS) {
@@ -577,7 +577,7 @@ namespace Plugin {
                     LOGINFO("DeleteStorage done");
                     state.installState = InstallState::UNINSTALLING;
                     NotifyInstallStatus(packageId, version, state);
-                    #ifdef USE_LIBPACKAGE
+                    #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
                     // XXX: what if DeleteStorage() fails, who Uninstall the package
                     packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
                     if (pmResult == packagemanager::SUCCESS) {
@@ -732,7 +732,7 @@ namespace Plugin {
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-            #ifdef USE_LIBPACKAGE
+            #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
             string gatewayMetadataPath;
             bool locked = (state.mLockCount > 0);
             LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
@@ -854,7 +854,7 @@ namespace Plugin {
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-            #ifdef USE_LIBPACKAGE
+            #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
             if (state.mLockCount) {
                 if (--state.mLockCount == 0) {
                     packagemanager::Result pmResult = packageImpl->Unlock(packageId, version);
@@ -918,7 +918,7 @@ namespace Plugin {
             return Core::ERROR_INVALID_SIGNATURE;
         }
 
-        #ifdef USE_LIBPACKAGE
+        #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
         packagemanager::ConfigMetaData metadata;
         packagemanager::Result pmResult = packageImpl->GetFileMetadata(fileLocator, id, version, metadata);
         if (pmResult == packagemanager::SUCCESS)
@@ -933,14 +933,20 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
+        #ifndef UNIT_TEST
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
         }
+        #endif
 
         #ifdef USE_LIBPACKAGE
         packageImpl = packagemanager::IPackageImpl::instance();
-
+        #else 
+          #ifdef UNIT_TEST
+          packageImpl = packagemanager::IPackageImplDummy::instance();
+          #endif
+        
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
@@ -951,10 +957,12 @@ namespace Plugin {
             mState.insert( { key, state } );
         }
         #endif
-
+    
+        #ifndef UNIT_TEST
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
+        #endif
         cacheInitialized = true;
          const std::string markerFile = PACKAGE_MANAGER_MARKER_FILE;
             std::ofstream file(markerFile);
