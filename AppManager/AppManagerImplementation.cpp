@@ -1634,5 +1634,39 @@ void AppManagerImplementation::updateCurrentActionTime(const std::string& appId,
     }
 }
 #endif
+
+        void AppManagerImplementation::checkInstallUninstallBlock(const std::string& appId, bool& blocked)
+                             
+        {
+                blocked = false;
+                int duplicateCount = 0;
+		
+		std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
+	        Core::hresult status = fetchAppPackageList(packageList);
+		
+		if (status != Core::ERROR_NONE) {
+		        LOGERR("Failed to fetch package list for appId: %s", appId.c_str());
+			return;
+    		}
+
+                for (const auto& package : packageList) {
+                        if ((!package.packageId.empty()) && (package.packageId == appId)) {
+                                duplicateCount++;
+                        	if (package.state == Exchange::IPackageInstaller::InstallState::INSTALLATION_BLOCKED ||
+                                	package.state == Exchange::IPackageInstaller::InstallState::UNINSTALL_BLOCKED) {
+                                	blocked = true;
+				LOGINFO("checkInstallUninstallBlock: appId=%s,package_state=%d", appId.c_str(), static_cast<int>(package.state));
+                                	break;
+                        	}
+                        }
+                }
+/*
+    // Only consider blocked if duplicates exist
+                if (duplicateCount <= 1) {
+                blocked = false;
+                }
+*/
+                LOGINFO("checkInstallUninstallBlock: appId=%s duplicateCount=%d blocked=%d", appId.c_str(), duplicateCount, blocked);
+        }
 } /* namespace Plugin */
 } /* namespace WPEFramework */
