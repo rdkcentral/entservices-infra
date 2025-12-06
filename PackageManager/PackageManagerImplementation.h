@@ -25,6 +25,8 @@
 #include <memory>
 #include <mutex>
 #include <condition_variable>
+#include <fstream>
+#include <cstdio>
 
 #ifdef USE_LIBPACKAGE
 #include <IPackageImpl.h>
@@ -48,6 +50,8 @@
 #define TELEMETRY_MARKER_UNINSTALL_TIME          "UninstallTime_split"
 #define TELEMETRY_MARKER_UNINSTALL_ERROR         "UninstallError_split"
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
+
+#define PACKAGE_MANAGER_MARKER_FILE              "/tmp/package_manager_ready"
 
 namespace WPEFramework {
 namespace Plugin {
