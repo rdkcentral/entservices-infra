@@ -101,7 +101,7 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
                 } else {
                     status = Status::HttpError;
                 }
-	    }
+            }
             fclose(fp);
         }
         else
