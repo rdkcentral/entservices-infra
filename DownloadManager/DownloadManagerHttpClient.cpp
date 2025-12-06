@@ -86,12 +86,21 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpCode);
             if (cc == CURLE_OK)
             {
-                LOGDBG("Download %s Success", fileName.c_str());
+                if (httpCode == 404) {
+                    status = Status::HttpError;
+                    LOGERR("Download %s Failed, code: %ld", fileName.c_str(),  httpCode);
+                } else {
+                    LOGDBG("Download %s Success", fileName.c_str());
+            }
             }
             else
             {
                 LOGERR("Download %s Failed error: %s code: %ld", fileName.c_str(), curl_easy_strerror(cc), httpCode);
-                status = Status::HttpError;
+                if ( cc == CURLE_WRITE_ERROR ) {
+                    status = Status::DiskError;
+                } else {
+                    status = Status::HttpError;
+                }
             }
             fclose(fp);
         }
