@@ -91,7 +91,7 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
                     LOGERR("Download %s Failed, code: %ld", fileName.c_str(),  httpCode);
                 } else {
                     LOGDBG("Download %s Success", fileName.c_str());
-		}
+            }
             }
             else
             {
