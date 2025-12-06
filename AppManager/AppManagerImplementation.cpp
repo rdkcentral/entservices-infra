@@ -1635,10 +1635,10 @@ void AppManagerImplementation::updateCurrentActionTime(const std::string& appId,
 }
 #endif
 
-        void AppManagerImplementation::checkInstallUninstallBlock(const std::string& appId, bool& blocked)
+        bool AppManagerImplementation::checkInstallUninstallBlock(const std::string& appId)
                              
         {
-                blocked = false;
+                bool blocked = false;
                 int duplicateCount = 0;
 		
 		std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
@@ -1646,7 +1646,7 @@ void AppManagerImplementation::updateCurrentActionTime(const std::string& appId,
 		
 		if (status != Core::ERROR_NONE) {
 		        LOGERR("Failed to fetch package list for appId: %s", appId.c_str());
-			return;
+			return false;
     		}
 
                 for (const auto& package : packageList) {
@@ -1660,13 +1660,8 @@ void AppManagerImplementation::updateCurrentActionTime(const std::string& appId,
                         	}
                         }
                 }
-/*
-    // Only consider blocked if duplicates exist
-                if (duplicateCount <= 1) {
-                blocked = false;
-                }
-*/
                 LOGINFO("checkInstallUninstallBlock: appId=%s duplicateCount=%d blocked=%d", appId.c_str(), duplicateCount, blocked);
+		return blocked;
         }
 } /* namespace Plugin */
 } /* namespace WPEFramework */
