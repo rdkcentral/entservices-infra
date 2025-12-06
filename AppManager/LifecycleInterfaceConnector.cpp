@@ -361,15 +361,8 @@ namespace WPEFramework
             AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
 #endif
             bool isAppLoaded = false;
-            bool installUninstallBlocked = false;
 
             LOGINFO("AppId retrieved: %s", appId.c_str());
-/*
-	    Exchange::IPackageInstaller::InstallState installState;
-            Core::hresult pkgStatus = Core::ERROR_GENERAL;
-            PluginHost::IShell* shell = mCurrentservice;
-            Exchange::IPackageInstaller* packageInstaller = nullptr;
-*/
             mAdminLock.Lock();
 
             if(nullptr != appManagerImplInstance)
@@ -412,11 +405,9 @@ namespace WPEFramework
                                     if (retryIt != appManagerImplInstance->mAppInfo.end())
                                     {	
 					    //check for installedblock/uninstalled block
-					appManagerImplInstance->checkInstallUninstallBlock(appId, installUninstallBlocked);
-
+					bool installUninstallBlocked = appManagerImplInstance->checkInstallUninstallBlock(appId);
 					if (installUninstallBlocked)
 					{
-	
 						LOGINFO("Blocked state found for appId: %s. Initiating TERMINATE.", appId.c_str());
 					        Core::hresult terminateStatus = appManagerImplInstance->TerminateApp(appId);
 						LOGINFO("TerminateApp returned status: %d", terminateStatus);
