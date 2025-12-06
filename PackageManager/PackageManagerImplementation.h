@@ -66,6 +66,13 @@ namespace Plugin {
     {
         private:
         class State {
+            class BlockedInstallData {
+                public:
+                string version;
+                packagemanager::NameValues keyValues;
+                string fileLocator;
+            };
+
             public:
             State() {}
             State(const packagemanager::ConfigMetaData &config) {
@@ -79,9 +86,12 @@ namespace Plugin {
             string unpackedPath;
             FailReason failReason = Exchange::IPackageInstaller::FailReason::NONE;
             std::list<Exchange::IPackageHandler::AdditionalLock> additionalLocks;
+            BlockedInstallData  blockedInstallData;
+
         };
 
         typedef std::pair<std::string, std::string> StateKey;
+        typedef std::map<StateKey, State> StateMap;
 
         class Configuration : public Core::JSON::Container {
             public:
@@ -170,7 +180,7 @@ namespace Plugin {
         Core::hresult Deinitialize(PluginHost::IShell* service) override;
 
         // IPackageInstaller methods
-        Core::hresult Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &reason) override;
+        Core::hresult Install(const string &packageId, const string &version, IPackageInstaller::IKeyValueIterator* const& additionalMetadata, const string &fileLocator, Exchange::IPackageInstaller::FailReason &failReason) override;
         Core::hresult Uninstall(const string &packageId, string &errorReason ) override;
         Core::hresult ListPackages(Exchange::IPackageInstaller::IPackageIterator*& packages);
         Core::hresult Config(const string &packageId, const string &version, Exchange::RuntimeConfig& configMetadata) override;
@@ -200,14 +210,29 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        string GetVersion(const string &id) {
+        inline string GetInstalledVersion(const string& id) {
             for (auto const& [key, state] : mState) {
-                if ((id.compare(key.first) == 0) && (state.installState == InstallState::INSTALLED)) {
+                if ((id.compare(key.first) == 0) &&
+                    (state.installState == InstallState::INSTALLED || state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
                     return key.second;
                 }
             }
             return "";
         }
+
+        inline string GetBlockedVersion(const string& id) {
+            for (auto const& [key, state] : mState) {
+                if ((id.compare(key.first) == 0) &&
+                    (state.installState == InstallState::INSTALLATION_BLOCKED || state.installState == InstallState::UNINSTALL_BLOCKED)) {
+                    return key.second;
+                }
+            }
+            return "";
+        }
+
+        inline bool IsInstallBlocked(const string &packageId, const string &version, const packagemanager::NameValues &keyValues, const string &fileLocator);
+        Core::hresult Install(const string &packageId, const string &version, const packagemanager::NameValues &keyValues, const string &fileLocator, State& state);
+
         void InitializeState();
         void downloader(int n);
         void NotifyDownloadStatus(const string& id, const string& locator, const DownloadReason status);
@@ -236,6 +261,7 @@ namespace Plugin {
                 case InstallState::UNINSTALLING : return "UNINSTALLING";
                 case InstallState::UNINSTALL_FAILURE : return "UNINSTALL_FAILURE";
                 case InstallState::UNINSTALLED : return "UNINSTALLED";
+                case InstallState::UNINSTALL_BLOCKED : return "UNINSTALL_BLOCKED";
                 default: return "Unknown";
             }
         }
@@ -272,7 +298,8 @@ namespace Plugin {
 
         uint32_t mNextDownloadId;
         DownloadQueue  mDownloadQueue;
-        std::map<StateKey, State>  mState;
+        std::recursive_mutex mtxState;
+        StateMap  mState;
         bool cacheInitialized = false;
 
         std::string downloadDir = "/opt/CDL/";

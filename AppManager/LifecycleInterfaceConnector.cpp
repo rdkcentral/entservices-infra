@@ -363,7 +363,6 @@ namespace WPEFramework
             bool isAppLoaded = false;
 
             LOGINFO("AppId retrieved: %s", appId.c_str());
-
             mAdminLock.Lock();
 
             if(nullptr != appManagerImplInstance)
@@ -404,9 +403,17 @@ namespace WPEFramework
 
                                     auto retryIt = appManagerImplInstance->mAppInfo.find(appId);
                                     if (retryIt != appManagerImplInstance->mAppInfo.end())
-                                    {
+                                    {	
+					    //check for installedblock/uninstalled block
+					bool installUninstallBlocked = appManagerImplInstance->checkInstallUninstallBlock(appId);
+					if (installUninstallBlocked)
+					{
+						LOGINFO("Blocked state found for appId: %s. Initiating TERMINATE.", appId.c_str());
+					        Core::hresult terminateStatus = appManagerImplInstance->TerminateApp(appId);
+						LOGINFO("TerminateApp returned status: %d", terminateStatus);
+					}
                                         /* Found the AppInfo; apply suspend/hibernate/unload logic */
-                                        if (fileExists(SUSPEND_POLICY_FILE))
+					else if (fileExists(SUSPEND_POLICY_FILE))
                                         {
                                             LOGINFO("App with AppId: %s is suspendable", appId.c_str());
                                             retryIt->second.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
@@ -1023,5 +1030,6 @@ End:
 
             return isRegular;
         }
+	
      } /* namespace Plugin */
 } /* namespace WPEFramework */
