@@ -1245,6 +1245,7 @@ err_ret:
 
             JsonObject jsonParam;
             std::string telemetryMetrics = "";
+            std::string appMarker = "";
 
             int duration = static_cast<int>(currentTime - requestTime);
             TelemetryMarker telemetryMarker = getTelemetryMarker(marker);
@@ -1279,8 +1280,9 @@ err_ret:
 
             if(nullptr != mTelemetryPluginObject)
             {
-                LOGINFO("Record appId %s marker %s start time %d",appId.c_str(), marker.c_str(), duration);
-                mTelemetryPluginObject->Record(appId, telemetryMetrics, marker);
+                appMarker = appId + ":" + marker;
+                LOGINFO("Record appMarker %s start time %d",appMarker.c_str(), duration);
+                mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
             }
         }
 #endif

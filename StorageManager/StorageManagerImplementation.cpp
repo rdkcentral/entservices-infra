@@ -194,8 +194,9 @@ namespace Plugin {
             jsonParam.ToString(telemetryMetrics);
             if(nullptr != mTelemetryPluginObject)
             {
-		LOGINFO("Record appId %s storageManagerLaunchTime %d",appId.c_str(),duration);
-                mTelemetryPluginObject->Record(appId, telemetryMetrics, TELEMETRY_MARKER_LAUNCH_TIME);
+                std::string appMarker = appId + ":" + TELEMETRY_MARKER_LAUNCH_TIME;
+                LOGINFO("Record appMarker %s storageManagerLaunchTime %d", appMarker.c_str(), duration);
+                mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
             }
         #endif
         return status;

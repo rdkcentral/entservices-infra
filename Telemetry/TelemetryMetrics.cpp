@@ -27,18 +27,6 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    //helper function to generate recordId
-    std::string generateRecordId(const std::string& id, const std::string& name)
-    {
-        if (id.empty() || name.empty())
-        {
-            LOGERR("Error: ID or Name is empty.");
-            return "";
-        }
-
-        return id + ":" + name;
-    }
-
     //helper function to generate set from comma separated string
     std::unordered_set<std::string> generateFilterSet(const std::string& filterStr)
     {
@@ -57,7 +45,6 @@ namespace Plugin {
     Core::hresult RecordMetrics(
         const std::string& id,
         const std::string& metrics,
-        const std::string& markerName,
         std::unordered_map<std::string, Json::Value>& metricsRecord,
         std::mutex& metricsMutex)
     {
@@ -82,7 +69,7 @@ namespace Plugin {
         else
         {
             std::lock_guard<std::mutex> lock(metricsMutex);
-            std::string recordId = generateRecordId(id, markerName);
+            std::string recordId = id;
             if (!recordId.empty())
             {
                 bool isNewRecord = (metricsRecord.find(recordId) == metricsRecord.end());
@@ -93,13 +80,14 @@ namespace Plugin {
                 /* store markerName inside JSON value the first time */
                 if (isNewRecord)
                 {
-                    existing["markerName"] = markerName;
+                    existing["markerName"] = newMetrics["markerName"];
                     LOGINFO("Storing new markerName '%s' for recordId '%s'", markerName.c_str(), recordId.c_str());
                 }
                 else
                 {
                     LOGINFO("RecordId '%s' already exists. markerName unchanged.", recordId.c_str());
                 }
+                newMetrics.removeMember("markerName"); // remove to avoid duplication
 
                 /* Merge each metric from newMetrics into existing record */
                 for (const std::string &metricKey : newMetrics.getMemberNames())
@@ -123,13 +111,12 @@ namespace Plugin {
 
     Core::hresult PublishMetrics(
         const std::string& id,
-        const std::string& markerName,
         std::unordered_map<std::string, Json::Value>& metricsRecord,
         std::mutex& metricsMutex)
     {
         Core::hresult status = Core::ERROR_GENERAL;
 
-        std::string recordId = generateRecordId(id, markerName);
+        std::string recordId = id;
         Json::Value filteredMetrics = Json::objectValue;
         std::string alternateId = ""; // To store value of the secondary ID field from current record (e.g, instanceID)
         std::string markerFilters = "";
@@ -194,40 +181,33 @@ namespace Plugin {
             }
         }
 
+        if (!alternateId.empty() && filteredMetrics.isMember("markerName"))
+        {
+            alternateId = alternateId + ":" + filteredMetrics["markerName"].asString();
+        }
+
 
         /* Merge other recordMetrics with the same id as alternate identifier and markerName */
         if (!error && !alternateId.empty())
         {
-            std::string alternateIdPrefix = alternateId + ":";
-
-            for (const auto& entry : metricsRecord)
+            if (metricsRecord.find(alternateId) == metricsRecord.end())
             {
-                const std::string& otherRecordId = entry.first;
-                if (otherRecordId == recordId)
-                    continue;
-
-                if (otherRecordId.compare(0, alternateIdPrefix.size(), alternateIdPrefix) == 0)
+                LOGINFO("No other records found to merge with alternateId: %s", alternateId.c_str());
+            }
+            else
+            {
+                LOGINFO("Merging records with alternateId: %s", alternateId.c_str());
+                const Json::Value& otherMetrics = metricsRecord[alternateId];
+                for (const std::string &key : otherMetrics.getMemberNames())
                 {
-                    const std::string otherMarkerName = otherRecordId.substr(alternateIdPrefix.size());
-
-                    /* Merge if markerName Matches */
-                    if (otherMarkerName == markerName)
+                    if (!useFilter || filterKeys.count(key))
                     {
-                        const Json::Value& otherMetrics = entry.second;
-
-                        for (const std::string& key : otherMetrics.getMemberNames())
-                        {
-                            if (!useFilter || filterKeys.count(key))
-                            {
-                                filteredMetrics[key] = otherMetrics[key];
-                                LOGINFO("Merged key '%s' from '%s' into current record", key.c_str(), otherRecordId.c_str());
-                            }
-                        }
-                        matchedOtherRecordId = otherRecordId;
-                        LOGINFO("Merged record: '%s' into '%s'", otherRecordId.c_str(), recordId.c_str());
-                        break;
+                        filteredMetrics[key] = otherMetrics[key];
+                        LOGINFO("Merged key '%s' from '%s' into current record", key.c_str(), otherRecordId.c_str());
                     }
                 }
+                matchedOtherRecordId = alternateId;
+                LOGINFO("Merged record: '%s' into '%s'", alternateId.c_str(), recordId.c_str());
             }
         }
 
