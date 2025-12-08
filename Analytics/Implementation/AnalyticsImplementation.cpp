@@ -149,12 +149,12 @@ namespace Plugin {
         ASSERT(shell != nullptr);
         mShell = shell;
 
-        mSysTime = std::make_shared<SystemTime>(shell);
-        if(mSysTime == nullptr)
-        {
-            LOGERR("Failed to create SystemTime instance");
+        try {
+            mSysTime = std::make_shared<SystemTime>(shell);
+        } catch (const std::bad_alloc& e) {
+            LOGERR("Failed to create SystemTime instance: %s", e.what());
+            return Core::ERROR_GENERAL;
         }
-
 
         std::string configLine = mShell->ConfigLine();
         Core::OptionalType<Core::JSON::Error> error;
