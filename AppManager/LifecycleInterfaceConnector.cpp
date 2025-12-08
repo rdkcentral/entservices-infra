@@ -1032,6 +1032,5 @@ End:
 
             return isRegular;
         }
-	
      } /* namespace Plugin */
 } /* namespace WPEFramework */
