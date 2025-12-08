@@ -754,7 +754,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
                 /* Check if the packageId matches the provided appId */
                 for (const auto& package : packageList)
                 {
-                    if (!package.packageId.empty() && package.packageId == appId)
+                    if (!package.packageId.empty() && package.packageId == appId && package.state == Exchange::IPackageInstaller::InstallState::INSTALLED)
                     {
                         packageData.version = std::string(package.version);
                         break;
