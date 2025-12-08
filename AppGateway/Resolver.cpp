@@ -109,7 +109,7 @@ namespace WPEFramework
                     r.includeContext = ExtractBooleanField(resolutionObj, "includeContext", hasAdditionalContext);
                     r.useComRpc = ExtractBooleanField(resolutionObj, "useComRpc", hasAdditionalContext);
 
-                    LOGTRACE("[Resolver] Loaded resolution for key: %s -> alias: %s, event: %s, permissionGroup: %s, includeContext: %s, useComRpc: %s",
+                    LOGINFO("[Resolver] Loaded resolution for key: %s -> alias: %s, event: %s, permissionGroup: %s, includeContext: %s, useComRpc: %s",
                             key.c_str(), r.alias.c_str(), r.event.c_str(), r.permissionGroup.c_str(),
                             r.includeContext ? "true" : "false", r.useComRpc ? "true" : "false");
 
