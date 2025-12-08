@@ -232,6 +232,7 @@ namespace Plugin {
         int duration = 0;
         bool shouldProcessMarker = true;
         bool publish = true;
+        std::string appMarker = "";
 
         if (marker.empty()) {
             LOGERR("Telemetry marker is empty");
@@ -283,16 +284,18 @@ namespace Plugin {
                     jsonParam["secondaryId"] = "appInstanceId";
 
                     if (jsonParam.ToString(telemetryMetrics)) {
-                        LOGINFO("Record appId %s marker %s duration %d", appId.c_str(), marker.c_str(), duration);
+                        LOGINFO("Record appMarker %s duration %d", appMarker.c_str(), duration);
 
-                        if (mTelemetryPluginObject->Record(appId, telemetryMetrics, marker) != Core::ERROR_NONE) {
+                        appMarker = appId + ":" + marker;
+
+                        if (mTelemetryPluginObject->Record(appMarker, telemetryMetrics) != Core::ERROR_NONE) {
                             LOGERR("Telemetry Record Failed");
                         }
 
                         if (publish) {
-                            LOGINFO("Publish appId %s marker %s", appId.c_str(), marker.c_str());
+                            LOGINFO("Publish appMarker %s", appMarker.c_str());
 
-                            if (mTelemetryPluginObject->Publish(appId, marker) != Core::ERROR_NONE) {
+                            if (mTelemetryPluginObject->Publish(appMarker) != Core::ERROR_NONE) {
                                 LOGERR("Telemetry Publish Failed");
                             }
                         }

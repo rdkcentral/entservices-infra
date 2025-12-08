@@ -102,6 +102,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
+        std::string appMarker = "";
         bool shouldPublish = false;
 
         if(nullptr == mTelemetryPluginObject) /*mTelemetryPluginObject is null retry to create*/
@@ -144,7 +145,8 @@ namespace Plugin
                         jsonParam["markerFilters"] = TELEMETRY_MARKER_LAUNCH_TIME_FILTER;
                         jsonParam.ToString(telemetryMetrics);
                         markerName = TELEMETRY_MARKER_LAUNCH_TIME;
-                        mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
+                        appMarker = appId + ":" + markerName;
+                        mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
                     }
                 break;
                 case REQUEST_TYPE_TERMINATE:
@@ -155,7 +157,8 @@ namespace Plugin
                         jsonParam["markerFilters"] = TELEMETRY_MARKER_CLOSE_TIME_FILTER;
                         jsonParam.ToString(telemetryMetrics);
                         markerName = TELEMETRY_MARKER_CLOSE_TIME;
-                        mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
+                        appMarker = appId + ":" + markerName;
+                        mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
                     }
                     else if(Exchange::ILifecycleManager::LifecycleState::SUSPENDED == newLifecycleState)
                     {
@@ -206,8 +209,9 @@ namespace Plugin
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {
-                    mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
-                    mTelemetryPluginObject->Publish(appId, markerName);
+                    appMarker = appId + ":" + markerName;
+                    mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
+                    mTelemetryPluginObject->Publish(appMarker);
                 }
             }
         }

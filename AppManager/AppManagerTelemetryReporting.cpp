@@ -86,6 +86,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
+        std::string appMarker = "";
         time_t currentTime = getCurrentTimestamp();
         AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
 
@@ -132,7 +133,8 @@ namespace Plugin
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {
-                    mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
+                    appMarker = appId + ":" + markerName;
+                    mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
                 }
             }
         }
@@ -147,6 +149,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
+        std::string appMarker = "";
         time_t currentTime = getCurrentTimestamp();
         AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
 
@@ -206,8 +209,9 @@ namespace Plugin
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {
-                    mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
-                    mTelemetryPluginObject->Publish(appId, markerName);
+                    appMarker = appId + ":" + markerName;
+                    mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
+                    mTelemetryPluginObject->Publish(appMarker);
                 }
             }
         }
@@ -222,6 +226,7 @@ namespace Plugin
         JsonObject jsonParam;
         std::string telemetryMetrics = "";
         std::string markerName = "";
+        std::string appMarker = "";
 
         LOGINFO("Received data for appId %s current action %d app errorCode %d",appId.c_str(), currentAction, errorCode);
 
@@ -258,8 +263,9 @@ namespace Plugin
             jsonParam.ToString(telemetryMetrics);
             if(!telemetryMetrics.empty())
             {
-                mTelemetryPluginObject->Record(appId, telemetryMetrics, markerName);
-                mTelemetryPluginObject->Publish(appId, markerName);
+                appMarker = appId + ":" + markerName;
+                mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
+                mTelemetryPluginObject->Publish(appMarker);
             }
         }
     }

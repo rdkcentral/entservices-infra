@@ -589,15 +589,14 @@ namespace Plugin {
     *
     * @param id           The unique identifier
     * @param metrics      A JSON-formatted string representing the metrics data to record.
-    * @param markerName   An string used to generate a unique record key.
     *
     * @return Core::hresult
     *         - Core::ERROR_NONE on success.
     *         - Core::ERROR_GENERAL if parsing fails or input is invalid.
     */
-    Core::hresult TelemetryImplementation::Record(const string& id, const string& metrics, const string& markerName)
+    Core::hresult TelemetryImplementation::Record(const string& id, const string& metrics)
     {
-        return RecordMetrics(id, metrics, markerName, mMetricsRecord, mMetricsMutex);
+        return RecordMetrics(id, metrics, mMetricsRecord, mMetricsMutex);
     }
 
     /* Publishes the collected telemetry metrics.
@@ -606,15 +605,14 @@ namespace Plugin {
     * metrics records to the telemetry.
     *
     * @param id                The unique identifier
-    * @param markerName        An string used to generate a unique record key.
     *
     * @return Core::hresult
     *         - Core::ERROR_NONE on success.
     *         - Core::ERROR_GENERAL the record is not found or publishing fails.
     */
-    Core::hresult TelemetryImplementation::Publish(const string& id, const string& markerName)
+    Core::hresult TelemetryImplementation::Publish(const string& id)
     {
-        return PublishMetrics(id, markerName, mMetricsRecord, mMetricsMutex);
+        return PublishMetrics(id, mMetricsRecord, mMetricsMutex);
     }
 } // namespace Plugin
 } // namespace WPEFramework

@@ -29,9 +29,6 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    //helper function to generate recordId
-    std::string generateRecordId(const std::string& id, const std::string& name);
-
     //helper function to generate set from comma separated string
     std::unordered_set<std::string> generateFilterSet(const std::string& filterStr);
 
@@ -39,7 +36,6 @@ namespace Plugin {
     Core::hresult RecordMetrics(
         const std::string& id,
         const std::string& metrics,
-        const std::string& markerName,
         std::unordered_map<std::string, Json::Value>& metricsRecord,
         std::mutex& metricsMutex
     );
@@ -47,7 +43,6 @@ namespace Plugin {
     /* Publish telemetry metrics */
     Core::hresult PublishMetrics(
         const std::string& id,
-        const std::string& markerName,
         std::unordered_map<std::string, Json::Value>& metricsRecord,
         std::mutex& metricsMutex
     );
