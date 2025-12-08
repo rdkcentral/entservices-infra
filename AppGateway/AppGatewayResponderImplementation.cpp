@@ -47,13 +47,10 @@ namespace WPEFramework
         {
             LOGINFO("AppGatewayResponderImplementation constructor");
 #ifdef ENABLE_APP_GATEWAY_AUTOMATION
-            struct stat buffer;
         #ifdef APP_GATEWAY_ENHANCED_LOGGING_INDICATOR
+            struct stat buffer;
             mEnhancedLoggingEnabled = (stat(APP_GATEWAY_ENHANCED_LOGGING_INDICATOR, &buffer) == 0);
             LOGINFO("Enhanced logging enabled: %s (indicator: %s)", mEnhancedLoggingEnabled ? "true" : "false", APP_GATEWAY_ENHANCED_LOGGING_INDICATOR);
-        #else
-            mEnhancedLoggingEnabled = (stat("/opt/appgateway_enhanced_logging", &buffer) == 0);
-            LOGINFO("Enhanced logging enabled: %s (indicator: /opt/appgateway_enhanced_logging)", mEnhancedLoggingEnabled ? "true" : "false");
         #endif
 #endif
         }
