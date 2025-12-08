@@ -409,8 +409,10 @@ namespace WPEFramework
 					if (installUninstallBlocked)
 					{
 						LOGINFO("Blocked state found for appId: %s. Initiating TERMINATE.", appId.c_str());
+						mAdminLock.Unlock();
 					        Core::hresult terminateStatus = appManagerImplInstance->TerminateApp(appId);
 						LOGINFO("TerminateApp returned status: %d", terminateStatus);
+						mAdminLock.Lock();
 					}
                                         /* Found the AppInfo; apply suspend/hibernate/unload logic */
 					else if (fileExists(SUSPEND_POLICY_FILE))
