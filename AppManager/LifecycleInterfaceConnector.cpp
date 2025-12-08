@@ -404,7 +404,7 @@ namespace WPEFramework
                                     auto retryIt = appManagerImplInstance->mAppInfo.find(appId);
                                     if (retryIt != appManagerImplInstance->mAppInfo.end())
                                     {	
-					    //check for installedblock/uninstalled block
+					    // Check for install/uninstall block.
 					bool installUninstallBlocked = appManagerImplInstance->checkInstallUninstallBlock(appId);
 					if (installUninstallBlocked)
 					{
