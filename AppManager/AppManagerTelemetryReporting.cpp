@@ -130,6 +130,7 @@ namespace Plugin
 
             if(!markerName.empty())
             {
+                jsonParam["markerName"] = markerName;
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {
@@ -206,6 +207,7 @@ namespace Plugin
                 jsonParam["appInstanceId"] = it->second.appInstanceId;
                 jsonParam["appVersion"] = it->second.packageInfo.version;
                 jsonParam["secondaryId"] = "appInstanceId";
+                jsonParam["markerName"] = markerName;
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {
@@ -260,6 +262,7 @@ namespace Plugin
         {
             jsonParam["errorCode"] = (int)errorCode;
             jsonParam["secondaryId"] = "appInstanceId";
+            jsonParam["markerName"] = markerName;
             jsonParam.ToString(telemetryMetrics);
             if(!telemetryMetrics.empty())
             {

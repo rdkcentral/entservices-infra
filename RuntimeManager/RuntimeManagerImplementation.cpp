@@ -1281,6 +1281,7 @@ err_ret:
                     return;
             }
             jsonParam["appId"] = appId;
+            jsonParam["markerName"] = marker;
             jsonParam.ToString(telemetryMetrics);
 
             if(nullptr != mTelemetryPluginObject)

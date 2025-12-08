@@ -282,6 +282,7 @@ namespace Plugin {
                 if (true == shouldProcessMarker) {
                     jsonParam["appId"] = appId;
                     jsonParam["secondaryId"] = "appInstanceId";
+                    jsonParam["markerName"] = marker;
 
                     if (jsonParam.ToString(telemetryMetrics)) {
                         LOGINFO("Record appMarker %s duration %d", appMarker.c_str(), duration);

@@ -141,10 +141,11 @@ namespace Plugin
                         ((Exchange::ILifecycleManager::LifecycleState::PAUSED == newLifecycleState) && (Exchange::ILifecycleManager::LifecycleState::PAUSED == targetLifecycleState)))
                     {
                         /*Telemetry reporting - launch case*/
+                        markerName = TELEMETRY_MARKER_LAUNCH_TIME;
                         jsonParam["lifecycleManagerSpawnTime"] = (int)(currentTime - requestTime);
                         jsonParam["markerFilters"] = TELEMETRY_MARKER_LAUNCH_TIME_FILTER;
+                        jsonParam["markerName"] = markerName;
                         jsonParam.ToString(telemetryMetrics);
-                        markerName = TELEMETRY_MARKER_LAUNCH_TIME;
                         appMarker = appId + ":" + markerName;
                         mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
                     }
@@ -153,10 +154,11 @@ namespace Plugin
                     if(Exchange::ILifecycleManager::LifecycleState::UNLOADED == newLifecycleState)
                     {
                         /*Telemetry reporting - close case*/
+                        markerName = TELEMETRY_MARKER_CLOSE_TIME;
                         jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
                         jsonParam["markerFilters"] = TELEMETRY_MARKER_CLOSE_TIME_FILTER;
+                        jsonParam["markerName"] = markerName;
                         jsonParam.ToString(telemetryMetrics);
-                        markerName = TELEMETRY_MARKER_CLOSE_TIME;
                         appMarker = appId + ":" + markerName;
                         mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
                     }
@@ -206,6 +208,7 @@ namespace Plugin
                 jsonParam["appInstanceId"] = context->getAppInstanceId();
                 jsonParam["lifecycleManagerSetTargetStateTime"] = (int)(currentTime - requestTime);
                 jsonParam["secondaryId"] = "appInstanceId";
+                jsonParam["markerName"] = markerName;
                 jsonParam.ToString(telemetryMetrics);
                 if(!telemetryMetrics.empty())
                 {

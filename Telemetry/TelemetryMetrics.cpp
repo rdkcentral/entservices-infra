@@ -78,14 +78,10 @@ namespace Plugin {
                 Json::Value &existing = metricsRecord[recordId];
 
                 /* store markerName inside JSON value the first time */
-                if (isNewRecord)
+                if (isNewRecord && newMetrics.isMember("markerName")) //markerName is optional
                 {
                     existing["markerName"] = newMetrics["markerName"];
-                    LOGINFO("Storing new markerName '%s' for recordId '%s'", markerName.c_str(), recordId.c_str());
-                }
-                else
-                {
-                    LOGINFO("RecordId '%s' already exists. markerName unchanged.", recordId.c_str());
+                    LOGINFO("Storing new telemetry marker '%s' ", recordId.c_str());
                 }
                 newMetrics.removeMember("markerName"); // remove to avoid duplication
 
@@ -157,7 +153,7 @@ namespace Plugin {
                 filterKeys = generateFilterSet(markerFilters);
                 if (filterKeys.empty())
                 {
-                    LOGERR("Filter list error for marker: %s", markerName.c_str());
+                    LOGERR("Filter list error for marker: %s",  recordId.c_str());
                     useFilter = false; // skip filtering in case of error
                 }
             }
@@ -170,7 +166,7 @@ namespace Plugin {
                 }
                 else
                 {
-                    LOGWARN("Key '%s' not allowed by filter for marker '%s'", key.c_str(), markerName.c_str());
+                    LOGWARN("Key '%s' not allowed by filter for marker '%s'", key.c_str(), recordId.c_str());
                 }
 
                 if (!secondaryIdField.empty() && key == secondaryIdField && alternateId.empty())
@@ -203,7 +199,7 @@ namespace Plugin {
                     if (!useFilter || filterKeys.count(key))
                     {
                         filteredMetrics[key] = otherMetrics[key];
-                        LOGINFO("Merged key '%s' from '%s' into current record", key.c_str(), otherRecordId.c_str());
+                        LOGINFO("Merged key '%s' from '%s' into current record", key.c_str(), alternateId.c_str());
                     }
                 }
                 matchedOtherRecordId = alternateId;
@@ -219,7 +215,7 @@ namespace Plugin {
             std::string publishMetrics = Json::writeString(writerBuilder, filteredMetrics);
 
             LOGINFO("Publishing metrics for RecordId:'%s' publishMetrics:'%s'", recordId.c_str(), publishMetrics.c_str());
-            t2_event_s((char*)markerName.c_str(), (char*)publishMetrics.c_str());
+            t2_event_s((char*)recordId.c_str(), (char*)publishMetrics.c_str());
 
             /* Remove Published Record */
             metricsRecord.erase(recordId);

@@ -191,6 +191,7 @@ namespace Plugin {
             int duration = static_cast<int>(currentTime - requestTime);
             jsonParam["storageManagerLaunchTime"] = duration;
             jsonParam["appId"] = appId;
+            jsonParam["markerName"] = TELEMETRY_MARKER_LAUNCH_TIME;
             jsonParam.ToString(telemetryMetrics);
             if(nullptr != mTelemetryPluginObject)
             {
