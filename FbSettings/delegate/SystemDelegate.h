@@ -330,10 +330,7 @@ public:
             const std::string terr = response[_T("territory")].String();
             code = TerritoryThunderToFirebolt(terr, "US");
         }
-        if (code.empty())
-        {
-            code = "US";
-        }
+
         // Wrap in quotes to make it a valid JSON string
         code = "\"" + code + "\"";
         return Core::ERROR_NONE;
