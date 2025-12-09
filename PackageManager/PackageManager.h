@@ -26,7 +26,6 @@
 #include <interfaces/json/JPackageHandler.h>
 #include <interfaces/json/JsonData_PackageDownloader.h>
 #include <interfaces/json/JsonData_PackageInstaller.h>
-#include <interfaces/json/JsonData_PackageHandler.h>
 
 #include "UtilsLogging.h"
 
