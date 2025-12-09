@@ -328,7 +328,7 @@ public:
         if (rc == Core::ERROR_NONE && response.HasLabel(_T("territory")))
         {
             const std::string terr = response[_T("territory")].String();
-            code = TerritoryThunderToFirebolt(terr, "US");
+            code = TerritoryThunderToFirebolt(terr, "");
         }
 
         // Wrap in quotes to make it a valid JSON string
