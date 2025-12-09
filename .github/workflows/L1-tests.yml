@@ -210,13 +210,13 @@ jobs:
           &&
           cmake --install build/Thunder
 
-      - name: Checkout entservices-apis
+      - name: Checkout entservices-apis 
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
           repository: rdkcentral/entservices-apis
           path: entservices-apis
-          ref: ${{env.INTERFACES_REF}}
+          ref: topic/RDKEMW-8957
           #token : ${{ secrets.RDKCM_RDKE }}
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
 
