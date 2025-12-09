@@ -133,6 +133,7 @@ namespace Plugin {
         Core::hresult InternalResolutionConfigure(std::vector<std::string>&& configPaths);
         bool SetupAppGatewayAuthenticator();
         void SendToLaunchDelegate(const Context& context, const string& payload);
+        std::string ReadCountryFromConfigFile();
     };
 } // namespace Plugin
 } // namespace WPEFramework
