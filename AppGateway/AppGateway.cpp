@@ -110,13 +110,11 @@ namespace Plugin {
         ASSERT(service == mService);
 
         RPC::IRemoteConnection *connection = nullptr;
-        uint32_t result = Core::ERROR_NONE;
+        VARIABLE_IS_NOT_USED uint32_t result = Core::ERROR_NONE;
 
-        if (mAppGateway != nullptr) {
-            Exchange::JAppGatewayResolver::Unregister(*this);
-            connection = service->RemoteConnection(mConnectionId);
-            VARIABLE_IS_NOT_USED result = mAppGateway->Release();
-            mAppGateway = nullptr;
+        if (mResponder != nullptr) {
+            result = mResponder->Release();
+            mResponder = nullptr;
 
             // It should have been the last reference we are releasing,
             // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
@@ -124,9 +122,11 @@ namespace Plugin {
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
         }
 
-        if (mResponder != nullptr) {
-            result = mResponder->Release();
-            mResponder = nullptr;
+        if (mAppGateway != nullptr) {
+            Exchange::JAppGatewayResolver::Unregister(*this);
+            connection = service->RemoteConnection(mConnectionId);
+            result = mAppGateway->Release();
+            mAppGateway = nullptr;
 
             // It should have been the last reference we are releasing,
             // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
