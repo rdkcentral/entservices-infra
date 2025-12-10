@@ -85,7 +85,8 @@ namespace Plugin {
                                     const uint64_t epochTimestamp,
                                     const uint64_t uptimeTimestamp,
                                     const string& appId,
-                                    const string& eventPayload)
+                                    const string& eventPayload,
+                                    const string& additionalContext)
     {
         std::shared_ptr<Event> event = std::make_shared<Event>();
         event->eventName = eventName;
@@ -93,14 +94,19 @@ namespace Plugin {
         event->eventSource = eventSource;
         event->eventSourceVersion = eventSourceVersion;
 
-        std::string entry;
-        while (cetList->Next(entry) == true) {
-            event->cetList.push_back(entry);
+        if (cetList != nullptr)
+        {
+            std::string entry;
+            while (cetList->Next(entry) == true)
+            {
+                event->cetList.push_back(entry);
+            }
         }
         event->epochTimestamp = epochTimestamp;
         event->uptimeTimestamp = uptimeTimestamp;
         event->appId = appId;
         event->eventPayload = eventPayload;
+        event->additionalContext = additionalContext;
 
         bool valid = true;
         if (eventName.empty())
@@ -149,12 +155,12 @@ namespace Plugin {
         ASSERT(shell != nullptr);
         mShell = shell;
 
-        mSysTime = std::make_shared<SystemTime>(shell);
-        if(mSysTime == nullptr)
-        {
-            LOGERR("Failed to create SystemTime instance");
+        try {
+            mSysTime = std::make_shared<SystemTime>(shell);
+        } catch (const std::bad_alloc& e) {
+            LOGERR("Failed to create SystemTime instance: %s", e.what());
+            return Core::ERROR_GENERAL;
         }
-
 
         std::string configLine = mShell->ConfigLine();
         Core::OptionalType<Core::JSON::Error> error;
@@ -346,6 +352,7 @@ namespace Plugin {
         backendEvent.eventPayload = event.eventPayload;
         backendEvent.appId = event.appId;
         backendEvent.cetList = event.cetList;
+        backendEvent.additionalContext = event.additionalContext;
 
         //TODO: Add mapping of event source/name to the desired backend
         if (mBackends.empty())
