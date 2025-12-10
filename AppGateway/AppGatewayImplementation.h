@@ -104,14 +104,13 @@ namespace Plugin {
         Core::hresult HandleEvent(const Context &context, const string &alias, const string &event, const string &origin,  const bool listen);
                 
         void ReturnMessageInSocket(const Context& context, const string payload ) {
-            if (mAppGatewayResponder==nullptr) {
-                mAppGatewayResponder = mService->QueryInterface<Exchange::IAppGatewayResponder>();
-            }
-
             if (mAppGatewayResponder == nullptr) {
                 LOGERR("AppGateway Responder not available");
                 return;
             }
+
+            //mAppGatewayResponder is assigned as part of configure where mService also assigned.
+            //Only adding a null check here to avoid potential crashes.
             if (Core::ERROR_NONE != mAppGatewayResponder->Respond(context, payload)) {
                 LOGERR("Failed to Respond in Gateway");
             }
@@ -131,7 +130,6 @@ namespace Plugin {
         Core::hresult InternalResolve(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult FetchResolvedData(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult InternalResolutionConfigure(std::vector<std::string>&& configPaths);
-        bool SetupAppGatewayAuthenticator();
         void SendToLaunchDelegate(const Context& context, const string& payload);
         std::string ReadCountryFromConfigFile();
     };
