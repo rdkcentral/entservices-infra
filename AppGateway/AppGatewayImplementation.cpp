@@ -565,7 +565,7 @@ namespace WPEFramework
             if ( mAuthenticator==nullptr ) {
                 mAuthenticator = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayAuthenticator>(INTERNAL_GATEWAY_CALLSIGN);
                 if (mAuthenticator == nullptr) {
-                    LOGERR("AppGateway Authenticator not available");
+                    LOGERR("mAppGateway Authenticator not available");
                     return false;
                 }
             }
