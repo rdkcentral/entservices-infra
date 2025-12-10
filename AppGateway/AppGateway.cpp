@@ -112,24 +112,27 @@ namespace Plugin {
         RPC::IRemoteConnection *connection = nullptr;
         VARIABLE_IS_NOT_USED uint32_t result = Core::ERROR_NONE;
 
+        if ((mAppGateway != nullptr) || (mResponder != nullptr)) {
+            connection = service->RemoteConnection(mConnectionId);
+        }
+
         if (mResponder != nullptr) {
             result = mResponder->Release();
             mResponder = nullptr;
 
             // It should have been the last reference we are releasing,
-            // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+            // so it should end up in a DESTRUCTION_SUCCEEDED, if not we
             // are leaking...
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
         }
 
         if (mAppGateway != nullptr) {
             Exchange::JAppGatewayResolver::Unregister(*this);
-            connection = service->RemoteConnection(mConnectionId);
             result = mAppGateway->Release();
             mAppGateway = nullptr;
 
             // It should have been the last reference we are releasing,
-            // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+            // so it should end up in a DESTRUCTION_SUCCEEDED, if not we
             // are leaking...
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
         }
