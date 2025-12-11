@@ -366,7 +366,7 @@ void AppManagerImplementation::Dispatch(EventNames event, const JsonObject param
 
                 mAdminLock.Lock();
                 Core::hresult unlockStatus = packageUnLock(appId);
-                LOGINFO("package unlock trigerred while sending unloaded event for appId %s status %d", appId.c_str(), unlockStatus);
+                LOGINFO("package unlock triggered while sending unloaded event for appId %s status %d", appId.c_str(), unlockStatus);
                 for (auto& notification : mAppManagerNotification)
                 {
                     notification->OnAppUnloaded(appId, appInstanceId);
