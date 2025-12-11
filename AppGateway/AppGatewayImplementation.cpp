@@ -205,36 +205,6 @@ namespace WPEFramework
             ASSERT(shell != nullptr);
             mService = shell;
             mService->AddRef();
-            // Added all QueryInterface calls here because mService is assigned only here.
-            // this below mAppGatewayResponder used in ReturnMessageInSocket(AppGatewayImplementation.h)
-            if (mAppGatewayResponder == nullptr) {
-                mAppGatewayResponder = mService->QueryInterface<Exchange::IAppGatewayResponder>();
-                if (mAppGatewayResponder == nullptr) {
-                    LOGERR("AppGatewayResponder interface not available");
-                }
-            }
-
-            if (mAppNotifications == nullptr) {
-                mAppNotifications = mService->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
-                if (mAppNotifications == nullptr) {
-                    LOGERR("AppNotifications interface not available");
-                }
-            }
-
-            if (mInternalGatewayResponder == nullptr) {
-                mInternalGatewayResponder = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayResponder>(INTERNAL_GATEWAY_CALLSIGN);
-                if (mInternalGatewayResponder == nullptr) {
-                    LOGERR("InternalGatewayResponder interface not available");
-                }
-            }
-
-            // SetupAppGatewayAuthenticator function removed and that corresponding functionality implemented inline.
-            if (mAuthenticator == nullptr) {
-                mAuthenticator = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayAuthenticator>(INTERNAL_GATEWAY_CALLSIGN);
-                if (mAuthenticator == nullptr) {
-                    LOGERR("Authenticator interface not available");
-                }
-            }
 
             result = InitializeResolver();
             if (Core::ERROR_NONE != result) {
@@ -443,8 +413,7 @@ namespace WPEFramework
             std::string permissionGroup;
             if (mResolverPtr->HasPermissionGroup(method, permissionGroup)) {
                 LOGTRACE("Method '%s' requires permission group '%s'", method.c_str(), permissionGroup.c_str());
-                // SetupAppGatewayAuthenticator function removed. This caller is also updated accordingly.
-                if (mAuthenticator != nullptr) {
+                if (SetupAppGatewayAuthenticator()) {
                     bool allowed = false;
                     if (Core::ERROR_NONE != mAuthenticator->CheckPermissionGroup(context.appId, permissionGroup, allowed)) {
                         LOGERR("Failed to check permission group '%s' for appId '%s'", permissionGroup.c_str(), context.appId.c_str());
@@ -456,9 +425,6 @@ namespace WPEFramework
                         ErrorUtils::NotPermitted(resolution);
                         return Core::ERROR_GENERAL;
                     }
-                } else {
-                    LOGERR("Authenticator interface not available");
-                    return Core::ERROR_GENERAL;
                 }
             }
             LOGTRACE("Resolved method '%s' to alias '%s'", method.c_str(), alias.c_str());            
@@ -571,19 +537,39 @@ namespace WPEFramework
 
         Core::hresult AppGatewayImplementation::HandleEvent(const Context &context, const string &alias,  const string &event, const string &origin, const bool listen) {
             if (mAppNotifications == nullptr) {
-                LOGERR("IAppNotifications interface not available");
-                return Core::ERROR_GENERAL;
+                mAppNotifications = mService->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
+                if (mAppNotifications == nullptr) {
+                    LOGERR("IAppNotifications interface not available");
+                    return Core::ERROR_GENERAL;
+                }
             }
+
             return mAppNotifications->Subscribe(ContextUtils::ConvertAppGatewayToNotificationContext(context,origin), listen, alias, event);
         }
 
         void AppGatewayImplementation::SendToLaunchDelegate(const Context& context, const string& payload)
         {
             if ( mInternalGatewayResponder==nullptr ) {
-                LOGERR("Internal Responder not available Not available");
-                return;
+                mInternalGatewayResponder = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayResponder>(INTERNAL_GATEWAY_CALLSIGN);
+                if (mInternalGatewayResponder == nullptr) {
+                    LOGERR("Internal Responder not available Not available");
+                    return;
+                }
             }
+
             mInternalGatewayResponder->Respond(context, payload);
+
+        }
+
+        bool AppGatewayImplementation::SetupAppGatewayAuthenticator() {
+            if ( mAuthenticator==nullptr ) {
+                mAuthenticator = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayAuthenticator>(INTERNAL_GATEWAY_CALLSIGN);
+                if (mAuthenticator == nullptr) {
+                    LOGERR("AppGateway Authenticator not available");
+                    return false;
+                }
+            }
+            return true;
         }
 
         // Helper: read a string key from a JSON file; returns empty if any step fails.
