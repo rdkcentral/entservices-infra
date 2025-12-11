@@ -140,7 +140,7 @@ namespace WPEFramework
                     if (mAuthenticator != nullptr) {
                         string appId;
                         if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
-                            LOGINFO("APP ID %s", appId.c_str());
+                            LOGTRACE("APP ID %s", appId.c_str());
                             mAppIdRegistry.Add(connectionId, appId);
 
                             #ifdef ENABLE_APP_GATEWAY_AUTOMATION
