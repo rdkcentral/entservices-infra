@@ -112,7 +112,6 @@ namespace Plugin {
                 LOGERR("AppGateway Responder not available");
                 return;
             }
-
             if (Core::ERROR_NONE != mAppGatewayResponder->Respond(context, payload)) {
                 LOGERR("Failed to Respond in Gateway");
             }
@@ -132,6 +131,7 @@ namespace Plugin {
         Core::hresult InternalResolve(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult FetchResolvedData(const Context &context, const string &method, const string &params, const string &origin, string& resolution);
         Core::hresult InternalResolutionConfigure(std::vector<std::string>&& configPaths);
+        bool SetupAppGatewayAuthenticator();
         void SendToLaunchDelegate(const Context& context, const string& payload);
         std::string ReadCountryFromConfigFile();
     };

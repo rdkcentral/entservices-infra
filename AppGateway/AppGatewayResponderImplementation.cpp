@@ -85,22 +85,6 @@ namespace WPEFramework
             ASSERT(shell != nullptr);
             mService = shell;
             mService->AddRef();
-
-            // Added all QueryInterface calls here because mService is assigned only here.
-            if (mResolver == nullptr) {
-                mResolver = mService->QueryInterface<Exchange::IAppGatewayResolver>();
-                if (mResolver == nullptr) {
-                    LOGERR("Resolver interface not available");
-                }
-            }
-
-            if (mAuthenticator == nullptr) {
-                mAuthenticator = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayAuthenticator>(GATEWAY_AUTHENTICATOR_CALLSIGN);
-                if (mAuthenticator == nullptr) {
-                    LOGERR("Authenticator interface Not available");
-                }
-            }
-
             result = InitializeWebsocket();
 
             return result;
@@ -137,30 +121,34 @@ namespace WPEFramework
                         return false;
                     }
 
-                    if (mAuthenticator != nullptr) {
-                        string appId;
-                        if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
-                            LOGTRACE("APP ID %s", appId.c_str());
-                            mAppIdRegistry.Add(connectionId, appId);
-
-                            #ifdef ENABLE_APP_GATEWAY_AUTOMATION
-                            // Check if this is the automation client
-                            #ifdef AUTOMATION_APP_ID
-                            if (appId == AUTOMATION_APP_ID) {
-                                mWsManager.SetAutomationId(connectionId);
-                                LOGINFO("Automation server connected with ID: %d, appId: %s", connectionId, appId.c_str());
-                            }
-                            #endif
-                            #endif
-
-                            Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
-
-                            return true;
+                    if ( mAuthenticator==nullptr ) {
+                        mAuthenticator = mService->QueryInterfaceByCallsign<Exchange::IAppGatewayAuthenticator>(GATEWAY_AUTHENTICATOR_CALLSIGN);
+                        if (mAuthenticator == nullptr) {
+                            LOGERR("Authenticator Not available");
+                            return false;
                         }
-                    } else {
-                        //No Need to return false here as function already returns false below.
-                        LOGERR("Authenticator Not available");
                     }
+
+                    string appId;
+                    if (Core::ERROR_NONE == mAuthenticator->Authenticate(sessionId,appId)) {
+                        LOGTRACE("APP ID %s", appId.c_str());
+                        mAppIdRegistry.Add(connectionId, appId);
+                        
+                        #ifdef ENABLE_APP_GATEWAY_AUTOMATION
+                        // Check if this is the automation client
+                        #ifdef AUTOMATION_APP_ID
+                        if (appId == AUTOMATION_APP_ID) {
+                            mWsManager.SetAutomationId(connectionId);
+                            LOGINFO("Automation server connected with ID: %d, appId: %s", connectionId, appId.c_str());
+                        }
+                        #endif
+                        #endif
+                        
+                        Core::IWorkerPool::Instance().Submit(ConnectionStatusNotificationJob::Create(this, connectionId, appId, true));
+
+                        return true;
+                    }
+
                     return false;
                 });
 
@@ -238,13 +226,18 @@ namespace WPEFramework
                     appId
                 };
 
-                if (mResolver != nullptr) {
-                    if (Core::ERROR_NONE != mResolver->Resolve(context, APP_GATEWAY_CALLSIGN, method, params, resolution)) {
-                        LOGERR("Resolver Failure");
-                    }
-                } else {
+                if (mResolver == nullptr) {
+                    mResolver = mService->QueryInterface<Exchange::IAppGatewayResolver>();
+                }
+
+                if (mResolver == nullptr) {
                     LOGERR("Resolver interface not available");
                     return;
+                }
+
+                string resolution;
+                if (Core::ERROR_NONE != mResolver->Resolve(context, APP_GATEWAY_CALLSIGN, method, params, resolution)) {
+                    LOGERR("Resolver Failure");
                 }
             } else {
                 LOGERR("No App ID found for connection %d. Terminate connection", connectionId);
