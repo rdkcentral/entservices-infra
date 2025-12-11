@@ -205,8 +205,15 @@ namespace WPEFramework
             ASSERT(shell != nullptr);
             mService = shell;
             mService->AddRef();
-
             // Added all QueryInterface calls here because mService is assigned only here.
+            // this below mAppGatewayResponder used in ReturnMessageInSocket(AppGatewayImplementation.h)
+            if (mAppGatewayResponder == nullptr) {
+                mAppGatewayResponder = mService->QueryInterface<Exchange::IAppGatewayResponder>();
+                if (mAppGatewayResponder == nullptr) {
+                    LOGERR("AppGatewayResponder interface not available");
+                }
+            }
+
             if (mAppNotifications == nullptr) {
                 mAppNotifications = mService->QueryInterfaceByCallsign<Exchange::IAppNotifications>(APP_NOTIFICATIONS_CALLSIGN);
                 if (mAppNotifications == nullptr) {
@@ -573,7 +580,7 @@ namespace WPEFramework
         void AppGatewayImplementation::SendToLaunchDelegate(const Context& context, const string& payload)
         {
             if ( mInternalGatewayResponder==nullptr ) {
-                LOGERR("Internal Responder not available");
+                LOGERR("Internal Responder not available Not available");
                 return;
             }
             mInternalGatewayResponder->Respond(context, payload);
