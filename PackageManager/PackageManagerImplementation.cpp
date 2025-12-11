@@ -517,67 +517,10 @@ namespace Plugin {
         if (state.installState == InstallState::INSTALLING) {
             result = Install(packageId, version, keyValues, fileLocator, state);
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                    packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
-                        ? PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE
-                        : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
-#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
-#else
-            if (nullptr == mStorageManagerObject) {
-                if (Core::ERROR_NONE != createStorageManagerObject()) {
-                    LOGERR("Failed to create StorageManager");
-                }
-            }
-            ASSERT (nullptr != mStorageManagerObject);
-            if (nullptr != mStorageManagerObject) {
-                string path = "";
-                string errorReason = "";
-                if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
-                    LOGINFO("CreateStorage path [%s]", path.c_str());
-                    state.installState = InstallState::INSTALLING;
-                    NotifyInstallStatus(packageId, version, state);
-                    #ifdef USE_LIBPACKAGE
-                    packagemanager::ConfigMetaData config;
-                    packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
-                    if (pmResult == packagemanager::SUCCESS) {
-                        result = Core::ERROR_NONE;
-                        state.installState = InstallState::INSTALLED;
-                    } else {
-                        state.installState = InstallState::INSTALL_FAILURE;
-                        switch (pmResult) {
-                            case packagemanager::Result::VERSION_MISMATCH:
-                                state.failReason = FailReason::PACKAGE_MISMATCH_FAILURE;
-                                break;
-                            case packagemanager::Result::PERSISTENCE_FAILURE:
-                                state.failReason = FailReason::PERSISTENCE_FAILURE;
-                                break;
-                            default:
-                                state.failReason = FailReason::SIGNATURE_VERIFICATION_FAILURE;
-                        }
-                        LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
-
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                        packageFailureErrorCode = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
-                            PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
-#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
-                    }
-                    #endif
-                } else {
-                    LOGERR("CreateStorage failed with result :%d errorReason [%s]", result, errorReason.c_str());
-                    state.failReason = FailReason::PERSISTENCE_FAILURE;
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                    packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_PERSISTENCE_FAILURE;
-#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
-                }
-                NotifyInstallStatus(packageId, version, state);
-            }
-#endif
-
-        } else {
-            LOGERR("Package: %s Version: %s Not found", packageId.c_str(), version.c_str());
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-            packageFailureErrorCode = PackageManagerImplementation::PackageFailureErrorCode::ERROR_VERSION_NOT_FOUND;
-#endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
-        }
+             if (result != Core::ERROR_NONE) {
+                packageFailureErrorCode = (state.failReason == FailReason::PACKAGE_MISMATCH_FAILURE)
+                    ? PackageManagerImplementation::PackageFailureErrorCode::ERROR_PACKAGE_MISMATCH_FAILURE
+                    : PackageManagerImplementation::PackageFailureErrorCode::ERROR_SIGNATURE_VERIFICATION_FAILURE;
 
             }
             recordAndPublishTelemetryData(((PackageManagerImplementation::PackageFailureErrorCode::ERROR_NONE == packageFailureErrorCode) ? TELEMETRY_MARKER_INSTALL_TIME : TELEMETRY_MARKER_INSTALL_ERROR),
