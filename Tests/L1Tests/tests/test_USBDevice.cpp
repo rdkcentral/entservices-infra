@@ -3897,11 +3897,14 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Lang
         return (int)LIBUSB_SUCCESS;
     });
 
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly(::testing::Return(2));
+    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillByDefault([](libusb_device_handle *dev_handle,
+        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
+        return 2;
+    });
 
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
+    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
         if (desc_index == 1)
         {
             const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
@@ -4167,11 +4170,14 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Lang
         return (int)LIBUSB_SUCCESS;
     });
 
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly(::testing::Return(LIBUSB_ERROR_PIPE));
+    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillByDefault([](libusb_device_handle *dev_handle,
+        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
+        return LIBUSB_ERROR_PIPE;
+    });
 
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
+    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillByDefault([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
         if (desc_index == 1)
         {
             const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
