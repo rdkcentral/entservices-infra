@@ -3275,7 +3275,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_GetL
     });
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly(::testing::Return(3));
+    .WillRepeatedly(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
@@ -3301,6 +3301,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_GetL
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+
     std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":255") != std::string::npos);
     EXPECT_TRUE(response.find("\"manufacturer\":\"USB\"") != std::string::npos);
@@ -3466,6 +3467,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_TwoL
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+
     std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":2") != std::string::npos);
     EXPECT_TRUE(response.find("\"languageId\":1033") != std::string::npos);
@@ -3921,8 +3923,8 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_More
             data[7] = 0x09;
             data[8] = 0x11;
             data[9] = 0x09;
-            data[10] = 0x0A;
-            data[11] = 0x04;
+            data[10] = 0x16;
+            data[11] = 0x09;
             return 12;
         }
         else if (desc_index == 1)
