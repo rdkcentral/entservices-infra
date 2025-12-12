@@ -2321,19 +2321,31 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetStringDescriptor_LanguageIdFailed)
     });
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly([](libusb_device_handle *dev_handle,
-        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
-        if (desc_index == 0)
-        {
-            return LIBUSB_ERROR_NO_DEVICE;
-        }
-        return LIBUSB_ERROR_NO_DEVICE;
-    });
-
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly(::testing::Return(LIBUSB_ERROR_NO_DEVICE));
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
+        if (desc_index == 1)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_MANUFACTURER);
+            return (int)strlen(MOCK_USB_DEVICE_MANUFACTURER);
+        }
+        else if (desc_index == 2)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_PRODUCT);
+            return (int)strlen(MOCK_USB_DEVICE_PRODUCT);
+        }
+        else if (desc_index == 3)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_SERIAL_NO);
+            return (int)strlen(MOCK_USB_DEVICE_SERIAL_NO);
+        }
+        return 0;
+    });
+
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find("\"manufacturer\":\"USB\"") != std::string::npos);
+    EXPECT_TRUE(response.find("\"product\":\"SanDisk 3.2Gen1\"") != std::string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_InvalidStringDescriptorType_NonStringType)
@@ -2455,7 +2467,29 @@ TEST_F(USBDeviceTest, GetDeviceInfo_InvalidStringDescriptorType_NonStringType)
         return 10;
     });
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
+        if (desc_index == 1)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_MANUFACTURER);
+            return (int)strlen(MOCK_USB_DEVICE_MANUFACTURER);
+        }
+        else if (desc_index == 2)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_PRODUCT);
+            return (int)strlen(MOCK_USB_DEVICE_PRODUCT);
+        }
+        else if (desc_index == 3)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_SERIAL_NO);
+            return (int)strlen(MOCK_USB_DEVICE_SERIAL_NO);
+        }
+        return 0;
+    });
+
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find("\"manufacturer\":\"USB\"") != std::string::npos);
+    EXPECT_TRUE(response.find("\"product\":\"SanDisk 3.2Gen1\"") != std::string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_StringDescriptorLengthMismatch)
@@ -2577,7 +2611,29 @@ TEST_F(USBDeviceTest, GetDeviceInfo_StringDescriptorLengthMismatch)
         return 10;
     });
 
-    EXPECT_EQ(Core::ERROR_GENERAL, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
+        if (desc_index == 1)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_MANUFACTURER);
+            return (int)strlen(MOCK_USB_DEVICE_MANUFACTURER);
+        }
+        else if (desc_index == 2)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_PRODUCT);
+            return (int)strlen(MOCK_USB_DEVICE_PRODUCT);
+        }
+        else if (desc_index == 3)
+        {
+            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_SERIAL_NO);
+            return (int)strlen(MOCK_USB_DEVICE_SERIAL_NO);
+        }
+        return 0;
+    });
+
+    EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    EXPECT_TRUE(response.find("\"manufacturer\":\"USB\"") != std::string::npos);
+    EXPECT_TRUE(response.find("\"product\":\"SanDisk 3.2Gen1\"") != std::string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_FourLanguageIDs)
