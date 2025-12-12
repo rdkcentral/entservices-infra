@@ -297,8 +297,10 @@ namespace Plugin {
 
 
         void ReturnMessageInSocket(const uint32_t connectionId, const int requestId, const string payload ) {
-             LOGDBG("<--[[a-%d-%d]] payload=%s",
-                    connectionId, requestId, payload.c_str());
+            if (mEnhancedLoggingEnabled) {
+                LOGDBG("<--[[a-%d-%d]] payload=%s",
+                        connectionId, requestId, payload.c_str());
+            }
 
             // Send response back to client
             mWsManager.SendMessageToConnection(connectionId, payload, requestId);
@@ -312,6 +314,7 @@ namespace Plugin {
         uint32_t InitializeWebsocket();
         mutable Core::CriticalSection mConnectionStatusImplLock;
         std::list<Exchange::IAppGatewayResponder::INotification*> mConnectionStatusNotification;
+        bool mEnhancedLoggingEnabled;
     };
 } // namespace Plugin
 } // namespace WPEFramework
