@@ -897,10 +897,6 @@ End:
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 AppManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(appId, newState);
 #endif
-                if(Exchange::ILifecycleManager::LifecycleState::UNLOADED == newState)
-                {
-                    removeAppInfoByAppId(appId);
-                }
             }
         }
 
