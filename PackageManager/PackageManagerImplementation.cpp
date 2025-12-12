@@ -422,7 +422,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PackageManagerImplementation::GetStorageDetails(string &quotaKB, string &usedKB)
+    Core::hresult PackageManagerImplementation::GetStorageInformation(uint32_t &quotaKB, uint32_t &usedKB)
     {
         Core::hresult result = Core::ERROR_NONE;
         LOGDBG();
