@@ -3301,6 +3301,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_GetL
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":255") != std::string::npos);
     EXPECT_TRUE(response.find("\"manufacturer\":\"USB\"") != std::string::npos);
     EXPECT_TRUE(response.find("\"product\":\"SanDisk 3.2Gen1\"") != std::string::npos);
@@ -3465,6 +3466,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_TwoL
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":2") != std::string::npos);
     EXPECT_TRUE(response.find("\"languageId\":1033") != std::string::npos);
 }
@@ -3630,6 +3632,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Thre
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":3") != std::string::npos);
 }
 
@@ -3796,6 +3799,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Four
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":4") != std::string::npos);
 }
 
@@ -3964,6 +3968,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_More
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
+    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":5") != std::string::npos);
 }
 
