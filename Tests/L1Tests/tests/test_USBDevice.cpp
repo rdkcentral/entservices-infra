@@ -3411,10 +3411,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_TwoL
         return (int)LIBUSB_SUCCESS;
     });
 
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillByDefault([](libusb_device_handle *dev_handle,
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly([](libusb_device_handle *dev_handle,
         uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
-        if (desc_index == 0)
+        if (desc_index == 0 && langid == 0)
         {
             data[0] = 6;
             data[1] = LIBUSB_DT_STRING;
@@ -3424,7 +3424,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_TwoL
             data[5] = 0x09;
             return 6;
         }
-        else if (desc_index == 1)
+        else if (desc_index == 1 && (langid == 1033 || langid == 1799))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
@@ -3437,7 +3437,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_TwoL
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        else if (desc_index == 2)
+        else if (desc_index == 2 && (langid == 1033 || langid == 1799))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_PRODUCT;
@@ -3450,7 +3450,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_TwoL
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        else if (desc_index == 3)
+        else if (desc_index == 3 && (langid == 1033 || langid == 1799))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
@@ -3463,12 +3463,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_TwoL
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        return 0;
+        return LIBUSB_ERROR_NOT_FOUND;
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
-
-    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":2") != std::string::npos);
     EXPECT_TRUE(response.find("\"languageId\":1033") != std::string::npos);
 }
@@ -3576,10 +3574,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Thre
         return (int)LIBUSB_SUCCESS;
     });
 
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillByDefault([](libusb_device_handle *dev_handle,
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly([](libusb_device_handle *dev_handle,
         uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
-        if (desc_index == 0)
+        if (desc_index == 0 && langid == 0)
         {
             data[0] = 8;
             data[1] = LIBUSB_DT_STRING;
@@ -3591,7 +3589,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Thre
             data[7] = 0x09;
             return 8;
         }
-        else if (desc_index == 1)
+        else if (desc_index == 1 && (langid == 1033 || langid == 1799 || langid == 2316))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
@@ -3604,7 +3602,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Thre
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        else if (desc_index == 2)
+        else if (desc_index == 2 && (langid == 1033 || langid == 1799 || langid == 2316))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_PRODUCT;
@@ -3617,7 +3615,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Thre
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        else if (desc_index == 3)
+        else if (desc_index == 3 && (langid == 1033 || langid == 1799 || langid == 2316))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
@@ -3630,11 +3628,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Thre
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        return 0;
+        return LIBUSB_ERROR_NOT_FOUND;
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
-    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":3") != std::string::npos);
 }
 
@@ -3741,10 +3738,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Four
         return (int)LIBUSB_SUCCESS;
     });
 
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillByDefault([](libusb_device_handle *dev_handle,
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly([](libusb_device_handle *dev_handle,
         uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
-        if (desc_index == 0)
+        if (desc_index == 0 && langid == 0)
         {
             data[0] = 10;
             data[1] = LIBUSB_DT_STRING;
@@ -3758,7 +3755,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Four
             data[9] = 0x09;
             return 10;
         }
-        else if (desc_index == 1)
+        else if (desc_index == 1 && (langid == 1033 || langid == 1799 || langid == 2316 || langid == 2321))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
@@ -3771,7 +3768,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Four
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        else if (desc_index == 2)
+        else if (desc_index == 2 && (langid == 1033 || langid == 1799 || langid == 2316 || langid == 2321))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_PRODUCT;
@@ -3784,7 +3781,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Four
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        else if (desc_index == 3)
+        else if (desc_index == 3 && (langid == 1033 || langid == 1799 || langid == 2316 || langid == 2321))
         {
             data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
@@ -3797,11 +3794,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_Four
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        return 0;
+        return LIBUSB_ERROR_NOT_FOUND;
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
-    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":4") != std::string::npos);
 }
 
@@ -3908,10 +3904,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_More
         return (int)LIBUSB_SUCCESS;
     });
 
-    ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillByDefault([](libusb_device_handle *dev_handle,
+    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+    .WillRepeatedly([](libusb_device_handle *dev_handle,
         uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
-        if (desc_index == 0)
+        if (desc_index == 0 && langid == 0)
         {
             data[0] = 12;
             data[1] = LIBUSB_DT_STRING;
@@ -3927,10 +3923,12 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_More
             data[11] = 0x09;
             return 12;
         }
-        else if (desc_index == 1)
+        else if (desc_index >= 1 && desc_index <= 3)
         {
             data[1] = LIBUSB_DT_STRING;
-            const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
+            const char *buf = (desc_index == 1) ? MOCK_USB_DEVICE_MANUFACTURER :
+                             (desc_index == 2) ? MOCK_USB_DEVICE_PRODUCT :
+                             MOCK_USB_DEVICE_SERIAL_NO;
             int buffer_len = strlen(buf) * 2, j = 0, index = 2;
             memset(&data[2], 0, length - 2);
             while((data[index] = buf[j++]) != '\0')
@@ -3940,37 +3938,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetUSBExtInfoStructFromDeviceDescriptor_More
             data[0] = buffer_len + 2;
             return (int)data[0];
         }
-        else if (desc_index == 2)
-        {
-            data[1] = LIBUSB_DT_STRING;
-            const char *buf = MOCK_USB_DEVICE_PRODUCT;
-            int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-            memset(&data[2], 0, length - 2);
-            while((data[index] = buf[j++]) != '\0')
-            {
-                index += 2;
-            }
-            data[0] = buffer_len + 2;
-            return (int)data[0];
-        }
-        else if (desc_index == 3)
-        {
-            data[1] = LIBUSB_DT_STRING;
-            const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
-            int buffer_len = strlen(buf) * 2, j = 0, index = 2;
-            memset(&data[2], 0, length - 2);
-            while((data[index] = buf[j++]) != '\0')
-            {
-                index += 2;
-            }
-            data[0] = buffer_len + 2;
-            return (int)data[0];
-        }
-        return 0;
+        return LIBUSB_ERROR_NOT_FOUND;
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
-    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":5") != std::string::npos);
 }
 
