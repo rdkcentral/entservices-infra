@@ -110,15 +110,15 @@ public:
         _id(0),
         _parent(static_cast<WebSocketConnectionManager::WebSocketChannel &>(*parent)),
         _queue(10){
-            LOGINFO("Connector value: %d", static_cast<int>(connector));
-            LOGINFO("Remote host: %s", remoteNode.HostAddress().c_str());
+            LOGTRACE("Connector value: %d", static_cast<int>(connector));
+            LOGTRACE("Remote host: %s", remoteNode.HostAddress().c_str()); 
         }
         ~WebSocketServer() {
             _qLock.Lock();
             _queue.Clear();
             _qLock.Unlock();
-            LOGINFO("WebSocketServer destructed for connectionId: %d", _id);
-
+            LOGTRACE("WebSocketServer destructed for connectionId: %d", _id);
+            
         }
 
     public:
@@ -150,7 +150,7 @@ public:
         void StateChange(){
             if (this->IsOpen())
             {
-                LOGINFO("Open - OK");
+                LOGTRACE("Open - OK");
                 const std::string &query = Link().Query();
                 if (_parent.Interface()._authHandler != nullptr) {
                     bool authResult = _parent.Interface()._authHandler(_id, query);
@@ -159,14 +159,14 @@ public:
                         this->Close(0);
                         return;
                     }
-                    LOGINFO("Authentication succeeded");
+                    LOGTRACE("Authentication succeeded");
                 } else {
                     LOGWARN("No authentication handler set, proceeding without authentication");
                 }
             }
             else if(this->IsSuspended())
             {
-                LOGINFO("Closed - %s", this->IsSuspended() ? _T("SUSPENDED") : _T("OK"));
+                LOGTRACE("Closed - %s", this->IsSuspended() ? _T("SUSPENDED") : _T("OK"));
                 if (_parent.Interface()._disconnectHandler != nullptr) {
                     _parent.Interface()._disconnectHandler(Id());
                 }
@@ -198,7 +198,7 @@ public:
         }
 
         void Id(const uint32_t id){
-            LOGINFO("Assigning connectionId: %d", id);
+            LOGTRACE("Assigning connectionId: %d", id);
             _id = id;
 
             // Process any pending messages for this connection
@@ -321,7 +321,7 @@ public:
             }
             //
             _queue.Add(element);
-            LOGINFO("Message queued for connectionId: %d, queue size: %d", _id, static_cast<int>(_queue.Count()));
+            LOGTRACE("Message queued for connectionId: %d, queue size: %d", _id, static_cast<int>(_queue.Count()));
 
              _qLock.Unlock();
         }
@@ -473,7 +473,7 @@ public:
         event->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
         event->Designator = designator;
         event->Parameters = payload;
-        LOGINFO("Emit Event for method=%s, connectionId=%d params=%s", designator.c_str(), connectionId, payload.c_str());
+        LOGTRACE("Emit Event for method=%s, connectionId=%d params=%s", designator.c_str(), connectionId, payload.c_str());
         mChannel->Submit(connectionId, Core::ProxyType<Core::JSON::IElement>(event));
         
         #ifdef ENABLE_APP_GATEWAY_AUTOMATION
@@ -503,7 +503,7 @@ public:
         request->Designator = designator;
         request->Parameters = params;
 
-        LOGINFO("Send Request for method=%s, connectionId=%d params=%s", designator.c_str(), connectionId, params.c_str());
+        LOGTRACE("Send Request for method=%s, connectionId=%d params=%s", designator.c_str(), connectionId, params.c_str());
         mChannel->Submit(connectionId, Core::ProxyType<Core::JSON::IElement>(request));
 
         #ifdef ENABLE_APP_GATEWAY_AUTOMATION
