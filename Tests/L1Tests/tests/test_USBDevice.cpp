@@ -2706,22 +2706,23 @@ TEST_F(USBDeviceTest, GetDeviceInfo_FourLanguageIDs)
     ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillByDefault([](libusb_device_handle *dev_handle,
         uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
-        data[1] = LIBUSB_DT_STRING;
         if (desc_index == 0)
         {
             data[0] = 10;
+            data[1] = LIBUSB_DT_STRING;
             data[2] = 0x09;
             data[3] = 0x04;
-            data[4] = 0x09;
-            data[5] = 0x07;
-            data[6] = 0x09;
-            data[7] = 0x0C;
-            data[8] = 0x09;
-            data[9] = 0x11;
+            data[4] = 0x07;
+            data[5] = 0x09;
+            data[6] = 0x0C;
+            data[7] = 0x09;
+            data[8] = 0x11;
+            data[9] = 0x09;
             return 10;
         }
         else if (desc_index == 1)
         {
+            data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_MANUFACTURER;
             int buffer_len = strlen(buf) * 2, j = 0, index = 2;
             memset(&data[2], 0, length - 2);
@@ -2734,6 +2735,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_FourLanguageIDs)
         }
         else if (desc_index == 2)
         {
+            data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_PRODUCT;
             int buffer_len = strlen(buf) * 2, j = 0, index = 2;
             memset(&data[2], 0, length - 2);
@@ -2746,6 +2748,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_FourLanguageIDs)
         }
         else if (desc_index == 3)
         {
+            data[1] = LIBUSB_DT_STRING;
             const char *buf = MOCK_USB_DEVICE_SERIAL_NO;
             int buffer_len = strlen(buf) * 2, j = 0, index = 2;
             memset(&data[2], 0, length - 2);
@@ -2760,7 +2763,6 @@ TEST_F(USBDeviceTest, GetDeviceInfo_FourLanguageIDs)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
-    std::cout << "Response: " << response << std::endl;
     EXPECT_TRUE(response.find("\"numLanguageIds\":4") != std::string::npos);
     EXPECT_TRUE(response.find("\"languageId\":1033") != std::string::npos);
 }
