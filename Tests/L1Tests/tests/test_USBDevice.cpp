@@ -2345,6 +2345,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetStringDescriptor_LanguageIdFailed)
 
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     std::cout << "Response: " << response << std::endl;
+    EXPECT_TRUE(response.find("\"numLanguageIds\":255") != std::string::npos);
     EXPECT_TRUE(response.find("\"manufacturer\":\"USB\"") != std::string::npos);
     EXPECT_TRUE(response.find("\"product\":\"SanDisk 3.2Gen1\"") != std::string::npos);
 }
@@ -2468,29 +2469,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_InvalidStringDescriptorType_NonStringType)
         return 10;
     });
 
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
-        if (desc_index == 1)
-        {
-            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_MANUFACTURER);
-            return (int)strlen(MOCK_USB_DEVICE_MANUFACTURER);
-        }
-        else if (desc_index == 2)
-        {
-            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_PRODUCT);
-            return (int)strlen(MOCK_USB_DEVICE_PRODUCT);
-        }
-        else if (desc_index == 3)
-        {
-            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_SERIAL_NO);
-            return (int)strlen(MOCK_USB_DEVICE_SERIAL_NO);
-        }
-        return 0;
-    });
-
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
-    EXPECT_TRUE(response.find("\"manufacturer\":\"USB\"") != std::string::npos);
-    EXPECT_TRUE(response.find("\"product\":\"SanDisk 3.2Gen1\"") != std::string::npos);
+    std::cout << "Response: " << response << std::endl;
+    EXPECT_TRUE(response.find("\"manufacturer\":\"\"") != std::string::npos);
+    EXPECT_TRUE(response.find("\"product\":\"\"") != std::string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_StringDescriptorLengthMismatch)
@@ -2612,30 +2594,10 @@ TEST_F(USBDeviceTest, GetDeviceInfo_StringDescriptorLengthMismatch)
         return 10;
     });
 
-    EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
-        if (desc_index == 1)
-        {
-            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_MANUFACTURER);
-            return (int)strlen(MOCK_USB_DEVICE_MANUFACTURER);
-        }
-        else if (desc_index == 2)
-        {
-            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_PRODUCT);
-            return (int)strlen(MOCK_USB_DEVICE_PRODUCT);
-        }
-        else if (desc_index == 3)
-        {
-            strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_SERIAL_NO);
-            return (int)strlen(MOCK_USB_DEVICE_SERIAL_NO);
-        }
-        return 0;
-    });
-
     EXPECT_EQ(Core::ERROR_NONE, handler.Invoke(connection, _T("getDeviceInfo"), _T("{\"deviceName\":\"100\\/001\"}"), response));
     std::cout << "Response: " << response << std::endl;
-    EXPECT_TRUE(response.find("\"manufacturer\":\"USB\"") != std::string::npos);
-    EXPECT_TRUE(response.find("\"product\":\"SanDisk 3.2Gen1\"") != std::string::npos);
+    EXPECT_TRUE(response.find("\"manufacturer\":\"\"") != std::string::npos);
+    EXPECT_TRUE(response.find("\"product\":\"\"") != std::string::npos);
 }
 
 TEST_F(USBDeviceTest, GetDeviceInfo_FourLanguageIDs)
@@ -2750,12 +2712,12 @@ TEST_F(USBDeviceTest, GetDeviceInfo_FourLanguageIDs)
             data[0] = 10;
             data[2] = 0x09;
             data[3] = 0x04;
-            data[4] = 0x07;
-            data[5] = 0x04;
-            data[6] = 0x0C;
-            data[7] = 0x04;
-            data[8] = 0x11;
-            data[9] = 0x04;
+            data[4] = 0x09;
+            data[5] = 0x07;
+            data[6] = 0x09;
+            data[7] = 0x0C;
+            data[8] = 0x09;
+            data[9] = 0x11;
             return 10;
         }
         else if (desc_index == 1)
