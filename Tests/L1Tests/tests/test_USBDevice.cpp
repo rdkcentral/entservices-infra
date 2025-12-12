@@ -2047,7 +2047,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_LanguageDescriptor_Success)
 
     ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillByDefault([](libusb_device_handle *dev_handle,
-        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
         data[1] = LIBUSB_DT_STRING;
         if (desc_index == 0)
         {
@@ -2201,7 +2201,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_InvalidDescriptorIndex_ZeroIndex)
 
     ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillByDefault([](libusb_device_handle *dev_handle,
-        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
         data[1] = LIBUSB_DT_STRING;
         if (desc_index == 0)
         {
@@ -2436,21 +2436,21 @@ TEST_F(USBDeviceTest, GetDeviceInfo_GetStringDescriptor_FallbackToASCII)
     .WillRepeatedly(::testing::Return(LIBUSB_ERROR_IO));
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) {
+    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
         if (desc_index == 1)
         {
             strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_MANUFACTURER);
-            return strlen(MOCK_USB_DEVICE_MANUFACTURER);
+            return (int)strlen(MOCK_USB_DEVICE_MANUFACTURER);
         }
         else if (desc_index == 2)
         {
             strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_PRODUCT);
-            return strlen(MOCK_USB_DEVICE_PRODUCT);
+            return (int)strlen(MOCK_USB_DEVICE_PRODUCT);
         }
         else if (desc_index == 3)
         {
             strcpy(reinterpret_cast<char*>(data), MOCK_USB_DEVICE_SERIAL_NO);
-            return strlen(MOCK_USB_DEVICE_SERIAL_NO);
+            return (int)strlen(MOCK_USB_DEVICE_SERIAL_NO);
         }
         return 0;
     });
@@ -2565,7 +2565,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_InvalidStringDescriptorType)
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly([](libusb_device_handle *dev_handle,
-        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
         data[1] = 0xFF;
         data[0] = 4;
         return (int)data[0];
@@ -2679,7 +2679,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_StringDescriptorSizeMismatch)
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillRepeatedly([](libusb_device_handle *dev_handle,
-        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
         data[1] = LIBUSB_DT_STRING;
         data[0] = 20;
         return 4;
@@ -2793,7 +2793,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_MultipleLanguageIDs)
 
     ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillByDefault([](libusb_device_handle *dev_handle,
-        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
         data[1] = LIBUSB_DT_STRING;
         if (desc_index == 0)
         {
@@ -2955,7 +2955,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_LessThanFourBytesLanguageDescriptor)
     .WillRepeatedly(::testing::Return(3));
 
     EXPECT_CALL(*p_libUSBImplMock, libusb_get_string_descriptor_ascii(::testing::_, ::testing::_, ::testing::_, ::testing::_))
-    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) {
+    .WillRepeatedly([](libusb_device_handle *dev_handle, uint8_t desc_index, unsigned char *data, int length) -> int {
         if (desc_index == 1)
         {
             strcpy(reinterpret_cast<char*>(data), "M");
@@ -3082,7 +3082,7 @@ TEST_F(USBDeviceTest, GetDeviceInfo_WideCharacterDescriptor)
 
     ON_CALL(*p_libUSBImplMock, libusb_get_string_descriptor(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
     .WillByDefault([](libusb_device_handle *dev_handle,
-        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) {
+        uint8_t desc_index, uint16_t langid, unsigned char *data, int length) -> int {
         data[1] = LIBUSB_DT_STRING;
         if (desc_index == 0)
         {
