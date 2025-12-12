@@ -170,7 +170,7 @@ namespace Plugin {
         Core::hresult Cancel(const string &downloadId) override;
         Core::hresult Delete(const string &fileLocator) override;
         Core::hresult Progress(const string &downloadId, Exchange::IPackageDownloader::ProgressInfo &progress);
-        Core::hresult GetStorageDetails(string &quotaKB, string &usedKB);
+        Core::hresult GetStorageInformation(uint32_t &quotaKB, uint32_t &usedKB);
         Core::hresult RateLimit(const string &downloadId, const uint64_t &limit);
 
         Core::hresult Register(Exchange::IPackageDownloader::INotification* notification) override;
