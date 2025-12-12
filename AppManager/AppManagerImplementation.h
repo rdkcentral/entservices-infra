@@ -276,6 +276,7 @@ namespace Plugin {
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         void updateCurrentActionTime(const std::string& appId, time_t currentActionTime, CurrentAction currentAction);
 #endif
+    bool checkInstallUninstallBlock(const std::string& appId);
     };
 } /* namespace Plugin */
 } /* namespace WPEFramework */
