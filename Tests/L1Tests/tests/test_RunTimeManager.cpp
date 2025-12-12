@@ -102,6 +102,10 @@ protected:
         EXPECT_CALL(*mWindowManagerMock, Register(::testing::_))
             .WillRepeatedly(::testing::Return(Core::ERROR_NONE));
 
+        // Mock ConfigLine to return the runtime app portal configuration
+        ON_CALL(*mServiceMock, ConfigLine())
+            .WillByDefault(::testing::Return("{\"runtimeAppPortal\":\"com.sky.as.apps\"}"));
+
         runTimeManagerConfigure->Configure(mServiceMock);
         return true;
     }
