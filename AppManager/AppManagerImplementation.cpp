@@ -757,7 +757,7 @@ Core::hresult AppManagerImplementation::packageLock(const string& appId, Package
                 /* Check if the packageId matches the provided appId */
                 for (const auto& package : packageList)
                 {
-                    if (!package.packageId.empty() && package.packageId == appId)
+                    if (!package.packageId.empty() && package.packageId == appId && package.state == Exchange::IPackageInstaller::InstallState::INSTALLED)
                     {
                         packageData.version = std::string(package.version);
                         break;
@@ -1637,5 +1637,33 @@ void AppManagerImplementation::updateCurrentActionTime(const std::string& appId,
     }
 }
 #endif
+
+bool AppManagerImplementation::checkInstallUninstallBlock(const std::string& appId)
+{
+    bool blocked = false;
+    int duplicateCount = 0;
+
+    std::vector<WPEFramework::Exchange::IPackageInstaller::Package> packageList;
+    Core::hresult status = fetchAppPackageList(packageList);
+
+    if (status != Core::ERROR_NONE) {
+        LOGERR("Failed to fetch package list for appId: %s", appId.c_str());
+        return false;
+    }
+
+    for (const auto& package : packageList) {
+        if ((!package.packageId.empty()) && (package.packageId == appId)) {
+            duplicateCount++;
+            if (package.state == Exchange::IPackageInstaller::InstallState::INSTALLATION_BLOCKED ||
+                package.state == Exchange::IPackageInstaller::InstallState::UNINSTALL_BLOCKED) {
+                blocked = true;
+                LOGINFO("checkInstallUninstallBlock: appId=%s,package_state=%d", appId.c_str(), static_cast<int>(package.state));
+                break;
+            }
+        }
+    }
+    LOGINFO("checkInstallUninstallBlock: appId=%s duplicateCount=%d blocked=%d", appId.c_str(), duplicateCount, blocked);
+    return blocked;
+}
 } /* namespace Plugin */
 } /* namespace WPEFramework */
