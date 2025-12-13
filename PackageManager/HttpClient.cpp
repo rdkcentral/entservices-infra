@@ -63,6 +63,8 @@ HttpClient::downloadFile(const std::string & url, const std::string & fileName, 
             (void) curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCb);
 
             cc = curl_easy_perform(curl);
+            fclose(fp);
+            
             curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpCode);
             if (cc == CURLE_OK) {
                 LOGDBG("Download %s Success", fileName.c_str());
@@ -74,7 +76,6 @@ HttpClient::downloadFile(const std::string & url, const std::string & fileName, 
                     status = Status::HttpError;
                 }
             }
-            fclose(fp);
         } else {
             LOGERR("Failed to open %s", fileName.c_str());
             status = Status::DiskError;

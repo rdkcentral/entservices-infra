@@ -690,7 +690,7 @@ uint32_t USBDeviceImplementation::getUSBDeviceInfoStructFromDeviceDescriptor(lib
 
 
 
-            sprintf(deviceName, "%03d/%03d", libusb_get_bus_number(pDev), libusb_get_device_address(pDev));
+            snprintf(deviceName, sizeof(deviceName), "%03d/%03d", libusb_get_bus_number(pDev), libusb_get_device_address(pDev));
             pUSBDeviceInfo->device.deviceName = std::string(deviceName);
 
             if (LIBUSB_CLASS_PER_INTERFACE == desc.bDeviceClass)
@@ -1025,7 +1025,7 @@ Core::hresult USBDeviceImplementation::GetDeviceInfo(const string &deviceName, U
         {
             char usbDeviceName[10] = {0};
 
-            (void)sprintf(usbDeviceName, "%03d/%03d", libusb_get_bus_number(devs[index]), libusb_get_device_address(devs[index]));
+            (void)snprintf(usbDeviceName, sizeof(usbDeviceName), "%03d/%03d", libusb_get_bus_number(devs[index]), libusb_get_device_address(devs[index]));
 
             if (deviceName.compare(string(usbDeviceName)) != 0)
             {
@@ -1095,7 +1095,7 @@ Core::hresult USBDeviceImplementation::BindDriver(const string &deviceName) cons
         {
             char usbDeviceName[10] = {0};
 
-            (void)sprintf(usbDeviceName, "%03d/%03d", libusb_get_bus_number(devs[index]), libusb_get_device_address(devs[index]));
+            (void)snprintf(usbDeviceName, sizeof(usbDeviceName), "%03d/%03d", libusb_get_bus_number(devs[index]), libusb_get_device_address(devs[index]));
 
             if (deviceName.compare(string(usbDeviceName)) != 0)
             {
@@ -1180,7 +1180,7 @@ Core::hresult USBDeviceImplementation::UnbindDriver(const string &deviceName) co
         {
             char usbDeviceName[10] = {0};
 
-            (void)sprintf(usbDeviceName, "%03d/%03d", libusb_get_bus_number(devs[index]), libusb_get_device_address(devs[index]));
+            (void)snprintf(usbDeviceName, sizeof(usbDeviceName), "%03d/%03d", libusb_get_bus_number(devs[index]), libusb_get_device_address(devs[index]));
 
             if (deviceName.compare(string(usbDeviceName)) != 0)
             {
