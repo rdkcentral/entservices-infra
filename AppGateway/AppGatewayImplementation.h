@@ -101,34 +101,6 @@ namespace Plugin {
             const std::string mDestination;
         };
 
-        class AppIdRegistry{
-        public:
-            void Add(const uint32_t connectionId, string appId) {
-                std::lock_guard<std::mutex> lock(mAppIdMutex);
-                mAppIdMap[connectionId] = std::move(appId);
-            }
-
-            void Remove(const uint32_t connectionId) {
-                std::lock_guard<std::mutex> lock(mAppIdMutex);
-                mAppIdMap.erase(connectionId);
-            }
-
-            bool Get(const uint32_t connectionId, string& appId) {
-                std::lock_guard<std::mutex> lock(mAppIdMutex);
-                auto it = mAppIdMap.find(connectionId);
-                if (it != mAppIdMap.end()) {
-                    appId = it->second;
-                    return true;
-                }
-                return false;
-            }
-
-
-        private:
-            std::unordered_map<uint32_t,string> mAppIdMap;
-            std::mutex mAppIdMutex;
-        };
-
         Core::hresult HandleEvent(const Context &context, const string &alias, const string &event, const string &origin,  const bool listen);
                 
         void ReturnMessageInSocket(const Context& context, const string payload ) {
@@ -151,7 +123,6 @@ namespace Plugin {
         Exchange::IAppGatewayResponder *mAppGatewayResponder;
         Exchange::IAppGatewayResponder *mInternalGatewayResponder; // Shared pointer to InternalGatewayResponder
         Exchange::IAppGatewayAuthenticator *mAuthenticator; // Shared pointer to Authenticator
-        AppIdRegistry mAppIdRegistry;
         uint32_t InitializeResolver();
         uint32_t InitializeWebsocket();
         uint32_t ProcessComRpcRequest(const Context &context, const string& alias, const string& method, const string& params, const string& origin, string &resolution);
@@ -162,6 +133,7 @@ namespace Plugin {
         Core::hresult InternalResolutionConfigure(std::vector<std::string>&& configPaths);
         bool SetupAppGatewayAuthenticator();
         void SendToLaunchDelegate(const Context& context, const string& payload);
+        std::string ReadCountryFromConfigFile();
     };
 } // namespace Plugin
 } // namespace WPEFramework
