@@ -356,7 +356,7 @@ TEST_F(PackageManagerTest, registeredMethodsusingJsonRpc) {
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("cancel")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("delete")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("progress")));
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getStorageDetails")));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getStorageInformation")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("rateLimit")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("install")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("uninstall")));
@@ -1113,41 +1113,41 @@ TEST_F(PackageManagerTest, progressMethodusingComRpcFailure) {
 	deinitforComRpc();
 }
 
-/* Test Case for getting storage details using JsonRpc
+/* Test Case for getting storage information using JsonRpc
  * 
  * Set up and initialize required JSON-RPC resources, configurations, mocks and expectations
- * Invoke the getStorageDetails method using the JSON RPC handler, passing required parameters
- * Verify getStorageDetails method success by asserting that it returns Core::ERROR_NONE
+ * Invoke the getStorageInformation method using the JSON RPC handler, passing required parameters
+ * Verify getStorageInformation method success by asserting that it returns Core::ERROR_NONE
  * Deinitialize the JSON-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, getStorageDetailsusingJsonRpc) {
+TEST_F(PackageManagerTest, getStorageInformationusingJsonRpc) {
 
     initforJsonRpc();
 
     // TC-26: Get Storage Details using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getStorageDetails"), _T("{\"quotaKB\": \"1024\", \"usedKB\": \"568\"}"), mJsonRpcResponse));
+    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getStorageInformation"), _T("{\"quotaKB\": 1024, \"usedKB\": 568}"), mJsonRpcResponse));
 
 	deinitforJsonRpc();
 }
 
-/* Test Case for getting storage details using ComRpc
+/* Test Case for getting storage information using ComRpc
  *
  * Set up and initialize required COM-RPC resources, configurations, mocks and expectations
- * Call the getStorageDetails method using the COM RPC interface, passing required parameters
- * Verify getStorageDetails method success by asserting that it returns Core::ERROR_NONE
+ * Call the getStorageInformation method using the COM RPC interface, passing required parameters
+ * Verify getStorageInformation method success by asserting that it returns Core::ERROR_NONE
  * Deinitialize the COM-RPC resources and clean-up related test resources
  */
 
-TEST_F(PackageManagerTest, getStorageDetailsusingComRpc) {
+TEST_F(PackageManagerTest, getStorageInformationusingComRpc) {
 
     initforComRpc();
 
-    string quotaKB = "1024";
-    string usedKB = "568";
+    uint32_t quotaKB = 1024;
+    uint32_t usedKB = 568;
 
     // TC-27: Get Storage Details using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->GetStorageDetails(quotaKB, usedKB));
+    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->GetStorageInformation(quotaKB, usedKB));
 
 	deinitforComRpc();
 }
