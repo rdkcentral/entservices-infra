@@ -11,7 +11,7 @@ applyTo: "**/*.config,**/*.conf.in"
         
              callsign: A unique identifier used to reference the plugin within the framework. Every callsign must be defined with a prefix of org.rdk and it must be followed by the ENT Service name written in PascalCase (e.g., org.rdk.PersistentStore).
         
-             Custom properties: Any additional configuration parameters required by the plugin. These are passed during activation via PluginHost::IShell::ConfigLine().This may include   
+             Custom properties: Any additional configuration parameters required by the plugin. These are passed during activation via PluginHost::IShell::ConfigLine(). This may include   
                  - startuporder - Specifies the order in which plugins are started, relative to others.
                  - precondition - If these aren’t met, the plugin stays in the Preconditions state and activates automatically once they are satisfied.Recommended to define the precondition if there are any.
                  - mode - Defines the execution mode of plugin.
