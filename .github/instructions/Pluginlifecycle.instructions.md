@@ -19,17 +19,17 @@ applyTo: "**/**.cpp,**/**.h"
           - Initialize() must handle all setup logic; constructors should remain minimal.
           - It must validate inputs and acquire necessary references.
           
-               ### Example
-                  const string HdcpProfile::Initialize(PluginHost::IShell* service) {
-                     .....
-                     if (_hdcpProfile != nullptr) {
-                           ...
-                           Exchange::IConfiguration* configure = _hdcpProfile->QueryInterface<Exchange::IConfiguration>();
-                           ...
-                     }
-                     ....
-                   }
-                   
+      ### Example
+         const string HdcpProfile::Initialize(PluginHost::IShell* service) {
+            .....
+            if (_hdcpProfile != nullptr) {
+                  ...
+                  Exchange::IConfiguration* configure = _hdcpProfile->QueryInterface<Exchange::IConfiguration>();
+                  ...
+            }
+            ....
+          }
+          
           - SHOULD register your listener object twice:
 
               Framework Service (_service): Use _service->Register(listener) to receive general plugin state change notifications (like ACTIVATED/DEACTIVATED).
