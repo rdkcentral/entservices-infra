@@ -66,7 +66,7 @@ applyTo: "**/**.cpp,**/**.h"
                       mRenderThread = std::thread([=](std::string waylandDisplay) {
                           mNativeJSRenderer = std::make_shared<NativeJSRenderer>(waylandDisplay);
                           mNativeJSRenderer->run();	
-                        	printf("After launch application execution ... \n"); fflush(stdout);
+                          std::cout << "After launch application execution ... " << std::endl;
                         	mNativeJSRenderer.reset();
                           }, waylandDisplay);
                       return (Core::ERROR_NONE);
