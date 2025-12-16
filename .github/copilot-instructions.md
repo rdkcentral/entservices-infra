@@ -13,6 +13,6 @@ When writing review comments based on custom instructions located under .github/
 
         Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Pluginmodule.instructions.md#module-name-convention
 
-        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/pluginconfig.instructions.md#plugin-configuration
+        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Pluginconfig.instructions.md#plugin-configuration
 
         Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Plugincmake.instructions.md#namespace-usage
