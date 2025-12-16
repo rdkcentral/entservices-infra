@@ -9,7 +9,7 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
 ## Inter-Plugin Communication
 
   ### Requirement
-     Plugins should use COM-RPC (e.g., use QueryInterfaceBycallSign or QueryInterface) to access other plugins.
+     Plugins should use COM-RPC (e.g., use QueryInterfaceByCallsign or QueryInterface) to access other plugins.
 
      ### Example
 
