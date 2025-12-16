@@ -5,7 +5,7 @@ When writing review comments based on custom instructions located under .github/
     Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/<instruction-file>.instructions.md#<violated_guideline_link>
 
     ## Examples
-        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/plugin.instructions.md#interface-implementation 
+        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Plugin.instructions.md#interface-implementation 
 
         Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/pluginlifecycle.instructions.md#deactivated
 
