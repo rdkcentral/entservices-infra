@@ -199,7 +199,7 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
 
   ### Requirement
     When a Thunder plugin needs to communicate with another plugin (via JSON-RPC or COM-RPC), do not create and hold the other plugin’s interface instance throughout the plugin lifecycle.
-    Instead, create the instance only when needed and release it immediately after use.If the other plugin gets deactivated, your stored interface becomes stale.Calling methods on a stale interface leads to undefined behavior, crashes, or deadlocks.Thunder does not automatically invalidate your pointer when the remote plugin goes down.
+    Instead, create the instance only when needed and release it immediately after use. If the other plugin gets deactivated, your stored interface becomes stale. Calling methods on a stale interface leads to undefined behavior, crashes, or deadlocks. Thunder does not automatically invalidate your pointer when the remote plugin goes down.
 
     ### Example
         
