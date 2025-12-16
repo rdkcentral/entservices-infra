@@ -83,7 +83,7 @@ applyTo: "**/**.cpp,**/**.h"
                       ASSERT(_connectionId == 0);
                     }
 
-          - If a plugin A needs to communicate with plugin B(via com-rpc or json-rpc) , then it should call AddRef() on the IShellService instance passed as input to increment its reference count. IShellService instance should not be reference counted(using addref()) when it is not going to communicate with any other plugins.
+          - If a plugin A needs to communicate with plugin B(via com-rpc or json-rpc) , then it should call AddRef() on the IShellService instance passed as input to increment its reference count. IShellService instance should not be reference counted(using AddRef()) when it is not going to communicate with any other plugins.
 
               Example:
 
