@@ -36,8 +36,8 @@ applyTo: "**/**.cpp,**/**.h"
                   
                         Example: _service->Register(&_hdcpProfileNotification);
                   
-              Target Plugin Interface (_hdcpProfile): Use _hdcpProfile->Register(listener) to receive the plugin's specific custom events (e.g., onProfileChanged).
-                  
+              Target Plugin Interface (_hdcpProfile): Use _hdcpProfile->Register(listener) to receive custom C++ events from the implementation. This registration acts as the essential bridge to capture internal events so the plugin can re-dispatch them as JSON-RPC notifications to external clients.
+
                         Example: _hdcpProfile->Register(&_hdcpProfileNotification);
                    
           - It must return a non-empty string on failure with a clear error message.
@@ -131,15 +131,19 @@ applyTo: "**/**.cpp,**/**.h"
                     }
                    ...
                 }   
-          - Notification handlers should be unregistered before releasing interfaces.
+          - Unregister your listener from both the Target Plugin interface and the Framework Shell before releasing the pointers.
               
               Example:
                void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
                   ...
-                  // Unregister notifications first
-                    if (_service != nullptr) {
-                        _service->Unregister(&_hdcpProfileNotification);
-                    }
+                  // 1. Unregister from the Target Plugin (stops custom events)
+                  if (_hdcpProfile != nullptr) {
+                    _hdcpProfile->Unregister(&_hdcpProfileNotification);
+                  }
+                  // 2. Unregister from the Framework Shell (stops state change events)
+                  if (_service != nullptr) {
+                    _service->Unregister(&_hdcpProfileNotification);
+                  }
                   ...
                 }   
                 
