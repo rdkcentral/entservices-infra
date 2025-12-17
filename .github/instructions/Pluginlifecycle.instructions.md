@@ -98,7 +98,7 @@ applyTo: "**/**.cpp,**/**.h"
 
           - Only one Initialize() method must exist — avoid overloads or split logic.
     
-  ### Deinitialize and Cleanup
+  ## Deinitialize and Cleanup
     
       ### Requirement
     
