@@ -76,7 +76,7 @@ endif(RIALTO_IN_DAC_FEATURE)
 
 if(RALF_PACKAGE_SUPPORT)
     message(STATUS "RALF_PACKAGE_SUPPORT is enabled")
-    add_definitions(-DRAFL_PACKAGE_SUPPORT_ENABLED)
+    add_definitions(-DRALF_PACKAGE_SUPPORT_ENABLED)
     list(APPEND RUNTIMEMANAGER_SOURCES RalfPackageBuilder.cpp)
 endif(RALF_PACKAGE_SUPPORT)    
 
