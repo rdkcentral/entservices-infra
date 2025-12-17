@@ -16,7 +16,7 @@ applyTo: "**/*.config,**/*.conf.in"
                  - precondition - If these aren’t met, the plugin stays in the Preconditions state and activates automatically once they are satisfied.Recommended to define the precondition if there are any.
                  - mode - Defines the execution mode of plugin.
 
-                    ### Plugin Mode Determination
+                    #### Plugin Mode Determination
 
                      If the plugin's mode is set to OFF, it is treated as in-process.
                 
