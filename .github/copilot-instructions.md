@@ -11,7 +11,7 @@ When writing review comments based on custom instructions located under .github/
 
         Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginImplementation.instructions.md#inter-plugin-communication 
 
-        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginModule.instructions.md#module-name-convention
+        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Pluginmodule.instructions.md#module-name-convention
 
         Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginConfig.instructions.md#plugin-configuration
 
