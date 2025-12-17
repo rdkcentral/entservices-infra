@@ -102,8 +102,7 @@ applyTo: "**/**.cpp,**/**.h"
     
       ### Requirement
     
-          - Deinitialize() must clean up all resources acquired during Initialize().
-          - It must release resources in reverse order of initialization.
+          - Deinitialize() must clean up all resources acquired during Initialize(). It must release resources in reverse order of initialization.
           - Every pointer or instance must be checked for nullptr before cleanup.
               Example:
                void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
