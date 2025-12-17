@@ -35,6 +35,6 @@ This ensures smooth upgrades (e.g., WPEFramework → Thunder) and prevents regre
       target_link_libraries(${MODULE_NAME} 
         PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        $WPEFrameworkPlugins::WPEFrameworkPlugins
-        $WPEFrameworkDefinitions::WPEFrameworkDefinitions)
+        ${WPEFrameworkPlugins::WPEFrameworkPlugins}
+        ${WPEFrameworkDefinitions::WPEFrameworkDefinitions})
 
