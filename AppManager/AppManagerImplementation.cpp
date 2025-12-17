@@ -18,6 +18,8 @@
 */
 
 #include <iomanip>      /* for std::setw, std::setfill */
+#include <thread>       /* for std::this_thread::sleep_for */
+#include <chrono>       /* for std::chrono::milliseconds */
 #include "AppManagerImplementation.h"
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
 #include "AppManagerTelemetryReporting.h"
@@ -1279,9 +1281,25 @@ Core::hresult AppManagerImplementation::fetchAppPackageList(std::vector<WPEFrame
     {
         Exchange::IPackageInstaller::IPackageIterator* packages = nullptr;
 
-        if (mPackageManagerInstallerObject->ListPackages(packages) != Core::ERROR_NONE || packages == nullptr)
+        Core::hresult listResult = mPackageManagerInstallerObject->ListPackages(packages);
+        
+        // ERROR_UNAVAILABLE indicates PackageManager cache is still initializing - retry with delay
+        if (listResult == Core::ERROR_UNAVAILABLE)
         {
-            LOGERR("ListPackage is returning Error or Packages is nullptr");
+            LOGWARN("ListPackages returned ERROR_UNAVAILABLE - cache initializing, retrying after delay");
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            listResult = mPackageManagerInstallerObject->ListPackages(packages);
+            
+            if (listResult == Core::ERROR_UNAVAILABLE)
+            {
+                LOGERR("ListPackages still unavailable after retry - PackageManager cache not initialized yet");
+                goto End;
+            }
+        }
+
+        if (listResult != Core::ERROR_NONE || packages == nullptr)
+        {
+            LOGERR("ListPackage is returning Error (0x%08x) or Packages is nullptr", listResult);
             goto End;
         }
 
