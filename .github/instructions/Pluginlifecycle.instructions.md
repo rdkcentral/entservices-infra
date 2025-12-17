@@ -90,7 +90,7 @@ const string HdcpProfile::Initialize(PluginHost::IShell *service)
 }
 ```
 
-- If plugin A needs to keep the `IShell` pointer beyond the scope of `Initialize()` (for example, by storing it in a member variable to access other plugins via COM-RPC or JSON-RPC throughout the plugin's lifecycle), then it **must** call `AddRef()` on the service instance before storing it, to increment its reference count. If the plugin only uses the `service` pointer within `Initialize()` and does not store it for later use, then `AddRef()` **must not** be called on the `IShell` instance.
+- If a plugin needs to keep the `IShell` pointer beyond the scope of `Initialize()` (for example, by storing it in a member variable to access other plugins via COM-RPC or JSON-RPC throughout the plugin's lifecycle), then it **must** call `AddRef()` on the service instance before storing it, to increment its reference count. If the plugin only uses the `service` pointer within `Initialize()` and does not store it for later use, then `AddRef()` **must not** be called on the `IShell` instance.
 
 **Example:**
 
@@ -175,10 +175,9 @@ void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
     if (_hdcpProfile != nullptr) {
         ....
         if (nullptr != connection) {
-            // Lets trigger the cleanup sequence for
-            // out-of-process code. Which will guard
-            // that unwilling processes, get shot if
-            // not stopped friendly :-)
+            // Trigger the cleanup sequence for out-of-process code,
+            // which ensures that unresponsive processes are terminated
+            // if they do not stop gracefully.
             connection->Terminate();
             connection->Release();
         }

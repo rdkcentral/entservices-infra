@@ -168,7 +168,7 @@ void Initialize(PluginHost::IShell* service) override {
     // ... other initialization code ...
     
     // This state check ensures the environment is ready for JSON-RPC access.
-    // if(PluginHost::IShell::state::ACTIVATED == state) 
+    if(PluginHost::IShell::state::ACTIVATED == state) 
     {
         Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:9998")));
         

@@ -44,13 +44,13 @@ All Thunder services must be registered using the SERVICE_REGISTRATION macro wit
 SERVICE_REGISTRATION(ServiceName, MAJOR, MINOR, PATCH)
 ```
 
-For better readability , it is always good to define the following plugin meta data which is not mandatory.
+For better readability, it is always good to define the following plugin metadata which is not mandatory:
 
-- Precondition - List of Thunder subsystems that must be active in order for the plugin to activate. This can also be set in Plugin.conf.in file.
+- **Precondition** - List of Thunder subsystems that must be active in order for the plugin to activate. This can also be set in Plugin.conf.in file.
 
-- Terminations - List of Thunder subsystems that will cause the plugin to deactivate if they are marked inactive whilst the plugin is running.
+- **Terminations** - List of Thunder subsystems that will cause the plugin to deactivate if they are marked inactive whilst the plugin is running.
 
-- Controls - List of the subsystems that are controlled by the plugin.
+- **Controls** - List of the subsystems that are controlled by the plugin.
 
 ### Example
 

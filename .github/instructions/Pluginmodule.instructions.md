@@ -21,6 +21,7 @@ applyTo: "**/Module.cpp,**/Module.h"
    #define MODULE_NAME Plugin_IOController
    #endif
    // Rest of the code
+   ```
 
 2. In Module.cpp:
 
