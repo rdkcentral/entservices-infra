@@ -229,7 +229,7 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
 #ifdef RDK_APPMANAGERS_DEBUG
     addHolePunchPortToSpec(spec, 22222);
 #endif
-
+    addHolePunchPortToSpec(spec, 9001);
     Json::FastWriter writer;
     resultSpec = writer.write(spec);
     LOGINFO("spec: '%s'\n", resultSpec.c_str());
