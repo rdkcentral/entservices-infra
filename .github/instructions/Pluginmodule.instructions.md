@@ -16,8 +16,8 @@ applyTo: "**/Module.cpp,**/Module.h"
 1. In Module.h:
 
    ```cpp
-   /**Rest of the code**/
+   // Rest of the code
    #ifndef MODULE_NAME
    #define MODULE_NAME Plugin_IOController
    #endif
-   /**Rest of the code**/
+   // Rest of the code
