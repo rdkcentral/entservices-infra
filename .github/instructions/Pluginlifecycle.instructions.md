@@ -14,7 +14,7 @@ applyTo: "**/**.cpp,**/**.h"
    
   ## Initialization
       
-      #### Requirement
+      ### Requirement
           
           - Initialize() must handle all setup logic; constructors should remain minimal.
           - It must validate inputs and acquire necessary references.
@@ -98,7 +98,7 @@ applyTo: "**/**.cpp,**/**.h"
 
           - Only one Initialize() method must exist — avoid overloads or split logic.
     
-  ### Deinitialize and Cleanup
+  ## Deinitialize and Cleanup
     
       ### Requirement
     
@@ -221,11 +221,11 @@ applyTo: "**/**.cpp,**/**.h"
                 }
 
 
-  ### Deactivated
+  ## Deactivated
 
-      Each plugin should implement the deactivated method. In Deactivated, it should be checked if remote connectionId matches yours plugin's connectionId.If it matches , then deactivate the plugin.
+      Each plugin should implement the deactivated method. In Deactivated, it should be checked if remote connectionId matches yours plugin's connectionId.If it matches, then deactivate the plugin.
 
-        #### Example
+        ### Example
       
             void XCast::Deactivated(RPC::IRemoteConnection *connection)
             {

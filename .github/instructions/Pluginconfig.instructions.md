@@ -5,7 +5,7 @@ applyTo: "**/*.config,**/*.conf.in"
 ## Plugin Configuration
 
   ### Requirement
-    - Each plugin must define <Pluginname>.conf.in file that includes the following mandatory properties:
+    - Each plugin must define <PluginName>.conf.in file that includes the following mandatory properties:
 
              autostart: Indicates whether the plugin should start automatically when the framework boots.This should be initialized to false by default.
         
@@ -13,7 +13,7 @@ applyTo: "**/*.config,**/*.conf.in"
         
              Custom properties: Any additional configuration parameters required by the plugin. These are passed during activation via PluginHost::IShell::ConfigLine(). The following structural configuration elements are commonly defined:
                  - startuporder - Specifies the order in which plugins are started, relative to others.
-                 - precondition - If these aren’t met, the plugin stays in the Preconditions state and activates automatically once they are satisfied. Recommended to define the precondition if there are any.
+                 - precondition - If these aren't met, the plugin stays in the Preconditions state and activates automatically once they are satisfied. It is recommended to define the precondition if the plugin depends on other subsystems being active.
                  - mode - Defines the execution mode of plugin.
 
                     #### Plugin Mode Determination
@@ -30,7 +30,7 @@ applyTo: "**/*.config,**/*.conf.in"
 
   ### Example
 
-        <Pluginname>.conf.in
+        <PluginName>.conf.in
 
               precondition = ["Platform"]
               callsign = "org.rdk.HdcpProfile"
