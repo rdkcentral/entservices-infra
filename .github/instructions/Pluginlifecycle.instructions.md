@@ -196,7 +196,7 @@ applyTo: "**/**.cpp,**/**.h"
                     }
                 }   
           
-          - If addref() is called on IShellService instance in Initialize() , then it should call Release() on the IShellService instance to decrement its reference count.
+          - If AddRef() is called on IShellService instance in Initialize() , then it should call Release() on the IShellService instance to decrement its reference count.
           
               Example:
 
