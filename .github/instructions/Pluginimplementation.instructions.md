@@ -134,7 +134,7 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
                 
       If the notifying plugin supports only JSON-RPC, then use a specialized smart link type when subscribing to its events. This method allows the framework to efficiently handle Plugin statechange events.
 
-      ### Example
+### Example
 
           /**
            * @file Network.cpp
