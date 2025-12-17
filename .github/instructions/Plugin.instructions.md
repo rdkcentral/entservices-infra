@@ -1,6 +1,6 @@
 ---
 description: Guidelines for C++ files and header files that share the same name as their parent folder.
-applyTo: "[plugin]/[plugin].cpp,[plugin]/[plugin].h"
+applyTo: "**/**.cpp,**/**.h"
 ---
 
 # Instructions summary
