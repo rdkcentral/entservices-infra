@@ -223,7 +223,7 @@ applyTo: "**/**.cpp,**/**.h"
 
   ### Deactivated
 
-      Each plugin should implement the deactivated method. In Deactivated, it should be checked if remote connectionId matches yours plugin's connectionId.If it matches , then deactivate the plugin.
+      Each plugin should implement the deactivated method. In Deactivated, it should be checked if remote connectionId matches your plugin's connectionId. If it matches your plugin's connectionId, the plugin should submit a deactivation job to handle the out-of-process failure gracefully.
 
         #### Example
       
