@@ -170,7 +170,6 @@ applyTo: "**/**.cpp,**/**.h"
               Exchange::ITestPlugin* _testPlugin;
               Core::Sink<Notification> _notification;
           };
-          ```
 
 
     - It should be registered during Initialize() to get itself notified when the remote process connects or disconnects.
