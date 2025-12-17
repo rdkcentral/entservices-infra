@@ -98,7 +98,7 @@ applyTo: "**/**.cpp,**/**.h"
 
           - Only one Initialize() method must exist — avoid overloads or split logic.
     
-  ### Deinitialize and Cleanup
+  ## Deinitialize and Cleanup
     
       ### Requirement
     
@@ -221,7 +221,7 @@ applyTo: "**/**.cpp,**/**.h"
                 }
 
 
-  ### Deactivated
+  ## Deactivated
 
       Each plugin should implement the deactivated method. In Deactivated, it should be checked if remote connectionId matches yours plugin's connectionId.If it matches , then deactivate the plugin.
 
