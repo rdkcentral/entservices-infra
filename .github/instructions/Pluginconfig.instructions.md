@@ -5,7 +5,7 @@ applyTo: "**/*.config,**/*.conf.in"
 ## Plugin Configuration
 
   ### Requirement
-    - Each plugin must define <Pluginname>.conf.in file that includes the following mandatory properties:
+    - Each plugin must define <PluginName>.conf.in file that includes the following mandatory properties:
 
              autostart: Indicates whether the plugin should start automatically when the framework boots.This should be initialized to false by default.
         
@@ -30,7 +30,7 @@ applyTo: "**/*.config,**/*.conf.in"
 
   ### Example
 
-        <Pluginname>.conf.in
+        <PluginName>.conf.in
 
               precondition = ["Platform"]
               callsign = "org.rdk.HdcpProfile"
