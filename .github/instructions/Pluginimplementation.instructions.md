@@ -21,11 +21,11 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
 
             _userSettingsPlugin = _service->QueryInterface<WPEFramework::Exchange::IUserSettings>();
 
-     SHOULD not use JSON-RPC or LinkType for inter-plugin communication, as they introduce unnecessary overhead.
+      SHOULD not use JSON-RPC or LinkType for inter-plugin communication, as they introduce unnecessary overhead.
 
-     ### Incorrect Example
-          LinkType:
-            _telemetry = Core::ProxyType<JSONRPCLink>::Create(_T("org.rdk.telemetry"), _T(""), "token=" + token);
+      ### Incorrect Example
+           LinkType:
+             _telemetry = Core::ProxyType<JSONRPCLink>::Create(_T("org.rdk.telemetry"), _T(""), "token=" + token);
 
           Json-RPC:
             uint32_t ret = m_SystemPluginObj->Invoke<JsonObject, JsonObject>(THUNDER_RPC_TIMEOUT, _T("getFriendlyName"), params, Result);
