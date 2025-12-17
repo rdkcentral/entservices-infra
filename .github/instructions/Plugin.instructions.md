@@ -100,6 +100,7 @@ applyTo: "**/**.cpp,**/**.h"
             ...
          }
          ```
+         ```
     
 ## Handling Out-of-Process Plugin Failures
 
