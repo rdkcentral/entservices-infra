@@ -35,7 +35,7 @@ applyTo: "**/**.cpp,**/**.h"
 
 ##  Service Registration
 
-  ### Requirement
+### Requirement
       All Thunder services must be registered using the SERVICE_REGISTRATION macro with name, major, minor and patch versions of service. Register the service using the following macro:
 
           SERVICE_REGISTRATION(ServiceName, MAJOR, MINOR, PATCH)
