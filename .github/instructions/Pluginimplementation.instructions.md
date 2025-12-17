@@ -9,28 +9,38 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
 ### Inter-Plugin Communication
 
 ### Requirement
-     Plugins should use COM-RPC (e.g., use QueryInterfaceByCallsign or QueryInterface) to access other plugins.
+
+Plugins should use COM-RPC (e.g., use QueryInterfaceByCallsign or QueryInterface) to access other plugins.
 
 ### Example
 
-          Telemetry Plugin accessing UserSettings(via COM-RPC) through the IShell Interface API **QueryInterfaceByCallsign()** exposed for each Plugin - (Refer https://github.com/rdkcentral/entservices-infra/blob/7988b8a719e594782f041309ce2d079cf6f52863/Telemetry/TelemetryImplementation.cpp#L160 )
-          
-            _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
+Telemetry Plugin accessing UserSettings(via COM-RPC) through the IShell Interface API **QueryInterfaceByCallsign()** exposed for each Plugin - (Refer https://github.com/rdkcentral/entservices-infra/blob/7988b8a719e594782f041309ce2d079cf6f52863/Telemetry/TelemetryImplementation.cpp#L160 )
 
-          QueryInterface:
+```cpp
+_userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
+```
 
-            _userSettingsPlugin = _service->QueryInterface<WPEFramework::Exchange::IUserSettings>();
+QueryInterface:
 
-      SHOULD not use JSON-RPC or LinkType for inter-plugin communication, as they introduce unnecessary overhead.
+```cpp
+_userSettingsPlugin = _service->QueryInterface<WPEFramework::Exchange::IUserSettings>();
+```
+
+SHOULD not use JSON-RPC or LinkType for inter-plugin communication, as they introduce unnecessary overhead.
 
 ### Incorrect Example
-           LinkType:
-             _telemetry = Core::ProxyType<JSONRPCLink>::Create(_T("org.rdk.telemetry"), _T(""), "token=" + token);
 
-          Json-RPC:
-            uint32_t ret = m_SystemPluginObj->Invoke<JsonObject, JsonObject>(THUNDER_RPC_TIMEOUT, _T("getFriendlyName"), params, Result);
+LinkType:
+```cpp
+_telemetry = Core::ProxyType<JSONRPCLink>::Create(_T("org.rdk.telemetry"), _T(""), "token=" + token);
+```
 
-      Use COM-RPC for plugin event registration by passing a C++ callback interface pointer for low-latency communication. It is important to register for StateChange notifications to monitor the notifying plugin's lifecycle and safely release the interface pointer upon deactivation to prevent accessing a non-existent service.
+Json-RPC:
+```cpp
+uint32_t ret = m_SystemPluginObj->Invoke<JsonObject, JsonObject>(THUNDER_RPC_TIMEOUT, _T("getFriendlyName"), params, Result);
+```
+
+Use COM-RPC for plugin event registration by passing a C++ callback interface pointer for low-latency communication. It is important to register for StateChange notifications to monitor the notifying plugin's lifecycle and safely release the interface pointer upon deactivation to prevent accessing a non-existent service.
 
 ### Example
           1. Initialize the Listener and Start Monitoring
@@ -197,34 +207,39 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
 ### On-Demand Plugin Interface Acquisition
 
 ### Requirement
-    When a Thunder plugin needs to communicate with another plugin (via JSON-RPC or COM-RPC), do not create and hold the other plugin’s interface instance throughout the plugin lifecycle.
-    Instead, create the instance only when needed and release it immediately after use. If the other plugin gets deactivated, your stored interface becomes stale. Calling methods on a stale interface leads to undefined behavior, crashes, or deadlocks. Thunder does not automatically invalidate your pointer when the remote plugin goes down.
+
+When a Thunder plugin needs to communicate with another plugin (via JSON-RPC or COM-RPC), do not create and hold the other plugin's interface instance throughout the plugin lifecycle.
+Instead, create the instance only when needed and release it immediately after use. If the other plugin gets deactivated, your stored interface becomes stale. Calling methods on a stale interface leads to undefined behavior, crashes, or deadlocks. Thunder does not automatically invalidate your pointer when the remote plugin goes down.
 
 ### Example
-        
-          void MyPlugin::setNumber() {
-              ....
-              WPEFramework::Exchange::IOtherPlugin* other = shell->QueryInterfaceByCallsign<WPEFramework::Exchange::IOtherPlugin>(org.rdk.OtherPlugin);
-          
-              if (other != nullptr) {
-                  other->PerformAction();
-                  other->Release(); // Release immediately after use
-                 }
-          }
+
+```cpp
+void MyPlugin::setNumber() {
+    ....
+    WPEFramework::Exchange::IOtherPlugin* other = shell->QueryInterfaceByCallsign<WPEFramework::Exchange::IOtherPlugin>(org.rdk.OtherPlugin);
+
+    if (other != nullptr) {
+        other->PerformAction();
+        other->Release(); // Release immediately after use
+    }
+}
+```
 
 ### Incorrect Example
-            
-          void MyPlugin::Initialize() {
-              _otherPlugin = shell->QueryInterfaceByCallsign<WPEFramework::Exchange::IOtherPlugin>();
-          }
-          
-          void MyPlugin::Deinitialize() {
-                 if (_otherPlugin) {
-                  _otherPlugin->Release();
-                  _otherPlugin = nullptr;
-              }
-          }
-          
-          void MyPlugin::DoSomething() {
-              _otherPlugin->PerformAction(); // Risky if other plugin is deactivated!
-          }
+
+```cpp
+void MyPlugin::Initialize() {
+    _otherPlugin = shell->QueryInterfaceByCallsign<WPEFramework::Exchange::IOtherPlugin>();
+}
+
+void MyPlugin::Deinitialize() {
+    if (_otherPlugin) {
+        _otherPlugin->Release();
+        _otherPlugin = nullptr;
+    }
+}
+
+void MyPlugin::DoSomething() {
+    _otherPlugin->PerformAction(); // Risky if other plugin is deactivated!
+}
+```

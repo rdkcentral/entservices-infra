@@ -146,82 +146,90 @@ Every plugin must implement:
                   ...
                 }   
                 
-          - Remote connections must be terminated after releasing plugin references.
-    
-              Example:
-               void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
-                   ...
-                   if (_hdcpProfile != nullptr) {
-                      
-                        ....
-                        if (nullptr != connection)
-                        {
-                            // Lets trigger the cleanup sequence for
-                            // out-of-process code. Which will guard
-                            // that unwilling processes, get shot if
-                            // not stopped friendly :-)
-                            connection->Terminate();
-                            connection->Release();
-                        }
-                       ....
-                  }
-              }   
-                
-          - Threads must be joined or safely terminated.
-    
-               Example:
-                 Core::hresult NativeJSImplementation::Deinitialize()
-                {
-                   LOGINFO("deinitializing NativeJS process");
-                   if (mNativeJSRenderer)
-                   {
-                       mNativeJSRenderer->terminate();
-                       if (mRenderThread.joinable())
-                       {
-                           mRenderThread.join();
-                       }
-                   }
-        	         return (Core::ERROR_NONE);
-                }
-          - Internal state (e.g., _connectionId, _service) and private members should be reset to their default state.
-    
-               Example:
-               void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
-                  ...
-                   if (connection != nullptr) {
-                            connection->Terminate();
-                            connection->Release();
-                        }
-                  ...
-                     if (_service != nullptr) {
-                        _service->Release();
-                        _service = nullptr;
-                    }
-                }   
-          
-          - If AddRef() was called on the IShell instance in Initialize(), then it should call Release() on the IShell instance to decrement its reference count.
-          
-              Example:
+- Remote connections must be terminated after releasing plugin references.
 
-                void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
-                   ...
-                   if (_service != nullptr)
-                   {
-                      _service->Release();
-                      _service = nullptr;
-                   }
-                   ...
-                }
-                
-          - All cleanup steps should be logged for traceability.
-    
-               Example:
-    
-               void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
-                   ...
-                   SYSLOG(Logging::Shutdown, (_T("HdcpProfile de-initialized")));
-                   ...
-                }
+**Example:**
+
+```cpp
+void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
+    ...
+    if (_hdcpProfile != nullptr) {
+        ....
+        if (nullptr != connection) {
+            // Lets trigger the cleanup sequence for
+            // out-of-process code. Which will guard
+            // that unwilling processes, get shot if
+            // not stopped friendly :-)
+            connection->Terminate();
+            connection->Release();
+        }
+        ....
+    }
+}
+```
+
+- Threads must be joined or safely terminated.
+
+**Example:**
+
+```cpp
+Core::hresult NativeJSImplementation::Deinitialize() {
+    LOGINFO("deinitializing NativeJS process");
+    if (mNativeJSRenderer) {
+        mNativeJSRenderer->terminate();
+        if (mRenderThread.joinable()) {
+            mRenderThread.join();
+        }
+    }
+    return (Core::ERROR_NONE);
+}
+```
+
+- Internal state (e.g., _connectionId, _service) and private members should be reset to their default state.
+
+**Example:**
+
+```cpp
+void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
+    ...
+    if (connection != nullptr) {
+        connection->Terminate();
+        connection->Release();
+    }
+    ...
+    if (_service != nullptr) {
+        _service->Release();
+        _service = nullptr;
+    }
+}
+```
+
+- If AddRef() was called on the IShell instance in Initialize(), then it should call Release() on the IShell instance to decrement its reference count.
+
+**Example:**
+
+```cpp
+void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
+    ...
+    if (_service != nullptr) {
+        _service->Release();
+        _service = nullptr;
+    }
+    ...
+}
+```
+
+- All cleanup steps should be logged for traceability.
+
+**Example:**
+
+```cpp
+void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
+    ...
+    SYSLOG(Logging::Shutdown, (_T("HdcpProfile de-initialized")));
+    ...
+}
+```
 
 
 ### Deactivated

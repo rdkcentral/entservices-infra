@@ -12,63 +12,67 @@ applyTo: "**/*.cpp,**/*.h"
 ### Interface Implementation
 
 ### Requirement
-      Each plugin must implement the appropriate Thunder interfaces.
-   
-      -> PluginHost::IPlugin – Mandatory for all plugins.
-   
-      -> PluginHost::IDispatcher or derive from PluginHost::JSONRPC – Mandatory If the plugin handles JSON-RPC.
-   
-      -> Custom interfaces (like IHdcpProfile for HdcpProfile plugin) must be added to ThunderInterfaces for RPC.
 
-      -> PluginHost::IWeb – If the plugin handles web requests.
+Each plugin must implement the appropriate Thunder interfaces.
+
+-> PluginHost::IPlugin – Mandatory for all plugins.
+
+-> PluginHost::IDispatcher or derive from PluginHost::JSONRPC – Mandatory If the plugin handles JSON-RPC.
+
+-> Custom interfaces (like IHdcpProfile for HdcpProfile plugin) must be added to ThunderInterfaces for RPC.
+
+-> PluginHost::IWeb – If the plugin handles web requests.
 
 
 ### Example
 
-              ```cpp
-              BEGIN_INTERFACE_MAP(HdcpProfile)
-                  INTERFACE_ENTRY(PluginHost::IPlugin)
-                  INTERFACE_ENTRY(PluginHost::IDispatcher)
-                  INTERFACE_AGGREGATE(Exchange::IHdcpProfile, _hdcpProfile)
-              END_INTERFACE_MAP
-              ```
+```cpp
+BEGIN_INTERFACE_MAP(HdcpProfile)
+    INTERFACE_ENTRY(PluginHost::IPlugin)
+    INTERFACE_ENTRY(PluginHost::IDispatcher)
+    INTERFACE_AGGREGATE(Exchange::IHdcpProfile, _hdcpProfile)
+END_INTERFACE_MAP
+```
 
 ### Service Registration
 
 ### Requirement
-      All Thunder services must be registered using the SERVICE_REGISTRATION macro with name, major, minor and patch versions of service. Register the service using the following macro:
 
-          SERVICE_REGISTRATION(ServiceName, MAJOR, MINOR, PATCH)
+All Thunder services must be registered using the SERVICE_REGISTRATION macro with name, major, minor and patch versions of service. Register the service using the following macro:
 
-      For better readability , it is always good to define the following plugin meta data which is not mandatory.
+```
+SERVICE_REGISTRATION(ServiceName, MAJOR, MINOR, PATCH)
+```
 
-          Precondition - List of Thunder subsystems that must be active in order for the plugin to activate. This can also be set in Plugin.conf.in file.
-          
-          Terminations - List of Thunder subsystems that will cause the plugin to deactivate if they are marked inactive whilst the plugin is running.
+For better readability , it is always good to define the following plugin meta data which is not mandatory.
 
-          Controls - List of the subsystems that are controlled by the plugin.
+- Precondition - List of Thunder subsystems that must be active in order for the plugin to activate. This can also be set in Plugin.conf.in file.
+
+- Terminations - List of Thunder subsystems that will cause the plugin to deactivate if they are marked inactive whilst the plugin is running.
+
+- Controls - List of the subsystems that are controlled by the plugin.
 
 ### Example
 
-      ```cpp
-      namespace WPEFramework {
-        namespace {
-            static Plugin::Metadata<Plugin::HdcpProfile> metadata(
-                API_VERSION_NUMBER_MAJOR,
-                API_VERSION_NUMBER_MINOR,
-                API_VERSION_NUMBER_PATCH,
-                {}, // Preconditions
-                {}, // Terminations
-                {}  // Controls
-            );
-        }
-    
-        namespace Plugin {
-            // Register HdcpProfile service with Thunder
-            SERVICE_REGISTRATION(HdcpProfile,API_VERSION_NUMBER_MAJOR,API_VERSION_NUMBER_MINOR,API_VERSION_NUMBER_PATCH);
-        }
+```cpp
+namespace WPEFramework {
+    namespace {
+        static Plugin::Metadata<Plugin::HdcpProfile> metadata(
+            API_VERSION_NUMBER_MAJOR,
+            API_VERSION_NUMBER_MINOR,
+            API_VERSION_NUMBER_PATCH,
+            {}, // Preconditions
+            {}, // Terminations
+            {}  // Controls
+        );
     }
-      ```
+
+    namespace Plugin {
+        // Register HdcpProfile service with Thunder
+        SERVICE_REGISTRATION(HdcpProfile,API_VERSION_NUMBER_MAJOR,API_VERSION_NUMBER_MINOR,API_VERSION_NUMBER_PATCH);
+    }
+}
+```
 
 ### JSON-RPC Stub Registration
 
@@ -105,7 +109,8 @@ applyTo: "**/*.cpp,**/*.h"
 ### Handling Out-of-Process Plugin Failures
 
 ### Requirement
-    - If the plugin runs as out-of-process, then it should implement RPC::IRemoteConnection::INotification inside your plugin.
+
+- If the plugin runs as out-of-process, then it should implement RPC::IRemoteConnection::INotification inside your plugin.
 
 ### Example
 
@@ -182,8 +187,7 @@ applyTo: "**/*.cpp,**/*.h"
           };
         ```
 
-
-    - It should be registered during Initialize() to get itself notified when the remote process connects or disconnects.
+- It should be registered during Initialize() to get itself notified when the remote process connects or disconnects.
 
 ### Example
 
