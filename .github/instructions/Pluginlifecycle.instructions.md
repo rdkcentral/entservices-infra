@@ -65,7 +65,7 @@ applyTo: "**/**.cpp,**/**.h"
                       std::cout << "initialize called on nativejs implementation " << std::endl;
                       mRenderThread = std::thread([=](std::string waylandDisplay) {
                           mNativeJSRenderer = std::make_shared<NativeJSRenderer>(waylandDisplay);
-                          mNativeJSRenderer->run();	
+                          mNativeJSRenderer->run();    
                           std::cout << "After launch application execution ... " << std::endl;
                         	mNativeJSRenderer.reset();
                           }, waylandDisplay);
