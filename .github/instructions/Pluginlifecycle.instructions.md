@@ -83,7 +83,7 @@ applyTo: "**/**.cpp,**/**.h"
                       ASSERT(_connectionId == 0);
                     }
 
-          - If plugin A needs to keep the `IShell`/`IShellService` pointer beyond the scope of `Initialize()` (for example, by storing it in a member variable to access other plugins via COM-RPC or JSON-RPC throughout the plugin's lifecycle), then it **must** call `AddRef()` on the service instance before storing it, to increment its reference count. If the plugin only uses the `service` pointer within `Initialize()` and does not store it for later use, then `AddRef()` **must not** be called on the `IShell`/`IShellService` instance.
+          - If plugin A needs to keep the `IShell` pointer beyond the scope of `Initialize()` (for example, by storing it in a member variable to access other plugins via COM-RPC or JSON-RPC throughout the plugin's lifecycle), then it **must** call `AddRef()` on the service instance before storing it, to increment its reference count. If the plugin only uses the `service` pointer within `Initialize()` and does not store it for later use, then `AddRef()` **must not** be called on the `IShell` instance.
 
               Example:
 
@@ -196,7 +196,7 @@ applyTo: "**/**.cpp,**/**.h"
                     }
                 }   
           
-          - If AddRef() is called on IShellService instance in Initialize() , then it should call Release() on the IShellService instance to decrement its reference count.
+          - If AddRef() is called on the IShell instance in Initialize() , then it should call Release() on the IShell instance to decrement its reference count.
           
               Example:
 
