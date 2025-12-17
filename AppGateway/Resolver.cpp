@@ -110,13 +110,13 @@ namespace WPEFramework
                     r.useComRpc = ExtractBooleanField(resolutionObj, "useComRpc", hasAdditionalContext);
 
                     LOGINFO("[Resolver] Loaded resolution for key: %s -> alias: %s, event: %s, permissionGroup: %s, includeContext: %s, useComRpc: %s",
-                           key.c_str(), r.alias.c_str(), r.event.c_str(), r.permissionGroup.c_str(),
-                           r.includeContext ? "true" : "false", r.useComRpc ? "true" : "false");
+                            key.c_str(), r.alias.c_str(), r.event.c_str(), r.permissionGroup.c_str(),
+                            r.includeContext ? "true" : "false", r.useComRpc ? "true" : "false");
 
                     // Check if this resolution already exists (will be overridden)
                     if (mResolutions.find(key) != mResolutions.end())
                     {
-                        LOGINFO("[Resolver] Overriding resolution for key: %s", key.c_str());
+                        LOGTRACE("[Resolver] Overriding resolution for key: %s", key.c_str());
                         overriddenCount++;
                     }
 
@@ -127,6 +127,7 @@ namespace WPEFramework
 
             LOGINFO("[Resolver] Loaded %zu resolutions from %s (%zu new, %zu overridden). Total resolutions: %zu",
                     loadedCount, path.c_str(), loadedCount - overriddenCount, overriddenCount, mResolutions.size());
+
             return true;
         }
 
