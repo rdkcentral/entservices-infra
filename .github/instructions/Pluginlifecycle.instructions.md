@@ -12,7 +12,7 @@ applyTo: "**/**.cpp,**/**.h"
     
     - Deinitialize(IShell* service) → Called when the plugin is deactivated.
    
-  ### Initialization
+  ## Initialization
       
       ### Requirement
           
