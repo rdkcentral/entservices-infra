@@ -7,12 +7,12 @@ When writing review comments based on custom instructions located under .github/
     ## Examples
         Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Plugin.instructions.md#interface-implementation 
 
-        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginLifecycle.instructions.md#deactivated
+        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Pluginlifecycle.instructions.md#deactivated
 
-        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginImplementation.instructions.md#inter-plugin-communication 
+        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Pluginimplementation.instructions.md#inter-plugin-communication 
 
-        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginModule.instructions.md#module-name-convention
+        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Pluginmodule.instructions.md#module-name-convention
 
-        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginConfig.instructions.md#plugin-configuration
+        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Pluginconfig.instructions.md#plugin-configuration
 
-        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginCMake.instructions.md#namespace-usage
+        Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Plugincmake.instructions.md#namespace-usage
