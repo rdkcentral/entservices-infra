@@ -194,7 +194,6 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
               }
           }
 
-
 ## On-Demand Plugin Interface Acquisition
 
   ### Requirement
