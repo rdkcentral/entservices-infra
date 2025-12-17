@@ -1,4 +1,4 @@
-### Review Comment Linking Guideline
+### Review Comment Linking Guidelines
 
 When writing review comments based on custom instructions located under .github/instructions/**.instructions.md, include a direct GitHub link to the exact violated guideline in the respective instruction file. Use the following format:
 
