@@ -6,99 +6,99 @@ applyTo: "**/**.cpp,**/**.h"
 
 ## Mandatory Lifecycle Methods
 
-  Every plugin must implement:
+Every plugin must implement:
 
-    - Initialize(IShell* service) → Called when the plugin is activated.
-    
-    - Deinitialize(IShell* service) → Called when the plugin is deactivated.
-   
-  ## Initialization
-      
-      ### Requirement
-          
-          - Initialize() must handle all setup logic; constructors should remain minimal.
-          - It must validate inputs and acquire necessary references.
-          
-      ### Example
-         const string HdcpProfile::Initialize(PluginHost::IShell* service) {
-            .....
-            if (_hdcpProfile != nullptr) {
-                  ...
-                  Exchange::IConfiguration* configure = _hdcpProfile->QueryInterface<Exchange::IConfiguration>();
-                  ...
-            }
-            ....
-          }
-          
-          - Plugin should register your listener object twice:
+- Initialize(IShell* service) → Called when the plugin is activated.
 
-              Framework Service (_service): Use _service->Register(listener) to receive general plugin state change notifications (like ACTIVATED/DEACTIVATED).
-                  
-                        Example: _service->Register(&_hdcpProfileNotification);
-                  
-              Target Plugin Interface (_hdcpProfile): Use _hdcpProfile->Register(listener) to receive custom C++ events from the implementation. This registration acts as the essential bridge to capture internal events so the plugin can re-dispatch them as JSON-RPC notifications to external clients.
+- Deinitialize(IShell* service) → Called when the plugin is deactivated.
 
-                        Example: _hdcpProfile->Register(&_hdcpProfileNotification);
-                   
-          - It must return a non-empty string on failure with a clear error message.
-    
-              
-             Example:
-    
-                   const string HdcpProfile::Initialize(PluginHost::IShell* service) {
-                       ...
-                       message = _T("HdcpProfile could not be configured");
-                       ...
-                       message = _T("HdcpProfile implementation did not provide a configuration interface");
-                       ...
-                       message = _T("HdcpProfile plugin could not be initialized");
-                       ...
-                       
-                   }
-                   
-          - Threads or async tasks should be started here if needed, with proper tracking.
-    
-               Example:
-    
-                  Core::hresult NativeJSImplementation::Initialize(string waylandDisplay)
-                  {   
-                      std::cout << "initialize called on nativejs implementation " << std::endl;
-                      mRenderThread = std::thread([=](std::string waylandDisplay) {
-                          mNativeJSRenderer = std::make_shared<NativeJSRenderer>(waylandDisplay);
-                          mNativeJSRenderer->run();    
-                          std::cout << "After launch application execution ... " << std::endl;
-                        	mNativeJSRenderer.reset();
-                          }, waylandDisplay);
-                      return (Core::ERROR_NONE);
-                  }
+## Initialization
 
-          - Before executing Initialize, ensure all private member variables are in a reset state (either initialized by the constructor or cleared by a prior Deinitialize). Validate this by asserting their default values.
+### Requirement
 
-              Example:
-              
-                    const string HdcpProfile::Initialize(PluginHost::IShell *service)
-                    {
-                      ASSERT(_server == nullptr);
-                      ASSERT(_impl == nullptr);
-                      ASSERT(_connectionId == 0);
-                    }
+- Initialize() must handle all setup logic; constructors should remain minimal.
+- It must validate inputs and acquire necessary references.
 
-          - If plugin A needs to keep the `IShell` pointer beyond the scope of `Initialize()` (for example, by storing it in a member variable to access other plugins via COM-RPC or JSON-RPC throughout the plugin's lifecycle), then it **must** call `AddRef()` on the service instance before storing it, to increment its reference count. If the plugin only uses the `service` pointer within `Initialize()` and does not store it for later use, then `AddRef()` **must not** be called on the `IShell` instance.
+### Example
 
-              Example:
+    const string HdcpProfile::Initialize(PluginHost::IShell* service) {
+        .....
+        if (_hdcpProfile != nullptr) {
+            ...
+            Exchange::IConfiguration* configure = _hdcpProfile->QueryInterface<Exchange::IConfiguration>();
+            ...
+        }
+        ....
+    }
 
-                   const string HdcpProfile::Initialize(PluginHost::IShell *service)
-                    {
-                      ...
-                       _service = service;
-                       _service->AddRef();
-                       // _service will be used to access other plugins via COM-RPC or JSON-RPC in later methods.
-                       ...
-                    }
+- Plugin should register your listener object twice:
 
-          - Only one Initialize() method must exist — avoid overloads or split logic.
-    
-  ## Deinitialize and Cleanup
+  - Framework Service (_service): Use _service->Register(listener) to receive general plugin state change notifications (like ACTIVATED/DEACTIVATED).
+
+      Example: _service->Register(&_hdcpProfileNotification);
+
+  - Target Plugin Interface (_hdcpProfile): Use _hdcpProfile->Register(listener) to receive the plugin's specific custom events (e.g., onProfileChanged).
+
+      Example: _hdcpProfile->Register(&_hdcpProfileNotification);
+
+- It must return a non-empty string on failure with a clear error message.
+
+  Example:
+
+      const string HdcpProfile::Initialize(PluginHost::IShell* service) {
+          ...
+          message = _T("HdcpProfile could not be configured");
+          ...
+          message = _T("HdcpProfile implementation did not provide a configuration interface");
+          ...
+          message = _T("HdcpProfile plugin could not be initialized");
+          ...
+
+      }
+
+- Threads or async tasks should be started here if needed, with proper tracking.
+
+  Example:
+
+      Core::hresult NativeJSImplementation::Initialize(string waylandDisplay)
+      {   
+          std::cout << "initialize called on nativejs implementation " << std::endl;
+          mRenderThread = std::thread([=](std::string waylandDisplay) {
+              mNativeJSRenderer = std::make_shared<NativeJSRenderer>(waylandDisplay);
+              mNativeJSRenderer->run();    
+              std::cout << "After launch application execution ... " << std::endl;
+              mNativeJSRenderer.reset();
+          }, waylandDisplay);
+          return (Core::ERROR_NONE);
+      }
+
+- Before executing Initialize, ensure all private member variables are in a reset state (either initialized by the constructor or cleared by a prior Deinitialize). Validate this by asserting their default values.
+
+  Example:
+
+      const string HdcpProfile::Initialize(PluginHost::IShell *service)
+      {
+          ASSERT(_server == nullptr);
+          ASSERT(_impl == nullptr);
+          ASSERT(_connectionId == 0);
+      }
+
+- If plugin A needs to keep the `IShell` pointer beyond the scope of `Initialize()` (for example, by storing it in a member variable to access other plugins via COM-RPC or JSON-RPC throughout the plugin's lifecycle), then it **must** call `AddRef()` on the service instance before storing it, to increment its reference count. If the plugin only uses the `service` pointer within `Initialize()` and does not store it for later use, then `AddRef()` **must not** be called on the `IShell` instance.
+
+  Example:
+
+      const string HdcpProfile::Initialize(PluginHost::IShell *service)
+      {
+          ...
+          _service = service;
+          _service->AddRef();
+          // _service will be used to access other plugins via COM-RPC or JSON-RPC in later methods.
+          ...
+      }
+
+- Only one Initialize() method must exist — avoid overloads or split logic.
+
+## Deinitialize and Cleanup
     
       ### Requirement
     
