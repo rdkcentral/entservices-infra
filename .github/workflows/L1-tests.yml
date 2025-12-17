@@ -502,7 +502,7 @@ jobs:
           -DPLUGIN_PREINSTALL_MANAGER=ON
           -DENABLE_UNIT_TESTS=ON
           &&
-          cmake --build build/entservices-infra -j8
+          cmake --build build/entservices-infra
           &&
           cmake --install build/entservices-infra
 
