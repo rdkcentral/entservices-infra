@@ -7,7 +7,7 @@ applyTo: "**/CMakeLists.txt"
   ### Requirement
 
       All CMake targets, install paths, export sets,find_package and references must use the ${NAMESPACE} variable instead of hardcoded framework names (e.g., WPEFrameworkCore, WPEFrameworkPlugins).
-This ensures smooth upgrades (e.g., WPEFramework → Thunder) and prevents regressions.
+      This ensures smooth upgrades (e.g., WPEFramework → Thunder) and prevents regressions.
 
   ### Correct Example
 
