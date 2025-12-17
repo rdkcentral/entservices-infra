@@ -736,7 +736,7 @@ namespace Plugin {
                 packagemanager::ConfigMetaData config;
                 packagemanager::NameValues locks;
                 packagemanager::Result pmResult = packageImpl->Lock(packageId, version, state.unpackedPath, config, locks);
-                LOGDBG("unpackedPath=%s", unpackedPath.c_str());
+                LOGDBG("unpackedPath=%s ", state.unpackedPath.c_str());
                 // save the new config in state
                 getRuntimeConfig(config, state.runtimeConfig);   // XXX: config is unnecessary in Lock ?!
                 if (pmResult == packagemanager::SUCCESS) {
@@ -799,6 +799,7 @@ namespace Plugin {
         runtimeConfig.appPath = config.appPath;
         runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
+        runtimeConfig.ralfPkgPath = config.ralfPkgPath;
     }
 
     void PackageManagerImplementation::getRuntimeConfig(const packagemanager::ConfigMetaData &config, Exchange::RuntimeConfig &runtimeConfig)
@@ -831,6 +832,7 @@ namespace Plugin {
         runtimeConfig.appPath = config.appPath;
         runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
+        runtimeConfig.ralfPkgPath = config.ralfPkgPath;
     }
 
     Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version)
