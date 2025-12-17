@@ -21,7 +21,7 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
 
             _userSettingsPlugin = _service->QueryInterface<WPEFramework::Exchange::IUserSettings>();
 
-     SHOULD not use JSON‑RPC or LinkType for inter‑plugin communication, as they introduce unnecessary overhead.
+     SHOULD not use JSON-RPC or LinkType for inter-plugin communication, as they introduce unnecessary overhead.
 
      ### Incorrect Example
           LinkType:
