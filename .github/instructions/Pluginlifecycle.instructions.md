@@ -199,7 +199,7 @@ Every plugin must implement:
                     }
                 }   
           
-          - If AddRef() is called on the IShell instance in Initialize() , then it should call Release() on the IShell instance to decrement its reference count.
+          - If AddRef() was called on the IShell instance in Initialize(), then it should call Release() on the IShell instance to decrement its reference count.
           
               Example:
 
