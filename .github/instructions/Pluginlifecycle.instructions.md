@@ -39,7 +39,7 @@ const string HdcpProfile::Initialize(PluginHost::IShell* service) {
 
     Example: _service->Register(&_hdcpProfileNotification);
 
-  - Target Plugin Interface (_hdcpProfile): Use _hdcpProfile->Register(listener) to receive the plugin's specific custom events (e.g., onProfileChanged).
+  - Target Plugin Interface (_hdcpProfile): Use _hdcpProfile->Register(listener) to receive the plugin's specific custom events (e.g., onProfileChanged).This registration serves as the internal bridge that captures C++ events from the implementation, allowing the plugin to translate and broadcast them as JSON-RPC notifications to external subscribers.
 
     Example: _hdcpProfile->Register(&_hdcpProfileNotification);
 
