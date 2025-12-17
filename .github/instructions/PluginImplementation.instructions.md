@@ -30,7 +30,7 @@ applyTo: "**/**Implementation.cpp,**/**Implementation.h,**/**.cpp,**/**.h"
           Json-RPC:
             uint32_t ret = m_SystemPluginObj->Invoke<JsonObject, JsonObject>(THUNDER_RPC_TIMEOUT, _T("getFriendlyName"), params, Result);
 
-      Use COM-RPC for plugin event registration by passing a C++ callback interface pointer for low-latency communication. It is important to register for StateChange notifications to monitor the Notifying Plugin's lifecycle and safely release the interface pointer upon deactivation, thereby preventing access to a non-existent service.
+      Use COM-RPC for plugin event registration by passing a C++ callback interface pointer for low-latency communication. It is important to register for StateChange notifications to monitor the notifying plugin's lifecycle and safely release the interface pointer upon deactivation, thereby preventing access to a non-existent service.
 
       ### Example
           1. Initialize the Listener and Start Monitoring
