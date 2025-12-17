@@ -83,15 +83,16 @@ applyTo: "**/**.cpp,**/**.h"
                       ASSERT(_connectionId == 0);
                     }
 
-          - If a plugin A needs to communicate with plugin B(via com-rpc or json-rpc) , then it should call AddRef() on the IShellService instance passed as input to increment its reference count. IShellService instance should not be reference counted(using AddRef()) when it is not going to communicate with any other plugins.
+          - If plugin A needs to keep the `IShell`/`IShellService` pointer beyond the scope of `Initialize()` (for example, by storing it in a member variable to access other plugins via COM-RPC or JSON-RPC throughout the plugin's lifecycle), then it **must** call `AddRef()` on the service instance before storing it, to increment its reference count. If the plugin only uses the `service` pointer within `Initialize()` and does not store it for later use, then `AddRef()` **must not** be called on the `IShell`/`IShellService` instance.
 
               Example:
 
                    const string HdcpProfile::Initialize(PluginHost::IShell *service)
                     {
                       ...
+                       _service = service;
                        _service->AddRef();
-                       //Accessing other Plugins via COM-RPC or JSON-RPC in upcoming methods.
+                       // _service will be used to access other plugins via COM-RPC or JSON-RPC in later methods.
                        ...
                     }
 
