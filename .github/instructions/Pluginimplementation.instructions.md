@@ -227,7 +227,7 @@ Instead, create the instance only when needed and release it immediately after u
 ```cpp
 void MyPlugin::setNumber() {
     ....
-    WPEFramework::Exchange::IOtherPlugin* other = shell->QueryInterfaceByCallsign<WPEFramework::Exchange::IOtherPlugin>(org.rdk.OtherPlugin);
+    WPEFramework::Exchange::IOtherPlugin* other = shell->QueryInterfaceByCallsign<WPEFramework::Exchange::IOtherPlugin>("org.rdk.OtherPlugin");
 
     if (other != nullptr) {
         other->PerformAction();

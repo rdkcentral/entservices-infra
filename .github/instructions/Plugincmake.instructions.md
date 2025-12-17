@@ -38,7 +38,7 @@ find_package(WPEFrameworkDefinitions REQUIRED)
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
     CompileSettingsDebug::CompileSettingsDebug
-    $WPEFrameworkPlugins::WPEFrameworkPlugins
-    $WPEFrameworkDefinitions::WPEFrameworkDefinitions)
+    WPEFrameworkPlugins::WPEFrameworkPlugins
+    WPEFrameworkDefinitions::WPEFrameworkDefinitions)
 ```
 
