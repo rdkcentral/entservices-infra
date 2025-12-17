@@ -23,7 +23,7 @@ applyTo: "**/**.cpp,**/**.h"
       -> PluginHost::IWeb – If the plugin handles web requests.
 
 
-  ### Example:
+### Example:
 
               ```cpp
               BEGIN_INTERFACE_MAP(HdcpProfile)
