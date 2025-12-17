@@ -1552,17 +1552,27 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->CloseApp(APPMANAGER_APP_ID));
-    // Simulate the app lifecycle state change event
-    mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
-        APPMANAGER_APP_ID,
-        APPMANAGER_APP_INSTANCE,
-        Exchange::ILifecycleManager::LifecycleState::ACTIVE,  // Old state
-        Exchange::ILifecycleManager::LifecycleState::PAUSED,     // New state
-        ""
-    );
+    std::thread callbackThread([this]() {
+        // Small delay to ensure CloseApp acquires its locks first
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // Simulate the app lifecycle state change event from a different thread
+        mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
+            APPMANAGER_APP_ID,
+            APPMANAGER_APP_INSTANCE,
+            Exchange::ILifecycleManager::LifecycleState::ACTIVE,  // Old state
+            Exchange::ILifecycleManager::LifecycleState::PAUSED,  // New state
+            ""
+        );
+    });
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
     EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
     
+    // Wait for callback thread to complete
+    if (callbackThread.joinable()) {
+        callbackThread.join();
+    }
+
     mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
     {
