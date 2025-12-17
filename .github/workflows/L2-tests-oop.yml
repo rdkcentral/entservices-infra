@@ -405,7 +405,7 @@ jobs:
           -DPLUGIN_ANALYTICS_SIFT_URL="127.0.0.1:12345"
           -DPLUGIN_ANALYTICS_EVENTS_MAP="/tmp/AnalyticsEventsMap.json"
           &&
-          cmake --build build/entservices-infra -j8
+          cmake --build build/entservices-infra
           &&
           cmake --install build/entservices-infra
 
