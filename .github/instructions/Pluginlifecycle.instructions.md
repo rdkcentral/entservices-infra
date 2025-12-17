@@ -14,7 +14,7 @@ applyTo: "**/**.cpp,**/**.h"
    
   ## Initialization
       
-      #### Requirement
+      ### Requirement
           
           - Initialize() must handle all setup logic; constructors should remain minimal.
           - It must validate inputs and acquire necessary references.
