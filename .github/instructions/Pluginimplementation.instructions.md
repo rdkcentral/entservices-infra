@@ -40,7 +40,7 @@ Json-RPC:
 uint32_t ret = m_SystemPluginObj->Invoke<JsonObject, JsonObject>(THUNDER_RPC_TIMEOUT, _T("getFriendlyName"), params, Result);
 ```
 
-Use COM-RPC for plugin event registration by passing a C++ callback interface pointer for low-latency communication. It is important to register for StateChange notifications to monitor the notifying plugin's lifecycle and safely release the interface pointer upon deactivation to prevent accessing a non-existent service.
+Use COM-RPC for plugin event registration by passing a C++ callback interface pointer for low-latency communication. It is important to register for StateChange notifications to monitor the notifying plugin's lifecycle. This allows you to safely release the interface pointer upon deactivation and prevents accessing a non-existent service.
 
 ### Example
 
@@ -202,17 +202,18 @@ void Network::subscribeToEvents(void) {
             errCode = m_networkmanager->Subscribe<JsonObject>(
                 5000, 
                 _T("onInterfaceStateChange"), 
-                          &Network::onInterfaceStateChange
-                      );
-                      
-                      if (Core::ERROR_NONE == errCode) {
-                          m_subsIfaceStateChange = true;
-                      } else {
-                          NMLOG_ERROR ("Subscribe to onInterfaceStateChange failed, errCode: %u", errCode);
-                      }
-                  }
-              }
-          }
+                &Network::onInterfaceStateChange
+            );
+            
+            if (Core::ERROR_NONE == errCode) {
+                m_subsIfaceStateChange = true;
+            } else {
+                NMLOG_ERROR ("Subscribe to onInterfaceStateChange failed, errCode: %u", errCode);
+            }
+        }
+    }
+}
+```
 
 ### On-Demand Plugin Interface Acquisition
 
