@@ -101,10 +101,10 @@ applyTo: "**/**.cpp,**/**.h"
          }
          ```
          ```
-    
+     
 ## Handling Out-of-Process Plugin Failures
 
-  ### Requirement
+### Requirement
     - If the plugin runs as out-of-process, then it should implement RPC::IRemoteConnection::INotification inside your plugin.
 
       ### Example
