@@ -30,7 +30,7 @@ applyTo: "**/**.cpp,**/**.h"
             ....
           }
           
-          - SHOULD register your listener object twice:
+          - Plugin should register your listener object twice:
 
               Framework Service (_service): Use _service->Register(listener) to receive general plugin state change notifications (like ACTIVATED/DEACTIVATED).
                   
@@ -51,7 +51,7 @@ applyTo: "**/**.cpp,**/**.h"
                        ...
                        message = _T("HdcpProfile implementation did not provide a configuration interface");
                        ...
-                       message = _T("HdcpProfile plugin could not be initialised");
+                       message = _T("HdcpProfile plugin could not be initialized");
                        ...
                        
                    }
@@ -216,7 +216,7 @@ applyTo: "**/**.cpp,**/**.h"
     
                void HdcpProfile::Deinitialize(PluginHost::IShell* service) {
                    ...
-                   SYSLOG(Logging::Shutdown, (_T("HdcpProfile de-initialised")));
+                   SYSLOG(Logging::Shutdown, (_T("HdcpProfile de-initialized")));
                    ...
                 }
 
