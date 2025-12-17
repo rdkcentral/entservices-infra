@@ -13,7 +13,7 @@ applyTo: "**/*.config,**/*.conf.in"
         
              Custom properties: Any additional configuration parameters required by the plugin. These are passed during activation via PluginHost::IShell::ConfigLine(). This may include   
                  - startuporder - Specifies the order in which plugins are started, relative to others.
-                 - precondition - If these aren’t met, the plugin stays in the Preconditions state and activates automatically once they are satisfied.Recommended to define the precondition if there are any.
+                 - precondition - If these aren't met, the plugin stays in the Preconditions state and activates automatically once they are satisfied. It is recommended to define the precondition if the plugin depends on other subsystems being active.
                  - mode - Defines the execution mode of plugin.
 
                     #### Plugin Mode Determination
