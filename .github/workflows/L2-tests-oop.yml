@@ -127,7 +127,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: feature/workflow-L1-L2-Test
 
       - name: Apply  ThunderTools
         run: |
