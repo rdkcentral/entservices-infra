@@ -19,6 +19,8 @@
 
 #include "RuntimeManagerImplementation.h"
 #include "DobbySpecGenerator.h"
+#include "ContainerUtils.h"
+#include "WebInspector.h"
 #include <errno.h>
 #include <fstream>
 
@@ -520,6 +522,7 @@ err_ret:
             bool displayResult = false;
             bool notifyParamCheckFailure = false;
             std::string errorCode = "";
+
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             /* Get current timestamp at the start of run for telemetry */
@@ -1188,11 +1191,47 @@ err_ret:
 
         void RuntimeManagerImplementation::onOCIContainerStartedEvent(std::string name, JsonObject& data)
         {
+	    // Get container IP address and attach WebInspector for debugging
+            LOGINFO("[Mounika]Container name: %s", name.c_str());
+            
+            const in_addr_t addr = ContainerUtils::getContainerIpAddress(name);
+            if (addr != 0)
+            {
+                struct in_addr ip_addr;
+                ip_addr.s_addr = addr;
+                LOGINFO("Container %s started with IP address: %s", name.c_str(), inet_ntoa(ip_addr));
+                
+                // Attach WebInspector - port starts at 2000 and increments for each container
+                static uint16_t debugPort = 2000;
+                auto webInspector = WebInspector::attach(name, addr, debugPort);
+                if (webInspector)
+                {
+                    mWebInspectors[name] = webInspector;
+                    LOGINFO("WebInspector attached for container %s on host port %d (forwards to container port 22222)", name.c_str(), debugPort);
+                    debugPort++;
+                }
+                else
+                {
+                    LOGWARN("WebInspector::attach returned nullptr for container %s", name.c_str());
+                }
+            }
+            else
+            {
+                LOGERR("Failed to get IP address for container '%s'", name.c_str());
+            }
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERSTARTED, data);
         }
 
         void RuntimeManagerImplementation::onOCIContainerStoppedEvent(std::string name, JsonObject& data)
         {
+		// Remove WebInspector when container stops
+            auto it = mWebInspectors.find(name);
+            if (it != mWebInspectors.end())
+            {
+                LOGINFO("Detaching WebInspector for container %s", name.c_str());
+                mWebInspectors.erase(it);
+            }
+
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERSTOPPED, data);
         }
 

@@ -131,9 +131,9 @@ static bool nsEnterWithFd(int namespaceFd, const std::function<void()> &func)
 static bool nsEnterWithPid(pid_t pid, int nsType,
                            const std::function<void()> &func)
 {
+	LOGINFO("[Mounika]: Entering nsEnterWithPid with pid=%d, nsType=%d", pid, nsType);
     char nsName[8];
     char nsPath[32];
-LOGINFO("Enter with PID");
     strcpy(nsName, "net");
 
     bool success;
@@ -179,11 +179,8 @@ LOGINFO("Enter with PID");
  */
 static pid_t findContainerPid(const std::string &containerId)
 {
-	return 0;
-    // the container id is used as the name for the cgroups, so we can use to
-    // get a list of pids within a cgroup, which effectively from our PoV is
-    // list of pids within a container
-LOGINFO("Container IP: %s", containerId.c_str());
+	
+     LOGINFO("Container IP: %s", containerId.c_str());
     const std::string cgroupPath = "/sys/fs/cgroup/memory/" + containerId + "/cgroup.procs";
     int procsFd = open(cgroupPath.c_str(), O_RDONLY | O_CLOEXEC);
     if (procsFd < 0)
@@ -233,7 +230,7 @@ LOGINFO("Container IP: %s", containerId.c_str());
 bool ContainerUtils::nsEnterImpl(const std::string &containerId, std::string type,
                                  const std::function<void()> &func)
 {
-	LOGINFO("Enter IMPl");
+	LOGINFO("[Mounika]Enter IMPl");
     // find a pid in the container
     pid_t containerPid = findContainerPid(containerId);
     if (containerPid <= 0)
@@ -261,8 +258,8 @@ bool ContainerUtils::nsEnterImpl(const std::string &containerId, std::string typ
  */
 uint32_t ContainerUtils::getContainerIpAddress(const std::string &containerId)
 {
-	LOGINFO("Container ID: %s", containerId.c_str());
-	return 0;
+	LOGINFO("[Mounika]Container ID: %s", containerId.c_str());
+
     uint32_t ipv4Addr = 0;
 
     // lambda to run on a thread in the context of the container network
