@@ -189,7 +189,7 @@ protected:
 
 USBDeviceTest:: USBDeviceTest():L2TestMocks()
         ,m_controller_usbdevice(nullptr)
-        , m_usbdeviceplugin(nullptr)
+        ,m_usbdeviceplugin(nullptr)
 {
         Core::JSONRPC::Message message;
         string response;
