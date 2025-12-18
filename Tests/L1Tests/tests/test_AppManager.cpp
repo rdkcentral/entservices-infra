@@ -1554,8 +1554,6 @@ TEST_F(AppManagerTest, CloseAppUsingComRpcSuccess)
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->CloseApp(APPMANAGER_APP_ID));
     std::thread callbackThread([this]() {
-        // Small delay to ensure CloseApp acquires its locks first
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // Simulate the app lifecycle state change event from a different thread
         mLifecycleManagerStateNotification_cb->OnAppLifecycleStateChanged(
