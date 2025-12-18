@@ -19,11 +19,10 @@
 
 #include "RuntimeManagerImplementation.h"
 #include "DobbySpecGenerator.h"
+#include "ContainerUtils.h"
+#include "WebInspector.h"
 #include <errno.h>
 #include <fstream>
-
-//TODO - Remove the hardcoding to enable compatibility with a common middleware. The app portal name should be configurable in some way
-#define RUNTIME_APP_PORTAL "com.sky.as.apps"
 
 namespace WPEFramework
 {
@@ -40,6 +39,7 @@ namespace WPEFramework
         , mWindowManagerConnector(nullptr)
         , mDobbyEventListener(nullptr)
         , mUserIdManager(nullptr)
+        , mRuntimeAppPortal("")
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         , mTelemetryMetricsObject(nullptr)
 #endif
@@ -151,9 +151,9 @@ namespace WPEFramework
 
             JsonObject obj = params.Object();
             string appIdFromContainer = obj["containerId"].String();
-            if (appIdFromContainer.find(RUNTIME_APP_PORTAL) == 0) // TODO improve logic of fetching appInstanceId
+            if (!mRuntimeAppPortal.empty() && appIdFromContainer.find(mRuntimeAppPortal) == 0) // TODO improve logic of fetching appInstanceId
             {
-                appIdFromContainer.erase(0, std::string(RUNTIME_APP_PORTAL).length());
+                appIdFromContainer.erase(0, mRuntimeAppPortal.length());
             }
             string appInstanceId = std::move(appIdFromContainer);
             string eventName = obj["eventName"].String();
@@ -284,6 +284,13 @@ namespace WPEFramework
                     LOGINFO("created OCIContainerPluginObject");
                     result = Core::ERROR_NONE;
                 }
+                RuntimeManagerImplementation::Configuration config;
+                config.FromString(service->ConfigLine());
+                if (!config.runtimeAppPortal.Value().empty())
+                {
+                    mRuntimeAppPortal = config.runtimeAppPortal.Value();
+                }
+                LOGINFO("runtimeAppPortal=%s", mRuntimeAppPortal.c_str());
             }
             else
             {
@@ -489,11 +496,11 @@ err_ret:
 
         std::string RuntimeManagerImplementation::getContainerId(const string& appInstanceId)
         {
-           string containerId = "";
+            string containerId = "";
 
             if (!appInstanceId.empty())
             {
-                containerId = std::string(RUNTIME_APP_PORTAL) + (appInstanceId);
+                containerId = mRuntimeAppPortal + appInstanceId;
             }
             return containerId;
         }
@@ -516,6 +523,7 @@ err_ret:
             bool notifyParamCheckFailure = false;
             std::string errorCode = "";
 
+
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             /* Get current timestamp at the start of run for telemetry */
             time_t requestTime = getCurrentTimestamp();
@@ -529,7 +537,7 @@ err_ret:
 
             mRuntimeManagerImplLock.Lock();
 
-            uid_t uid = mUserIdManager->getUserId(appInstanceId);
+            uid_t uid = mUserIdManager->getUserId(appId);
             gid_t gid = mUserIdManager->getAppsGid();
 
             std::ifstream inFile("/tmp/specchange");
@@ -1183,11 +1191,47 @@ err_ret:
 
         void RuntimeManagerImplementation::onOCIContainerStartedEvent(std::string name, JsonObject& data)
         {
+	    // Get container IP address and attach WebInspector for debugging
+            LOGINFO("[Mounika]Container name: %s", name.c_str());
+            
+            const in_addr_t addr = ContainerUtils::getContainerIpAddress(name);
+            if (addr != 0)
+            {
+                struct in_addr ip_addr;
+                ip_addr.s_addr = addr;
+                LOGINFO("Container %s started with IP address: %s", name.c_str(), inet_ntoa(ip_addr));
+                
+                // Attach WebInspector - port starts at 2000 and increments for each container
+                static uint16_t debugPort = 2000;
+                auto webInspector = WebInspector::attach(name, addr, debugPort);
+                if (webInspector)
+                {
+                    mWebInspectors[name] = webInspector;
+                    LOGINFO("WebInspector attached for container %s on host port %d (forwards to container port 22222)", name.c_str(), debugPort);
+                    debugPort++;
+                }
+                else
+                {
+                    LOGWARN("WebInspector::attach returned nullptr for container %s", name.c_str());
+                }
+            }
+            else
+            {
+                LOGERR("Failed to get IP address for container '%s'", name.c_str());
+            }
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERSTARTED, data);
         }
 
         void RuntimeManagerImplementation::onOCIContainerStoppedEvent(std::string name, JsonObject& data)
         {
+		// Remove WebInspector when container stops
+            auto it = mWebInspectors.find(name);
+            if (it != mWebInspectors.end())
+            {
+                LOGINFO("Detaching WebInspector for container %s", name.c_str());
+                mWebInspectors.erase(it);
+            }
+
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERSTOPPED, data);
         }
 

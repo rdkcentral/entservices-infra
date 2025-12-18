@@ -43,6 +43,7 @@ std::shared_ptr<WebInspector> WebInspector::attach(const std::string &appId,
         LOGWARN("failed to setup port forwarding for webinspector");
         return nullptr;
     }
+    LOGINFO("[Mounika]WebInspector attached successfully for appId=%s on debugPort=%d", appId.c_str(), debugPort);
 
     return std::shared_ptr<WebInspector>(new WebInspector(appId, debugPort, comment));
 }
