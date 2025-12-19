@@ -1,42 +1,42 @@
 /**
-* If not stated otherwise in this file or this component's LICENSE
-* file the following copyright and licenses apply:
-*
-* Copyright 2024 RDK Management
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-**/
+ * If not stated otherwise in this file or this component's LICENSE
+ * file the following copyright and licenses apply:
+ *
+ * Copyright 2024 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
 
 #pragma once
 #include <string>
 #include <vector>
+#include "RalfConstants.h"
+#include "../ApplicationConfiguration.h"
+#include <interfaces/IRuntimeManager.h>
 
-namespace WPEFramework
+namespace ralf
 {
 
     class RalfPackageBuilder
     {
-
     private:
-        typedef std::pair<std::string, std::string> RalfPackagesPair;
-
         /** This function generates an OCI root filesystem package based on the given application instance ID and Ralf package path.
          * @param appInstanceId The application instance ID for which the OCI root filesystem package is to be generated.
          * @param pkgInfoSet The vector of pairs containing Ralf package mount points and their corresponding metadata in json format.
          * @param ociRootfsPath Output parameter that will hold the path to the generated OCI root filesystem package.
          * @return true if the OCI root filesystem package was generated successfully, false otherwise.
          */
-        bool generateOCIRootfsPackage(const std::string &appInstanceId, const std::vector<RalfPackagesPair> &pkgInfoSet, std::string &ociRootfsPath);
+        bool generateOCIRootfsPackage(const std::string &appInstanceId, const std::vector<RalfPkgInfoPair> &pkgInfoSet, std::string &ociRootfsPath);
 
         /**
          * This function generates a Ralf package configuration based on the given OCI root filesystem path.
@@ -45,7 +45,7 @@ namespace WPEFramework
          * @param ralfPackages A vector of pairs containing Ralf package mount points and their corresponding metadata in json format.
          * @return true if the Ralf package configuration was generated successfully, false otherwise.
          */
-        bool generateRalfPackageConfig(const std::string &ociRootfsPath, const std::vector<RalfPackagesPair> &ralfPackages);
+        bool generateRalfPackageConfig(const std::string &ociRootfsPath, const std::vector<RalfPkgInfoPair> &ralfPackages);
 
         /**
          * This function extracts Ralf package details from the given configuration data.
@@ -53,7 +53,13 @@ namespace WPEFramework
          * @param ralfPackages Output parameter that will hold the extracted Ralf package details as a vector of pairs.
          * @return true if the Ralf package details were extracted successfully, false otherwise.
          */
-        bool extractRalfPackagesFromConfig(const std::string &ralfPkgInfo, std::vector<RalfPackagesPair> &ralfPackages);
+        bool extractRalfPkgInfoFromMetadata(const std::string &ralfPkgInfo, std::vector<RalfPkgInfoPair> &ralfPackages);
+        /**
+         * This function checks for existing configuration file and reuses it if found.
+         * @param configFilePath The path to the configuration file to check.
+         * @return true if the configuration file exists and was reused, false otherwise.
+         */
+        bool checkAndReuseExistingConfig(const std::string &configFilePath);
 
     public:
         RalfPackageBuilder() {}
@@ -67,5 +73,14 @@ namespace WPEFramework
          * @return true if the OCI root filesystem package was generated successfully, false otherwise.
          */
         bool generateOCIRootfsPackageForAppInstance(const std::string &appInstanceId, const std::string &ralfPkgPath, std::string &ociRootfsPath);
+        /**
+         * This function generates the dobby specification for a Ralf package based on the given application configuration and runtime configuration.
+         * We will get details about userid,groupid, mWesterosSocketPath etc from ApplicationConfiguration
+         * and Ralf package details from RuntimeConfig
+         * @param config The application configuration.
+         * @param runtimeConfigObject The runtime configuration.
+         * @return true if the dobby specification was generated successfully, false otherwise.
+         */
+        bool generateRalfDobbySpec(const WPEFramework::Plugin::ApplicationConfiguration &config, const WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject);
     };
-} // namespace WPEFramework
+} // namespace ralf

@@ -25,6 +25,10 @@
 //TODO - Remove the hardcoding to enable compatibility with a common middleware. The app portal name should be configurable in some way
 #define RUNTIME_APP_PORTAL "com.sky.as.apps"
 
+#ifdef RALF_PACKAGE_SUPPORT
+#include "ralf/RalfPackageBuilder.h"
+#endif // RALF_PACKAGE_SUPPORT
+
 namespace WPEFramework
 {
     namespace Plugin
@@ -452,8 +456,15 @@ err_ret:
 
         bool RuntimeManagerImplementation::generate(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, std::string& dobbySpec)
         {
+#ifdef RALF_PACKAGE_SUPPORT
+            RalfPackageBuilder ralfBuilder;
+            LOGINFO("Generating Ralf Package Config : %s", runtimeConfigObject.ralfPkgPath.c_str());
+            return ralfBuilder.generateRalfDobbySpec(config, runtimeConfigObject);
+#else            
             DobbySpecGenerator generator;
+            LOGINFO("Generating dobbySpec from Ralf Details : %s", runtimeConfigObject.ralfPkgPath.c_str());
             return generator.generate(config, runtimeConfigObject, dobbySpec);
+#endif            
         }
 
         Exchange::IRuntimeManager::RuntimeState RuntimeManagerImplementation::getRuntimeState(const string& appInstanceId)
@@ -633,7 +644,7 @@ err_ret:
                LOGWARN(" Rialto app session not ready. ");
                status = Core::ERROR_GENERAL;
             }
-            legacyContainer = false;
+           // legacyContainer = false;
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
             LOGINFO("legacyContainer: %s", legacyContainer ? "true" : "false");
             if (xdgRuntimeDir.empty() || waylandDisplay.empty() || !displayResult)

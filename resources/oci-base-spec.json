@@ -1,5 +1,10 @@
 {
     "ociVersion": "1.0.1",
+    "hostname": "rdkdobby",
+    "root": {
+        "path": "rootfs",
+        "readonly": true
+    },
     "platform": {
         "os": "linux",
         "arch": "arm"
@@ -62,11 +67,6 @@
         ],
         "noNewPrivileges": true
     },
-    "root": {
-        "path": "rootfs",
-        "readonly": true
-    },
-    "hostname": "rdkdobby",
     "mounts": [
         {
             "destination": "/tmp",
