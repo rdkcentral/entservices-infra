@@ -17,7 +17,7 @@
  * limitations under the License.
  **/
 #include "../Module.h"
-#include "UtilsLogging.h"
+#include <UtilsLogging.h>
 #include "RalfPackageBuilder.h"
 #include "RalfOCIConfigGenerator.h"
 #include "RalfSupport.h"
@@ -59,14 +59,13 @@ namespace ralf
     {
         // TODO : Implement this function to generate Ralf package config json file.
         // Step 1. Check whether the config file already exists
-        if (checkAndReuseExistingConfig(configFilePath))
+        if (!checkAndReuseExistingConfig(configFilePath))
         {
-            LOGINFO(" Reusing old configuration file: %s\n", configFilePath.c_str());
-            return true; // Reused existing config file
+            // Step 2, Load the base template stored as resource.
+            RalfOCIConfigGenerator ralfOciGen;
+            return ralfOciGen.generateRalfOCIConfig(configFilePath, ralfPackages);
         }
-        // Step 2, Load the base template stored as resource.
-        RalfOCIConfigGenerator ralfOciGen;
-        return ralfOciGen.generateRalfOCIConfig(configFilePath, ralfPackages);
+        return true;
     }
 
     bool RalfPackageBuilder::generateOCIRootfsPackageForAppInstance(const std::string &appInstanceId, const std::string &ralfPkgPath, std::string &ociRootfsPath)
@@ -78,7 +77,7 @@ namespace ralf
             LOGINFO("Failed to extract Ralf package details from config: %s\n", ralfPkgPath.c_str());
             return false;
         }
-        LOGDBG("Extracted %d Ralf packages from config\n", (int)ralfPackages.size());
+        LOGINFO("Extracted %d Ralf packages from config\n", (int)ralfPackages.size());
         // Step two: Generate OCI rootfs package
         if (!generateOCIRootfsPackage(appInstanceId, ralfPackages, ociRootfsPath))
         {

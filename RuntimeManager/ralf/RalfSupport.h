@@ -34,7 +34,7 @@ namespace ralf
     bool create_directories(const std::string &path);
     /**
      * Given the Ralf package configuration data, parse and extract package metadata paths and mount paths
-     * @param configData The Ralf package configuration file in JSON format
+     * @param configData The Ralf package configuration data in JSON format
      * @param packages [out parameter] A vector of pairs containing package metadata paths and mount paths
      * @return true on success, false on failure
      */

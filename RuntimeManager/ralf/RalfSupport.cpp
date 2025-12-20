@@ -36,7 +36,6 @@
 #include <cerrno>
 #include <fstream>
 #include <sstream>
-
 namespace ralf
 {
 
@@ -114,6 +113,7 @@ namespace ralf
     bool JsonFromFile(const std::string &filePath, Json::Value &rootNode)
     {
         bool status = false;
+        LOGDBG("JsonFromFile called for file: %s\n", filePath.c_str());
         std::ifstream file(filePath, std::ios::in);
         if (file.is_open())
         {

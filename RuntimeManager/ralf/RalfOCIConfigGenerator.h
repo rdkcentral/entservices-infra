@@ -43,5 +43,15 @@ namespace ralf
          * @param graphicsConfigNode The graphics configuration JSON node.
          */
         bool applyGraphicsConfigToOCIConfig(Json::Value &ociConfigRootNode, const Json::Value &graphicsConfigNode);
+
+        /**
+         * Applies the configuration options from the Ralf package to the OCI config JSON.
+         * The following parameters are expected to be applied:
+         * entryPoint, permissions and configurations
+         * @param ociConfigRootNode The root node of the OCI config JSON.
+         * @param ralfPackageConfigNode The Ralf package configuration JSON node.
+         * @return true if the configuration options were applied successfully, false otherwise.
+         */
+        bool applyRalfPackageConfigToOCIConfig(Json::Value &ociConfigRootNode, const Json::Value &ralfPackageConfigNode);
     };
 } // namespace ralf

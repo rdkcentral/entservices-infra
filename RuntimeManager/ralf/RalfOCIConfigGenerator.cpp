@@ -50,11 +50,28 @@ namespace ralf
             return false;
         }
 
+        // Now apply each Ralf package configuration
+        for (auto ralfPkgInfo : ralfPackages)
+        {
+            Json::Value ralfPackageConfigNode;
+            if (!JsonFromFile(ralfPkgInfo.first, ralfPackageConfigNode))
+            {
+                LOGERR("Failed to load Ralf package config JSON from file: %s", ralfPkgInfo.second.c_str());
+                return false;
+            }
+            if (!applyRalfPackageConfigToOCIConfig(ociConfigRootNode, ralfPackageConfigNode))
+            {
+                LOGERR("Failed to apply Ralf package config to OCI config for package: %s", ralfPkgInfo.first.c_str());
+                return false;
+            }
+        }
+
         // Convert the modified JSON object back to a string
         std::string ociConfigJson;
         Json::StreamWriterBuilder writer;
         ociConfigJson = Json::writeString(writer, ociConfigRootNode);
 
+        LOGDBG("Generated OCI config JSON: Writing to file  %s\n", configFilePath.c_str());
         // Write to file
         std::ofstream outFile(configFilePath);
         if (!outFile)
@@ -129,6 +146,60 @@ namespace ralf
         {
             LOGWARN("No vendorGpuSupport/devNodes found in graphics config\n");
         }
+        return status;
+    }
+    bool RalfOCIConfigGenerator::applyRalfPackageConfigToOCIConfig(Json::Value &ociConfigRootNode, const Json::Value &ralfPackageConfigNode)
+    {
+        bool status = true;
+
+        // Apply entryPoint if exists
+        if (ralfPackageConfigNode.isMember("entryPoint"))
+        {
+            // args is a array of strings. So append each string to args array
+            ociConfigRootNode["process"]["args"].append(ralfPackageConfigNode["entryPoint"]);
+            LOGDBG("Applied entryPoint to OCI config\n");
+        }
+        else
+        {
+            LOGWARN("No entryPoint found in Ralf package config\n");
+        }
+
+        // Apply permissions if exists
+        if (ralfPackageConfigNode.isMember("permissions"))
+        {
+            const Json::Value &permissions = ralfPackageConfigNode["permissions"];
+            for (Json::Value::ArrayIndex i = 0; i < permissions.size(); ++i)
+            {
+                ociConfigRootNode["linux"]["capabilities"].append(permissions[i]);
+                LOGDBG("Applied permission %s to OCI config\n", permissions[i].asString().c_str());
+            }
+        }
+        else
+        {
+            LOGWARN("No permissions found in Ralf package config\n");
+        }
+
+        // Apply configurations if exists
+        if (ralfPackageConfigNode.isMember("configurations"))
+        {
+            const Json::Value &configurations = ralfPackageConfigNode["configurations"];
+            for (Json::Value::ArrayIndex i = 0; i < configurations.size(); ++i)
+            {
+                const Json::Value &config = configurations[i];
+                // Assuming configurations are key-value pairs to be added as environment variables
+                if (config.isMember("key") && config.isMember("value"))
+                {
+                    std::string envVar = config["key"].asString() + "=" + config["value"].asString();
+                    ociConfigRootNode["process"]["env"].append(envVar);
+                    LOGDBG("Applied configuration %s to OCI config\n", envVar.c_str());
+                }
+            }
+        }
+        else
+        {
+            LOGWARN("No configurations found in Ralf package config\n");
+        }
+
         return status;
     }
 } // namespace ralf
