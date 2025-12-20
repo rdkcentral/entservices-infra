@@ -21,6 +21,7 @@
 
 #include "RalfOCIConfigGenerator.h"
 #include "RalfSupport.h"
+#include <fstream>
 
 namespace ralf
 {
@@ -53,6 +54,17 @@ namespace ralf
         std::string ociConfigJson;
         Json::StreamWriterBuilder writer;
         ociConfigJson = Json::writeString(writer, ociConfigRootNode);
+
+        // Write to file
+        std::ofstream outFile(configFilePath);
+        if (!outFile)
+        {
+            LOGERR("Failed to open OCI config output file: %s", configFilePath.c_str());
+            return false;
+        }
+        outFile << ociConfigJson;
+        outFile.close();
+        LOGINFO("Successfully generated Ralf OCI config file: %s", configFilePath.c_str());
 
         return true;
     }
@@ -94,7 +106,7 @@ namespace ralf
                     deviceNode["major"] = majorNum;
                     deviceNode["minor"] = minorNum;
 
-                    ociConfigRootNode["devices"].append(deviceNode);
+                    ociConfigRootNode["linux"]["devices"].append(deviceNode);
 
                     // Add in the resources devices section as well
                     Json::Value resourceDevice;
@@ -103,7 +115,7 @@ namespace ralf
                     resourceDevice["minor"] = minorNum;
                     resourceDevice["access"] = "rwm";
                     resourceDevice["allow"] = true;
-                    ociConfigRootNode["resources"]["devices"].append(resourceDevice);
+                    ociConfigRootNode["linux"]["resources"]["devices"].append(resourceDevice);
                     LOGDBG("Added device node to OCI config: %s (type=%c, major=%u, minor=%u)\n", devNodePath.c_str(), devType, majorNum, minorNum);
                 }
                 else

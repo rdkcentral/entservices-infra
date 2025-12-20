@@ -35,6 +35,8 @@
 #include <cstdlib>
 #include <cerrno>
 #include <fstream>
+#include <sstream>
+
 namespace ralf
 {
 
@@ -86,16 +88,15 @@ namespace ralf
         return true;
     }
 
-
-    bool parseRalPkgInfo(const std::string &configData, std::vector<std::pair<std::string, std::string> > &packages)
+    bool parseRalPkgInfo(const std::string &pkgInfoFile, std::vector<RalfPkgInfoPair> &packages)
     {
         Json::Value root;
-        Json::Reader reader;
-        if (!reader.parse(configData, root))
+        JsonFromFile(pkgInfoFile, root);
+        if (!root.isMember("packages"))
         {
+            LOGERR("Ralf package config JSON does not contain 'packages' field\n");
             return false;
         }
-
         for (Json::Value::ArrayIndex i = 0; i < root["packages"].size(); ++i)
         {
             std::string configData = root["packages"][i]["pkgMetaDataPath"].asString();
@@ -125,12 +126,15 @@ namespace ralf
             std::istringstream s(configData);
             status = Json::parseFromStream(readerBuilder, s, &rootNode, &errs);
             if (!status)
-                LOGERR("Failed to parse OCI base spec JSON: %s", errs.c_str());
+                LOGERR("Failed to parse JSON: %s\n", errs.c_str());
+        }
+        else
+        {
+            LOGERR("Failed to open JSON file: %s\n", filePath.c_str());
         }
         LOGDBG("JsonFromFile [%s] ,status: %d\n", filePath.c_str(), status);
         return status;
     }
-
 
     bool generateOCIRootfs(const std::string appInstanceId, const std::string &pkgmountPaths, std::string &ociRootfsPath)
     {
@@ -142,9 +146,10 @@ namespace ralf
 
         // Now we can mount the overlay filesystem
         std::string options = "lowerdir=" + pkgmountPaths + ",workdir=" + workDir;
+        LOGDBG("Mounting overlayfs with options: %s\n", options.c_str());
         if (mount(RALF_OVERLAYFS_TYPE.c_str(), appRootfsDir.c_str(), RALF_OVERLAYFS_TYPE.c_str(), 0, options.c_str()) != 0)
         {
-            LOGINFO("Error mounting overlayfs: %s\n", strerror(errno));
+            LOGERR("Error mounting overlayfs: %s\n", strerror(errno));
             return false;
         }
         ociRootfsPath = appRootfsDir;

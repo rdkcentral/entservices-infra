@@ -29,17 +29,7 @@ namespace ralf
 
     bool RalfPackageBuilder::extractRalfPkgInfoFromMetadata(const std::string &ralfPkgInfo, std::vector<RalfPkgInfoPair> &ralfPackages)
     {
-        // Step 1: Read the configuration data from the file
-        std::ifstream file(ralfPkgInfo.c_str(), std::ios::in | std::ios::binary);
-        if (!file.is_open())
-        {
-            return false;
-        }
-
-        std::string configData((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        file.close();
-        // Step 2: Parse the configuration data
-        return parseRalPkgInfo(configData, ralfPackages);
+        return parseRalPkgInfo(ralfPkgInfo, ralfPackages);
     }
     bool RalfPackageBuilder::generateOCIRootfsPackage(const std::string &appInstanceId, const std::vector<RalfPkgInfoPair> &pkgInfoSet, std::string &ociRootfsPath)
     {
@@ -88,6 +78,7 @@ namespace ralf
             LOGINFO("Failed to extract Ralf package details from config: %s\n", ralfPkgPath.c_str());
             return false;
         }
+        LOGDBG("Extracted %d Ralf packages from config\n", (int)ralfPackages.size());
         // Step two: Generate OCI rootfs package
         if (!generateOCIRootfsPackage(appInstanceId, ralfPackages, ociRootfsPath))
         {

@@ -1,4 +1,7 @@
 #pragma once
+#include <string>
+#include <utility>
+
 namespace ralf
 {
     const std::string RALF_OCI_BASE_SPEC_FILE = "/usr/share/ralf/oci-base-spec.json";

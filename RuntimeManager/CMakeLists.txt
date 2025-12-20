@@ -77,7 +77,8 @@ endif(RIALTO_IN_DAC_FEATURE)
 if(RALF_PACKAGE_SUPPORT)
     message(STATUS "RALF_PACKAGE_SUPPORT is enabled")
     add_definitions(-DRAFL_PACKAGE_SUPPORT_ENABLED)
-    list(APPEND RUNTIMEMANAGER_SOURCES ralf/RalfPackageBuilder.cpp ralf/RalfOCIConfigGenerator.cpp)
+    file(GLOB RALF_SRC_FILES "ralf/*.cpp" )
+    list(APPEND RUNTIMEMANAGER_SOURCES ${RALF_SRC_FILES})
 endif(RALF_PACKAGE_SUPPORT)    
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED ${RUNTIMEMANAGER_SOURCES})
@@ -87,6 +88,7 @@ target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NA
 endif(RIALTO_IN_DAC_FEATURE)
 
 if(RALF_PACKAGE_SUPPORT)
+
     target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins jsoncpp )
 endif(RALF_PACKAGE_SUPPORT)
 
