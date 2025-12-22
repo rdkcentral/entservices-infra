@@ -17,3 +17,6 @@ Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/inst
 Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Pluginconfig.instructions.md#plugin-configuration
 
 Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/Plugincmake.instructions.md#namespace-usage
+
+Refer: https://github.com/rdkcentral/entservices-infra/blob/develop/.github/instructions/PluginOnboardingCompliance.instructions.md#coverity-scan-inclusion-and-test-workflow-updates-for-new-plugins
+
