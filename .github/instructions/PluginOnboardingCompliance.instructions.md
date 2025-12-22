@@ -47,6 +47,7 @@ When adding a new plugin in `CMakeLists.txt`, you **must** also update the follo
    ```yaml
    jobs:
      build-test:
+       runs-on: ubuntu-22.04
        steps:
          - name: Configure with new plugin
            run: |
