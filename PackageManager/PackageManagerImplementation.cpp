@@ -972,7 +972,7 @@ namespace Plugin {
 
         #if defined (USE_LIBPACKAGE) || defined(UNIT_TEST)
 
-        #if defined(USE_LIBPACKAGE)
+        #if defined (USE_LIBPACKAGE)
         packageImpl = packagemanager::IPackageImpl::instance();
         #elif defined(UNIT_TEST)
         packageImpl = packagemanager::IPackageImplDummy::instance();
