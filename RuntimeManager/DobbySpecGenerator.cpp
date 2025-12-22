@@ -229,7 +229,7 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
 #ifdef RDK_APPMANAGERS_DEBUG
     addHolePunchPortToSpec(spec, 22222);
 #endif
-
+    addHolePunchPortToSpec(spec, 9001);
     Json::FastWriter writer;
     resultSpec = writer.write(spec);
     LOGINFO("spec: '%s'\n", resultSpec.c_str());
@@ -615,7 +615,7 @@ Json::Value DobbySpecGenerator::createAppServiceSDKPlugin(const ApplicationConfi
         ports.append(port);
     }
     pluginObj["data"]["additionalPorts"] = std::move(ports);
-
+    pluginObj["data"]["setMenu"] = "local-services-1"; //MADANA HACK HOMEAPP
     return pluginObj;
 }
 
