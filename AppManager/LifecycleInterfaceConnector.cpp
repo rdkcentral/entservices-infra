@@ -31,9 +31,8 @@
 #include <plugins/System.h>
 
 #include <interfaces/ILifecycleManager.h>
-
-#include "UtilsString.h"
 #include "AppManagerImplementation.h"
+#include "UtilsString.h"
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
 #include "AppManagerTelemetryReporting.h"
 #endif
@@ -77,6 +76,9 @@ namespace WPEFramework
                mCurrentservice = nullptr;
             }
             LifecycleInterfaceConnector::_instance = nullptr;
+
+	    //clear action list
+	    mAppCurrentActionList.clear();
         }
 
         Core::hresult LifecycleInterfaceConnector::createLifecycleManagerRemoteObject()
@@ -361,7 +363,6 @@ namespace WPEFramework
             bool isAppLoaded = false;
 
             LOGINFO("AppId retrieved: %s", appId.c_str());
-
             mAdminLock.Lock();
 
             if(nullptr != appManagerImplInstance)
@@ -377,6 +378,8 @@ namespace WPEFramework
                         if(nullptr != mLifecycleManagerRemoteObject)
                         {
                             appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_CLOSE);
+
+			    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
 
                             status = mLifecycleManagerRemoteObject->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::PAUSED, appIntent);
 
@@ -400,9 +403,19 @@ namespace WPEFramework
 
                                     auto retryIt = appManagerImplInstance->mAppInfo.find(appId);
                                     if (retryIt != appManagerImplInstance->mAppInfo.end())
-                                    {
+                                    {	
+					    // Check for install/uninstall block.
+					bool installUninstallBlocked = appManagerImplInstance->checkInstallUninstallBlock(appId);
+					if (installUninstallBlocked)
+					{
+						LOGINFO("Blocked state found for appId: %s. Initiating TERMINATE.", appId.c_str());
+						mAdminLock.Unlock();
+					        Core::hresult terminateStatus = appManagerImplInstance->TerminateApp(appId);
+						LOGINFO("TerminateApp returned status: %d", terminateStatus);
+						mAdminLock.Lock();
+					}
                                         /* Found the AppInfo; apply suspend/hibernate/unload logic */
-                                        if (fileExists(SUSPEND_POLICY_FILE))
+					else if (fileExists(SUSPEND_POLICY_FILE))
                                         {
                                             LOGINFO("App with AppId: %s is suspendable", appId.c_str());
                                             retryIt->second.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
@@ -513,6 +526,7 @@ namespace WPEFramework
                         if (nullptr != mLifecycleManagerRemoteObject)
                         {
                             appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_TERMINATE);
+			    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                             status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
                             if (status != Core::ERROR_NONE)
                             {
@@ -586,6 +600,7 @@ namespace WPEFramework
                     bool success{};
 
                     appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_KILL);
+		    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                     result = mLifecycleManagerRemoteObject->KillApp(appInstanceId, errorReason, success);
 
                     if (!(result == Core::ERROR_NONE && success))
@@ -707,19 +722,18 @@ namespace WPEFramework
 
                     Exchange::IAppManager::LoadedAppInfo loadedAppInfo = {};
 		    loadedAppInfo.appId = appId;
-        //TODO - populate type field and rename currentLifecycleState to lifecycleState             
-        //loadedAppJson["type"] = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);              
+                    loadedAppInfo.type = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);
 		    loadedAppInfo.appInstanceId = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
 		    loadedAppInfo.activeSessionId = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
 
 		    appInfo.targetAppState = mapAppLifecycleState(
-                        static_cast<Exchange::ILifecycleManager::LifecycleState>(
+                    static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "targetLifecycleState")));
                     loadedAppInfo.targetLifecycleState = appInfo.targetAppState;
                     appInfo.appNewState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "lifecycleState")));
-                    loadedAppInfo.currentLifecycleState = appInfo.appNewState;
+                    loadedAppInfo.lifecycleState = appInfo.appNewState;
 
                     //Add loaded info
 		    loadedAppInfoList.push_back(loadedAppInfo);
@@ -853,7 +867,26 @@ End:
 
                 if(shouldNotify)
                 {
-                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+                    if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
+		    {
+                        if (mAppCurrentActionList[appId] == Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING)
+			{
+			    //Normal close: Unlode event from App manager
+			    LOGINFO("Terminate event from plugin");
+			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+			}
+			else
+			{
+			    //Upnormal close: No unload event from app manager
+			    LOGINFO("Terminate event due to app crash");
+			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_ABORT);
+			}
+			mAppCurrentActionList.erase(appId);
+		    }
+		    else
+		    {
+                        appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+		    }
                 }
 
                 if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
@@ -864,10 +897,6 @@ End:
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                 AppManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(appId, newState);
 #endif
-                if(Exchange::ILifecycleManager::LifecycleState::UNLOADED == newState)
-                {
-                    removeAppInfoByAppId(appId);
-                }
             }
         }
 

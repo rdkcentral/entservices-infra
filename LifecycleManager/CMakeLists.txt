@@ -40,13 +40,11 @@ set(PLUGIN_LIFECYCLE_MANAGER_SOURCES
 	Module.cpp
 	ApplicationContext.cpp
 	RequestHandler.cpp
-	RippleHandler.cpp
 	RuntimeManagerHandler.cpp
 	WindowManagerHandler.cpp
 	State.cpp
 	StateHandler.cpp
-	StateTransitionHandler.cpp
-	WebSocket.cpp )
+	StateTransitionHandler.cpp)
 
 if (AIMANAGERS_TELEMETRY_METRICS_SUPPORT)
 list( APPEND PLUGIN_LIFECYCLE_MANAGER_SOURCES
