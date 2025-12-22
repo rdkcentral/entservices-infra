@@ -2,7 +2,7 @@
 applyTo: "CMakeLists.txt"
 ---
 
-## Requirement: 
+## Requirement
 
 ### Coverity Scan Inclusion and Test Workflow Updates for New Plugins
 
@@ -35,14 +35,15 @@ When adding a new plugin in `CMakeLists.txt`, you **must** also update the follo
    cmake \
        -DPLUGIN_CORE=ON \
        -DPLUGIN_LEGACY=ON \
-       -DPLUGIN_MY_NEW_PLUGIN=ON \  # <-- NEW PLUGIN FLAG
+       # <-- NEW PLUGIN FLAG
+       -DPLUGIN_MY_NEW_PLUGIN=ON \
        .
    ```
    This ensures Coverity runs on your new plugin.
 
 3. **Update Test Workflow YAMLs**
 
-   Ensure each CI workflow references your new plugin using the new CMake flag in their build/test step. For example, in `L1-tests.yml`:
+   Ensure each test workflow references your new plugin using the **DPLUGIN_<PLUGINNAME>** CMake flag in their build/test step. For example, in `L1-tests.yml`:
    ```yaml
    jobs:
      build-test:
@@ -59,29 +60,7 @@ When adding a new plugin in `CMakeLists.txt`, you **must** also update the follo
    ```
    Repeat similar additions in `L2-tests.yml` and `L2-tests-oop.yml`.
 
-4. **Example Plugin Addition Workflow**
-   ```bash
-   mkdir MyNewPlugin/
-   # Add source files for your plugin here
-
-   # Edit cov_build.sh
-   cmake \
-     -DPLUGIN_CORE=ON \
-     -DPLUGIN_LEGACY=ON \
-     -DPLUGIN_MY_NEW_PLUGIN=ON \
-     .
-   
-   # Edit each workflow YAML
-   # Example for L2-tests.yml
-   jobs:
-     test:
-       steps:
-         - run: cmake -DPLUGIN_MY_NEW_PLUGIN=ON .
-         - run: ctest
-   ```
-
 **Summary:**  
 Whenever a new plugin is registered via `CMakeLists.txt`, always update:
 - `cov_build.sh` (add plugin flag to Coverity scan build step)
-- All test CI workflows (`L1-tests.yml`, `L2-tests.yml`, `L2-tests-oop.yml`) to include your plugin flag  
-so that your plugin’s code quality and tests are assured!
+- All test CI workflows (`L1-tests.yml`, `L2-tests.yml`, `L2-tests-oop.yml`) to include your plugin flag so that your plugin’s code quality and tests are assured!
