@@ -972,10 +972,9 @@ namespace Plugin {
 
         #ifdef USE_LIBPACKAGE
         packageImpl = packagemanager::IPackageImpl::instance();
-        #else 
-          #ifdef UNIT_TEST
-          packageImpl = packagemanager::IPackageImplDummy::instance();
-          #endif
+        #ifdef UNIT_TEST
+        packageImpl = packagemanager::IPackageImplDummy::instance();
+        #endif
         
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
