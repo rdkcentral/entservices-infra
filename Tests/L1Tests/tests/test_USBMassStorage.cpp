@@ -292,7 +292,7 @@ TEST_F(USBMassStorageTest, getMountPointsFailed_devicename_mismatch)
 
     handler.Invoke(connection, _T("getDeviceList"), _T("{}"), response);
 
-    EXPECT_EQ(Core::ERROR_INVALID_DEVICENAME, handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\": \"001\"}"), response));
+    EXPECT_EQ(ERROR_INVALID_DEVICENAME, handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\": \"001\"}"), response));
 
 }
 
@@ -320,7 +320,7 @@ TEST_F(USBMassStorageTest, getMountPointsFailed_umount_fail)
         return -1;
     });
 
-    EXPECT_EQ(Core::ERROR_INVALID_DEVICENAME, handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\": \"001\"}"), response));
+    EXPECT_EQ(ERROR_INVALID_DEVICENAME, handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\": \"001\"}"), response));
 
 }
 
@@ -614,7 +614,7 @@ TEST_F(USBMassStorageTest, getPartitionInfoFail_devicepath_empty)
 
     handler.Invoke(connection, _T("getMountPoints"), _T("{\"deviceName\": \"001/002\"}"), response);
 
-    EXPECT_EQ(Core::ERROR_INVALID_MOUNTPOINT, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\": \"/tmp/medis/usb1\"}"), response));
+    EXPECT_EQ(ERROR_INVALID_MOUNTPOINT, handler.Invoke(connection, _T("getPartitionInfo"), _T("{\"mountPath\": \"/tmp/medis/usb1\"}"), response));
 
     usbDeviceList.clear();
 }

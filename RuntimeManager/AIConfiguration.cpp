@@ -27,6 +27,8 @@
 
 #define AICONFIGURATION_INI_PATH "/opt/demo/config.ini"
 
+extern char **environ;
+
 namespace WPEFramework
 {
 namespace Plugin
@@ -127,6 +129,17 @@ namespace Plugin
     std::list<std::string> AIConfiguration::getPreloads() const
     {
         return mPreloads;
+    }
+    std::list<std::string> AIConfiguration::readGlobalEnv() const
+    {
+       std::list<std::string> environmentVariables;
+       char **envList = environ;
+
+       for (;*envList;envList++)
+       {
+           environmentVariables.emplace_back(*envList);
+       }
+       return environmentVariables;
     }
 
     std::list<std::string> AIConfiguration::getEnvs() const
@@ -312,6 +325,8 @@ namespace Plugin
         //TODO SUPPORT LANG=en_US
         //TODO SUPPORT STB_ENTITLEMENTS
 
+        std::list<std::string> gEnv = readGlobalEnv();
+        mEnvVariables.insert(mEnvVariables.end(),gEnv.begin(),gEnv.end());
         LOGINFO("AIConfiguration reading from config file at %s", AICONFIGURATION_INI_PATH);
         std::ifstream iniFile(AICONFIGURATION_INI_PATH);
         if (!iniFile.is_open())

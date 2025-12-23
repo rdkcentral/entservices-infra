@@ -32,7 +32,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class USBMassStorage: public PluginHost::IPlugin, public PluginHost::JSONRPC
+    class USBMassStorage: public PluginHost::IPlugin, public PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::FunctionCallbackType> 
     {
      private:
         class Notification : public RPC::IRemoteConnection::INotification,
@@ -88,6 +88,8 @@ namespace Plugin {
             void Deinitialize(PluginHost::IShell* service) override;
             string Information() const override;
 
+            static uint32_t OnJSONRPCError(const Core::JSONRPC::Context& context, const string& method, const string& parameters, const uint32_t errorcode, string& errormessage);
+
         private:
             void Deactivated(RPC::IRemoteConnection* connection);
 
@@ -96,7 +98,7 @@ namespace Plugin {
             uint32_t _connectionId{};
             Exchange::IUSBMassStorage* _usbMassStorage{};
             Core::Sink<Notification> _usbStoragesNotification;
-            Exchange::IConfiguration* configure;
+            Exchange::IConfiguration* configure{nullptr};
     };
 
 } // namespace Plugin

@@ -23,6 +23,9 @@
 #include <interfaces/json/JsonData_LifecycleManagerState.h>
 #include <interfaces/json/JLifecycleManagerState.h>
 #include <semaphore.h>
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+#include "LifecycleManagerTelemetryReporting.h"
+#endif
 
 namespace WPEFramework
 {
@@ -44,6 +47,9 @@ namespace WPEFramework
         bool LifecycleManagerImplementation::initialize(PluginHost::IShell* service)
         {
             bool ret = RequestHandler::getInstance()->initialize(service, this);
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            LifecycleManagerTelemetryReporting::getInstance().initialize(service);
+#endif
 	    return ret;
         }
 
@@ -128,6 +134,9 @@ namespace WPEFramework
              string appInstanceId(obj["appInstanceId"].String());
              uint32_t oldLifecycleState(obj["oldLifecycleState"].Number());
              string navigationIntent(obj["navigationIntent"].String());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+             ApplicationContext* context = getContext("", appId);
+#endif
 
              mAdminLock.Lock();
         
@@ -137,6 +146,9 @@ namespace WPEFramework
              switch(event)
              {
                  case LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED:
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                     LifecycleManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(context, obj);
+#endif
                      handleStateChangeEvent(obj);
                      while (index != mLifecycleManagerNotification.end())
                      {
@@ -155,6 +167,13 @@ namespace WPEFramework
                  case LIFECYCLE_MANAGER_EVENT_WINDOW:
                       handleWindowManagerEvent(obj);
                       break;
+                 case LIFECYCLE_MANAGER_EVENT_ONFAILURE:
+                      while (index != mLifecycleManagerNotification.end())
+                      {
+                          (*index)->OnAppStateChanged(appId, (LifecycleState)newLifecycleState, errorReason);
+                          ++index;
+                      }
+                      break;
                  default:
                      LOGWARN("Event[%u] not handled", event);
                      break;
@@ -168,31 +187,31 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_NONE;
             JsonArray appsInformation;
             std::list<ApplicationContext*>::iterator iter = mLoadedApplications.end();
-	    for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
-	    {
+            for (iter = mLoadedApplications.begin(); iter != mLoadedApplications.end(); iter++)
+            {
                 if (nullptr != *iter)
                 {
                     JsonObject appData;
                     ApplicationContext* context = (*iter);
                     appData["appInstanceID"] = context->getAppInstanceId();
                     appData["appId"] = context->getAppId();
-		    struct timespec lastStateChangeTime = context->getLastLifecycleStateChangeTime();
+                    struct timespec lastStateChangeTime = context->getLastLifecycleStateChangeTime();
                     char timeData[200];
                     char timeDataExpanded[1000];
-		    memset(timeData, 0, sizeof(timeData));
-		    memset(timeDataExpanded, 0, sizeof(timeDataExpanded));
+                    memset(timeData, 0, sizeof(timeData));
+                    memset(timeDataExpanded, 0, sizeof(timeDataExpanded));
                     strftime(timeData, sizeof timeData, "%D %T", gmtime(&lastStateChangeTime.tv_sec));
                     sprintf(timeDataExpanded, "%s.%09ld", timeData, lastStateChangeTime.tv_nsec);
-                    appData["currentLifecycleState"] = (uint32_t) context->getCurrentLifecycleState();
+                    appData["lifecycleState"] = (uint32_t) context->getCurrentLifecycleState();
                     appData["timeOfLastLifecycleStateChange"] = string(timeDataExpanded);
                     appData["activeSessionId"] = context->getActiveSessionId();
                     appData["targetLifecycleState"] = (uint32_t) context->getTargetLifecycleState();
                     appData["mostRecentIntent"] = context->getMostRecentIntent();
                     if (verbose)
-		    {	    
+                    {
                         RuntimeManagerHandler* runtimeManagerHandler = RequestHandler::getInstance()->getRuntimeManagerHandler();
-			if (nullptr != runtimeManagerHandler)
-			{
+                        if (nullptr != runtimeManagerHandler)
+                        {
                             string runtimeStats("");
                             bool runtimeStatsResult = runtimeManagerHandler->getRuntimeStats(context->getAppInstanceId(), runtimeStats);
                             if (true == runtimeStatsResult)
@@ -208,7 +227,7 @@ namespace WPEFramework
                     }
                     appsInformation.Add(appData);
                 }
-	    }
+            }
             appsInformation.ToString(apps);
             return status;
         }
@@ -219,7 +238,7 @@ namespace WPEFramework
             loaded = false;
             ApplicationContext* context = getContext("", appId);
             if (nullptr != context)
-	    {
+            {
                 loaded = true;
             }
             return status;
@@ -233,6 +252,11 @@ namespace WPEFramework
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext("", appId);
             bool firstLaunch = false;
+            time_t requestTime = 0;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
+#endif
+            mAdminLock.Lock();
             if (nullptr == context)
 	    {
                 context = new ApplicationContext(appId);
@@ -240,6 +264,8 @@ namespace WPEFramework
 		mLoadedApplications.push_back(context);
                 firstLaunch = true;
 	    }
+            context->setRequestTime(requestTime);
+            context->setRequestType(REQUEST_TYPE_LAUNCH);
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
             success = RequestHandler::getInstance()->launch(context, launchIntent, targetLifecycleState, errorReason);
@@ -255,6 +281,7 @@ namespace WPEFramework
 		}
                 appInstanceId = context->getAppInstanceId();
             }
+            mAdminLock.Unlock();
             return status;
         }
         
@@ -263,17 +290,42 @@ namespace WPEFramework
             // Moves a currently loaded app between states
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext(appInstanceId, "");
+            time_t requestTime = 0;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
+#endif
             if (nullptr == context)
 	    {
                 status = Core::ERROR_GENERAL;
                 return status;
 	    }
-
+            mAdminLock.Lock();
+            switch(targetLifecycleState)
+            {
+                case Exchange::ILifecycleManager::LifecycleState::PAUSED:        //before SUSPEND or HIBERNATE app will be PAUSED
+                    context->setRequestTime(requestTime);
+                    context->setRequestType(REQUEST_TYPE_PAUSE);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::SUSPENDED:
+                    context->setRequestType(REQUEST_TYPE_SUSPEND);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::HIBERNATED:
+                    context->setRequestType(REQUEST_TYPE_HIBERNATE);
+                break;
+                case Exchange::ILifecycleManager::LifecycleState::ACTIVE:
+                    context->setRequestTime(requestTime);
+                    context->setRequestType(REQUEST_TYPE_RESUME);
+                break;
+                default:
+                    LOGERR("targetLifecycleState is invalid");
+                break;
+            }
             string errorReason("");
             context->setTargetLifecycleState(targetLifecycleState);
             context->setMostRecentIntent(launchIntent);
 
             bool success = RequestHandler::getInstance()->updateState(context, targetLifecycleState, errorReason);
+            mAdminLock.Unlock();
             if (false == success)
             {
                 status = Core::ERROR_GENERAL;
@@ -289,12 +341,22 @@ namespace WPEFramework
             // This moves an app to the unloaded state
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext(appInstanceId, "");
+            time_t requestTime = 0;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
+#endif
             if (nullptr == context)
 	    {
                 status = Core::ERROR_GENERAL;
                 success = false;
                 return status;
 	    }
+            mAdminLock.Lock();
+            if(REQUEST_TYPE_PAUSE != context->getRequestType())   //If request through AppManager closeApp, requestTime is already set
+            {
+                context->setRequestTime(requestTime);
+            }
+            context->setRequestType(REQUEST_TYPE_TERMINATE);
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(false);
 
@@ -303,6 +365,7 @@ namespace WPEFramework
 	    {
                 status = Core::ERROR_GENERAL;
 	    }
+            mAdminLock.Unlock();
             return status;
         }
         
@@ -310,15 +373,24 @@ namespace WPEFramework
         {
             Core::hresult status = Core::ERROR_NONE;
             ApplicationContext* context = getContext(appInstanceId, "");
+            time_t requestTime =0;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            requestTime = LifecycleManagerTelemetryReporting::getInstance().getCurrentTimestamp();
+#endif
+
             if (nullptr == context)
 	    {
                 status = Core::ERROR_GENERAL;
                 success = false;
                 return status;
 	    }
+            mAdminLock.Lock();
+            context->setRequestTime(requestTime);
+            context->setRequestType(REQUEST_TYPE_TERMINATE);
             context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
             context->setApplicationKillParams(true);
             success = RequestHandler::getInstance()->terminate(context, true, errorReason);
+            mAdminLock.Unlock();
             return status;
         }
         
@@ -333,11 +405,27 @@ namespace WPEFramework
                 success = false;
                 return status;
 	    }
-            success = RequestHandler::getInstance()->sendIntent(context, intent, errorReason);
-            if (!success)
-	    {
+
+            // sending intent is not valid for non-active application
+            if (Exchange::ILifecycleManager::LifecycleState::ACTIVE != context->getCurrentLifecycleState())
+            {
+                printf("Failed to send intent to non-active app [%s] \n", appInstanceId.c_str());
+                fflush(stdout);
                 status = Core::ERROR_GENERAL;
-	    }
+                success = false;
+                errorReason = "application is not active";
+                return status;
+            }
+
+            JsonObject eventData;
+            eventData["appId"] = context->getAppId();
+            eventData["appInstanceId"] = context->getAppInstanceId();
+            eventData["oldLifecycleState"] = (uint32_t)Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+            eventData["newLifecycleState"] = (uint32_t)Exchange::ILifecycleManager::LifecycleState::ACTIVE;
+            eventData["navigationIntent"] = intent;
+            eventData["errorReason"] = "";
+            dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_APPSTATECHANGED, eventData);
+            status = Core::ERROR_NONE;
             return status;
         }
 
@@ -522,7 +610,35 @@ namespace WPEFramework
                 else
                 {
                     LOGINFO("Received state change event for app Onterminated event ");
-                    sem_post(&context->mAppTerminatingSemaphore);
+                    //check if unexpected termination
+                    if (context->getCurrentLifecycleState() != Exchange::ILifecycleManager::LifecycleState::TERMINATING)
+                    {
+                        LOGWARN("Container has terminated unexpectedly for app[%s] ", appInstanceId.c_str());
+                        LOGWARN("Unloading app [%s] - [%s]", context->getAppId().c_str(), appInstanceId.c_str());
+                        std::string terminateError="";
+                        std::string updateError="";
+                        bool terminated = false;
+                        bool stateUpdated = false;
+                        context->setRequestType(REQUEST_TYPE_TERMINATE);
+                        context->setTargetLifecycleState(Exchange::ILifecycleManager::LifecycleState::TERMINATING);
+                        context->setApplicationKillParams(false);
+
+                        terminated = RequestHandler::getInstance()->terminate(context, false, terminateError);
+                        stateUpdated = RequestHandler::getInstance()->updateState(context, context->getTargetLifecycleState(), updateError);
+                        if(terminated && stateUpdated)
+                        {
+                            LOGINFO("Successfully handled unexpected container termination for app[%s] ", appInstanceId.c_str());
+                            LOGINFO("Successfully triggered unload for app[%s]", appInstanceId.c_str());
+                        }
+                        else
+                        {
+                            LOGERR("Failed to handle unexpected termination for app[%s] terminateSuccess[%d] updateStateSuccess[%d] terminateError[%s] updateError[%s]", appInstanceId.c_str(), terminated, stateUpdated, terminateError.c_str(), updateError.c_str());
+                        }
+                    }
+                    else
+                    {
+                       addStateTransitionRequest(context, "onAppTerminating");
+                    }
                 }
             }
             else if (eventName.compare("onStateChanged") == 0)
@@ -539,21 +655,40 @@ namespace WPEFramework
                     else
                     {
                         LOGINFO("Received state change event for app which is available ie running");
-                        sem_post(&context->mAppRunningSemaphore);
+                        addStateTransitionRequest(context, "onAppRunning");
                     }
                 }
+                // state change to TERMINATING is ignored as it is handled in onTerminated
             }
             else if (eventName.compare("onFailure") == 0)
             {
                 string appInstanceId = data["appInstanceId"];
                 string errorCode = data["errorCode"];
-                LOGINFO("Received container failure event from runtime manager for app[%s] error[%s]", appInstanceId.c_str(), errorCode.c_str());
+                LOGERR("Received container failure event from runtime manager for app[%s] error[%s]", appInstanceId.c_str(), errorCode.c_str());
+                notifyOnFailure(appInstanceId, errorCode);
             }
             else if (eventName.compare("onStarted") == 0)
             {
                 string appInstanceId = data["appInstanceId"];
                 LOGINFO("Received container started event from runtime manager for app[%s]", appInstanceId.c_str());
             }
+        }
+
+        void LifecycleManagerImplementation::notifyOnFailure(const string& appInstanceId, const string& errorCode)
+        {
+            string appId = "";
+            JsonObject eventData;
+            ApplicationContext* context = getContext(appInstanceId, "");
+            if (nullptr != context)
+            {
+                appId = context->getAppId();
+            }
+            eventData["appId"] = appId;
+            eventData["appInstanceId"] = appInstanceId;
+            eventData["newLifecycleState"] = static_cast<uint32_t>(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
+            eventData["errorReason"] = errorCode;
+            dispatchEvent(LifecycleManagerImplementation::EventNames::LIFECYCLE_MANAGER_EVENT_ONFAILURE, eventData);
+            LOGINFO("Notify error event for appId[%s] appInstanceId[%s] error[%s]", appId.c_str(), appInstanceId.c_str(), errorCode.c_str());
         }
 
 	void LifecycleManagerImplementation::handleStateChangeEvent(const JsonObject &data)
@@ -608,9 +743,28 @@ namespace WPEFramework
             ApplicationContext* context = getContext(appInstanceId, "");
             if (nullptr != context)
 	    {
-                sem_post(&context->mFirstFrameSemaphore);
+                addStateTransitionRequest(context, "onFirstFrame");
 	    }
 	}
+    }
+
+    void LifecycleManagerImplementation::addStateTransitionRequest(ApplicationContext* context, std::string event)
+    {
+        if (context->mPendingStateTransition && (0 == context->mPendingEventName.compare(event)))
+        {
+            std::string errorReason("");
+            bool success = RequestHandler::getInstance()->updateState(context, context->getTargetLifecycleState(), errorReason);
+            printf("added state transition request [%d] [%s] \n", success, event.c_str());
+            fflush(stdout);
+        }
+        else
+        {
+            printf("received wrong state transition request\n");
+            // enable for debugging wrong state transition requests
+            // printf("expected [%s] but got [%s]\n", context->mPendingEventName.c_str(), event.c_str());
+            // printf("pending state transition [%d]\n", context->mPendingStateTransition);
+            fflush(stdout);
+        }
     }
 
     } /* namespace Plugin */

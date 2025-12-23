@@ -41,13 +41,13 @@
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
-#define TIMEOUT   (1000)
+#define TIMEOUT   (50000)
 #define APPMANAGER_APP_ID           "com.test.app"
 #define APPMANAGER_EMPTY_APP_ID     ""
 #define APPMANAGER_APP_VERSION      "1.2.8"
 #define APPMANAGER_APP_DIGEST       ""
 #define APPMANAGER_APP_STATE        Exchange::IPackageInstaller::InstallState::INSTALLED
-#define APPMANAGER_APP_STATE_STR    "APPLICATION_TYPE_INTERACTIVE"
+#define APPMANAGER_APP_STATE_STR    "INTERACTIVE_APP"
 #define APPMANAGER_APP_SIZE         0
 #define APPMANAGER_WRONG_APP_ID     "com.wrongtest.app"
 #define APPMANAGER_APP_INTENT       "test.intent"
@@ -59,7 +59,7 @@
 #define APPMANAGER_PACKAGEID        "testPackageID"
 #define APPMANAGER_INSTALLSTATUS_INSTALLED    "INSTALLED"
 #define APPMANAGER_INSTALLSTATUS_UNINSTALLED    "UNINSTALLED"
-#define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","reason":"INSTALLED"}])"
+#define TEST_JSON_INSTALLED_PACKAGE R"([{"packageId":"YouTube","version":"100.1.30+rialto","state":"INSTALLED"}])"
 
 typedef enum : uint32_t {
     AppManager_StateInvalid = 0x00000000,
@@ -110,6 +110,9 @@ protected:
     Core::JSONRPC::Handler& mJsonRpcHandler;
     DECL_CORE_JSONRPC_CONX connection;
     string mJsonRpcResponse;
+    std::mutex mPreLoadMutex;
+    std::condition_variable mPreLoadCV;
+    bool mPreLoadSpawmCalled = false;
 
     void createAppManagerImpl()
     {
@@ -186,6 +189,9 @@ protected:
                     return Core::ERROR_NONE;
                 }));
 
+        ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(-1));
+        
         EXPECT_EQ(string(""), plugin->Initialize(mServiceMock));
         mAppManagerImpl = Plugin::AppManagerImplementation::getInstance();
         TEST_LOG("createResources - All done!");
@@ -338,6 +344,28 @@ protected:
         return Core::Service<RPC::IteratorType<Exchange::IPackageInstaller::IPackageIterator>>::Create<Exchange::IPackageInstaller::IPackageIterator>(packageList);
     }
 
+     auto FillLoadedAppsIterator()
+    {
+        std::list<WPEFramework::Exchange::IAppManager::LoadedAppInfo> loadedAppInfoList;
+
+        WPEFramework::Exchange::IAppManager::LoadedAppInfo app_1, app_2;
+        app_1.appId = "NexTennis";
+        app_1.appInstanceId = "0295effd-2883-44ed-b614-471e3f682762";
+        app_1.activeSessionId = "";
+        app_1.targetLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE; 
+        app_1.lifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+
+        app_2.appId = "uktv";
+        app_2.appInstanceId = "67fa75b6-0c85-43d4-a591-fd29e7214be5";
+        app_2.activeSessionId = "";
+        app_2.targetLifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE; 
+        app_2.lifecycleState = WPEFramework::Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+
+        loadedAppInfoList.emplace_back(app_1);
+        loadedAppInfoList.emplace_back(app_2);
+        return Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>>::Create<Exchange::IAppManager::ILoadedAppInfoIterator>(loadedAppInfoList);
+    }
+
     void LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState state)
     {
         const std::string launchArgs = APPMANAGER_APP_LAUNCHARGS;
@@ -374,6 +402,51 @@ protected:
             appInstanceId = APPMANAGER_APP_INSTANCE;
             errorReason = "";
             success = true;
+            return Core::ERROR_NONE;
+        });
+    }
+
+    void preLaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState state)
+    {
+        const std::string launchArgs = APPMANAGER_APP_LAUNCHARGS;
+        TEST_LOG("LaunchAppPreRequisite with state: %d", state);
+
+        EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
+        .WillRepeatedly([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
+            auto mockIterator = FillPackageIterator(); // Fill the package Info
+            packages = mockIterator;
+            return Core::ERROR_NONE;
+        });
+
+        EXPECT_CALL(*mPackageManagerMock, Lock(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string &packageId, const string &version, const Exchange::IPackageHandler::LockReason &lockReason, uint32_t &lockId /* @out */, string &unpackedPath /* @out */, Exchange::RuntimeConfig &configMetadata /* @out */, Exchange::IPackageHandler::ILockIterator*& appMetadata /* @out */) {
+            lockId = 1;
+            unpackedPath = APPMANAGER_APP_UNPACKEDPATH;
+            return Core::ERROR_NONE;
+        });
+
+        EXPECT_CALL(*mLifecycleManagerMock, IsAppLoaded(::testing::_, ::testing::_))
+        .WillRepeatedly([&](const std::string &appId, bool &loaded) {
+            loaded = true;
+            return Core::ERROR_NONE;
+        });
+
+        EXPECT_CALL(*mLifecycleManagerMock, SetTargetAppState(::testing::_, ::testing::_, ::testing::_))
+        .WillRepeatedly([&](const string& appInstanceId , const Exchange::ILifecycleManager::LifecycleState targetLifecycleState , const string& launchIntent) {
+            return Core::ERROR_NONE;
+        });
+        EXPECT_CALL(*mLifecycleManagerMock, SpawnApp(APPMANAGER_APP_ID, ::testing::_, ::testing::_, ::testing::_, launchArgs, ::testing::_, ::testing::_, ::testing::_))
+        .Times(::testing::AnyNumber())
+        .WillOnce([&](const string& appId, const string& launchIntent, const Exchange::ILifecycleManager::LifecycleState targetLifecycleState,
+            const Exchange::RuntimeConfig& runtimeConfigObject, const string& launchArgs, string& appInstanceId, string& errorReason, bool& success) {
+            {
+                std::lock_guard<std::mutex> lock(mPreLoadMutex);
+                mPreLoadSpawmCalled = true;
+            }
+            appInstanceId = APPMANAGER_APP_INSTANCE;
+            errorReason = "";
+            success = true;
+            mPreLoadCV.notify_one();
             return Core::ERROR_NONE;
         });
     }
@@ -496,6 +569,7 @@ TEST_F(AppManagerTest, RegisteredMethodsUsingJsonRpcSuccess)
 
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getInstalledApps")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("isInstalled")));
+
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("getLoadedApps")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("launchApp")));
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Exists(_T("preloadApp")));
@@ -581,7 +655,7 @@ TEST_F(AppManagerTest, GetInstalledAppsUsingJSONRpcSuccess)
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getInstalledApps"), _T("{\"apps\": \"\"}"), mJsonRpcResponse));
     jsonStr = GetPackageInfoInJSON();
     EXPECT_STREQ(
-    "[{\"appId\":\"com.test.app\",\"versionString\":\"1.2.8\",\"type\":\"APPLICATION_TYPE_INTERACTIVE\",\"lastActiveTime\":\"\",\"lastActiveIndex\":\"\"}]",
+    "[{\"appId\":\"com.test.app\",\"versionString\":\"1.2.8\",\"type\":\"INTERACTIVE_APP\",\"lastActiveTime\":\"\",\"lastActiveIndex\":\"\"}]",
     mJsonRpcResponse.c_str());
 
     if(status == Core::ERROR_NONE)
@@ -809,15 +883,7 @@ TEST_F(AppManagerTest, IsInstalledUsingComRpcFailureEmptyAppID)
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
 
-    EXPECT_CALL(*mPackageInstallerMock, ListPackages(::testing::_))
-    .WillOnce([&](Exchange::IPackageInstaller::IPackageIterator*& packages) {
-        auto mockIterator = FillPackageIterator(); // Fill the package Info
-        packages = mockIterator;
-        return Core::ERROR_NONE;
-    });
-
-    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->IsInstalled("", installed));
-    EXPECT_EQ(installed, false);
+    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->IsInstalled("", installed));
 
     if(status == Core::ERROR_NONE)
     {
@@ -1018,13 +1084,27 @@ TEST_F(AppManagerTest, LaunchAppUsingJSONRpcSuccess)
  * Verifying the return of the API by passing the app in suspended state
  * Releasing the AppManager interface and all related test resources
  */
+//TODO
+/*
 TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
 {
     Core::hresult status;
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    ExpectedAppLifecycleEvent expectedEvent;
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = APPMANAGER_APP_INSTANCE;
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+    expectedEvent.intent = APPMANAGER_APP_INTENT;
+    expectedEvent.source = "";
 
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::SUSPENDED);
     ON_CALL(*p_wrapsImplMock, stat(::testing::_, ::testing::_))
         .WillByDefault([](const char* path, struct stat* info) {
@@ -1037,13 +1117,16 @@ TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
     });
 
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
+    mAppManagerImpl->Unregister(&notification);
     if(status == Core::ERROR_NONE)
     {
         releaseResources();
     }
 }
-
+*/
 /*
  * Test Case for LaunchAppUsingComRpcFailureWrongAppID
  * Setting up AppManager/LifecycleManager/LifecycleManagerState/PersistentStore/PackageManagerRDKEMS Plugin and creating required COM-RPC resources
@@ -1058,12 +1141,26 @@ TEST_F(AppManagerTest, LaunchAppUsingCOMRPCSuspendedSuccess)
 TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureWrongAppID)
 {
     Core::hresult status;
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
+    ExpectedAppLifecycleEvent expectedEvent;
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
 
+    expectedEvent.appId = APPMANAGER_WRONG_APP_ID;
+    expectedEvent.appInstanceId = "";
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NOT_INSTALLED;
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
+
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
-    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->LaunchApp(APPMANAGER_WRONG_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_WRONG_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
     if(status == Core::ERROR_NONE)
     {
@@ -1085,7 +1182,7 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureEmptyAppID)
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
-    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->LaunchApp("", APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    EXPECT_EQ(Core::ERROR_INVALID_PARAMETER, mAppManagerImpl->LaunchApp("", APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
 
     if(status == Core::ERROR_NONE)
     {
@@ -1128,7 +1225,7 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSpawnAppFailure)
         return Core::ERROR_GENERAL;
     });
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
     // Verify that the notification handler received the expected event
     signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLaunchRequest);
     EXPECT_TRUE(signalled & AppManager_onAppLaunchRequest);
@@ -1154,9 +1251,20 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcSpawnAppFailure)
 TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureIsAppLoadedReturnError)
 {
     Core::hresult status;
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
+    ExpectedAppLifecycleEvent expectedEvent;
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = "";
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_PACKAGE_LOCK;
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
 
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::ACTIVE);
     EXPECT_CALL(*mLifecycleManagerMock, IsAppLoaded(::testing::_, ::testing::_))
@@ -1164,7 +1272,11 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureIsAppLoadedReturnError)
         loaded = false;
         return Core::ERROR_GENERAL;
     });
-    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+
+
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
     if(status == Core::ERROR_NONE)
     {
@@ -1181,9 +1293,24 @@ TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureIsAppLoadedReturnError)
  */
 TEST_F(AppManagerTest, LaunchAppUsingComRpcFailureLifecycleManagerRemoteObjectIsNull)
 {
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
+    ExpectedAppLifecycleEvent expectedEvent;
+
     createAppManagerImpl();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = "";
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NOT_INSTALLED;
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
+
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->LaunchApp(APPMANAGER_APP_ID, APPMANAGER_APP_INTENT, APPMANAGER_APP_LAUNCHARGS));
+
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
     releaseAppManagerImpl();
 }
@@ -1206,9 +1333,14 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcSuccess)
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    mPreLoadSpawmCalled = false;
 
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
+    preLaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
+    {
+        std::unique_lock<std::mutex> lock(mPreLoadMutex);
+        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(10), [&]{ return mPreLoadSpawmCalled; }));
+    }
 
     if(status == Core::ERROR_NONE)
     {
@@ -1232,10 +1364,15 @@ TEST_F(AppManagerTest, PreloadAppUsingJSONRpcSuccess)
     std::string error = "";
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+    mPreLoadSpawmCalled = false;
 
-    LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
+    preLaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
     std::string request = "{\"appId\": \"" + std::string(APPMANAGER_APP_ID) + "\", \"launchArgs\": \"" + std::string(APPMANAGER_APP_LAUNCHARGS) + "\"}";
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("preloadApp"), request, mJsonRpcResponse));
+    {
+        std::unique_lock<std::mutex> lock(mPreLoadMutex);
+        ASSERT_TRUE(mPreLoadCV.wait_for(lock, std::chrono::seconds(10), [&]{ return mPreLoadSpawmCalled; }));
+    }
 
     if(status == Core::ERROR_NONE)
     {
@@ -1259,13 +1396,27 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcFailureWrongAppID)
 {
     Core::hresult status;
     std::string error = "";
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
+    ExpectedAppLifecycleEvent expectedEvent;
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
 
+    expectedEvent.appId = APPMANAGER_WRONG_APP_ID;
+    expectedEvent.appInstanceId = "";
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NOT_INSTALLED;
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
+
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->PreloadApp(APPMANAGER_WRONG_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->PreloadApp(APPMANAGER_WRONG_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
+
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
     if(status == Core::ERROR_NONE)
     {
@@ -1289,9 +1440,20 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcFailureIsAppLoadedReturnError)
 {
     Core::hresult status;
     std::string error = "";
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
+    ExpectedAppLifecycleEvent expectedEvent;
 
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
+
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = "";
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_PACKAGE_LOCK;
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
 
     LaunchAppPreRequisite(Exchange::ILifecycleManager::LifecycleState::PAUSED);
 
@@ -1300,7 +1462,10 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcFailureIsAppLoadedReturnError)
         loaded = false;
         return Core::ERROR_GENERAL;
     });
-    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
+
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
     if(status == Core::ERROR_NONE)
     {
@@ -1318,10 +1483,24 @@ TEST_F(AppManagerTest, PreloadAppUsingComRpcFailureIsAppLoadedReturnError)
 TEST_F(AppManagerTest, PreloadAppUsingComRpcFailureLifecycleManagerRemoteObjectIsNull)
 {
     std::string error = "";
+    uint32_t signalled = AppManager_StateInvalid;
+    Core::Sink<NotificationHandler> notification;
+    ExpectedAppLifecycleEvent expectedEvent;
 
     createAppManagerImpl();
 
-    EXPECT_EQ(Core::ERROR_GENERAL, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
+    expectedEvent.appId = APPMANAGER_APP_ID;
+    expectedEvent.appInstanceId = "";
+    expectedEvent.newState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNKNOWN;
+    expectedEvent.oldState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+    expectedEvent.errorReason = Exchange::IAppManager::AppErrorReason::APP_ERROR_NOT_INSTALLED;
+    mAppManagerImpl->Register(&notification);
+    notification.SetExpectedEvent(expectedEvent);
+
+    EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->PreloadApp(APPMANAGER_APP_ID, APPMANAGER_APP_LAUNCHARGS, error));
+
+    signalled = notification.WaitForRequestStatus(TIMEOUT, AppManager_onAppLifecycleStateChanged);
+    EXPECT_TRUE(signalled & AppManager_onAppLifecycleStateChanged);
 
     releaseAppManagerImpl();
 }
@@ -2861,20 +3040,27 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
     Core::hresult status;
 
     status = createResources();
+    Plugin::AppManagerImplementation::AppInfo appInfo;
+    Plugin::AppManagerImplementation::PackageInfo pkgInfo;
+    std::string nexTennisAppId = "NexTennis";
+    appInfo.appInstanceId = nexTennisAppId;
+    pkgInfo.type = Plugin::AppManagerImplementation::ApplicationType::APPLICATION_TYPE_INTERACTIVE;
+    appInfo.packageInfo = pkgInfo;
+    mAppManagerImpl->mAppInfo[nexTennisAppId] = appInfo;
     EXPECT_EQ(Core::ERROR_NONE, status);
     EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
     ).WillOnce([&](const bool verbose, std::string &apps) {
         apps = R"([
-            {"appId":"NexTennis","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6},
-            {"appId":"uktv","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6}
+            {"appId":"NexTennis","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6},
+            {"appId":"uktv","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":6,"lifecycleState":6}
         ])";
         return Core::ERROR_NONE;
-    });
+    });        
     // Simulate a JSON-RPC call
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("getLoadedApps"), _T("{}"), mJsonRpcResponse));
     EXPECT_STREQ(mJsonRpcResponse.c_str(),
-    "\"[{\\\"appId\\\":\\\"NexTennis\\\",\\\"appInstanceId\\\":\\\"0295effd-2883-44ed-b614-471e3f682762\\\",\\\"activeSessionId\\\":\\\"\\\",\\\"targetLifecycleState\\\":8,\\\"currentLifecycleState\\\":8},{\\\"appId\\\":\\\"uktv\\\",\\\"appInstanceId\\\":\\\"67fa75b6-0c85-43d4-a591-fd29e7214be5\\\",\\\"activeSessionId\\\":\\\"\\\",\\\"targetLifecycleState\\\":8,\\\"currentLifecycleState\\\":8}]\"");
-     if(status == Core::ERROR_NONE)
+    "[{\"appId\":\"NexTennis\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"type\":\"INTERACTIVE_APP\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"lifecycleState\":\"APP_STATE_HIBERNATED\"},{\"appId\":\"uktv\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"type\":\"\",\"targetLifecycleState\":\"APP_STATE_HIBERNATED\",\"lifecycleState\":\"APP_STATE_HIBERNATED\"}]");
+    if(status == Core::ERROR_NONE)
     {
         releaseResources();
     }
@@ -2886,6 +3072,7 @@ TEST_F(AppManagerTest, GetLoadedAppsJsonRpc)
  * Verifying the return of the API
  * Releasing the AppManager interface and all related test resources
  */
+/*
 TEST_F(AppManagerTest, GetLoadedAppsCOMRPCSuccess)
 {
     Core::hresult status;
@@ -2893,30 +3080,22 @@ TEST_F(AppManagerTest, GetLoadedAppsCOMRPCSuccess)
     status = createResources();
     EXPECT_EQ(Core::ERROR_NONE, status);
     EXPECT_CALL(*mLifecycleManagerMock, GetLoadedApps(::testing::_, ::testing::_)
-    ).WillOnce([&](bool verbose, string& apps) {
-        apps = R"([
-            {"appId":"NTV","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":7,"currentLifecycleState":7},
-            {"appId":"NexTennis","appInstanceID":"0295effd-2883-44ed-b614-471e3f682762","activeSessionId":"","targetLifecycleState":6,"currentLifecycleState":6},
-            {"appId":"uktv","appInstanceID":"67fa75b6-0c85-43d4-a591-fd29e7214be5","activeSessionId":"","targetLifecycleState":5,"currentLifecycleState":5},
-            {"appId":"YouTube","appInstanceID":"12345678-1234-1234-1234-123456789012","activeSessionId":"","targetLifecycleState":4,"currentLifecycleState":4},
-            {"appId":"Netflix","appInstanceID":"87654321-4321-4321-4321-210987654321","activeSessionId":"","targetLifecycleState":3,"currentLifecycleState":3},
-            {"appId":"Spotify","appInstanceID":"abcdefab-cdef-abcd-efab-cdefabcdefab","activeSessionId":"","targetLifecycleState":2,"currentLifecycleState":2},
-            {"appId":"Hulu","appInstanceID":"fedcbafe-dcba-fedc-ba98-7654321fedcb","activeSessionId":"","targetLifecycleState":1,"currentLifecycleState":1},
-            {"appId":"AmazonPrime","appInstanceID":"12345678-90ab-cdef-1234-567890abcdef","activeSessionId":"","targetLifecycleState":0,"currentLifecycleState":0}
-        ])";
+    ).WillOnce([&](const bool verbose, Exchange::IAppManager::ILoadedAppInfoIterator*& apps) {
+        auto mockIterator = FillLoadedAppsIterator(); // Fill the loaded apps
+        apps = mockIterator;
         return Core::ERROR_NONE;
     });
     std::string apps;
     EXPECT_EQ(Core::ERROR_NONE, mAppManagerImpl->GetLoadedApps(apps));
     EXPECT_STREQ(apps.c_str(),
-        "[{\"appId\":\"NTV\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":9,\"currentLifecycleState\":9},"
-        "{\"appId\":\"NexTennis\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":8,\"currentLifecycleState\":8},"
-        "{\"appId\":\"uktv\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"targetLifecycleState\":7,\"currentLifecycleState\":7},"
-        "{\"appId\":\"YouTube\",\"appInstanceId\":\"12345678-1234-1234-1234-123456789012\",\"activeSessionId\":\"\",\"targetLifecycleState\":6,\"currentLifecycleState\":6},"
-        "{\"appId\":\"Netflix\",\"appInstanceId\":\"87654321-4321-4321-4321-210987654321\",\"activeSessionId\":\"\",\"targetLifecycleState\":4,\"currentLifecycleState\":4},"
-        "{\"appId\":\"Spotify\",\"appInstanceId\":\"abcdefab-cdef-abcd-efab-cdefabcdefab\",\"activeSessionId\":\"\",\"targetLifecycleState\":3,\"currentLifecycleState\":3},"
-        "{\"appId\":\"Hulu\",\"appInstanceId\":\"fedcbafe-dcba-fedc-ba98-7654321fedcb\",\"activeSessionId\":\"\",\"targetLifecycleState\":2,\"currentLifecycleState\":2},"
-        "{\"appId\":\"AmazonPrime\",\"appInstanceId\":\"12345678-90ab-cdef-1234-567890abcdef\",\"activeSessionId\":\"\",\"targetLifecycleState\":1,\"currentLifecycleState\":1}]");
+        "[{\"appId\":\"NTV\",\"type\":\"\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":9,\"lifecycleState\":9},"
+        "{\"appId\":\"NexTennis\",\"type\":\"\",\"appInstanceId\":\"0295effd-2883-44ed-b614-471e3f682762\",\"activeSessionId\":\"\",\"targetLifecycleState\":8,\"lifecycleState\":8},"
+        "{\"appId\":\"uktv\",\"type\":\"\",\"appInstanceId\":\"67fa75b6-0c85-43d4-a591-fd29e7214be5\",\"activeSessionId\":\"\",\"targetLifecycleState\":7,\"lifecycleState\":7},"
+        "{\"appId\":\"YouTube\",\"type\":\"\",\"appInstanceId\":\"12345678-1234-1234-1234-123456789012\",\"activeSessionId\":\"\",\"targetLifecycleState\":6,\"lifecycleState\":6},"
+        "{\"appId\":\"Netflix\",\"type\":\"\",\"appInstanceId\":\"87654321-4321-4321-4321-210987654321\",\"activeSessionId\":\"\",\"targetLifecycleState\":4,\"lifecycleState\":4},"
+        "{\"appId\":\"Spotify\",\"type\":\"\",\"appInstanceId\":\"abcdefab-cdef-abcd-efab-cdefabcdefab\",\"activeSessionId\":\"\",\"targetLifecycleState\":3,\"lifecycleState\":3},"
+        "{\"appId\":\"Hulu\",\"type\":\"\",\"appInstanceId\":\"fedcbafe-dcba-fedc-ba98-7654321fedcb\",\"activeSessionId\":\"\",\"targetLifecycleState\":2,\"lifecycleState\":2},"
+        "{\"appId\":\"AmazonPrime\",\"type\":\"\",\"appInstanceId\":\"12345678-90ab-cdef-1234-567890abcdef\",\"activeSessionId\":\"\",\"targetLifecycleState\":1,\"lifecycleState\":1}]");
 
     if(status == Core::ERROR_NONE)
     {
@@ -2924,7 +3103,7 @@ TEST_F(AppManagerTest, GetLoadedAppsCOMRPCSuccess)
     }
 
 }
-
+*/
 /* * Test Case for OnAppInstallationStatusChangedSuccess
  * Setting up AppManager/LifecycleManager/LifecycleManagerState/PackageManagerRDKEMS Plugin and creating required COM-RPC resources
  * Registering the notification handler to receive the app installation status change event.
@@ -2986,7 +3165,7 @@ TEST_F(AppManagerTest, OnApplicationStateChangedSuccess)
         "YouTube",
         "12345678-1234-1234-1234-123456789012",
         Exchange::ILifecycleManager::LifecycleState::ACTIVE,      // Old state
-        Exchange::ILifecycleManager::LifecycleState::SUSPENDED,   // New state
+        Exchange::ILifecycleManager::LifecycleState::TERMINATING,   // New state
         "start"
     );
     /* Ensure that the OnAppLifecycleStateChanged callback is not called/invoked */

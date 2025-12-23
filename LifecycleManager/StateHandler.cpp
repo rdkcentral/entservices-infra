@@ -166,35 +166,36 @@ namespace WPEFramework
             Exchange::ILifecycleManager::LifecycleState lifecycleState = request.mTargetState;
             ApplicationContext* context = request.mContext;
 
-            if (!context)
-	    {
+            if (context == nullptr)
+            {
+                errorReason = "ApplicationContext is null";
                 return false;
-	    }
+            }
             Exchange::ILifecycleManager::LifecycleState currentLifecycleState = context->getCurrentLifecycleState();
 
-            if (currentLifecycleState == lifecycleState)
+            if ((context->mPendingStateTransition) && (Exchange::ILifecycleManager::LifecycleState::TERMINATING != currentLifecycleState))
+            {
+                sendEvent(context, context->mPendingOldState, currentLifecycleState, errorReason);
+            }
+
+            if ((false == context->mPendingStateTransition) && (currentLifecycleState == lifecycleState))
 	    {
 	        return true;
 	    }
 
             std::vector<Exchange::ILifecycleManager::LifecycleState> statePath;
-            std::map<Exchange::ILifecycleManager::LifecycleState, bool> seenPaths;
-            bool isValidRequest = StateHandler::isValidTransition(currentLifecycleState, lifecycleState, seenPaths, statePath);
-            if (!isValidRequest)
+            bool result = getStatePath(context, lifecycleState, statePath, errorReason);
+            if (false == result)
             {
-                errorReason = "Invalid launch request in current state";
-                return false;
+                printf("Unable to get sequence for target state \n");
+                fflush(stdout);
+                return false; 
             }
-            //ensure final state is pushed here
-            statePath.push_back(lifecycleState);
 
-            if (Exchange::ILifecycleManager::LifecycleState::TERMINATING == lifecycleState)
-	    {
-                statePath.push_back(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
-	    }
-            bool result = false;
-            IEventHandler* eventHandler = RequestHandler::getInstance()->getEventHandler();
             bool isStateTerminating = false;
+            size_t lastStateIndex = static_cast<size_t>(-1); 
+            context->mPendingStateTransition = false;
+
             // start from next state
 	    for (size_t stateIndex=1; stateIndex<statePath.size(); stateIndex++)
 	    {
@@ -203,60 +204,121 @@ namespace WPEFramework
                 if (!isStateTerminating)
 		{
                     result = updateState(context, statePath[stateIndex], errorReason);
-                if(result)
-                {
-                    printf("StateHandler::changeState: Success %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                    if(result)
+                    {
+                        printf("StateHandler::changeState: Success %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                    }
+                    else
+                    {
+                        printf("StateHandler::changeState: Failed to change state from %s to %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                        break;
+                    }
+                    if (true == context->mPendingStateTransition)
+                    {
+                        context->mPendingOldState = oldLifecycleState;
+                        lastStateIndex = stateIndex;
+                        break;
+                    }
                 }
-                else
-                {
-                    printf("StateHandler::changeState: Failed to change state from %s to %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
-                    break;
-                }
-                fflush(stdout);
-            }
 
+		Exchange::ILifecycleManager::LifecycleState newLifecycleState = ((State*)context->getState())->getValue();
+                if (isStateTerminating)
+		{
+                    newLifecycleState = statePath[stateIndex];
+                }
+                sendEvent(context, oldLifecycleState, newLifecycleState, errorReason);
+
+                if (isStateTerminating)
+                {
+                    result = updateState(context, statePath[stateIndex], errorReason);
+                    if(result)
+                    {
+                        printf("StateHandler::changeState:Terminating: Success %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                    }
+                    else
+                    {
+                        printf("StateHandler::changeState:Terminating: Failed to change state from %s to %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
+                        break;
+                    }
+                    if (true == context->mPendingStateTransition)
+                    {
+                        lastStateIndex = stateIndex;
+                        break;
+                    }
+                }
+            }
+            if (true == context->mPendingStateTransition)
+            {
+                context->mPendingStates.clear();
+                if (lastStateIndex < statePath.size())
+                {
+                    for (size_t stateIndex = lastStateIndex; stateIndex < statePath.size() ; stateIndex++)
+                    {
+                        context->mPendingStates.push_back(statePath[stateIndex]);
+                    }
+                }
+            }
+            else 
+	    {
+                context->mPendingStateTransition = false;
+                context->mPendingEventName = "";
+                context->mPendingStates.clear();
+            }		  
+            return result;
+        }
+
+        void StateHandler::sendEvent(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState oldLifecycleState, Exchange::ILifecycleManager::LifecycleState newLifecycleState, string& errorReason)
+	{
+            IEventHandler* eventHandler = RequestHandler::getInstance()->getEventHandler();
+
+            if (nullptr != eventHandler)
+            {
                 struct timespec stateChangeTime;
                 timespec_get(&stateChangeTime, TIME_UTC);
                 context->setLastLifecycleStateChangeTime(stateChangeTime);
                 context->setStateChangeId(sStateChangeCount);
                 sStateChangeCount++;
 
-                if (nullptr != eventHandler)
+                JsonObject eventData;
+                eventData["appId"] = context->getAppId();
+                eventData["appInstanceId"] = context->getAppInstanceId();
+                eventData["oldLifecycleState"] = (uint32_t)oldLifecycleState;
+                eventData["newLifecycleState"] = (uint32_t)newLifecycleState;
+                if (newLifecycleState == Exchange::ILifecycleManager::LifecycleState::ACTIVE)
                 {
-		    Exchange::ILifecycleManager::LifecycleState newLifecycleState = ((State*)context->getState())->getValue();
-                    if (isStateTerminating)
-		    {
-                        newLifecycleState = statePath[stateIndex];
-                    }
-                    JsonObject eventData;
-                    eventData["appId"] = context->getAppId();
-                    eventData["appInstanceId"] = context->getAppInstanceId();
-                    eventData["oldLifecycleState"] = (uint32_t)oldLifecycleState;
-                    eventData["newLifecycleState"] = (uint32_t)newLifecycleState;
-                    if (newLifecycleState == Exchange::ILifecycleManager::LifecycleState::ACTIVE)
-                    {
-                        eventData["navigationIntent"] = context->getMostRecentIntent();
-                    }
-                    eventData["errorReason"] = errorReason;
-                    eventHandler->onStateChangeEvent(eventData);
+                    eventData["navigationIntent"] = context->getMostRecentIntent();
                 }
-                if (isStateTerminating)
-            {
-                result = updateState(context, statePath[stateIndex], errorReason);
-                if(result)
-                {
-                    printf("StateHandler::changeState:Terminating: Success %s -> %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
-                }
-                else
-                {
-                    printf("StateHandler::changeState:Terminating: Failed to change state from %s to %s\n", mStateStrings[oldLifecycleState].c_str(), mStateStrings[statePath[stateIndex]].c_str());
-                    break;
-                }
-                fflush(stdout);
+                eventData["errorReason"] = errorReason;
+                eventHandler->onStateChangeEvent(eventData);
             }
         }
-        return result;
-    }
 
+        bool StateHandler::getStatePath(ApplicationContext* context, Exchange::ILifecycleManager::LifecycleState lifecycleState, std::vector<Exchange::ILifecycleManager::LifecycleState>& statePath, string& errorReason)
+        {
+            if (false == context->mPendingStateTransition)
+            {
+                Exchange::ILifecycleManager::LifecycleState currentLifecycleState = context->getCurrentLifecycleState();
+                std::map<Exchange::ILifecycleManager::LifecycleState, bool> seenPaths;
+
+                bool isValidRequest = StateHandler::isValidTransition(currentLifecycleState, lifecycleState, seenPaths, statePath);
+                if (!isValidRequest)
+                {
+                    errorReason = "Invalid launch request in current state";
+                    return false;
+                }
+                //ensure final state is pushed here
+                statePath.push_back(lifecycleState);
+
+                if (Exchange::ILifecycleManager::LifecycleState::TERMINATING == lifecycleState)
+	        {
+                    statePath.push_back(Exchange::ILifecycleManager::LifecycleState::UNLOADED);
+	        }
+            }
+            else
+            {
+                statePath = context->mPendingStates;
+            }
+            return true;
+        }
     } /* namespace Plugin */
 } /* namespace WPEFramework */

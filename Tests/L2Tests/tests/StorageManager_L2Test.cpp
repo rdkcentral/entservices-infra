@@ -919,7 +919,7 @@ TEST_F(StorageManagerTest, ClearAllStorageUsingJsonRpcWithExemptionSuccess)
     JsonObject resultJson;
     string applist;
 
-    params["exemptionAppIds"] = {"{\"exemptionAppIds\":[\"testApp1\",\"testApp2\"]}"};
+    params["exemptionAppIds"] = {"[\"testApp1\",\"testApp2\"]"};
 
     /* Invoking setAppProperty method */
     status = InvokeServiceMethod(STORAGEMANAGER_CALLSIGN, "clearAll", params, resultJson);
@@ -975,7 +975,7 @@ TEST_F(StorageManagerTest, ClearAllStorageUsingJsonRpcFailiureIfStorageDirectory
     /* Clearing the contents of the appId */
     JsonObject params;
     JsonObject resultJson;
-    params["exemptionAppIds"] = {""};
+    params["exemptionAppIds"] = {"[]"};
     /* Invoking setAppProperty method */
     status = InvokeServiceMethod(STORAGEMANAGER_CALLSIGN, "clearAll", params, resultJson);
     EXPECT_EQ(status,Core::ERROR_GENERAL);

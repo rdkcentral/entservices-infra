@@ -156,6 +156,7 @@ jobs:
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/error_code_R4_4.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/1004-Add-support-for-project-dir.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-733-Add-ENTOS-IDS.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Jsonrpc_dynamic_error_handling.patch
           cd -
       - name: Build Thunder
         run: >
@@ -189,10 +190,14 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Proc"
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/RBus"
           mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Rfc"
+          mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/PowerManagerHal"
+          mkdir -p "$GITHUB_WORKSPACE/entservices-apis/apis/Mfr"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IIarm.h" "$GITHUB_WORKSPACE/entservices-apis/apis/IARM/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IProc.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Proc/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IRBus.h" "$GITHUB_WORKSPACE/entservices-apis/apis/RBus/"
           cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IRfc.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Rfc/"
+          cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IPowerManagerHal.h" "$GITHUB_WORKSPACE/entservices-apis/apis/PowerManagerHal/"
+          cp "$GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/interfaces/IMfr.h" "$GITHUB_WORKSPACE/entservices-apis/apis/Mfr/"
 
       - name: Build entservices-apis
         run: >
@@ -242,6 +247,9 @@ jobs:
           rdk/ds/manager.hpp
           rdk/ds/dsTypes.h
           rdk/ds/dsUtl.h
+          rdk/ds/audioOutputPortType.hpp
+          rdk/ds/audioOutputPortConfig.hpp
+          rdk/ds/pixelResolution.hpp
           rdk/iarmbus/libIARM.h
           rdk/iarmbus/libIBus.h
           rdk/iarmbus/libIBusDaemon.h
@@ -257,6 +265,7 @@ jobs:
           systemaudioplatform.h
           maintenanceMGR.h
           pkg.h
+          edid-parser.hpp
           btmgr.h
           tvError.h
           tvTypes.h
@@ -272,7 +281,7 @@ jobs:
           rdk/ds/VideoDFC.hpp
           dsRpc.h
           &&
-          cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h .
+          cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h /usr/include/libdrm/drm.h /usr/include/libdrm/drm_mode.h /usr/include/xf86drm.h .
 
       - name: Set clang toolchain
         if: ${{ matrix.compiler == 'clang' }}
@@ -347,6 +356,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices/proc
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/libusb
           -I $GITHUB_WORKSPACE/install/usr/include
+          -I ./usr/include/libdrm
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h
@@ -428,6 +438,7 @@ jobs:
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/systemservices/proc
           -I $GITHUB_WORKSPACE/entservices-deviceanddisplay/helpers
           -I $GITHUB_WORKSPACE/install/usr/include
+          -I ./usr/include/libdrm
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/devicesettings.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Iarm.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Rfc.h

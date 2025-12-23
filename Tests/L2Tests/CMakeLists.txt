@@ -22,6 +22,10 @@ set(THUNDER_PORT 9998)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 
+if(PLUGIN_MIGRATION)
+    set(SRC_FILES ${SRC_FILES} tests/Migration_L2Test.cpp)
+endif()
+
 if (PLUGIN_ANALYTICS)
     set(SRC_FILES ${SRC_FILES} tests/Analytics_L2Test.cpp)
 endif()
@@ -56,6 +60,10 @@ endif()
 
 if(PLUGIN_SHAREDSTORAGE)
     set(SRC_FILES ${SRC_FILES} tests/SharedStorage_L2Test.cpp)
+endif()
+
+if(PLUGIN_RESOURCEMANAGER)
+    set(SRC_FILES ${SRC_FILES} tests/ResourceManager_L2Test.cpp)
 endif()
 
 if(PLUGIN_OCICONTAINER)

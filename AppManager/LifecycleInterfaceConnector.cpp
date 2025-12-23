@@ -26,13 +26,16 @@
 #include <thread>
 #include <fstream>
 #include <sstream>
+#include <list>
 #include <unistd.h>
 #include <plugins/System.h>
 
 #include <interfaces/ILifecycleManager.h>
-
-#include "UtilsString.h"
 #include "AppManagerImplementation.h"
+#include "UtilsString.h"
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+#include "AppManagerTelemetryReporting.h"
+#endif
 
 #define SUSPEND_POLICY_FILE        "/tmp/AI2.0Suspendable"
 #define HIBERNATE_POLICY_FILE      "/tmp/AI2.0Hibernatable"
@@ -52,6 +55,7 @@ namespace WPEFramework
         : mLifecycleManagerRemoteObject(nullptr),
           mLifecycleManagerStateRemoteObject(nullptr),
           mNotification(*this),
+          mAppStateChangeNotification(*this),
           mCurrentservice(nullptr),
           mAppIdAwaitingPause("")
         {
@@ -72,6 +76,9 @@ namespace WPEFramework
                mCurrentservice = nullptr;
             }
             LifecycleInterfaceConnector::_instance = nullptr;
+
+	    //clear action list
+	    mAppCurrentActionList.clear();
         }
 
         Core::hresult LifecycleInterfaceConnector::createLifecycleManagerRemoteObject()
@@ -94,6 +101,7 @@ namespace WPEFramework
             {
                 LOGINFO("Created LifecycleManager Remote Object \n");
                 mLifecycleManagerRemoteObject->AddRef();
+                mLifecycleManagerRemoteObject->Register(&mAppStateChangeNotification);
 
                 LOGINFO("Created LifecycleManagerState Remote Object \n");
                 mLifecycleManagerStateRemoteObject->AddRef();
@@ -110,6 +118,7 @@ namespace WPEFramework
             ASSERT(nullptr != mLifecycleManagerRemoteObject );
             if(mLifecycleManagerRemoteObject )
             {
+                mLifecycleManagerRemoteObject->Unregister(&mAppStateChangeNotification);
                 mLifecycleManagerRemoteObject ->Release();
                 mLifecycleManagerRemoteObject = nullptr;
             }
@@ -161,6 +170,10 @@ namespace WPEFramework
             string errorReason = "";
             bool success = true;
             Exchange::ILifecycleManager::LifecycleState state = Exchange::ILifecycleManager::LifecycleState::UNLOADED;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
+
             if (appId.empty())
             {
                 LOGERR("appId is empty");
@@ -236,9 +249,24 @@ namespace WPEFramework
                             else
                             {
                                 LOGERR("spawnApp failed");
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_SPAWN_APP);
+#endif
                             }
                         }
                     }
+                    else
+                    {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_INTERNAL);
+#endif
+                    }
+                }
+                else
+                {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_LAUNCH, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                 }
                 mAdminLock.Unlock();
             }
@@ -250,6 +278,9 @@ namespace WPEFramework
         {
             Core::hresult status = Core::ERROR_GENERAL;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
 
             string intent = "";
 
@@ -303,7 +334,16 @@ namespace WPEFramework
                     else
                     {
                         LOGERR("PreLoad failed");
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_PRELOAD, AppManagerImplementation::ERROR_SPAWN_APP);
+#endif
                     }
+                }
+                else
+                {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_PRELOAD, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                 }
                 mAdminLock.Unlock();
             }
@@ -316,12 +356,13 @@ namespace WPEFramework
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
             std::string appIntent = "";
-            bool success = false;
-            std::string errorReason = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
+            bool isAppLoaded = false;
 
             LOGINFO("AppId retrieved: %s", appId.c_str());
-
             mAdminLock.Lock();
 
             if(nullptr != appManagerImplInstance)
@@ -332,10 +373,13 @@ namespace WPEFramework
                     {
                         appInstanceId = appIterator->second.appInstanceId;
                         appIntent = appIterator->second.appIntent;
+                        isAppLoaded = true;
 
                         if(nullptr != mLifecycleManagerRemoteObject)
                         {
                             appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_CLOSE);
+
+			    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
 
                             status = mLifecycleManagerRemoteObject->SetTargetAppState(appInstanceId, Exchange::ILifecycleManager::LifecycleState::PAUSED, appIntent);
 
@@ -359,9 +403,19 @@ namespace WPEFramework
 
                                     auto retryIt = appManagerImplInstance->mAppInfo.find(appId);
                                     if (retryIt != appManagerImplInstance->mAppInfo.end())
-                                    {
+                                    {	
+					    // Check for install/uninstall block.
+					bool installUninstallBlocked = appManagerImplInstance->checkInstallUninstallBlock(appId);
+					if (installUninstallBlocked)
+					{
+						LOGINFO("Blocked state found for appId: %s. Initiating TERMINATE.", appId.c_str());
+						mAdminLock.Unlock();
+					        Core::hresult terminateStatus = appManagerImplInstance->TerminateApp(appId);
+						LOGINFO("TerminateApp returned status: %d", terminateStatus);
+						mAdminLock.Lock();
+					}
                                         /* Found the AppInfo; apply suspend/hibernate/unload logic */
-                                        if (fileExists(SUSPEND_POLICY_FILE))
+					else if (fileExists(SUSPEND_POLICY_FILE))
                                         {
                                             LOGINFO("App with AppId: %s is suspendable", appId.c_str());
                                             retryIt->second.targetAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED;
@@ -385,43 +439,60 @@ namespace WPEFramework
                                         }
                                         else
                                         {
-                                            LOGINFO("App with AppId: %s is non suspendable. Proceeding to unload the app", appId.c_str());
-                                            status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
-                                            if (status != Core::ERROR_NONE)
-                                            {
-                                                LOGERR("UnloadApp failed with error reason: %s", errorReason.c_str());
-                                            }
-                                            else
-                                            {
-                                                LOGINFO("UnloadApp succeeded for appId: %s", appId.c_str());
-                                            }
+                                            LOGINFO("App with AppId: %s is non suspendable. Keeping app in Paused state", appId.c_str());
                                         }
                                     }
                                     else
                                     {
                                         LOGERR("AppId: %s not found after PAUSED wait", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                        appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                                         status = Core::ERROR_GENERAL;
                                     }
                                 }
                                 else
                                 {
                                     LOGERR("Timed out waiting for appId: %s to reach PAUSED state", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                                     status = Core::ERROR_GENERAL;
                                 }
                             }
                             else
                             {
                                 LOGERR("Failed to set PAUSED state for AppId: %s", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_SET_TARGET_APP_STATE);
+#endif
                             }
+                        }
+                        else
+                        {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                            appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
                         }
 
                         break;
                     }
                 }
+
+                if (!isAppLoaded)
+                {
+                    LOGERR("AppId %s not found in database", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INVALID_PARAMS);
+#endif
+                }
             }
             else
             {
                 LOGERR("AppManagerImplementation instance is null");
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_CLOSE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
             }
             mAdminLock.Unlock();
             return status;
@@ -433,6 +504,9 @@ namespace WPEFramework
             uint32_t status = Core::ERROR_GENERAL;
             std::string appInstanceId = "";
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
             bool success = false;
             std::string errorReason = "";
             bool foundAppId = false;
@@ -452,10 +526,14 @@ namespace WPEFramework
                         if (nullptr != mLifecycleManagerRemoteObject)
                         {
                             appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_TERMINATE);
+			    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                             status = mLifecycleManagerRemoteObject->UnloadApp(appInstanceId, errorReason, success);
                             if (status != Core::ERROR_NONE)
                             {
                                 LOGERR("UnloadApp failed with error reason: %s", errorReason.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_UNLOAD_APP);
+#endif
                             }
                         }
                         break;
@@ -464,11 +542,17 @@ namespace WPEFramework
                 if (!foundAppId)
                 {
                     LOGERR("AppId %s not found in database", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_INVALID_PARAMS);
+#endif
                 }
             }
             else
             {
                 LOGERR("appManagerImplInstance is null");
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_TERMINATE, AppManagerImplementation::ERROR_INTERNAL);
+#endif
             }
             mAdminLock.Unlock();
             return status;
@@ -480,6 +564,9 @@ namespace WPEFramework
             LOGINFO("killApp entered");
             Core::hresult result = Core::ERROR_GENERAL;
             AppManagerImplementation* appManagerImplInstance = AppManagerImplementation::getInstance();
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+            AppManagerTelemetryReporting& appManagerTelemetryReporting =AppManagerTelemetryReporting::getInstance();
+#endif
 
             if (appId.empty())
             {
@@ -503,6 +590,9 @@ namespace WPEFramework
                 if (appInstanceId.empty())
                 {
                     LOGERR("appInstanceId not found for appId '%s'", appId.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                    appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_INVALID_PARAMS);
+#endif
                 }
                 else
                 {
@@ -510,14 +600,24 @@ namespace WPEFramework
                     bool success{};
 
                     appManagerImplInstance->updateCurrentAction(appId, AppManagerImplementation::APP_ACTION_KILL);
+		    mAppCurrentActionList[appId] = Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING;
                     result = mLifecycleManagerRemoteObject->KillApp(appInstanceId, errorReason, success);
 
                     if (!(result == Core::ERROR_NONE && success))
                     {
                         LOGERR("killApp failed, result: %d, success: %d, errorReason: %s", result, success, errorReason.c_str());
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_KILL_APP);
+#endif
                     }
                 }
                 mAdminLock.Unlock();
+            }
+            else
+            {
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                appManagerTelemetryReporting.reportTelemetryErrorData(appId, AppManagerImplementation::APP_ACTION_KILL, AppManagerImplementation::ERROR_INTERNAL);
+#endif
             }
 
             return result;
@@ -571,11 +671,12 @@ namespace WPEFramework
         }
 
         /* GetLoadedApps invokes it */
-        Core::hresult LifecycleInterfaceConnector::getLoadedApps(string& apps)
+        Core::hresult LifecycleInterfaceConnector::getLoadedApps(Exchange::IAppManager::ILoadedAppInfoIterator*& apps)
         {
             LOGINFO("getLoadedApps Entered");
             Core::hresult result = Core::ERROR_GENERAL;
             AppManagerImplementation *appManagerImplInstance = AppManagerImplementation::getInstance();
+            std::list<WPEFramework::Exchange::IAppManager::LoadedAppInfo> loadedAppInfoList;
 
             mAdminLock.Lock();
             /* Checking if mLifecycleManagerRemoteObject is not valid then create the object */
@@ -608,8 +709,8 @@ namespace WPEFramework
                 }
 
                 auto getIntJsonField = [&](JsonObject& obj, const char* key) -> int {
-	                return obj.HasLabel(key) ? static_cast<int>(obj[key].Number()) : 0;
-	            };
+                    return obj.HasLabel(key) ? static_cast<int>(obj[key].Number()) : 0;
+                };
 
                 // Iterate through each app JSON object in the array
                 for (size_t i = 0; i < loadedAppsJsonArray.Length(); ++i)
@@ -619,25 +720,28 @@ namespace WPEFramework
                     LOGINFO("Loaded appId: %s", appId.c_str());
                     auto& appInfo = appManagerImplInstance->mAppInfo[appId];
 
-                    JsonObject loadedAppJson;
-                    loadedAppJson["appId"] = appId;
-                    loadedAppJson["appInstanceId"] = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
-                    loadedAppJson["activeSessionId"] = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
-                    appInfo.targetAppState = mapAppLifecycleState(
-                        static_cast<Exchange::ILifecycleManager::LifecycleState>(
+                    Exchange::IAppManager::LoadedAppInfo loadedAppInfo = {};
+		    loadedAppInfo.appId = appId;
+                    loadedAppInfo.type = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);
+		    loadedAppInfo.appInstanceId = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
+		    loadedAppInfo.activeSessionId = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
+
+		    appInfo.targetAppState = mapAppLifecycleState(
+                    static_cast<Exchange::ILifecycleManager::LifecycleState>(
                             getIntJsonField(loadedAppsObject, "targetLifecycleState")));
-                    loadedAppJson["targetLifecycleState"] = static_cast<int>(appInfo.targetAppState);
+                    loadedAppInfo.targetLifecycleState = appInfo.targetAppState;
                     appInfo.appNewState = mapAppLifecycleState(
                         static_cast<Exchange::ILifecycleManager::LifecycleState>(
-                            getIntJsonField(loadedAppsObject, "currentLifecycleState")));
-                    loadedAppJson["currentLifecycleState"] = static_cast<int>(appInfo.appNewState);
+                            getIntJsonField(loadedAppsObject, "lifecycleState")));
+                    loadedAppInfo.lifecycleState = appInfo.appNewState;
 
-                    loadedAppsArray.Add(loadedAppJson);
+                    //Add loaded info
+		    loadedAppInfoList.push_back(loadedAppInfo);
                 }
-                // Convert the JSON array back to string to return
-                loadedAppsArray.ToString(apps);
-                LOGINFO("getLoadedApps result JSON: %s", apps.c_str());
-                result = Core::ERROR_NONE;
+
+                apps = Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>> \
+		   ::Create<Exchange::IAppManager::ILoadedAppInfoIterator>(loadedAppInfoList);
+		result = Core::ERROR_NONE;
             }
             else
             {
@@ -752,27 +856,111 @@ End:
                         break;
                     }
                 }
+                shouldNotify = ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_LOADING) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_HIBERNATED) ||
+                                       (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED));
+
+                LOGINFO("shouldNotify %d for Appstate %u",shouldNotify, newAppState);
+
+                if(shouldNotify)
+                {
+                    if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
+		    {
+                        if (mAppCurrentActionList[appId] == Exchange::IAppManager::AppLifecycleState::APP_STATE_TERMINATING)
+			{
+			    //Normal close: Unlode event from App manager
+			    LOGINFO("Terminate event from plugin");
+			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+			}
+			else
+			{
+			    //Upnormal close: No unload event from app manager
+			    LOGINFO("Terminate event due to app crash");
+			    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_ABORT);
+			}
+			mAppCurrentActionList.erase(appId);
+		    }
+		    else
+		    {
+                        appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+		    }
+                }
 
                 if(newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED)
                 {
                     appManagerImplInstance->handleOnAppUnloaded(appId, appInstanceId);
                 }
 
-                if (it != appManagerImplInstance->mAppInfo.end())
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                AppManagerTelemetryReporting::getInstance().reportTelemetryDataOnStateChange(appId, newState);
+#endif
+            }
+        }
+
+        void LifecycleInterfaceConnector::OnAppStateChanged(const string& appId, Exchange::ILifecycleManager::LifecycleState state, const string& errorReason)
+        {
+            string appInstanceId = "";
+            Exchange::IAppManager::AppLifecycleState currentAppState = Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED;
+            AppManagerImplementation*appManagerImplInstance = AppManagerImplementation::getInstance();
+            Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+            LOGINFO("OnAppStateChanged event triggered for appId %s: state=%d, errorReason=%s", appId.c_str(), static_cast<int>(state), errorReason.c_str());
+
+            if(nullptr == appManagerImplInstance)
+            {
+                LOGERR("Invalid AppManager Implementation Instance");
+            }
+            else
+            {
+                if (!appId.empty())
                 {
-                    shouldNotify = ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_LOADING) ||
-                                           (newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE) ||
-                                           ((newAppState == Exchange::IAppManager::AppLifecycleState::APP_STATE_PAUSED) &&
-                                            (it->second.currentAction == AppManagerImplementation::APP_ACTION_CLOSE)));
-
-                    LOGINFO("shouldNotify %d for Appstate %u",shouldNotify, newAppState);
-
-                    if(shouldNotify)
+                    auto it = appManagerImplInstance->mAppInfo.find(appId);
+                    if(it != appManagerImplInstance->mAppInfo.end())
                     {
-                        appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, newAppState, oldAppState, Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE);
+                        appInstanceId = it->second.appInstanceId;
+                        currentAppState = it->second.appNewState;
+                    }
+                    else
+                    {
+                        LOGERR("appId not found in database");
                     }
                 }
+
+                if (!errorReason.empty())
+                {
+                    errorCode = mapErrorReason(errorReason);
+                    appManagerImplInstance->handleOnAppLifecycleStateChanged(appId, appInstanceId, Exchange::IAppManager::AppLifecycleState::APP_STATE_UNLOADED,
+                        currentAppState, errorCode);
+                    LOGINFO("Notified error event for appId %s: currentAppState=%d errorCode %d", appId.c_str(), static_cast<int>(currentAppState), static_cast<int>(errorCode));
+                }
             }
+        }
+
+        Exchange::IAppManager::AppErrorReason LifecycleInterfaceConnector::mapErrorReason(const string& errorReason)
+        {
+            Exchange::IAppManager::AppErrorReason errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_NONE;
+            if(!errorReason.empty())
+            {
+                if(!errorReason.compare("ERROR_CREATE_DISPLAY"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_CREATE_DISPLAY;
+                }
+                else if(!errorReason.compare("ERROR_DOBBY_SPEC"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_DOBBY_SPEC;
+                }
+                else if(!errorReason.compare("ERROR_INVALID_PARAM"))
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_INVALID_PARAM;
+                }
+                else
+                {
+                    errorCode = Exchange::IAppManager::AppErrorReason::APP_ERROR_UNKNOWN;
+                }
+            }
+            return errorCode;
         }
 
         /* Returns appInstanceId for appId. Does not synchronize access to LoadedAppInfo.
@@ -789,6 +977,24 @@ End:
                 return {};
             else
                 return it->second.appInstanceId;
+        }
+
+        void LifecycleInterfaceConnector::removeAppInfoByAppId(const string& appId)
+        {
+            AppManagerImplementation* appManagerImpl = AppManagerImplementation::getInstance();
+            if (!appManagerImpl)
+                return;
+
+            auto it = appManagerImpl->mAppInfo.find(appId);
+            if (it != appManagerImpl->mAppInfo.end())
+            {
+                LOGINFO("appId %s is removed from database", appId.c_str());
+                appManagerImpl->mAppInfo.erase(it);
+            }
+            else
+            {
+                LOGERR("AppInfo for appId '%s' not found", appId.c_str());
+            }
         }
 
         bool LifecycleInterfaceConnector::fileExists(const char* pFileName)

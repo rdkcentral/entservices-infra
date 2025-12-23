@@ -24,6 +24,7 @@
 #include "UtilsController.h"
 
 #include "rfcapi.h"
+#include <fstream>
 
 #ifdef HAS_RBUS
 #include "rbus.h"
@@ -38,6 +39,7 @@
 #define RFC_REPORT_DEFAULT_PROFILE_ENABLE "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.FTUEReport.Enable"
 #define T2_PERSISTENT_FOLDER "/opt/.t2reportprofiles/"
 #define DEFAULT_PROFILES_FILE "/etc/t2profiles/default.json"
+#define OPTOUT_TELEMETRY_STATUS "/opt/tmtryoptout"
 
 #define USERSETTINGS_CALLSIGN "org.rdk.UserSettings"
 
@@ -151,37 +153,29 @@ namespace Plugin {
     }
 
 #ifdef HAS_RBUS
-    void TelemetryImplementation::activateUserSettingsandGetPrivacyMode()
+    void TelemetryImplementation::getPrivacyMode()
     {
-        PluginHost::IShell::state state;
+         ASSERT(_service != nullptr);
 
-        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state != PluginHost::IShell::state::ACTIVATED))
-            Utils::activatePlugin(_service, USERSETTINGS_CALLSIGN);
-            
-        if ((Utils::getServiceState(_service, USERSETTINGS_CALLSIGN, state) == Core::ERROR_NONE) && (state == PluginHost::IShell::state::ACTIVATED))
-        {
-            ASSERT(_service != nullptr);
-
-            _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
-            if (_userSettingsPlugin)
-            {
-                _userSettingsPlugin->Register(&_userSettingsNotification);
+         _userSettingsPlugin = _service->QueryInterfaceByCallsign<WPEFramework::Exchange::IUserSettings>(USERSETTINGS_CALLSIGN);
+         if (_userSettingsPlugin)
+         {
+             _userSettingsPlugin->Register(&_userSettingsNotification);
                 
-                std::string privacyMode;
-                if (_userSettingsPlugin->GetPrivacyMode(privacyMode) == Core::ERROR_NONE)
-                {
-                    notifyT2PrivacyMode(privacyMode);
-                }
-                else
-                {
-                    LOGERR("Failed to get privacy mode");
-                }
-            }
-        }
-        else
-        {
-            LOGERR("Failed to activate %s", USERSETTINGS_CALLSIGN);
-        }
+             std::string privacyMode;
+             if (_userSettingsPlugin->GetPrivacyMode(privacyMode) == Core::ERROR_NONE)
+             {
+                 notifyT2PrivacyMode(privacyMode);
+             }
+             else
+             {
+                LOGERR("Failed to get privacy mode");
+             }
+         }
+		 else
+         {
+                LOGERR("Failed to get _userSettingsPlugin handle");
+         }
     }
     
     static void t2EventHandler(rbusHandle_t handle, char const* methodName, rbusError_t error, rbusObject_t param)
@@ -342,7 +336,7 @@ namespace Plugin {
         InitializePowerManager();
 
 #ifdef HAS_RBUS        
-        activateUserSettingsandGetPrivacyMode();
+        getPrivacyMode();
 #endif        
         setRFCReportProfiles();
         
@@ -532,6 +526,59 @@ namespace Plugin {
         LOGERR("No RBus support");
         return Core::ERROR_NOT_EXIST;
 #endif
+        return Core::ERROR_NONE;
+    }
+
+    /***
+     * @brief       : Used to read file contents into a string
+     * @param1[in]  : Complete file name with path
+     * @param2[out] : Destination string object filled with file contents
+     * @return      : <bool>; TRUE if operation success; else FALSE.
+     */
+    bool TelemetryImplementation::getFileContent(std::string fileName, std::string& fileContent)
+    {
+        std::ifstream inFile(fileName.c_str(), ios::in);
+        if (!inFile.is_open()) return false;
+
+        std::stringstream buffer;
+        buffer << inFile.rdbuf();
+        fileContent = buffer.str();
+        inFile.close();
+
+        return true;
+    }
+
+    Core::hresult TelemetryImplementation::SetOptOutTelemetry(const bool optOut, TelemetrySuccess& successResult)
+    {
+        uint32_t result = Core::ERROR_GENERAL;
+        ofstream optfile;
+        optfile.open(OPTOUT_TELEMETRY_STATUS, ios::out);
+        if (optfile) {
+            optfile << (optOut ? "true" :"false");
+            optfile.close();
+            successResult.success = true;
+            LOGINFO("TelemetryOptOut flag set to %s\n",optOut ? "true" :"false");
+            result = Core::ERROR_NONE;
+        } else {
+            successResult.success = false;
+            LOGERR("Couldn't update Telemetry Opt Out flag\n");
+        }
+        return result;
+    }
+
+    Core::hresult TelemetryImplementation::IsOptOutTelemetry(bool& optOut, bool& success)
+    {
+        string optOutStatus;
+
+        bool retVal = getFileContent(OPTOUT_TELEMETRY_STATUS, optOutStatus);
+        if (retVal && optOutStatus.length()) {
+            if (optOutStatus.find("true") != string::npos) {
+                optOut = true;
+            } else {
+                optOut = false;
+            }
+        }
+        success = true;
         return Core::ERROR_NONE;
     }
 } // namespace Plugin

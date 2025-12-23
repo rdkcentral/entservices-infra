@@ -63,6 +63,7 @@ patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Use_Legact_Alt_B
 patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/error_code_R4_4.patch
 patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/1004-Add-support-for-project-dir.patch
 patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-733-Add-ENTOS-IDS.patch
+patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Jsonrpc_dynamic_error_handling.patch
 cd -
 
 cmake -G Ninja -S Thunder -B build/Thunder \
@@ -158,6 +159,7 @@ touch rbus.h
 touch telemetry_busmessage_sender.h
 touch maintenanceMGR.h
 touch pkg.h
+touch edid-parser.hpp
 touch secure_wrapper.h
 touch wpa_ctrl.h
 touch proc/readproc.h

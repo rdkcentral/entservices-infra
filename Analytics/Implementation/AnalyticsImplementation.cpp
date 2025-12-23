@@ -85,7 +85,8 @@ namespace Plugin {
                                     const uint64_t epochTimestamp,
                                     const uint64_t uptimeTimestamp,
                                     const string& appId,
-                                    const string& eventPayload)
+                                    const string& eventPayload,
+                                    const string& additionalContext)
     {
         std::shared_ptr<Event> event = std::make_shared<Event>();
         event->eventName = eventName;
@@ -93,24 +94,19 @@ namespace Plugin {
         event->eventSource = eventSource;
         event->eventSourceVersion = eventSourceVersion;
 
-        LOGINFO("Event Name: %s", eventName.c_str());
-        LOGINFO("Event Version: %s", eventVersion.c_str());
-        LOGINFO("Event Source: %s", eventSource.c_str());
-        LOGINFO("Event Source Version: %s", eventSourceVersion.c_str());
-        LOGINFO("cetList[]: ");
-        std::string entry;
-        while (cetList->Next(entry) == true) {
-            event->cetList.push_back(entry);
-            LOGINFO("     %s ", entry.c_str());
+        if (cetList != nullptr)
+        {
+            std::string entry;
+            while (cetList->Next(entry) == true)
+            {
+                event->cetList.push_back(entry);
+            }
         }
         event->epochTimestamp = epochTimestamp;
         event->uptimeTimestamp = uptimeTimestamp;
         event->appId = appId;
         event->eventPayload = eventPayload;
-
-        LOGINFO("Epoch Timestamp:  %" PRIu64, epochTimestamp);
-        LOGINFO("Uptime Timestamp: %" PRIu64, uptimeTimestamp);
-        LOGINFO("Event Payload: %s", eventPayload.c_str());
+        event->additionalContext = additionalContext;
 
         bool valid = true;
         if (eventName.empty())
@@ -159,12 +155,12 @@ namespace Plugin {
         ASSERT(shell != nullptr);
         mShell = shell;
 
-        mSysTime = std::make_shared<SystemTime>(shell);
-        if(mSysTime == nullptr)
-        {
-            LOGERR("Failed to create SystemTime instance");
+        try {
+            mSysTime = std::make_shared<SystemTime>(shell);
+        } catch (const std::bad_alloc& e) {
+            LOGERR("Failed to create SystemTime instance: %s", e.what());
+            return Core::ERROR_GENERAL;
         }
-
 
         std::string configLine = mShell->ConfigLine();
         Core::OptionalType<Core::JSON::Error> error;
@@ -356,6 +352,7 @@ namespace Plugin {
         backendEvent.eventPayload = event.eventPayload;
         backendEvent.appId = event.appId;
         backendEvent.cetList = event.cetList;
+        backendEvent.additionalContext = event.additionalContext;
 
         //TODO: Add mapping of event source/name to the desired backend
         if (mBackends.empty())

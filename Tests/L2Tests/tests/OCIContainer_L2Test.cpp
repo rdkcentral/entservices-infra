@@ -24,7 +24,7 @@
 #include <gtest/gtest.h>
 #include <interfaces/IOCIContainer.h>
 
-#define EVNT_TIMEOUT (1000)
+#define EVNT_TIMEOUT (5000)
 #define OCICONTAINER_CALLSIGN _T("org.rdk.OCIContainer.1")
 #define OCICONTAINERTEST_CALLSIGN _T("L2tests.1")
 

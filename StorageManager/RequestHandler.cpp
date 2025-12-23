@@ -876,18 +876,24 @@ namespace WPEFramework
         Core::hresult RequestHandler::ClearAll(const string& exemptionAppIds, string& errorReason)
         {
             Core::hresult status = Core::ERROR_GENERAL;
-            JsonObject parameters;
+            JsonValue parameters;
             LOGINFO("Entered ClearAll Implementation");
             std::unique_lock<std::mutex> lock(mStorageManagerImplLock);
 
             parameters.FromString(exemptionAppIds);
-            const JsonArray exemptedIdsjson = parameters.HasLabel("exemptionAppIds") ? parameters["exemptionAppIds"].Array() : JsonArray();
             std::list<std::string> exemptedIdsStrList;
-            for (unsigned int i = 0; i < exemptedIdsjson.Length(); i++)
+            if (parameters.Content()== JsonValue::type::ARRAY)
             {
-                exemptedIdsStrList.push_back(exemptedIdsjson[i].String());
+                const JsonArray exemptedIdsjson = parameters.Array();
+                for (unsigned int i = 0; i < exemptedIdsjson.Length(); i++)
+                {
+                    exemptedIdsStrList.push_back(exemptedIdsjson[i].String());
+                }
             }
-
+            else
+            {
+                LOGERR("invalid exemptionappids format. input is not in array format");
+            }
             DIR* dir = opendir(mBaseStoragePath.c_str());
             if (!dir)
             {

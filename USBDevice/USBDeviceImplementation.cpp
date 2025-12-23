@@ -157,8 +157,6 @@ void USBDeviceImplementation::libUSBClose(void)
     (void)libusb_hotplug_deregister_callback(NULL, _hotPlugHandle[0]);
     (void)libusb_hotplug_deregister_callback(NULL, _hotPlugHandle[1]);
 
-    (void)libusb_exit(NULL);
-
     if (_libUSBDeviceThread)
     {
         if (_libUSBDeviceThread->joinable())
@@ -169,6 +167,7 @@ void USBDeviceImplementation::libUSBClose(void)
         _libUSBDeviceThread = nullptr;
     }
 
+    (void)libusb_exit(NULL);
     LOGINFO("libUSBClose Successed");
 }
 
@@ -1034,7 +1033,7 @@ Core::hresult USBDeviceImplementation::GetDeviceInfo(const string &deviceName, U
             }
             else
             {
-                uint8_t portPath[8]; // Maximum 8 levels (depends on USB architecture)
+                uint8_t portPath[8] = {0}; // Maximum 8 levels (depends on USB architecture)
 
                 status = USBDeviceImplementation::instance()->getUSBDeviceInfoStructFromDeviceDescriptor(devs[index], &deviceInfo);
                 if (Core::ERROR_NONE != status)

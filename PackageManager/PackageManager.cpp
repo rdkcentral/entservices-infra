@@ -146,7 +146,6 @@ namespace Plugin
 
     void PackageManager::Deactivated(RPC::IRemoteConnection* connection)
     {
-        LOGINFO();
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
         if (mConnectionId == connection->Id()) {
@@ -155,5 +154,30 @@ namespace Plugin
         }
     }
 
+    void PackageManager::NotificationHandler::OnAppDownloadStatus(Exchange::IPackageDownloader::IPackageInfoIterator* const packageInfos)
+    {
+        JsonArray packageInfoArray;
+        if (packageInfos != nullptr)
+        {
+            Exchange::IPackageDownloader::PackageInfo resultItem{};
+
+            while (packageInfos->Next(resultItem) == true)
+            {
+                JsonObject packageInfoJson;
+                packageInfoJson["downloadId"] = resultItem.downloadId;
+                packageInfoJson["fileLocator"] = resultItem.fileLocator;
+                packageInfoJson["failReason"] = (resultItem.reason == Exchange::IPackageDownloader::Reason::NONE) ? "NONE" :
+                                            (resultItem.reason == Exchange::IPackageDownloader::Reason::DOWNLOAD_FAILURE) ? "DOWNLOAD_FAILURE" :
+                                            (resultItem.reason == Exchange::IPackageDownloader::Reason::DISK_PERSISTENCE_FAILURE) ? "DISK_PERSISTENCE_FAILURE" : "UNKNOWN";
+                packageInfoArray.Add(packageInfoJson);
+            }
+
+            Core::JSON::Container eventPayload;
+            eventPayload.Add(_T("jsonresponse"), &packageInfoArray);
+            //unable to remove escaped characters from fileLocator as ToString called in Notify() always adds escape characters.
+
+            mParent.Notify(_T("onAppDownloadStatus"), eventPayload);
+        }
+    }
 } // namespace Plugin
 } // namespace WPEFramework
