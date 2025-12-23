@@ -176,7 +176,6 @@ namespace WPEFramework
                 {
 			clock_gettime(CLOCK_MONOTONIC, &ts);
 			auto ms =  ((double)(ts.tv_sec * 1000) + ((double)ts.tv_nsec/1000000));
-			LOGINFO("[TIMESTAMP][RuntimeManager][ContainerTermination][Start] EpochMs: %lld appInstanceId: %s", static_cast<long long>(ms), appInstanceId.c_str());
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     auto it = mRuntimeAppInfo.find(appInstanceId);
                     if (it != mRuntimeAppInfo.end())
@@ -206,7 +205,7 @@ namespace WPEFramework
 
 			 clock_gettime(CLOCK_MONOTONIC, &ts);
 		    auto ms =  ((double)(ts.tv_sec * 1000) + ((double)ts.tv_nsec/1000000));
-                    LOGINFO("[TIMESTAMP][RuntimeManager][ContainerTermination][End] EpochMs: %lld appInstanceId: %s", static_cast<long long>(ms), appInstanceId.c_str());
+                    LOGINFO("[TIMESTAMP][RuntimeManager][ContainerTermination][Start] EpochMs: %lld appInstanceId: %s", static_cast<long long>(ms), appInstanceId.c_str());
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     auto it = mRuntimeAppInfo.find(appInstanceId);
                     if (it != mRuntimeAppInfo.end())
@@ -227,6 +226,7 @@ namespace WPEFramework
                         (*index)->OnTerminated(appInstanceId);
                         ++index;
                     }
+		     LOGINFO("[TIMESTAMP][RuntimeManager][ContainerTermination][End] EpochMs: %lld appInstanceId: %s", static_cast<long long>(ms), appInstanceId.c_str());
                 break;
                 }
 
