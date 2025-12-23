@@ -970,12 +970,13 @@ namespace Plugin {
         }
         #endif
 
+        #if defined (USE_LIBPACKAGE) || defined(UNIT_TEST)
+        
         #ifdef USE_LIBPACKAGE
         packageImpl = packagemanager::IPackageImpl::instance();
-        #else 
-          #ifdef UNIT_TEST
-          packageImpl = packagemanager::IPackageImplDummy::instance();
-          #endif
+        #elif defined(UNIT_TEST)
+        packageImpl = packagemanager::IPackageImplDummy::instance();
+        #endif
         
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
