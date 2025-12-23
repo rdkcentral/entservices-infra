@@ -13,6 +13,7 @@ on:
 
 env:
   BUILD_TYPE: Debug
+  REPO_NAME: "infra"
   THUNDER_REF: "R4.4.1"
   INTERFACES_REF: "develop"
   AUTOMATICS_UNAME: ${{ secrets.AUTOMATICS_UNAME}}
@@ -63,7 +64,7 @@ jobs:
             !thunder/install/usr/lib/pkgconfig/gtest.pc
             !thunder/install/usr/lib/pkgconfig/gtest_main.pc
             !thunder/install/usr/lib/wpeframework/plugins
-          key: ${{ runner.os }}-${{ env.THUNDER_REF }}-${{ env.INTERFACES_REF }}-4
+          key: ${{ runner.os }}-${{ env.REPO_NAME }}-${{ env.THUNDER_REF }}-${{ env.INTERFACES_REF }}-4
 
       - name: Set up Python
         uses: actions/setup-python@v4
