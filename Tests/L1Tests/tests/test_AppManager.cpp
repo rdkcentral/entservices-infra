@@ -292,6 +292,7 @@ protected:
         dispatcher->Deactivate();
         dispatcher->Release();
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         plugin->Deinitialize(mServiceMock);
         delete mServiceMock;
         mAppManagerImpl = nullptr;
