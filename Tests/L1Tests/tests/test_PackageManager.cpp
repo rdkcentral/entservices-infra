@@ -898,6 +898,20 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
+    // Poll progress until download completes
+    bool downloadComplete = false;
+    int retries = 10;
+    while (!downloadComplete && retries-- > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        string progressResponse;
+        if (Core::ERROR_NONE == mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\"}"), progressResponse)) {
+            // Check if progress indicates completion (parse JSON for status)
+            if (progressResponse.find("\"progress\":100") != std::string::npos) {
+                downloadComplete = true;
+            }
+        }
+    }
+
     // TC-18: Delete download using JsonRpc
     EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
 
