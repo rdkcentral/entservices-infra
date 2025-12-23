@@ -174,8 +174,6 @@ namespace WPEFramework
 
                 case RUNTIME_MANAGER_EVENT_CONTAINERSTARTED:
                 {
-			clock_gettime(CLOCK_MONOTONIC, &ts);
-			auto ms =  ((double)(ts.tv_sec * 1000) + ((double)ts.tv_nsec/1000000));
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
                     auto it = mRuntimeAppInfo.find(appInstanceId);
                     if (it != mRuntimeAppInfo.end())
@@ -226,7 +224,10 @@ namespace WPEFramework
                         (*index)->OnTerminated(appInstanceId);
                         ++index;
                     }
-		     LOGINFO("[TIMESTAMP][RuntimeManager][ContainerTermination][End] EpochMs: %lld appInstanceId: %s", static_cast<long long>(ms), appInstanceId.c_str());
+		   
+                    clock_gettime(CLOCK_MONOTONIC, &ts);
+                    auto ms1 =  ((double)(ts.tv_sec * 1000) + ((double)ts.tv_nsec/1000000)); 
+		    LOGINFO("[TIMESTAMP][RuntimeManager][ContainerTermination][End] EpochMs: %lld appInstanceId: %s", static_cast<long long>(ms1), appInstanceId.c_str());
                 break;
                 }
 
