@@ -104,7 +104,6 @@ jobs:
             sudo ninja -C build install
 
       - name: Checkout Thunder
-        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
           repository: rdkcentral/Thunder
