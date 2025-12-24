@@ -142,7 +142,6 @@ jobs:
           ref: develop
 
       - name: Checkout googletest
-        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
         with:
           repository: google/googletest
@@ -331,7 +330,6 @@ jobs:
         run: echo "TOOLCHAIN_FILE=$GITHUB_WORKSPACE/entservices-testframework/Tests/gcc-with-coverage.cmake" >> $GITHUB_ENV
 
       - name: Build googletest
-        if: steps.cache.outputs.cache-hit != 'true'
         run: >
           cmake -G Ninja
           -S "$GITHUB_WORKSPACE/googletest"
