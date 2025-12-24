@@ -31,7 +31,7 @@ namespace ralf
      * @param path The directory path to create
      * @return true on success, false on failure
      */
-    bool create_directories(const std::string &path);
+    bool create_directories(const std::string &path, int uid = 0, int gid = 0);
     /**
      * Given the Ralf package configuration data, parse and extract package metadata paths and mount paths
      * @param configData The Ralf package configuration data in JSON format
@@ -54,10 +54,12 @@ namespace ralf
      * The overlay filesystem will use the pkgmountPaths as lowerdir and RALF_APP_ROOTFS_DIR/appInstanceId as workdir
      * @param appInstanceId The application instance ID
      * @param pkgmountPaths The colon separated list of package mount paths to be used as lowerdir
+     * @param uid The user ID to set as owner of the created directories
+     * @param gid The group ID to set as owner of the created directories
      * @param ociRootfsPath [out parameter] The path to the mounted OCI root filesystem
      * @return true on success, false on failure
      */
-    bool generateOCIRootfs(const std::string appInstanceId, const std::string &pkgmountPaths, std::string &ociRootfsPath);
+    bool generateOCIRootfs(const std::string appInstanceId, const std::string &pkgmountPaths, const int uid, const int gid, std::string &ociRootfsPath);
     /**
      * Given a device node path, this function will return the major and minor numbers.
      * @param devNodePath : Input device node path.
@@ -68,5 +70,14 @@ namespace ralf
      */
 
     bool getDevNodeMajorMinor(const std::string &devNodePath, unsigned int &majorNum, unsigned int &minorNum, char &devType);
+
+    /**
+     * Function to check if a given path exists
+     * @param path The path to check
+     * @return true if the path exists, false otherwise
+     */
+    bool checkIfPathExists(const std::string &path);
+
+    bool unmountOverlayfs(const std::string &overlayfsMountPath);
 
 } // namespace ralf

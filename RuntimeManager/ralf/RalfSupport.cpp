@@ -39,14 +39,14 @@
 namespace ralf
 {
 
-    bool create_directories(const std::string &path)
+    bool create_directories(const std::string &path, int uid, int gid)
     {
 
         if (path.empty())
             return false;
 
         std::string current_path;
-        mode_t mode = 0755; // Default permissions
+        mode_t mode = 0777; // rwx for user, group, others
         size_t pos = 0;
 
         // Skip leading slash if absolute path
@@ -77,7 +77,16 @@ namespace ralf
                         return false;
                     }
                 }
-            }
+                // Set ownership if uid and gid are provided
+                if (uid != 0 || gid != 0)
+                {
+                    if (chown(current_path.c_str(), uid, gid) != 0)
+                    {
+                        LOGINFO("Error setting ownership for directory '%s': %s\n", current_path.c_str(), strerror(errno));
+                        return false;
+                    }
+                }
+            }            
 
             if (next_pos == std::string::npos)
                 break;
@@ -101,6 +110,30 @@ namespace ralf
             std::string configData = root["packages"][i]["pkgMetaDataPath"].asString();
             std::string mountPath = root["packages"][i]["pkgMountPath"].asString();
             packages.push_back(std::make_pair(configData, mountPath));
+        }
+        return true;
+    }
+    bool setDirOwnership(const std::string &path, uid_t ownerUid, gid_t ownerGid, bool recursive)
+    {
+        if (recursive)
+        {
+            // Recursively change ownership
+            std::string command = "chown -R " + std::to_string(ownerUid) + ":" + std::to_string(ownerGid) + " " + path;
+            int ret = system(command.c_str());
+            if (ret != 0)
+            {
+                LOGERR("Failed to recursively change ownership of %s to %d:%d\n", path.c_str(), ownerUid, ownerGid);
+                return false;
+            }
+        }
+        else
+        {
+            // Change ownership of the directory only
+            if (chown(path.c_str(), ownerUid, ownerGid) != 0)
+            {
+                LOGERR("Failed to change ownership of %s to %d:%d\n", path.c_str(), ownerUid, ownerGid);
+                return false;
+            }
         }
         return true;
     }
@@ -136,23 +169,26 @@ namespace ralf
         return status;
     }
 
-    bool generateOCIRootfs(const std::string appInstanceId, const std::string &pkgmountPaths, std::string &ociRootfsPath)
+    bool generateOCIRootfs(const std::string appInstanceId, const std::string &pkgmountPaths,const  int uid, const int gid,  std::string &ociRootfsPath)
     {
-
         // Let us create a directory for app as RALF_APP_ROOTFS_DIR/appInstanceId
-        std::string workDir = RALF_APP_ROOTFS_DIR + appInstanceId;
-        std::string appRootfsDir = workDir + "/rootfs";
-        create_directories(appRootfsDir);
+        std::string baseDir = RALF_APP_ROOTFS_DIR + appInstanceId;
+        std::string appRootfsDir = baseDir + "/rootfs";
+        std::string workSubDir = baseDir + "/work";
+        create_directories(appRootfsDir, uid, gid);
+        create_directories(workSubDir, uid, gid);
 
         // Now we can mount the overlay filesystem
-        std::string options = "lowerdir=" + pkgmountPaths + ",workdir=" + workDir;
+        std::string options = "lowerdir=" + pkgmountPaths + ",upperdir=" + appRootfsDir + ",workdir=" + workSubDir;
         LOGDBG("Mounting overlayfs with options: %s\n", options.c_str());
+
         if (mount(RALF_OVERLAYFS_TYPE.c_str(), appRootfsDir.c_str(), RALF_OVERLAYFS_TYPE.c_str(), 0, options.c_str()) != 0)
         {
             LOGERR("Error mounting overlayfs: %s\n", strerror(errno));
             return false;
         }
-        ociRootfsPath = appRootfsDir;
+        ociRootfsPath = baseDir;
+        ;
         return true;
     }
 
@@ -168,4 +204,19 @@ namespace ralf
         }
         return true;
     }
+    bool checkIfPathExists(const std::string &path)
+    {
+        struct stat buffer;
+        return (stat(path.c_str(), &buffer) == 0);
+    }
+    bool unmountOverlayfs(const std::string &overlayfsMountPath)
+    {
+        if (umount(overlayfsMountPath.c_str()) != 0)
+        {
+            LOGERR("Error unmounting overlayfs at %s: %s\n", overlayfsMountPath.c_str(), strerror(errno));
+            return false;
+        }
+        return true;
+    }
+
 } // namespace ralf

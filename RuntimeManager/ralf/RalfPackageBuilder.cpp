@@ -27,76 +27,64 @@
 namespace ralf
 {
 
-    bool RalfPackageBuilder::extractRalfPkgInfoFromMetadata(const std::string &ralfPkgInfo, std::vector<RalfPkgInfoPair> &ralfPackages)
-    {
-        return parseRalPkgInfo(ralfPkgInfo, ralfPackages);
-    }
-    bool RalfPackageBuilder::generateOCIRootfsPackage(const std::string &appInstanceId, const std::vector<RalfPkgInfoPair> &pkgInfoSet, std::string &ociRootfsPath)
+    bool RalfPackageBuilder::generateOCIRootfsPackage(const std::string &appInstanceId,const int uid, const int gid, std::string &ociRootfsPath)
     {
         // Let us extract the mount points.
         std::string packageLayers = RALF_GRAPHICS_LAYER_ROOTFS;
-        for (const auto &package : pkgInfoSet)
+        for (const auto &package : mRalfPackages)
         {
             packageLayers += ":" + package.second; // Append mount paths
         }
-
         // Create OCI rootfs package based on parsed data
-        return generateOCIRootfs(appInstanceId, packageLayers, ociRootfsPath);
+        return generateOCIRootfs(appInstanceId, packageLayers, uid, gid, ociRootfsPath);
     }
-    bool RalfPackageBuilder::checkAndReuseExistingConfig(const std::string &configFilePath)
+
+    bool RalfPackageBuilder::generateRalfDobbySpec(const WPEFramework::Plugin::ApplicationConfiguration &config, const WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject, std::string &dobbySpec)
     {
-        bool status = false;
-        std::ifstream infile(configFilePath.c_str());
-        if (infile.good())
+        std::string ralfPkgPath = runtimeConfigObject.ralfPkgPath;
+
+        // Step one: Extract Ralf package details from metadata
+        bool status = parseRalPkgInfo(ralfPkgPath, mRalfPackages);
+        if (!status)
         {
-            LOGINFO(" Reusing old configuration file: %s\n", configFilePath.c_str());
-            status = true;
+            LOGERR("Failed to parse Ralf package info from metadata: %s\n", ralfPkgPath.c_str());
+            return false;
         }
-        infile.close();
+        LOGDBG("Extracted %d Ralf packages from config\n", (int)mRalfPackages.size());
+        // Step two: Generate overlay OCI rootfs package for the application instance
+        std::string ociRootfsPath;
+        ;
+        status = generateOCIRootfsPackage(config.mAppInstanceId, config.mUserId, config.mGroupId, ociRootfsPath);
+        if (!status)
+        {
+            LOGERR("Failed to generate OCI rootfs package for appInstanceId: %s\n", config.mAppInstanceId.c_str());
+            return status;
+        }
+        dobbySpec = ociRootfsPath;
+        LOGDBG("Generated OCI rootfs package at path: %s\n", ociRootfsPath.c_str());
+        // There is zero chance that a mount path already exists, but there is a chance for config file to exist.
+        std::string configFilePath = RALF_APP_ROOTFS_DIR + config.mAppInstanceId + "/config.json";
+
+        RalfOCIConfigGenerator ralfOciGen(configFilePath, mRalfPackages);
+        status = ralfOciGen.generateRalfOCIConfig(config, runtimeConfigObject);
         return status;
     }
-    bool RalfPackageBuilder::generateRalfPackageConfig(const std::string &configFilePath, const std::vector<RalfPkgInfoPair> &ralfPackages)
+
+    bool RalfPackageBuilder::unmountOverlayfsIfExists(const std::string &appInstanceId)
     {
-        // TODO : Implement this function to generate Ralf package config json file.
-        // Step 1. Check whether the config file already exists
-        if (!checkAndReuseExistingConfig(configFilePath))
+        // We need to unmount the overlayfs mount point if exists
+        std::string overlayMountPath = RALF_APP_ROOTFS_DIR + appInstanceId + "/rootfs";
+        bool status = checkIfPathExists(overlayMountPath);
+        if (status)
         {
-            // Step 2, Load the base template stored as resource.
-            RalfOCIConfigGenerator ralfOciGen;
-            return ralfOciGen.generateRalfOCIConfig(configFilePath, ralfPackages);
+            status = unmountOverlayfs(overlayMountPath);
+            if (!status)
+            {
+                LOGERR("Failed to unmount overlayfs at path: %s\n", overlayMountPath.c_str());
+                return false;
+            }
+            LOGDBG("Successfully unmounted overlayfs at path: %s\n", overlayMountPath.c_str());
         }
         return true;
-    }
-
-    bool RalfPackageBuilder::generateOCIRootfsPackageForAppInstance(const std::string &appInstanceId, const std::string &ralfPkgPath, std::string &ociRootfsPath)
-    {
-        // Step one extra ct Ralf package details from config
-        std::vector<RalfPkgInfoPair> ralfPackages;
-        if (!extractRalfPkgInfoFromMetadata(ralfPkgPath, ralfPackages))
-        {
-            LOGINFO("Failed to extract Ralf package details from config: %s\n", ralfPkgPath.c_str());
-            return false;
-        }
-        LOGINFO("Extracted %d Ralf packages from config\n", (int)ralfPackages.size());
-        // Step two: Generate OCI rootfs package
-        if (!generateOCIRootfsPackage(appInstanceId, ralfPackages, ociRootfsPath))
-        {
-            LOGINFO("Failed to generate OCI rootfs package for appInstanceId: %s\n", appInstanceId.c_str());
-            return false;
-        }
-        std::string configFilePath = RALF_APP_ROOTFS_DIR + appInstanceId + "/config.json";
-        // Step three: Generate Ralf package config for  OCI rootfs package
-        if (!generateRalfPackageConfig(configFilePath, ralfPackages))
-        {
-            LOGINFO("Failed to generate Ralf package config for OCI rootfs package: %s\n", ociRootfsPath.c_str());
-            return false;
-        }
-        return true;
-    }
-
-    bool RalfPackageBuilder::generateRalfDobbySpec(const WPEFramework::Plugin::ApplicationConfiguration &config, const WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject)
-    {
-        // TODO: Implement this function to generate the dobby specification for a Ralf package.
-        return false;
     }
 } // namespace ralf

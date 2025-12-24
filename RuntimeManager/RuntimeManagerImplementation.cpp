@@ -25,9 +25,9 @@
 //TODO - Remove the hardcoding to enable compatibility with a common middleware. The app portal name should be configurable in some way
 #define RUNTIME_APP_PORTAL "com.sky.as.apps"
 
-#ifdef RALF_PACKAGE_SUPPORT
+#ifdef RAFL_PACKAGE_SUPPORT_ENABLED
 #include "ralf/RalfPackageBuilder.h"
-#endif // RALF_PACKAGE_SUPPORT
+#endif // RAFL_PACKAGE_SUPPORT_ENABLED
 
 namespace WPEFramework
 {
@@ -456,15 +456,14 @@ err_ret:
 
         bool RuntimeManagerImplementation::generate(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, std::string& dobbySpec)
         {
-#ifdef RALF_PACKAGE_SUPPORT
-            RalfPackageBuilder ralfBuilder;
+#ifdef RAFL_PACKAGE_SUPPORT_ENABLED
             LOGINFO("Generating Ralf Package Config : %s", runtimeConfigObject.ralfPkgPath.c_str());
-            return ralfBuilder.generateRalfDobbySpec(config, runtimeConfigObject);
+            ralf::RalfPackageBuilder ralfBuilder;
+            return ralfBuilder.generateRalfDobbySpec(config, runtimeConfigObject,dobbySpec);
 #else            
             DobbySpecGenerator generator;
-            LOGINFO("Generating dobbySpec from Ralf Details : %s", runtimeConfigObject.ralfPkgPath.c_str());
             return generator.generate(config, runtimeConfigObject, dobbySpec);
-#endif            
+#endif //RAFL_PACKAGE_SUPPORT_ENABLED           
         }
 
         Exchange::IRuntimeManager::RuntimeState RuntimeManagerImplementation::getRuntimeState(const string& appInstanceId)
@@ -548,6 +547,7 @@ err_ret:
             {
                 uid = 30490;
             }
+            uid = gid = 30001;
             config.mUserId = uid;
             config.mGroupId = gid;
 
@@ -585,15 +585,15 @@ err_ret:
                 LOGERR("envVariables is empty inside Run()");
             }
 
+
             if (!appId.empty())
             {
-                appStorageInfo.userId = userId;
-                appStorageInfo.groupId = groupId;
+                LOGINFO("Fetching storage info for appId: %s, userId: %d, groupId: %d", appId.c_str(), uid, gid);
                 if (Core::ERROR_NONE == getAppStorageInfo(appId, appStorageInfo))
                 {
                     config.mAppStorageInfo.path = std::move(appStorageInfo.path);
-                    config.mAppStorageInfo.userId = userId;
-                    config.mAppStorageInfo.groupId = groupId;
+                    config.mAppStorageInfo.userId = uid;
+                    config.mAppStorageInfo.groupId = gid;
                     config.mAppStorageInfo.size = std::move(appStorageInfo.size);
                     config.mAppStorageInfo.used = std::move(appStorageInfo.used);
                 }
@@ -625,7 +625,11 @@ err_ret:
             if (!xdgRuntimeDir.empty() && !waylandDisplay.empty())
             {
                 westerosSocket = xdgRuntimeDir + "/" + waylandDisplay;
-                config.mWesterosSocketPath = westerosSocket;
+                config.mWesterosSocketPath = westerosSocket;            
+#ifdef RAFL_PACKAGE_SUPPORT_ENABLED                    
+               config.mWesterosSocketPath = waylandDisplay;
+#endif //RAFL_PACKAGE_SUPPORT_ENABLED
+                LOGINFO("Westeros Socket Path : %s", config.mWesterosSocketPath.c_str());
             }
 
             bool legacyContainer = true;
@@ -644,8 +648,9 @@ err_ret:
                LOGWARN(" Rialto app session not ready. ");
                status = Core::ERROR_GENERAL;
             }
-           // legacyContainer = false;
+            legacyContainer = false;
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
+
             LOGINFO("legacyContainer: %s", legacyContainer ? "true" : "false");
             if (xdgRuntimeDir.empty() || waylandDisplay.empty() || !displayResult)
             {
@@ -658,7 +663,7 @@ err_ret:
                 notifyParamCheckFailure = true;
             }
             /* Generate dobbySpec */
-            else if (legacyContainer && false == RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
+            else if (!RuntimeManagerImplementation::generate(config, runtimeConfigObject, dobbySpec))
             {
                 LOGERR("Failed to generate dobbySpec");
                 status = Core::ERROR_GENERAL;
@@ -674,6 +679,9 @@ err_ret:
                      xdgRuntimeDir.c_str(), waylandDisplay.c_str());
                 std::string command = "";
                 std::string appPath = runtimeConfigObject.unpackedPath;
+#ifdef RAFL_PACKAGE_SUPPORT_ENABLED  
+                appPath = dobbySpec; // In Ralf package, dobbySpec contains the path to the generated dobby spec file
+#endif //RAFL_PACKAGE_SUPPORT_ENABLED
                 if(isOCIPluginObjectValid())
                 {
                     string containerId = getContainerId(appInstanceId);
@@ -682,11 +690,13 @@ err_ret:
                         if(legacyContainer)
                             status =  mOciContainerObject->StartContainerFromDobbySpec(containerId, dobbySpec, command, westerosSocket, descriptor, success, errorReason);
                         else
-                            status = mOciContainerObject->StartContainer(containerId, appPath, command, westerosSocket, descriptor, success, errorReason);
+                            status = mOciContainerObject->StartContainer(containerId, appPath, command, "", descriptor, success, errorReason);
 
                         if ((success == false) || (status != Core::ERROR_NONE))
                         {
                             LOGERR("Failed to Run Container %s",errorReason.c_str());
+                            ralf::RalfPackageBuilder ralfBuilder;
+                            ralfBuilder.unmountOverlayfsIfExists(appPath);
                         }
                         else
                         {
@@ -1025,6 +1035,13 @@ err_ret:
                status = Core::ERROR_GENERAL;
             }
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
+
+#ifdef RALF_PACKAGE_SUPPORT_ENABLED
+            // Clean up overlayfs if exists
+            ralf::RalfPackageBuilder ralfBuilder;
+            ralfBuilder.unmountOverlayfsIfExists(mRuntimeAppInfo[appInstanceId].appId);
+#endif // RALF_PACKAGE_SUPPORT_ENABLED  
+
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
@@ -1092,6 +1109,12 @@ err_ret:
                status = Core::ERROR_GENERAL;
             }
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
+
+#ifdef RALF_PACKAGE_SUPPORT_ENABLED
+            // Clean up overlayfs if exists
+            ralf::RalfPackageBuilder ralfBuilder;
+            ralfBuilder.unmountOverlayfsIfExists(mRuntimeAppInfo[appInstanceId].appId);
+#endif // RALF_PACKAGE_SUPPORT_ENABLED  
             mRuntimeManagerImplLock.Unlock();
             return status;
         }

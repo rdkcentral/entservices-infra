@@ -32,55 +32,38 @@ namespace ralf
     private:
         /** This function generates an OCI root filesystem package based on the given application instance ID and Ralf package path.
          * @param appInstanceId The application instance ID for which the OCI root filesystem package is to be generated.
-         * @param pkgInfoSet The vector of pairs containing Ralf package mount points and their corresponding metadata in json format.
+         * @param uid The user ID to set as owner of the created directories
+         * @param gid The group ID to set as owner of the created directories
          * @param ociRootfsPath Output parameter that will hold the path to the generated OCI root filesystem package.
          * @return true if the OCI root filesystem package was generated successfully, false otherwise.
          */
-        bool generateOCIRootfsPackage(const std::string &appInstanceId, const std::vector<RalfPkgInfoPair> &pkgInfoSet, std::string &ociRootfsPath);
+        bool generateOCIRootfsPackage(const std::string &appInstanceId, const int uid, const int gid, std::string &ociRootfsPath);
 
         /**
-         * This function generates a Ralf package configuration based on the given OCI root filesystem path.
-         * The file generated will be ociRootfsPath/config.json
-         * @param ociRootfsPath The path to the OCI root filesystem.
-         * @param ralfPackages A vector of pairs containing Ralf package mount points and their corresponding metadata in json format.
-         * @return true if the Ralf package configuration was generated successfully, false otherwise.
+         * The vector of Ralf package details as pairs of mount point and metadata path.
          */
-        bool generateRalfPackageConfig(const std::string &ociRootfsPath, const std::vector<RalfPkgInfoPair> &ralfPackages);
-
+        std::vector<RalfPkgInfoPair> mRalfPackages;
         /**
-         * This function extracts Ralf package details from the given configuration data.
-         * @param ralfPkgInfo Path to the json configuration data containing Ralf package details.
-         * @param ralfPackages Output parameter that will hold the extracted Ralf package details as a vector of pairs.
-         * @return true if the Ralf package details were extracted successfully, false otherwise.
+         * The file containing Ralf package/metadata details in json format.
          */
-        bool extractRalfPkgInfoFromMetadata(const std::string &ralfPkgInfo, std::vector<RalfPkgInfoPair> &ralfPackages);
-        /**
-         * This function checks for existing configuration file and reuses it if found.
-         * @param configFilePath The path to the configuration file to check.
-         * @return true if the configuration file exists and was reused, false otherwise.
-         */
-        bool checkAndReuseExistingConfig(const std::string &configFilePath);
+        std::string mRalfPkgInfo;
 
     public:
-        RalfPackageBuilder() {}
+        RalfPackageBuilder(){};
         virtual ~RalfPackageBuilder() {}
 
-        /**
-         * This function generates an OCI root filesystem package for a given application instance ID
-         * @param appInstanceId The application instance ID for which the OCI root filesystem package is to be generated.
-         * @param ralfPkgPath The path to the Ralf package/metadata details in json format.
-         * @param ociRootfsPath Output parameter that will hold the path to the generated OCI root filesystem package.
-         * @return true if the OCI root filesystem package was generated successfully, false otherwise.
-         */
-        bool generateOCIRootfsPackageForAppInstance(const std::string &appInstanceId, const std::string &ralfPkgPath, std::string &ociRootfsPath);
         /**
          * This function generates the dobby specification for a Ralf package based on the given application configuration and runtime configuration.
          * We will get details about userid,groupid, mWesterosSocketPath etc from ApplicationConfiguration
          * and Ralf package details from RuntimeConfig
          * @param config The application configuration.
          * @param runtimeConfigObject The runtime configuration.
+         * @param dobbySpec Output parameter that will hold the path to the RALF rootfs
          * @return true if the dobby specification was generated successfully, false otherwise.
          */
-        bool generateRalfDobbySpec(const WPEFramework::Plugin::ApplicationConfiguration &config, const WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject);
+        bool generateRalfDobbySpec(const WPEFramework::Plugin::ApplicationConfiguration &config, const WPEFramework::Exchange::RuntimeConfig &runtimeConfigObject, std::string &dobbySpec);
+
+        bool unmountOverlayfsIfExists(const std::string &appInstanceId);
+        
     };
 } // namespace ralf
