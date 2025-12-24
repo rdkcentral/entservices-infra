@@ -62,16 +62,18 @@ namespace WPEFramework
             auto it = statusToString.find(status);
             if (it != statusToString.end()) {
                 // if file exists, it will be truncated, otherwise it will be created
-                std::ofstream file(MIGRATIONSTATUS, std::ios::trunc);
-                if (file.is_open()) {
+                std::ofstream* file = new std::ofstream(MIGRATIONSTATUS, std::ios::trunc);
+                if (file->is_open()) {
                 // Write the string status to the file
-                file << it->second;
+                *file << it->second;
                 LOGINFO("Current ENTOS Migration Status is %s\n", it->second.c_str());
+                file->close();
+                // COVERITY ISSUE: Memory leak - dynamically allocated file object not deleted
                 } else {
                     LOGERR("Failed to open or create file %s\n", MIGRATIONSTATUS);
+                    delete file;
                     return (ERROR_FILE_IO);
                 }
-                file.close();
             } else {
                 LOGERR("Invalid Migration Status\n");
                 return (WPEFramework::Core::ERROR_INVALID_PARAMETER);
