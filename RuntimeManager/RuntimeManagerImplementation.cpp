@@ -1202,18 +1202,42 @@ err_ret:
                 LOGINFO("Container %s started with IP address: %s", name.c_str(), inet_ntoa(ip_addr));
                 
                 // Attach WebInspector - port starts at 2000 and increments for each container
-                static uint16_t debugPort = 2000;
-                auto webInspector = WebInspector::attach(name, addr, debugPort);
-                if (webInspector)
+                uint16_t debugPort = 0;
+
+                for (uint16_t port = 2000; port <= 2100; ++port)
                 {
-                    mWebInspectors[name] = webInspector;
-                    LOGINFO("WebInspector attached for container %s on host port %d (forwards to container port 22222)", name.c_str(), debugPort);
-                    debugPort++;
+                    bool portInUse = false;
+                    for (const auto& inspector : mWebInspectors)
+                    {
+                        if (inspector.second && inspector.second->debugPort() == port)
+                        {
+                            portInUse = true;
+                            break;
+                        }
+                    }
+                    if (!portInUse)
+                    {
+                        debugPort = port;
+                        break;
+                    }
+                }
+                if (debugPort != 0)
+                {
+                    auto webInspector = WebInspector::attach(name, addr, debugPort);
+                    if (webInspector)
+                    {
+                        mWebInspectors[name] = webInspector;
+                        LOGINFO("WebInspector attached for container %s on host port %d (forwards to container port 22222)", name.c_str(), debugPort);
+                    }
+                    else
+                    {
+                        LOGWARN("WebInspector::attach failed for container %s on port %d", name.c_str(), debugPort);
+                    }
                 }
                 else
                 {
-                    LOGWARN("WebInspector::attach returned nullptr for container %s", name.c_str());
-                }
+                    LOGERR("No available debug ports (2000-2100) for container %s", name.c_str());
+                }	
             }
             else
             {
