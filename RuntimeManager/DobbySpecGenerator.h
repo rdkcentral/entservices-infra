@@ -25,6 +25,7 @@
 #include <json/json.h>
 #include "tracing/Logging.h"
 #include <string>
+#include <memory>
 #include "ApplicationConfiguration.h"
 #include <interfaces/IRuntimeManager.h>
 #include "AIConfiguration.h"
@@ -82,7 +83,7 @@ namespace Plugin
 	    std::string mRuntimeMountPoint;
             std::string mGstRegistrySourcePath;
             std::string mGstRegistryDestinationPath;
-            AIConfiguration* mAIConfiguration;
+            std::unique_ptr<AIConfiguration> mAIConfiguration;
     };
 } /* namespace Plugin */
 } /* namespace WPEFramework */
