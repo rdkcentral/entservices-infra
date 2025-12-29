@@ -24,8 +24,11 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <sys/stat.h>
+#include <yaml-cpp/yaml.h>
 
 #define AICONFIGURATION_INI_PATH "/opt/demo/config.ini"
+#define AICONFIGURATION_YAML_PATH "/opt/demo/runtime.yaml"
 
 extern char **environ;
 
@@ -44,6 +47,14 @@ namespace Plugin
     void AIConfiguration::initialize()
     {
         readFromConfigFile();
+	struct stat st{};
+	if (::stat(AICONFIGURATION_YAML_PATH, &st) == 0) {
+	LOGINFO("yaml-test AIConfiguration reading from YAML at %s", AICONFIGURATION_YAML_PATH);
+        readconfigfromyaml(AICONFIGURATION_YAML_PATH);
+	}
+	else {
+	LOGINFO("YAML file %s not found", AICONFIGURATION_YAML_PATH);
+	}
     }
 
     size_t AIConfiguration::getContainerConsoleLogCap()
@@ -315,6 +326,63 @@ namespace Plugin
         LOGINFO("preloads: %s", preloadsStr.c_str());
         LOGINFO("envVariables: %s", envsStr.c_str());
     }
+
+// ----------------------------------------------------
+// NEW: Read configuration from YAML and print results
+// ----------------------------------------------------
+
+void AIConfiguration::readconfigfromyaml(const std::string& yamlPath)
+{
+    try {
+        YAML::Node root = YAML::LoadFile(yamlPath);
+
+        if (!root || !root.IsMap()) {
+            LOGERR("Invalid YAML format: root must be a mapping");
+            return;
+        }
+
+        if (root["preloads"]) {
+            LOGINFO("preloads:");
+            for (const auto& n : root["preloads"]) {
+                LOGINFO("  %s", n.as<std::string>().c_str());
+            }
+        }
+
+        if (root["envVariables"]) {
+            LOGINFO("envVariables:");
+            for (const auto& n : root["envVariables"]) {
+                LOGINFO("  %s", n.as<std::string>().c_str());
+            }
+        }
+
+        if (root["enableSvp"]) {
+            LOGINFO("enableSvp: %s", root["enableSvp"].as<bool>() ? "true" : "false");
+        }
+
+        if (root["memoryLimit"]) {
+            LOGINFO("memoryLimit: %llu", root["memoryLimit"].as<uint64_t>());
+        }
+
+        if (root["gpuMemoryLimit"]) {
+            LOGINFO("gpuMemoryLimit: %llu", root["gpuMemoryLimit"].as<uint64_t>());
+        }
+
+        if (root["ionDefaultQuota"]) {
+            LOGINFO("ionDefaultQuota: %llu", root["ionDefaultQuota"].as<uint64_t>());
+        }
+
+        if (root["svpfiles"]) {
+            LOGINFO("svpfiles:");
+            for (const auto& n : root["svpfiles"]) {
+                LOGINFO("  %s", n.as<std::string>().c_str());
+            }
+        }
+
+    } catch (const std::exception& ex) {
+        LOGERR("Error parsing YAML: %s", ex.what());
+    }
+}
+	
 
     void AIConfiguration::readFromConfigFile()
     {
