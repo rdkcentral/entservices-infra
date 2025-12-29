@@ -39,6 +39,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         RuntimeManager.cpp
@@ -113,7 +114,7 @@ include_directories(BEFORE ${RUNTIME_MANAGER_INCLUDES})
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
     CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  
-    ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES})
+    ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES} yaml-cpp)
 
 if(RDK_SERVICES_L1_TEST)
     set(JSONCPP_INCLUDE_PATH "/usr/include/jsoncpp" CACHE PATH "Path to jsoncpp includes")
