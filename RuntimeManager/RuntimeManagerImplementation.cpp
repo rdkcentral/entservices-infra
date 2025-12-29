@@ -1191,9 +1191,8 @@ err_ret:
 
         void RuntimeManagerImplementation::onOCIContainerStartedEvent(std::string name, JsonObject& data)
         {
-	    // Get container IP address and attach WebInspector for debugging
-            LOGINFO("[Mounika]Container name: %s", name.c_str());
-            
+            LOGINFO("Container name: %s", name.c_str());        
+            #ifdef RDK_APPMANAGERS_DEBUG
             const in_addr_t addr = ContainerUtils::getContainerIpAddress(name);
             if (addr != 0)
             {
@@ -1201,33 +1200,25 @@ err_ret:
                 ip_addr.s_addr = addr;
                 LOGINFO("Container %s started with IP address: %s", name.c_str(), inet_ntoa(ip_addr));
                 
-                // Attach WebInspector - port starts at 2000 and increments for each container
                 uint16_t debugPort = 0;
-
+                           
                 for (uint16_t port = 2000; port <= 2100; ++port)
                 {
-                    bool portInUse = false;
-                    for (const auto& inspector : mWebInspectors)
-                    {
-                        if (inspector.second && inspector.second->debugPort() == port)
-                        {
-                            portInUse = true;
-                            break;
-                        }
-                    }
-                    if (!portInUse)
+                    if (mPortAvailability.find(port) == mPortAvailability.end() || !mPortAvailability[port])
                     {
                         debugPort = port;
                         break;
                     }
                 }
+                
                 if (debugPort != 0)
                 {
                     auto webInspector = WebInspector::attach(name, addr, debugPort);
                     if (webInspector)
                     {
                         mWebInspectors[name] = webInspector;
-                        LOGINFO("WebInspector attached for container %s on host port %d (forwards to container port 22222)", name.c_str(), debugPort);
+                        mPortAvailability[debugPort] = true;
+                        LOGINFO("WebInspector attached for container %s on host port %d ", name.c_str(), debugPort);
                     }
                     else
                     {
@@ -1236,26 +1227,31 @@ err_ret:
                 }
                 else
                 {
-                    LOGERR("No available debug ports (2000-2100) for container %s", name.c_str());
-                }	
+                    LOGERR("No available debug ports for container %s", name.c_str());
+                }
             }
             else
             {
                 LOGERR("Failed to get IP address for container '%s'", name.c_str());
             }
+			#endif
+            
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERSTARTED, data);
         }
 
         void RuntimeManagerImplementation::onOCIContainerStoppedEvent(std::string name, JsonObject& data)
         {
-		// Remove WebInspector when container stops
+		   #ifdef RDK_APPMANAGERS_DEBUG
             auto it = mWebInspectors.find(name);
             if (it != mWebInspectors.end())
             {
-                LOGINFO("Detaching WebInspector for container %s", name.c_str());
+                uint16_t freedPort = it->second->debugPort();
+                LOGINFO("Detaching WebInspector for container %s, freeing debug port %d", name.c_str(), freedPort);
                 mWebInspectors.erase(it);
+                mPortAvailability[freedPort] = false;
+                LOGINFO("Debug port %d flag reset to available for reuse", freedPort);
             }
-
+			#endif
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERSTOPPED, data);
         }
 
