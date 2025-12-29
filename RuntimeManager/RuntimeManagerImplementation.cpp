@@ -25,9 +25,9 @@
 //TODO - Remove the hardcoding to enable compatibility with a common middleware. The app portal name should be configurable in some way
 #define RUNTIME_APP_PORTAL "com.sky.as.apps"
 
-#ifdef RAFL_PACKAGE_SUPPORT_ENABLED
+#ifdef RALF_PACKAGE_SUPPORT_ENABLED
 #include "ralf/RalfPackageBuilder.h"
-#endif // RAFL_PACKAGE_SUPPORT_ENABLED
+#endif // RALF_PACKAGE_SUPPORT_ENABLED
 
 namespace WPEFramework
 {
@@ -225,6 +225,10 @@ namespace WPEFramework
                         (*index)->OnTerminated(appInstanceId);
                         ++index;
                     }
+#ifdef RALF_PACKAGE_SUPPORT_ENABLED
+                    ralf::RalfPackageBuilder ralfBuilder;
+                    ralfBuilder.unmountOverlayfsIfExists(appInstanceId);
+#endif
                 break;
                 }
 
@@ -235,6 +239,12 @@ namespace WPEFramework
                     (*index)->OnFailure(appInstanceId, error);
                     ++index;
                 }
+#ifdef RALF_PACKAGE_SUPPORT_ENABLED
+                {
+                ralf::RalfPackageBuilder ralfBuilder;
+                ralfBuilder.unmountOverlayfsIfExists(appInstanceId);
+                }
+#endif
                 break;
 
                 default:
@@ -456,14 +466,14 @@ err_ret:
 
         bool RuntimeManagerImplementation::generate(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfigObject, std::string& dobbySpec)
         {
-#ifdef RAFL_PACKAGE_SUPPORT_ENABLED
+#ifdef RALF_PACKAGE_SUPPORT_ENABLED
             LOGINFO("Generating Ralf Package Config : %s", runtimeConfigObject.ralfPkgPath.c_str());
             ralf::RalfPackageBuilder ralfBuilder;
             return ralfBuilder.generateRalfDobbySpec(config, runtimeConfigObject,dobbySpec);
 #else            
             DobbySpecGenerator generator;
             return generator.generate(config, runtimeConfigObject, dobbySpec);
-#endif //RAFL_PACKAGE_SUPPORT_ENABLED           
+#endif //RALF_PACKAGE_SUPPORT_ENABLED
         }
 
         Exchange::IRuntimeManager::RuntimeState RuntimeManagerImplementation::getRuntimeState(const string& appInstanceId)
@@ -547,9 +557,11 @@ err_ret:
             {
                 uid = 30490;
             }
-            uid = gid = 30001;
+            uid = gid = 0;
             config.mUserId = uid;
             config.mGroupId = gid;
+            appStorageInfo.userId = uid;
+            appStorageInfo.groupId = gid;
 
             if (ports)
             {
@@ -626,9 +638,9 @@ err_ret:
             {
                 westerosSocket = xdgRuntimeDir + "/" + waylandDisplay;
                 config.mWesterosSocketPath = westerosSocket;            
-#ifdef RAFL_PACKAGE_SUPPORT_ENABLED                    
+#ifdef RALF_PACKAGE_SUPPORT_ENABLED
                config.mWesterosSocketPath = waylandDisplay;
-#endif //RAFL_PACKAGE_SUPPORT_ENABLED
+#endif //RALF_PACKAGE_SUPPORT_ENABLED
                 LOGINFO("Westeros Socket Path : %s", config.mWesterosSocketPath.c_str());
             }
 
@@ -679,9 +691,9 @@ err_ret:
                      xdgRuntimeDir.c_str(), waylandDisplay.c_str());
                 std::string command = "";
                 std::string appPath = runtimeConfigObject.unpackedPath;
-#ifdef RAFL_PACKAGE_SUPPORT_ENABLED  
+#ifdef RALF_PACKAGE_SUPPORT_ENABLED
                 appPath = dobbySpec; // In Ralf package, dobbySpec contains the path to the generated dobby spec file
-#endif //RAFL_PACKAGE_SUPPORT_ENABLED
+#endif //RALF_PACKAGE_SUPPORT_ENABLED
                 if(isOCIPluginObjectValid())
                 {
                     string containerId = getContainerId(appInstanceId);
@@ -1035,13 +1047,6 @@ err_ret:
                status = Core::ERROR_GENERAL;
             }
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
-
-#ifdef RALF_PACKAGE_SUPPORT_ENABLED
-            // Clean up overlayfs if exists
-            ralf::RalfPackageBuilder ralfBuilder;
-            ralfBuilder.unmountOverlayfsIfExists(mRuntimeAppInfo[appInstanceId].appId);
-#endif // RALF_PACKAGE_SUPPORT_ENABLED  
-
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
@@ -1109,12 +1114,6 @@ err_ret:
                status = Core::ERROR_GENERAL;
             }
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
-
-#ifdef RALF_PACKAGE_SUPPORT_ENABLED
-            // Clean up overlayfs if exists
-            ralf::RalfPackageBuilder ralfBuilder;
-            ralfBuilder.unmountOverlayfsIfExists(mRuntimeAppInfo[appInstanceId].appId);
-#endif // RALF_PACKAGE_SUPPORT_ENABLED  
             mRuntimeManagerImplLock.Unlock();
             return status;
         }

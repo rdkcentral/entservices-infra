@@ -27,7 +27,7 @@
 namespace ralf
 {
 
-    bool RalfPackageBuilder::generateOCIRootfsPackage(const std::string &appInstanceId,const int uid, const int gid, std::string &ociRootfsPath)
+    bool RalfPackageBuilder::generateOCIRootfsPackage(const std::string &appInstanceId, const int uid, const int gid, std::string &ociRootfsPath)
     {
         // Let us extract the mount points.
         std::string packageLayers = RALF_GRAPHICS_LAYER_ROOTFS;
@@ -74,6 +74,7 @@ namespace ralf
     {
         // We need to unmount the overlayfs mount point if exists
         std::string overlayMountPath = RALF_APP_ROOTFS_DIR + appInstanceId + "/rootfs";
+        LOGDBG("Checking and unmounting overlayfs at path: %s\n", overlayMountPath.c_str());
         bool status = checkIfPathExists(overlayMountPath);
         if (status)
         {
@@ -81,10 +82,19 @@ namespace ralf
             if (!status)
             {
                 LOGERR("Failed to unmount overlayfs at path: %s\n", overlayMountPath.c_str());
-                return false;
+                status = false;
             }
-            LOGDBG("Successfully unmounted overlayfs at path: %s\n", overlayMountPath.c_str());
+            else
+            {
+                LOGDBG("Successfully unmounted overlayfs at path: %s\n", overlayMountPath.c_str());
+                status = true;
+            }
         }
-        return true;
+        else
+        {
+            LOGDBG("No overlayfs mount exists at path: %s\n", overlayMountPath.c_str());
+            status = false;
+        }
+        return status;
     }
 } // namespace ralf

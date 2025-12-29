@@ -104,7 +104,7 @@ namespace ralf
         // set gidMappings also
         Json::Value gidMapping;
         gidMapping["containerID"] = 0;
-        gidMapping["hostID"] = appConfig.mUserId;
+        gidMapping["hostID"] = appConfig.mGroupId;
         gidMapping["size"] = 1;
         ociConfigRootNode["linux"]["gidMappings"].append(gidMapping);
 
@@ -190,9 +190,9 @@ namespace ralf
         Json::Value mountOptions(Json::arrayValue); 
         mountOptions.append("rbind");
         mountOptions.append("rw");
-        mountOptions.append("nosuid");
+/*        mountOptions.append("nosuid");
         mountOptions.append("nodev");
-        mountOptions.append("noexec");
+        mountOptions.append("noexec");*/
         mountEntry["options"] = mountOptions;
 
         ociConfigRootNode["mounts"].append(mountEntry);
