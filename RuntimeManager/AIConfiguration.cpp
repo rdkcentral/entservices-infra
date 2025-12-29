@@ -28,7 +28,7 @@
 #include <yaml-cpp/yaml.h>
 
 #define AICONFIGURATION_INI_PATH "/opt/demo/config.ini"
-#define AICONFIGURATION_YAML_PATH "/opt/demo/runtime.yaml"
+#define AICONFIGURATION_YAML_PATH "/opt/rdkappmanagers.yaml"
 
 extern char **environ;
 
@@ -54,7 +54,20 @@ namespace Plugin
 	}
 	else {
 	LOGINFO("YAML file %s not found", AICONFIGURATION_YAML_PATH);
-	}
+	}	
+
+/*
+	std::thread(this {
+        struct stat st{};
+        if (::stat(AICONFIGURATION_YAML_PATH, &st) == 0) {
+            LOGINFO("yaml-test AIConfiguration reading from YAML at %s",
+                    AICONFIGURATION_YAML_PATH);
+            readconfigfromyaml(AICONFIGURATION_YAML_PATH);
+        } else {
+            LOGINFO("YAML file %s not found", AICONFIGURATION_YAML_PATH);
+        }
+    }).detach();
+*/
     }
 
     size_t AIConfiguration::getContainerConsoleLogCap()
