@@ -49,8 +49,8 @@ namespace Plugin
         readFromConfigFile();
 	struct stat st{};
 	if (::stat(AICONFIGURATION_YAML_PATH, &st) == 0) {
-	LOGINFO("yaml-test AIConfiguration reading from YAML at %s", AICONFIGURATION_YAML_PATH);
-        readconfigfromyaml(AICONFIGURATION_YAML_PATH);
+	LOGINFO("AIConfiguration reading from YAML at %s", AICONFIGURATION_YAML_PATH);
+        readFromYamlConfigFile(AICONFIGURATION_YAML_PATH);
 	}
 	else {
 	LOGINFO("YAML file %s not found", AICONFIGURATION_YAML_PATH);
@@ -331,7 +331,7 @@ namespace Plugin
 // NEW: Read configuration from YAML and print results
 // ----------------------------------------------------
 
-void AIConfiguration::readconfigfromyaml(const std::string& yamlPath)
+void AIConfiguration::readFromYamlConfigFile(const std::string& yamlPath)
 {
     try {
         YAML::Node root = YAML::LoadFile(yamlPath);

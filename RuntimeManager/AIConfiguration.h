@@ -54,7 +54,7 @@ namespace Plugin
             std::string getDialUsn() const;
             std::map<std::string, size_t> getIonHeapQuotas() const;
             void printAIConfiguration();
-	    void readconfigfromyaml(const std::string& yamlPath);
+	    void readFromYamlConfigFile(const std::string& yamlPath);
 
             // system configuration
             std::list<std::string> getPreloads() const;
