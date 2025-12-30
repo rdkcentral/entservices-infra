@@ -13,8 +13,6 @@
 extern "C" const char *iptc_strerror(int err);
 
 
-//Q_LOGGING_CATEGORY(netFilter, "netfilter")
-
 /// Global lock, used to control access to the iptables ruleset
 NetFilterLock NetFilter::mLock;
 
@@ -34,8 +32,7 @@ extern "C" void nfDebug(const char *format, ...)
     va_start(ap, format);
     vsnprintf(message, sizeof(message), format, ap);
     va_end(ap);
-
-    //qCDebug(netFilter).noquote() << message;
+    LOGINFO("%s", message);
 }
 
 extern "C" void nfInfo(const char *format, ...)
@@ -46,8 +43,7 @@ extern "C" void nfInfo(const char *format, ...)
     va_start(ap, format);
     vsnprintf(message, sizeof(message), format, ap);
     va_end(ap);
-
-    //qCInfo(netFilter).noquote() << message;
+    LOGINFO("%s", message);
 }
 
 extern "C" void nfError(const char *format, ...)
@@ -58,8 +54,7 @@ extern "C" void nfError(const char *format, ...)
     va_start(ap, format);
     vsnprintf(message, sizeof(message), format, ap);
     va_end(ap);
-
-   // qCWarning(netFilter).noquote() << message;
+    LOGWARN("%s", message);
 }
 
 extern "C" void nfSysError(int error, const char *format, ...)
@@ -70,37 +65,9 @@ extern "C" void nfSysError(int error, const char *format, ...)
     va_start(ap, format);
     vsnprintf(message, sizeof(message), format, ap);
     va_end(ap);
-
-    //qCWarning(netFilter).noquote() << message << '(' << error << '-'
-    //                               << iptc_strerror(error) << ')';
+    LOGWARN("%s (%d - %s)", message, error, iptc_strerror(error));
 }
 
-// -----------------------------------------------------------------------------
-/*!
-    \internal
-
-    Helper callback used to perform a regex match on a comment string.
-
- */
-/*
-static int regexMatcher(const char *str, void *userData)
-{
-//    qCInfo(netFilter, "check comment '%s' matches", str);
-
-    auto regex = reinterpret_cast<const QRegExp*>(userData);
-    if (regex->exactMatch(str))
-    {
-        qDebug("iptables comment %s does match", str);
-        return 0;
-    }
-    else
-    {
-        qDebug("iptables comment %s doesn't match", str);
-        return 1;
-    }
-    
-}
-*/
 
 // -----------------------------------------------------------------------------
 /*!
@@ -145,11 +112,10 @@ void NetFilter::removeAllRulesMatchingComment(const std::string &commentMatch)
 bool NetFilter::openExternalPort(in_port_t port, Protocol protocol,
                                  const std::string &comment)
 {
-/*    qCInfo(netFilter, "opening netfilter hole for %s port %hu",
+    LOGINFO("opening netfilter hole for %s port %hu",
            (protocol == Protocol::Tcp) ? "tcp" :
            (protocol == Protocol::Udp) ? "udp" : "???",
            port);
-*/
     std::lock_guard<NetFilterLock> locker(mLock);
 
     return (::openExternalPort(port, static_cast<int>(protocol), comment.c_str()) == 0);
@@ -211,9 +177,7 @@ bool NetFilter::addContainerPortForwarding(const std::string &bridgeIface,
 std::list<NetFilter::PortForward> NetFilter::getContainerPortForwardList(const std::string &bridgeIface,
                                                                      const in_addr_t &containerIp)
 {
-//    qCInfo(netFilter, "finding NAT PREROUTING rules that forward to a container"
- //                     " ip address %s", qPrintable(containerIp.toString()));
-
+    LOGINFO("finding NAT PREROUTING rules that forward to a container ip address %u", containerIp);
     std::unique_lock<NetFilterLock> locker(mLock);
 
     HolePunchEntry entries[32];
@@ -239,8 +203,8 @@ std::list<NetFilter::PortForward> NetFilter::getContainerPortForwardList(const s
                                            entries[i].containerPort });
                 break;
 
-            //default:
-                //qWarning("unknown hole punch protocol (%d)", entries[i].protocol);
+            default:
+                LOGWARN("unknown hole punch protocol (%d)", entries[i].protocol);
         }
     }
 

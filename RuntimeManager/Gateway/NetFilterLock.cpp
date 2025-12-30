@@ -21,25 +21,25 @@
 NetFilterLock::NetFilterLock()
 {
     mLockFd = open(XT_LOCK_NAME, O_CLOEXEC | O_CREAT, 0600);
-  //  if (mLockFd < 0)
-        //qErrnoWarning(errno, "failed to create / open '%s'", XT_LOCK_NAME);
+    if (mLockFd < 0)
+        LOGERR("failed to create / open '%s': %s", XT_LOCK_NAME, strerror(errno));
 }
 
 NetFilterLock::~NetFilterLock()
 {
-//    if ((mLockFd >= 0) && (close(mLockFd) != 0))
-       // qErrnoWarning(errno, "failed to close lock file");
+       if ((mLockFd >= 0) && (close(mLockFd) != 0))
+       LOGERR("failed to close lock file: %s", strerror(errno));
 }
 
 void NetFilterLock::lock()
 {
     if (mLockFd < 0)
     {
-    //    qWarning("invalid xtables lock");
+         LOGWARN("invalid xtables lock");
     }
     else if (TEMP_FAILURE_RETRY(flock(mLockFd, LOCK_EX)) < 0)
     {
-      //  qErrnoWarning(errno, "failed to acquire xtables file lock");
+         LOGERR("failed to acquire xtables file lock: %s", strerror(errno));
     }
 }
 
@@ -47,11 +47,11 @@ void NetFilterLock::unlock()
 {
     if (mLockFd < 0)
     {
-        //qWarning("invalid xtables lock");
+        LOGWARN("invalid xtables lock");
     }
     else if (TEMP_FAILURE_RETRY(flock(mLockFd, LOCK_UN)) < 0)
     {
-        //qErrnoWarning(errno, "failed to clear xtables file lock");
+        LOGERR("failed to clear xtables file lock: %s", strerror(errno));
     }
 }
 
@@ -59,7 +59,7 @@ bool NetFilterLock::try_lock()
 {
     if (mLockFd < 0)
     {
-//        qWarning("invalid xtables lock");
+        LOGWARN("invalid xtables lock");
         return false;
     }
 
@@ -70,7 +70,7 @@ bool NetFilterLock::try_lock_until(const std::chrono::steady_clock::time_point &
 {
     if (mLockFd < 0)
     {
-  //      qWarning("invalid xtables lock");
+        LOGWARN("invalid xtables lock");
         return false;
     }
 
@@ -84,7 +84,7 @@ bool NetFilterLock::try_lock_until(const std::chrono::steady_clock::time_point &
 
     if (TEMP_FAILURE_RETRY(flock(mLockFd, LOCK_EX | LOCK_NB)) == 0)
         return true;
+    LOGWARN("timed out waiting to acquire the xtables file lock");
 
-//    qWarning("timed out waiting to acquire the xtables file lock");
     return false;
 }

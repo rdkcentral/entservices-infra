@@ -24,28 +24,6 @@
 #include <errno.h>
 
 
-
-/*
-#define NETFILTER_IP_FIELDS(n) \
-        uint8_t((n) >> 24), \
-        uint8_t((n) >> 16), \
-        uint8_t((n) >> 8),  \
-        uint8_t((n) >> 0)
-
-#define NF_ALIGN_KERNEL(x, a) \
-        NF_ALIGN_KERNEL_MASK(x, (size_t)(a) - 1)
-
-#define NF_ALIGN_KERNEL_MASK(x, mask) \
-        (((x) + (mask)) & ~(mask))
-
-#undef XT_ALIGN
-#define XT_ALIGN(s) \
-        NF_ALIGN_KERNEL((s), __alignof__(struct _xt_align))
-*/
-
-
-
-
 extern void nfDebug(const char *format, ...)
     __attribute__ ((format (printf, 1, 2)));
 
