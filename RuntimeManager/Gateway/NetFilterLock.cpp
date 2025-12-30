@@ -7,6 +7,7 @@
 
 #include "NetFilterLock.h"
 #include "NetFilter.h"
+#include <errno.h>
 
 #include <thread>
 

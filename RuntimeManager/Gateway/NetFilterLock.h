@@ -10,6 +10,8 @@
 
 #include <mutex>
 #include <chrono>
+#include "UtilsLogging.h"
+#include "tracing/Logging.h"
 
 
 class NetFilterLock
