@@ -55,19 +55,6 @@ namespace Plugin
 	else {
 	LOGINFO("YAML file %s not found", AICONFIGURATION_YAML_PATH);
 	}	
-
-/*
-	std::thread(this {
-        struct stat st{};
-        if (::stat(AICONFIGURATION_YAML_PATH, &st) == 0) {
-            LOGINFO("yaml-test AIConfiguration reading from YAML at %s",
-                    AICONFIGURATION_YAML_PATH);
-            readconfigfromyaml(AICONFIGURATION_YAML_PATH);
-        } else {
-            LOGINFO("YAML file %s not found", AICONFIGURATION_YAML_PATH);
-        }
-    }).detach();
-*/
     }
 
     size_t AIConfiguration::getContainerConsoleLogCap()
@@ -355,41 +342,56 @@ void AIConfiguration::readconfigfromyaml(const std::string& yamlPath)
         }
 
         if (root["preloads"]) {
+            mPreloads.clear();
             LOGINFO("preloads:");
             for (const auto& n : root["preloads"]) {
-                LOGINFO("  %s", n.as<std::string>().c_str());
+                std::string val = n.as<std::string>();
+                mPreloads.push_back(val);
+                LOGINFO("  %s", val.c_str());
             }
         }
 
         if (root["envVariables"]) {
+            mEnvVariables.clear();
             LOGINFO("envVariables:");
             for (const auto& n : root["envVariables"]) {
-                LOGINFO("  %s", n.as<std::string>().c_str());
+                std::string val = n.as<std::string>();
+                mEnvVariables.push_back(val);
+                LOGINFO("  %s", val.c_str());
             }
         }
 
         if (root["enableSvp"]) {
-            LOGINFO("enableSvp: %s", root["enableSvp"].as<bool>() ? "true" : "false");
+            mSvpEnabled = root["enableSvp"].as<bool>();
+            LOGINFO("enableSvp: %s", mSvpEnabled ? "true" : "false");
         }
 
         if (root["memoryLimit"]) {
-            LOGINFO("memoryLimit: %llu", root["memoryLimit"].as<uint64_t>());
+            mNonHomeAppMemoryLimit = static_cast<ssize_t>(root["memoryLimit"].as<uint64_t>());
+            LOGINFO("memoryLimit: %zd", mNonHomeAppMemoryLimit);
         }
 
         if (root["gpuMemoryLimit"]) {
-            LOGINFO("gpuMemoryLimit: %llu", root["gpuMemoryLimit"].as<uint64_t>());
+            mNonHomeAppGpuLimit = static_cast<ssize_t>(root["gpuMemoryLimit"].as<uint64_t>());
+            LOGINFO("gpuMemoryLimit: %zd", mNonHomeAppGpuLimit);
         }
 
         if (root["ionDefaultQuota"]) {
-            LOGINFO("ionDefaultQuota: %llu", root["ionDefaultQuota"].as<uint64_t>());
+            mIonHeapDefaultQuota = root["ionDefaultQuota"].as<size_t>();
+            LOGINFO("ionDefaultQuota: %zu", mIonHeapDefaultQuota);
         }
 
         if (root["svpfiles"]) {
+            mSvpFiles.clear();
             LOGINFO("svpfiles:");
             for (const auto& n : root["svpfiles"]) {
-                LOGINFO("  %s", n.as<std::string>().c_str());
+                std::string val = n.as<std::string>();
+                mSvpFiles.push_back(val);
+                LOGINFO("  %s", val.c_str());
             }
         }
+
+        //printAIConfiguration();
 
     } catch (const std::exception& ex) {
         LOGERR("Error parsing YAML: %s", ex.what());
