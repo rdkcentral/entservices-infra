@@ -105,7 +105,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: develop
+          ref: feature/workflow-test
           token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout entservices-deviceanddisplay
@@ -127,7 +127,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: feature/workflow-L1-L2-Test
 
       - name: Apply  ThunderTools
         run: |
@@ -405,7 +405,7 @@ jobs:
           -DPLUGIN_ANALYTICS_SIFT_URL="127.0.0.1:12345"
           -DPLUGIN_ANALYTICS_EVENTS_MAP="/tmp/AnalyticsEventsMap.json"
           &&
-          cmake --build build/entservices-infra -j8
+          cmake --build build/entservices-infra
           &&
           cmake --install build/entservices-infra
 
@@ -591,7 +591,7 @@ jobs:
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Run unit tests with valgrind
-        if: ${{ !env.ACT }}
+        if: ${{ !env.ACT && inputs.caller_source != 'testframework' }}
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
@@ -607,7 +607,7 @@ jobs:
           rm -rf $(pwd)/rdkL2TestResults.json
           
       - name: Generate coverage
-        if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
+        if: ${{ matrix.coverage == 'with-coverage' && !env.ACT && inputs.caller_source != 'testframework' }}
         run: >
           cp $GITHUB_WORKSPACE/entservices-testframework/Tests/L2Tests/.lcovrc_l2 ~/.lcovrc
           &&
