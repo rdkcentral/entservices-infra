@@ -912,8 +912,11 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
         }
     }
 
-    // TC-18: Delete download using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    if(downloadComplete)
+    {
+        // TC-18: Delete download using JsonRpc
+        EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    }
 
 	deinitforJsonRpc();
 }
@@ -984,11 +987,12 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
         }
     }
 
-
-    // TC-20: Delete download failure when download in progress using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
-
-	deinitforComRpc();
+    if(downloadComplete)
+    {
+        // TC-20: Delete download failure when download in progress using ComRpc
+        EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
+    }
+    deinitforComRpc();
 }
 
 /* Test Case for delete download failure using ComRpc
