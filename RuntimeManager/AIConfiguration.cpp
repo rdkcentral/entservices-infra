@@ -342,25 +342,25 @@ void AIConfiguration::readFromYamlConfigFile()
 
         if (root["preloads"]) {
             LOGINFO("preloads (merging with defaults):");
-            std::set<std::string> preloadSet(mPreloads.begin(), mPreloads.end());
+            //std::set<std::string> preloadSet(mPreloads.begin(), mPreloads.end());
             for (const auto& n : root["preloads"]) {
                 std::string val = n.as<std::string>();
-                if (preloadSet.find(val) == preloadSet.end()) {
+              //  if (preloadSet.find(val) == preloadSet.end()) {
                     mPreloads.push_back(val);
                     LOGINFO("  %s", val.c_str());
-                }
+               // }
             }
         }
 
         if (root["envVariables"]) {
             LOGINFO("envVariables (merging with defaults):");
-            std::set<std::string> envSet(mEnvVariables.begin(), mEnvVariables.end());
+          //  std::set<std::string> envSet(mEnvVariables.begin(), mEnvVariables.end());
             for (const auto& n : root["envVariables"]) {
                 std::string val = n.as<std::string>();
-                if (envSet.find(val) == envSet.end()) {
+              //  if (envSet.find(val) == envSet.end()) {
                     mEnvVariables.push_back(val);
                     LOGINFO("  %s", val.c_str());
-                }
+             //   }
             }
         }
 
