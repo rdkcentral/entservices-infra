@@ -85,7 +85,9 @@ namespace WPEFramework {
             std::string mQuery;
             std::string mDatabaseName;
 
-            DatabaseQuery(std::string query, std::string dbName): mQuery(query), mDatabaseName(dbName) {}
+            // Issue IDs 12, 13: Variables copied when they could be moved
+            // Fix: Use std::move to transfer ownership instead of copying
+            DatabaseQuery(std::string query, std::string dbName): mQuery(std::move(query)), mDatabaseName(std::move(dbName)) {}
         };
 
         class DatabaseConnection {

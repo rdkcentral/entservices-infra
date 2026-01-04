@@ -238,13 +238,19 @@ namespace WPEFramework
 
                             if (status == Core::ERROR_NONE)
                             {
+                                // Issue ID 309: Using invalid iterator
+                                // Fix: Re-fetch iterator after SpawnApp call as map may have been modified
                                 LOGINFO("Update App Info");
-                                it->second.appInstanceId   = std::move(appInstanceId);
-                                it->second.appIntent       = intent;
-                                it->second.packageInfo.type = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
-                                it->second.targetAppState  =    (state == Exchange::ILifecycleManager::LifecycleState::SUSPENDED)
-                                                                                                                                           ? Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED
-                                                                                                                                           : Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+                                auto it_update = appManagerImplInstance->mAppInfo.find(appId);
+                                if (it_update != appManagerImplInstance->mAppInfo.end())
+                                {
+                                    it_update->second.appInstanceId   = std::move(appInstanceId);
+                                    it_update->second.appIntent       = intent;
+                                    it_update->second.packageInfo.type = AppManagerImplementation::APPLICATION_TYPE_INTERACTIVE;
+                                    it_update->second.targetAppState  =    (state == Exchange::ILifecycleManager::LifecycleState::SUSPENDED)
+                                                                                                                                               ? Exchange::IAppManager::AppLifecycleState::APP_STATE_SUSPENDED
+                                                                                                                                               : Exchange::IAppManager::AppLifecycleState::APP_STATE_ACTIVE;
+                                }
                             }
                             else
                             {
@@ -390,8 +396,12 @@ namespace WPEFramework
                                 mAppIdAwaitingPause = appId;
                                 mAdminLock.Unlock();
                                 {
+                                    // Issue ID 4: Condition variable wait without proper loop synchronization
+                                    // Fix: Move condition check inside the wait predicate to prevent race condition
                                     std::unique_lock<std::mutex> lk(mStateMutex);
-                                    mStateChangedCV.wait_for(lk, std::chrono::milliseconds(PAUSE_STATE_WAITTIME));
+                                    mStateChangedCV.wait_for(lk, std::chrono::milliseconds(PAUSE_STATE_WAITTIME), [this, &appId]() {
+                                        return mAppIdAwaitingPause != appId;
+                                    });
                                 }
 
                                 mAdminLock.Lock();
@@ -718,7 +728,9 @@ namespace WPEFramework
                     JsonObject loadedAppsObject = loadedAppsJsonArray[i].Object();
                     string appId = loadedAppsObject.HasLabel("appId")?loadedAppsObject["appId"].String():"";
                     LOGINFO("Loaded appId: %s", appId.c_str());
-                    auto& appInfo = appManagerImplInstance->mAppInfo[appId];
+                    // Issue ID 26: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    auto& appInfo = appManagerImplInstance->mAppInfo[std::move(appId)];
 
                     Exchange::IAppManager::LoadedAppInfo loadedAppInfo = {};
 		    loadedAppInfo.appId = appId;
@@ -736,7 +748,9 @@ namespace WPEFramework
                     loadedAppInfo.lifecycleState = appInfo.appNewState;
 
                     //Add loaded info
-		    loadedAppInfoList.push_back(loadedAppInfo);
+		    // Issue ID 27: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+		    loadedAppInfoList.push_back(std::move(loadedAppInfo));
                 }
 
                 apps = Core::Service<RPC::IteratorType<Exchange::IAppManager::ILoadedAppInfoIterator>> \
@@ -914,6 +928,9 @@ End:
             }
             else
             {
+                // Issue ID 328: mAppInfo accessed without mAdminLock protection
+                // Fix: Acquire mAdminLock before accessing mAppInfo
+                mAdminLock.Lock();
                 if (!appId.empty())
                 {
                     auto it = appManagerImplInstance->mAppInfo.find(appId);
@@ -935,6 +952,7 @@ End:
                         currentAppState, errorCode);
                     LOGINFO("Notified error event for appId %s: currentAppState=%d errorCode %d", appId.c_str(), static_cast<int>(currentAppState), static_cast<int>(errorCode));
                 }
+                mAdminLock.Unlock();
             }
         }
 

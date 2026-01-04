@@ -43,6 +43,7 @@ namespace WPEFramework
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         , mRequestTime(0)
         , mRequestType(REQUEST_TYPE_NONE)
+        , mPendingOldState(LifecycleState::UNINITIALIZED) // Fix for Coverity issue 1075 - UNINIT_CTOR: Initialize mPendingOldState
 #endif
         {
             mState = (void*) new UnloadedState(this);

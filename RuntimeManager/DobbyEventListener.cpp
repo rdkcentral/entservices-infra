@@ -36,8 +36,9 @@
 namespace WPEFramework {
     namespace Plugin {
 
+        // Fix for Coverity issue 1079 - UNINIT_CTOR: Initialize mOCIContainerObject in constructor
         DobbyEventListener::DobbyEventListener()
-            : mOCIContainerNotification(this),mEventHandler(nullptr)
+            : mOCIContainerNotification(this),mEventHandler(nullptr), mOCIContainerObject(nullptr)
         {
             LOGINFO("Creating DobbyEventListener instance");
         }

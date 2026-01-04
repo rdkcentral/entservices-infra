@@ -363,13 +363,17 @@ namespace Plugin {
                 if (rc == SQLITE_ROW) {
                     if (!k.empty()) {
                         if (t == 0) {
-                            value = v;
+                            // Issue ID 41: Variable copied when it could be moved
+                            // Fix: Use std::move to transfer ownership instead of copying
+                            value = std::move(v);
                             ttl = 0;
                             result = Core::ERROR_NONE;
                         } else if (IsTimeSynced()) {
                             t -= time(nullptr);
                             if (t > 0) {
-                                value = v;
+                                // Issue ID 42: Variable copied when it could be moved
+                                // Fix: Use std::move to transfer ownership instead of copying
+                                value = std::move(v);
                                 ttl = t;
                                 result = Core::ERROR_NONE;
                             } else {

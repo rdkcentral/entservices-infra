@@ -33,7 +33,8 @@ namespace Plugin
 namespace WPEC = WPEFramework::Core;
 namespace WPEJ = WPEFramework::Core::JSON;
 
-DobbyInterface::DobbyInterface(): mEventHandler(nullptr)
+// Fix for Coverity issue 1077 - UNINIT_CTOR: Initialize mEventListenerId and mOmiListenerId in constructor
+DobbyInterface::DobbyInterface(): mEventHandler(nullptr), mEventListenerId(0), mOmiListenerId(0)
 {
 }
 
@@ -745,7 +746,8 @@ void DobbyInterface::onContainerStateChanged(int32_t descriptor, const std::stri
  *
  * @return Descriptor value
  */
-const int DobbyInterface::GetContainerDescriptorFromId(const std::string& containerId)
+// Fix for Coverity issue 1007, 1010 - PW.USELESS_TYPE_QUALIFIER_ON_RETURN_TYPE: Remove const qualifier from return type
+int DobbyInterface::GetContainerDescriptorFromId(const std::string& containerId)
 {
     const std::list<std::pair<int32_t, std::string>> containers = mDobbyProxy->listContainers();
 
@@ -803,7 +805,8 @@ const std::string DobbyInterface::GetContainerIdFromDescriptor(const int descrip
  * @param state      Container state
  * @param _this      Callback parameters, or in this case, the pointer to 'this'
  */
-const void DobbyInterface::stateListener(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState state, const void* _this)
+// Fix for Coverity issue 1008, 1011 - PW.USELESS_TYPE_QUALIFIER_ON_RETURN_TYPE: Remove const qualifier from void return type
+void DobbyInterface::stateListener(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState state, const void* _this)
 {
     // Cast const void* back to DobbyInterface* type to get 'this'
     DobbyInterface* __this = const_cast<DobbyInterface*>(reinterpret_cast<const DobbyInterface*>(_this));
@@ -831,7 +834,8 @@ const void DobbyInterface::stateListener(int32_t descriptor, const std::string& 
  * @param err        Error type
  * @param _this      Callback parameters, or in this case, the pointer to 'this'
  */
-const void DobbyInterface::omiErrorListener(const std::string& id, omi::IOmiProxy::ErrorType err, const void* _this)
+// Fix for Coverity issue 1009, 1012 - PW.USELESS_TYPE_QUALIFIER_ON_RETURN_TYPE: Remove const qualifier from void return type
+void DobbyInterface::omiErrorListener(const std::string& id, omi::IOmiProxy::ErrorType err, const void* _this)
 {
 
     // Cast const void* back to DobbyInterface* type to get 'this'

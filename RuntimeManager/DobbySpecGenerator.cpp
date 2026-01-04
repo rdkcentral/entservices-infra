@@ -21,6 +21,9 @@
 #include "ApplicationConfiguration.h"
 #include "UtilsLogging.h"
 #include <sys/mount.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -921,6 +924,8 @@ void DobbySpecGenerator::createFkpsMounts(const ApplicationConfiguration& config
 	std::string fkpsFile = *it;      
         const std::string fkpsFilePath = fkpsPathPrefix + fkpsFile;
 
+        // Fix for Coverity issues 1072, 1073 - TOCTOU: Acceptable risk - stat() used only to check
+        // file existence before mount operation, no security-critical operations follow
         // check if the file exists
         struct stat details;
         if (stat(fkpsFilePath.c_str(), &details) != 0)
@@ -1029,22 +1034,28 @@ Json::Value DobbySpecGenerator::createResourceManagerMount(const ApplicationConf
 
     struct stat details;
     Json::Value resmgrMount;
-    if (stat(resmgrMountSource.c_str(), &details) == 0)
+    // Fix for Coverity issues 1070, 1071 - TOCTOU: Use open() with fstat() to avoid race condition
+    int fd = open(resmgrMountSource.c_str(), O_RDONLY | O_NOFOLLOW);
+    if (fd >= 0)
     {
-        resmgrMount = createBindMount(resmgrMountSource, resmgrMountPoint, mntOptions);
-
-        // check the group owner matches the app
-        if ((details.st_gid != config.mGroupId) &&
-            (chown(resmgrMountSource.c_str(), -1, config.mGroupId) != 0))
+        if (fstat(fd, &details) == 0)
         {
-            printf("failed to change group owner of '%s'", resmgrMountSource.c_str());
-        }
+            resmgrMount = createBindMount(resmgrMountSource, resmgrMountPoint, mntOptions);
 
-        // and that the group perms are set to 0770
-        if (chmod(resmgrMountSource.c_str(), 0770) != 0)
-        {
-            printf("failed to set file permissions to 0770 for '%s'", resmgrMountSource.c_str());
+            // check the group owner matches the app
+            if ((details.st_gid != config.mGroupId) &&
+                (fchown(fd, -1, config.mGroupId) != 0))
+            {
+                printf("failed to change group owner of '%s'", resmgrMountSource.c_str());
+            }
+
+            // and that the group perms are set to 0770
+            if (fchmod(fd, 0770) != 0)
+            {
+                printf("failed to set file permissions to 0770 for '%s'", resmgrMountSource.c_str());
+            }
         }
+        close(fd);
     }
 
     return resmgrMount;

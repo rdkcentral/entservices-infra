@@ -42,6 +42,7 @@ AppManagerImplementation::AppManagerImplementation()
 , mCurrentservice(nullptr)
 , mPackageManagerNotification(*this)
 , mAppManagerWorkerThread()
+, mStorageManagerRemoteObject(nullptr) // Fix for Coverity issue 1087 - UNINIT_CTOR: Initialize mStorageManagerRemoteObject
 {
     LOGINFO("Create AppManagerImplementation Instance");
     if (nullptr == AppManagerImplementation::_instance)
@@ -902,7 +903,9 @@ Core::hresult AppManagerImplementation::LaunchApp(const string& appId , const st
             if (request->mRequestParam != nullptr)
             {
                 mAppManagerLock.lock();
-                mAppRequestList.push_back(request);
+                // Issue ID 21: Variable copied when it could be moved
+                // Fix: Use std::move to transfer ownership instead of copying
+                mAppRequestList.push_back(std::move(request));
                 mAppManagerLock.unlock();
                 mAppRequestListCV.notify_one();
                 status = Core::ERROR_NONE;
@@ -1125,7 +1128,9 @@ Core::hresult AppManagerImplementation::PreloadApp(const string& appId , const s
             if (request->mRequestParam != nullptr)
             {
                 mAppManagerLock.lock();
-                mAppRequestList.push_back(request);
+                // Issue ID 22: Variable copied when it could be moved
+                // Fix: Use std::move to transfer ownership instead of copying
+                mAppRequestList.push_back(std::move(request));
                 mAppManagerLock.unlock();
                 mAppRequestListCV.notify_one();
                 status = Core::ERROR_NONE;
@@ -1601,9 +1606,11 @@ void AppManagerImplementation::getCustomValues(WPEFramework::Exchange::RuntimeCo
 
         if (aipathchange)
         {
-            runtimeConfig.appPath = apppath;
-            runtimeConfig.runtimePath = runtimepath;
-            runtimeConfig.command = command;
+            // Issue IDs 23, 24, 25: Variables copied when they could be moved
+            // Fix: Use std::move to transfer ownership instead of copying
+            runtimeConfig.appPath = std::move(apppath);
+            runtimeConfig.runtimePath = std::move(runtimepath);
+            runtimeConfig.command = std::move(command);
             runtimeConfig.appType = 1;
             runtimeConfig.resourceManagerClientEnabled = true;
         }

@@ -70,9 +70,11 @@ namespace Plugin {
     AnalyticsImplementation::~AnalyticsImplementation()
     {
         LOGINFO("AnalyticsImplementation::~AnalyticsImplementation()");
+        // Issue ID 311: Double unlock
+        // Fix: Remove manual unlock - unique_lock will unlock automatically when going out of scope
         std::unique_lock<std::mutex> lock(mQueueMutex);
         mActionQueue.push({ACTION_TYPE_SHUTDOWN, nullptr});
-        lock.unlock();
+        // lock.unlock() removed - destructor handles unlock
         mQueueCondition.notify_one();
         mThread.join();
     }
@@ -141,9 +143,13 @@ namespace Plugin {
             event->uptimeTimestamp = GetCurrentUptimeInMs();
         }
 
+        // Issue ID 312: Double unlock
+        // Fix: Remove manual unlock - unique_lock will unlock automatically when going out of scope
         std::unique_lock<std::mutex> lock(mQueueMutex);
-        mActionQueue.push({ACTION_TYPE_SEND_EVENT, event});
-        lock.unlock();
+        // Issue ID 10: Variable copied when it could be moved
+        // Fix: Use std::move to transfer ownership instead of copying
+        mActionQueue.push({ACTION_TYPE_SEND_EVENT, std::move(event)});
+        // lock.unlock() removed - destructor handles unlock
         mQueueCondition.notify_one();
         return Core::ERROR_NONE;
     }

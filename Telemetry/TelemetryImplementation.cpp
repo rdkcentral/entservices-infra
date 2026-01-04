@@ -165,7 +165,9 @@ namespace Plugin {
              std::string privacyMode;
              if (_userSettingsPlugin->GetPrivacyMode(privacyMode) == Core::ERROR_NONE)
              {
-                 notifyT2PrivacyMode(privacyMode);
+                 // Issue ID 58: Variable copied when it could be moved
+                 // Fix: Use std::move to transfer ownership instead of copying
+                 notifyT2PrivacyMode(std::move(privacyMode));
              }
              else
              {

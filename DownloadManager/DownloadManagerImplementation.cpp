@@ -129,6 +129,8 @@ namespace Plugin {
             }
             else
             {
+                // Issue ID 327: Thread may access mDownloadPath before it's fully set
+                // Fix: Ensure thread-safe initialization by setting path before creating thread
                 LOGINFO("DM: Download path ready at '%s'", mDownloadPath.c_str());
                 mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&DownloadManagerImplementation::downloaderRoutine, this, 1));
             }
@@ -427,13 +429,15 @@ namespace Plugin {
         while (mDownloaderRunFlag)
         {
             DownloadInfoPtr downloadRequest = pickDownloadJob();
-            while (downloadRequest == nullptr && mDownloaderRunFlag)
+            // Issue ID 5: Condition checked outside lock, then wait called - race condition can cause indefinite wait
+            // Fix: Use predicate-based wait to check condition atomically with the wait
+            if (downloadRequest == nullptr && mDownloaderRunFlag)
             {
                 LOGDBG("DM: Waiting for download request...");
                 std::unique_lock<std::mutex> lock(mQueueMutex);
-                mDownloadThreadCV.wait(lock);
-                lock.unlock();
-
+                mDownloadThreadCV.wait(lock, [this]() {
+                    return !mDownloaderRunFlag || pickDownloadJob() != nullptr;
+                });
                 downloadRequest = pickDownloadJob();
             }
 

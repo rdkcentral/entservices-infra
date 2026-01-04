@@ -33,7 +33,8 @@ namespace WPEFramework
 {
 namespace Plugin
 {
-    AIConfiguration::AIConfiguration()
+    // Fix for Coverity issue 1078 - UNINIT_CTOR: Initialize mConsoleLogCap in constructor
+    AIConfiguration::AIConfiguration(): mConsoleLogCap(0)
     {
     }
 
@@ -377,15 +378,21 @@ namespace Plugin
                 }
                 else if (key == "vpuAccessBlacklist")
                 {
-                    mVpuAccessBlacklist = parseStringArray(key, value);
+                    // Issue IDs 46, 47: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    mVpuAccessBlacklist = std::move(parseStringArray(key, value));
                 }
                 else if (key == "appsRequiringDBus")
                 {
-                    mAppsRequiringDBus = parseStringArray(key, value);
+                    // Issue IDs 48, 49: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    mAppsRequiringDBus = std::move(parseStringArray(key, value));
                 }
                 else if (key == "mapiPorts")
                 {
-                    mMapiPorts = parseIntArray(value);
+                    // Issue ID 50: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    mMapiPorts = std::move(parseIntArray(value));
                 }
                 else if (key == "resourceManagerClientEnabled")
                 {
@@ -422,7 +429,9 @@ namespace Plugin
                     {
                         value = value.substr(1, value.size() - 2);
                     }
-                    mDialServerPathPrefix = value;
+                    // Issue IDs 51, 52: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    mDialServerPathPrefix = std::move(value);
                 }
                 else if (key == "dialUsn")
                 {
@@ -431,15 +440,21 @@ namespace Plugin
                     {
                         value = value.substr(1, value.size() - 2);
                     }
-                    mDialUsn = value;
+                    // Issue IDs 53, 54: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    mDialUsn = std::move(value);
                 }
                 else if (key == "ionLimits")
                 {
-                    mIonHeapQuotas = parseIonLimits(value);
+                    // Issue IDs 55, 56: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    mIonHeapQuotas = std::move(parseIonLimits(value));
                 }
                 else if (key == "preloads")
                 {
-                    mPreloads = parseStringArray(key, value);
+                    // Issue ID 57: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    mPreloads = std::move(parseStringArray(key, value));
                 }
                 else if (key == "envVariables")
                 {

@@ -46,8 +46,9 @@ namespace WPEFramework
         Core::hresult NativeJSImplementation::Initialize(string waylandDisplay)
         {   
             std::cout << "initialize called on nativejs implementation " << std::endl;
-            mRenderThread = std::thread([=](std::string waylandDisplay) {
-                mNativeJSRenderer = std::make_shared<NativeJSRenderer>(waylandDisplay);
+            // Fix for Coverity issue 1004 - PW.PARAMETER_HIDDEN: Rename lambda parameter to avoid hiding function parameter
+            mRenderThread = std::thread([=](std::string display) {
+                mNativeJSRenderer = std::make_shared<NativeJSRenderer>(display);
                 //if (!gPendingUrlRequest.empty())
                 //{
 		//    ModuleSettings moduleSettings;
@@ -57,7 +58,10 @@ namespace WPEFramework
                 //    gPendingUrlOptionsRequest = "";
                 //}
 		
-		mNativeJSRenderer->run();
+		// Fix for Coverity issue 337 - NULL_FIELD: Add null check before dereferencing mNativeJSRenderer
+		if (mNativeJSRenderer != nullptr) {
+		    mNativeJSRenderer->run();
+		}
 		
 		printf("After launch application execution ... \n"); fflush(stdout);
 		mNativeJSRenderer.reset();
@@ -103,7 +107,9 @@ namespace WPEFramework
 		if(mNativeJSRenderer)
 		{
 			std::string Url(url);
-			mNativeJSRenderer->runApplication(id, Url);
+			// Issue ID 38: Variable copied when it could be moved
+			// Fix: Use std::move to transfer ownership instead of copying
+			mNativeJSRenderer->runApplication(id, std::move(Url));
 		}
 		else
 		{
@@ -119,7 +125,9 @@ namespace WPEFramework
 		if(mNativeJSRenderer)
 		{
 			std::string Code(code);
-			mNativeJSRenderer->runJavaScript(id, Code);
+			// Issue ID 39: Variable copied when it could be moved
+			// Fix: Use std::move to transfer ownership instead of copying
+			mNativeJSRenderer->runJavaScript(id, std::move(Code));
 		}
 		else
 		{

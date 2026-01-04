@@ -108,6 +108,7 @@ namespace Plugin {
             , _storeInspector(nullptr)
             , _storeLimit(nullptr)
             , _storeCache(nullptr)
+            , configure(nullptr) // Fix for Coverity issue 1097 - UNINIT_CTOR: Initialize configure
         {
         }
         ~SharedStorage() override = default;

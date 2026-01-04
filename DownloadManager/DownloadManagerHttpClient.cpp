@@ -66,7 +66,12 @@ DownloadManagerHttpClient::Status DownloadManagerHttpClient::downloadFile(const 
     {
         (void) curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         LOGDBG("curl rateLimit set to %u", rateLimit);
-        curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, (curl_off_t)rateLimit);
+        // Issue ID 6: curl_easy_setopt return value not checked - library function may fail
+        // Fix: Check return value and handle error case
+        CURLcode rateLimit_ret = curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE, (curl_off_t)rateLimit);
+        if (rateLimit_ret != CURLE_OK) {
+            LOGWARN("Failed to set CURLOPT_MAX_RECV_SPEED_LARGE: %s", curl_easy_strerror(rateLimit_ret));
+        }
 
         fp = fopen(fileName.c_str(), "wb");
         if (fp != NULL)

@@ -282,7 +282,9 @@ namespace Plugin {
 
                 if (status.ok()) {
                     if (response.has_value()) {
-                        auto v = response.value();
+                        // Issue ID 1: Using auto without reference causes unnecessary copy of Value object
+                        // Fix: Change to const auto& to avoid copy and improve performance
+                        const auto& v = response.value();
                         if (v.has_ttl()) {
                             ttl = v.ttl().seconds();
                             value = v.value();

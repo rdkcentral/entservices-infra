@@ -144,7 +144,9 @@ public:
         {
             std::unordered_set<Exchange::IAppNotificationHandler::IEmitter *> emitters;
             emitters.insert(cb);
-            mRegisteredNotifications[event_l] = emitters;
+            // Issue ID 72: Variable copied when it could be moved
+            // Fix: Use std::move to avoid unnecessary copy of emitters set
+            mRegisteredNotifications[event_l] = std::move(emitters);
             cb->AddRef();
             LOGDBG("Notification registered = %s", event_l.c_str());
         }

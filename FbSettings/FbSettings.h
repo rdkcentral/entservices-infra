@@ -68,7 +68,10 @@ namespace WPEFramework {
                 }
                 virtual void Dispatch()
                 {
-                    mParent.mDelegate->HandleAppEventNotifier(mCallback, mEvent, mListen);
+                    // Fix for Coverity issues 335, 341 - NULL_FIELD: Add null check before dereferencing mDelegate
+                    if (mParent.mDelegate != nullptr) {
+                        mParent.mDelegate->HandleAppEventNotifier(mCallback, mEvent, mListen);
+                    }
                 }
 
             private:

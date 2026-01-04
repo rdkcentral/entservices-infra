@@ -30,8 +30,9 @@ namespace WPEFramework {
 
         NativeJS* NativeJS::_instance = nullptr;
 
+        // Fix for Coverity issue 1076 - UNINIT_CTOR: Initialize mConnectionId in constructor
         NativeJS::NativeJS()
-            : PluginHost::IPlugin(), PluginHost::JSONRPC(), mService(nullptr), mNativeJS(nullptr)
+            : PluginHost::IPlugin(), PluginHost::JSONRPC(), mService(nullptr), mNativeJS(nullptr), mConnectionId(0)
         {
             NativeJS::_instance = this;
         }
@@ -72,7 +73,9 @@ namespace WPEFramework {
                    waylandDisplay = display;
                 }
             }
-            mNativeJS->Initialize(waylandDisplay);
+            // Issue ID 40: Variable copied when it could be moved
+            // Fix: Use std::move to transfer ownership instead of copying
+            mNativeJS->Initialize(std::move(waylandDisplay));
 	    Exchange::JNativeJS::Register(*this, mNativeJS);
             return "";
         }

@@ -42,7 +42,8 @@ namespace {
 namespace Plugin {
     SERVICE_REGISTRATION(Analytics, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
 
-    Analytics::Analytics(): mConnectionId(0), mAnalytics(nullptr)
+    // Fix for Coverity issue 1084 - UNINIT_CTOR: Initialize mService in constructor
+    Analytics::Analytics(): mConnectionId(0), mAnalytics(nullptr), mService(nullptr)
     {
         SYSLOG(Logging::Startup, (_T("Analytics Constructor")));
     }

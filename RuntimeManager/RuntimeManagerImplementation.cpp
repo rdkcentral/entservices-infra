@@ -579,6 +579,10 @@ err_ret:
                 LOGERR("envVariables is empty inside Run()");
             }
 
+            // Coverity Issue 1062: SLEEP - Waiting while holding a lock
+            // Release lock before calling getAppStorageInfo() which may perform blocking I/O
+            mRuntimeManagerImplLock.Unlock();
+            
             if (!appId.empty())
             {
                 appStorageInfo.userId = userId;
@@ -592,6 +596,8 @@ err_ret:
                     config.mAppStorageInfo.used = std::move(appStorageInfo.used);
                 }
             }
+            
+            mRuntimeManagerImplLock.Lock();
 
             /* Creating Display */
             if(nullptr != mWindowManagerConnector)
@@ -668,45 +674,61 @@ err_ret:
                      xdgRuntimeDir.c_str(), waylandDisplay.c_str());
                 std::string command = "";
                 std::string appPath = runtimeConfigObject.unpackedPath;
+                
+                // Coverity Issue 1063: SLEEP - Waiting while holding a lock
+                // Release lock before calling StartContainer operations which may block
+                string containerId;
+                bool isValid = false;
+                
+                mRuntimeManagerImplLock.Lock();
                 if(isOCIPluginObjectValid())
                 {
-                    string containerId = getContainerId(appInstanceId);
-                    if (!containerId.empty())
-                    {
-                        if(legacyContainer)
-                            status =  mOciContainerObject->StartContainerFromDobbySpec(containerId, dobbySpec, command, westerosSocket, descriptor, success, errorReason);
-                        else
-                            status = mOciContainerObject->StartContainer(containerId, appPath, command, westerosSocket, descriptor, success, errorReason);
+                    containerId = getContainerId(appInstanceId);
+                    isValid = !containerId.empty();
+                }
+                mRuntimeManagerImplLock.Unlock();
+                
+                // Call potentially blocking container start operation without holding lock
+                if (isValid)
+                {
+                    if(legacyContainer)
+                        status = mOciContainerObject->StartContainerFromDobbySpec(containerId, dobbySpec, command, westerosSocket, descriptor, success, errorReason);
+                    else
+                        status = mOciContainerObject->StartContainer(containerId, appPath, command, westerosSocket, descriptor, success, errorReason);
+                    
+                    mRuntimeManagerImplLock.Lock();
 
-                        if ((success == false) || (status != Core::ERROR_NONE))
-                        {
-                            LOGERR("Failed to Run Container %s",errorReason.c_str());
-                        }
-                        else
-                        {
-                            LOGINFO("Update Info for %s",appInstanceId.c_str());
-                            if (!appId.empty())
-                            {
-                                runtimeAppInfo.appId = std::move(appId);
-                            }
-                            runtimeAppInfo.appInstanceId = std::move(appInstanceId);
-                            runtimeAppInfo.descriptor = std::move(descriptor);
-                            runtimeAppInfo.containerState = Exchange::IRuntimeManager::RUNTIME_STATE_STARTING;
-#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                            /* Store request time and type in runtime app info map */
-                            runtimeAppInfo.requestTime = requestTime;
-                            runtimeAppInfo.requestType = REQUEST_TYPE_LAUNCH;
-#endif
-                            /* Insert/update runtime app info */
-                            mRuntimeAppInfo[runtimeAppInfo.appInstanceId] = std::move(runtimeAppInfo);
-                        }
+                    if ((success == false) || (status != Core::ERROR_NONE))
+                    {
+                        LOGERR("Failed to Run Container %s",errorReason.c_str());
                     }
                     else
                     {
-                        LOGERR("appInstanceId is not found ");
-                        errorCode = "ERROR_INVALID_PARAM";
-                        notifyParamCheckFailure = true;
+                        LOGINFO("Update Info for %s",appInstanceId.c_str());
+                        if (!appId.empty())
+                        {
+                            runtimeAppInfo.appId = std::move(appId);
+                        }
+                        // Coverity fix: 1118, 1119 - Copy instead of move since appInstanceId is used later and descriptor is a primitive
+                        runtimeAppInfo.appInstanceId = appInstanceId;
+                        runtimeAppInfo.descriptor = descriptor;
+                        runtimeAppInfo.containerState = Exchange::IRuntimeManager::RUNTIME_STATE_STARTING;
+#ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
+                        /* Store request time and type in runtime app info map */
+                        runtimeAppInfo.requestTime = requestTime;
+                        runtimeAppInfo.requestType = REQUEST_TYPE_LAUNCH;
+#endif
+                        /* Insert/update runtime app info */
+                        mRuntimeAppInfo[runtimeAppInfo.appInstanceId] = std::move(runtimeAppInfo);
                     }
+                }
+                else
+                {
+                    mRuntimeManagerImplLock.Lock();
+                    LOGERR("appInstanceId is not found ");
+                    errorCode = "ERROR_INVALID_PARAM";
+                    notifyParamCheckFailure = true;
+                }
                 }
                 else
                 {
@@ -736,14 +758,22 @@ err_ret:
             time_t requestTime = getCurrentTimestamp();
 #endif
 
+            // Coverity Issue 1053: SLEEP - Waiting while holding a lock
+            // Release lock before potentially blocking HibernateContainer() call
+            string containerId;
+            
             mRuntimeManagerImplLock.Lock();
-
             if(isOCIPluginObjectValid())
             {
-               string containerId = getContainerId(appInstanceId);
-                if (!containerId.empty())
-                {
-                    status =  mOciContainerObject->HibernateContainer(containerId, options, success, errorReason);
+               containerId = getContainerId(appInstanceId);
+            }
+            mRuntimeManagerImplLock.Unlock();
+
+            // Call potentially blocking operation without holding lock
+            if (!containerId.empty())
+            {
+                status = mOciContainerObject->HibernateContainer(containerId, options, success, errorReason);
+                mRuntimeManagerImplLock.Lock();
                     if ((success == false))
                     {
                         LOGERR("Failed to HibernateContainer %s",errorReason.c_str());
@@ -792,17 +822,33 @@ err_ret:
             time_t requestTime = getCurrentTimestamp();
 #endif
 
+            // Coverity Issue 1051: SLEEP - Waiting while holding a lock
+            // Release lock before potentially blocking WakeupContainer() call to prevent deadlock
+            string containerId;
+            RuntimeState currentRuntimeState;
+            bool shouldWakeup = false;
+            
             mRuntimeManagerImplLock.Lock();
             if(isOCIPluginObjectValid())
             {
-                string containerId = getContainerId(appInstanceId);
+                containerId = getContainerId(appInstanceId);
                 if (!containerId.empty())
                 {
-                    RuntimeState currentRuntimeState = getRuntimeState(appInstanceId);
+                    currentRuntimeState = getRuntimeState(appInstanceId);
                     if (Exchange::IRuntimeManager::RUNTIME_STATE_HIBERNATING == currentRuntimeState ||
                         Exchange::IRuntimeManager::RUNTIME_STATE_HIBERNATED == currentRuntimeState)
                     {
-                        status =  mOciContainerObject->WakeupContainer(containerId, success, errorReason);
+                        shouldWakeup = true;
+                    }
+                }
+            }
+            mRuntimeManagerImplLock.Unlock();
+            
+            // Call potentially blocking operation without holding lock
+            if (shouldWakeup && !containerId.empty())
+            {
+                status = mOciContainerObject->WakeupContainer(containerId, success, errorReason);
+                mRuntimeManagerImplLock.Lock();
                         if ((success == false) || (status != Core::ERROR_NONE))
                         {
                             LOGERR("Failed to WakeupContainer %s",errorReason.c_str());
@@ -855,15 +901,22 @@ err_ret:
             time_t requestTime = getCurrentTimestamp();
 #endif
 
+            // Coverity Issue 1054: SLEEP - Waiting while holding a lock
+            // Release lock before potentially blocking PauseContainer() call
+            string containerId;
+            
             mRuntimeManagerImplLock.Lock();
-
             if(isOCIPluginObjectValid())
             {
-                string containerId = getContainerId(appInstanceId);
+                containerId = getContainerId(appInstanceId);
+            }
+            mRuntimeManagerImplLock.Unlock();
 
-                if (!containerId.empty())
-                {
-                    status =  mOciContainerObject->PauseContainer(containerId, success, errorReason);
+            // Call potentially blocking operation without holding lock
+            if (!containerId.empty())
+            {
+                status = mOciContainerObject->PauseContainer(containerId, success, errorReason);
+                mRuntimeManagerImplLock.Lock();
                     if ((success == false) || (status != Core::ERROR_NONE))
                     {
                         LOGERR("Failed to PauseContainer %s",errorReason.c_str());
@@ -910,14 +963,22 @@ err_ret:
             time_t requestTime = getCurrentTimestamp();
 #endif
 
+            // Coverity Issue 1052: SLEEP - Waiting while holding a lock
+            // Release lock before potentially blocking ResumeContainer() call
+            string containerId;
+            
             mRuntimeManagerImplLock.Lock();
             if(isOCIPluginObjectValid())
             {
-                string containerId = getContainerId(appInstanceId);
+                containerId = getContainerId(appInstanceId);
+            }
+            mRuntimeManagerImplLock.Unlock();
 
-                if (!containerId.empty())
-                {
-                    status =  mOciContainerObject->ResumeContainer(containerId, success, errorReason);
+            // Call potentially blocking operation without holding lock
+            if (!containerId.empty())
+            {
+                status = mOciContainerObject->ResumeContainer(containerId, success, errorReason);
+                mRuntimeManagerImplLock.Lock();
                     if ((success == false) || (status != Core::ERROR_NONE))
                     {
                         LOGERR("Failed to ResumeContainer %s",errorReason.c_str());
@@ -975,13 +1036,21 @@ err_ret:
                 LOGERR("Terminate called for unknown appInstanceId: %s, skipping telemetry update", appInstanceId.c_str());
             }
 #endif
+            // Coverity Issue 1057: SLEEP - Waiting while holding a lock
+            // Release lock before potentially blocking StopContainer() call
+            string containerId;
+            
             if(isOCIPluginObjectValid())
             {
-                string containerId = getContainerId(appInstanceId);
+                mRuntimeManagerImplLock.Lock();
+                containerId = getContainerId(appInstanceId);
+                mRuntimeManagerImplLock.Unlock();
 
+                // Call potentially blocking operation without holding lock
                 if (!containerId.empty())
                 {
-                    status =  mOciContainerObject->StopContainer(containerId, false, success, errorReason);
+                    status = mOciContainerObject->StopContainer(containerId, false, success, errorReason);
+                    mRuntimeManagerImplLock.Lock();
                     if (errorReason.compare("Container not found") == 0)
                     {
                         LOGINFO("Container is not running, no need to StopContainer");
@@ -1048,13 +1117,21 @@ err_ret:
                 LOGERR("Kill called for unknown appInstanceId: %s, skipping telemetry update", appInstanceId.c_str());
             }
 #endif
+            // Coverity Issue 1058: SLEEP - Waiting while holding a lock
+            // Release lock before potentially blocking StopContainer() call
+            string containerId;
+            
             if(isOCIPluginObjectValid())
             {
-                string containerId = getContainerId(appInstanceId);
+                mRuntimeManagerImplLock.Lock();
+                containerId = getContainerId(appInstanceId);
+                mRuntimeManagerImplLock.Unlock();
 
+                // Call potentially blocking operation without holding lock
                 if (!containerId.empty())
                 {
-                    status =  mOciContainerObject->StopContainer(containerId, true, success, errorReason);
+                    status = mOciContainerObject->StopContainer(containerId, true, success, errorReason);
+                    mRuntimeManagerImplLock.Lock();
                     if ((success == false) || (status != Core::ERROR_NONE))
                     {
                         LOGERR("Failed to StopContainer for Kill %s",errorReason.c_str());
@@ -1097,15 +1174,22 @@ err_ret:
             std::string errorReason = "";
             bool success = false;
 
+            // Coverity Issue 1055: SLEEP - Waiting while holding a lock
+            // Release lock before potentially blocking GetContainerInfo() call
+            string containerId;
+            
             mRuntimeManagerImplLock.Lock();
-
             if(isOCIPluginObjectValid())
             {
-                string containerId = getContainerId(appInstanceId);
+                containerId = getContainerId(appInstanceId);
+            }
+            mRuntimeManagerImplLock.Unlock();
 
-                if (!containerId.empty())
-                {
-                    status =  mOciContainerObject->GetContainerInfo(containerId, info, success, errorReason);
+            // Call potentially blocking operation without holding lock
+            if (!containerId.empty())
+            {
+                status = mOciContainerObject->GetContainerInfo(containerId, info, success, errorReason);
+                mRuntimeManagerImplLock.Lock();
                     if ((success == false) || (status != Core::ERROR_NONE))
                     {
                         LOGERR("Failed to GetContainerInfo %s",errorReason.c_str());
@@ -1134,16 +1218,22 @@ err_ret:
             std::string errorReason = "";
             bool success = false;
 
+            // Coverity Issue 1056: SLEEP - Waiting while holding a lock
+            // Release lock before potentially blocking Annotate() call
+            string containerId;
+            
             mRuntimeManagerImplLock.Lock();
-
             if(isOCIPluginObjectValid())
             {
-                string containerId = getContainerId(appInstanceId);
+                containerId = getContainerId(appInstanceId);
+            }
+            mRuntimeManagerImplLock.Unlock();
 
-                if (!containerId.empty())
+            // Validate and call potentially blocking operation without holding lock
+            if (!containerId.empty())
+            {
+                if (key.empty())
                 {
-                    if (key.empty())
-                    {
                         LOGERR("Annotate: key is empty");
                     }
                     else

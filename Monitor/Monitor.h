@@ -223,6 +223,19 @@ namespace Plugin {
 
                         return (*this);
                     }
+                    // Coverity Issue ID 331: MISSING_MOVE_ASSIGNMENT - Adding move assignment operator for efficiency
+                    // Fix: Implement move assignment operator to enable move semantics and improve performance
+                    Measurement& operator=(Measurement&& RHS) noexcept
+                    {
+                        if (this != &RHS)
+                        {
+                            Min = std::move(RHS.Min);
+                            Max = std::move(RHS.Max);
+                            Average = std::move(RHS.Average);
+                            Last = std::move(RHS.Last);
+                        }
+                        return (*this);
+                    }
                     Measurement& operator=(const Core::MeasurementType<uint64_t>& RHS)
                     {
                         Min = RHS.Min();

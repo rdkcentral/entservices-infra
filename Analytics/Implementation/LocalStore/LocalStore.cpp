@@ -58,7 +58,9 @@ namespace WPEFramework
             if (conn->Connect(dbPath))
             {
                 status = true;
-                mDatabaseConnection = conn;
+                // Issue ID 14: Variable copied when it could be moved
+                // Fix: Use std::move to transfer ownership instead of copying
+                mDatabaseConnection = std::move(conn);
                 mPath = dbPath;
             }
             else
@@ -127,9 +129,10 @@ namespace WPEFramework
                 std::string query = buildGetEventsQuery(table, start, maxCount);
                 if (!query.empty())
                 {
-                    DatabaseTable table;
-                    if (mDatabaseConnection->ExecAndGetResults(query, table)
-                        && table.NumRows() > 0)
+                    // Fix for Coverity issue 1002 - PW.PARAMETER_HIDDEN: Rename local variable to avoid hiding parameter
+                    DatabaseTable resultTable;
+                    if (mDatabaseConnection->ExecAndGetResults(query, resultTable)
+                        && resultTable.NumRows() > 0)
                     {
                         // get start from first row's id value
                         count.first = std::stoi(table[0][0].GetValue());
@@ -159,10 +162,11 @@ namespace WPEFramework
                 std::string query = buildGetEventsQuery(table, start, count);
                 if (!query.empty())
                 {
-                    DatabaseTable table;
-                    if (mDatabaseConnection->ExecAndGetResults(query, table))
+                    // Fix for Coverity issue 1003 - PW.PARAMETER_HIDDEN: Rename local variable to avoid hiding parameter
+                    DatabaseTable resultTable;
+                    if (mDatabaseConnection->ExecAndGetResults(query, resultTable))
                     {
-                        for (uint32_t rowIdx = 0; rowIdx < table.NumRows(); rowIdx++)
+                        for (uint32_t rowIdx = 0; rowIdx < resultTable.NumRows(); rowIdx++)
                         {
                             if (table[rowIdx].NumCols() < 2)
                             {
@@ -171,7 +175,9 @@ namespace WPEFramework
                             }
 
                             std::string entry = table[rowIdx][1].GetValue();
-                            entries.push_back(entry);
+                            // Issue ID 15: Variable copied when it could be moved
+                            // Fix: Use std::move to transfer ownership instead of copying
+                            entries.push_back(std::move(entry));
                         }
                     }
                     else

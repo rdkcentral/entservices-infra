@@ -421,7 +421,9 @@ class UserSettingsDelegate : public BaseEventDelegate{
                         language = presentationLanguage.substr(0, dashPos);
                     } else {
                         // If no dash found, return the whole string
-                        language = presentationLanguage;
+                        // Issue ID 34: Variable copied when it could be moved
+                        // Fix: Use std::move to transfer ownership instead of copying
+                        language = std::move(presentationLanguage);
                     }
                     // Wrap in quotes to make it a valid JSON string
                     result = "\"" + language + "\"";
@@ -632,7 +634,9 @@ class UserSettingsDelegate : public BaseEventDelegate{
 
                 if (!arrayContent.empty()) {
                     // Use a cleaner parsing approach similar to GetPreferredAudioLanguages
-                    string remaining = arrayContent;
+                    // Issue ID 35: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    string remaining = std::move(arrayContent);
                     bool first = true;
 
                     while (!remaining.empty()) {
@@ -720,7 +724,9 @@ class UserSettingsDelegate : public BaseEventDelegate{
 
                 if (!arrayContent.empty()) {
                     // Use a cleaner parsing approach similar to SetPreferredAudioLanguages
-                    string remaining = arrayContent;
+                    // Issue ID 36: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    string remaining = std::move(arrayContent);
                     bool first = true;
 
                     while (!remaining.empty()) {

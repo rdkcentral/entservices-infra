@@ -822,7 +822,9 @@ namespace Plugin {
         runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
 
         JsonArray vars = JsonArray();
-        for (auto str: config.envVars) {
+        // Issue ID 2: Range-based for loop copies each string instead of referencing
+        // Fix: Use const auto& to avoid copying strings in the loop
+        for (const auto& str: config.envVars) {
             vars.Add(str);
         }
         vars.ToString(runtimeConfig.envVariables);
@@ -874,7 +876,9 @@ namespace Plugin {
                         LOGDBG("blockedVer: '%s' state: %d", blockedVer.c_str(), (unsigned) stateBlocked.installState);
                         stateBlocked.unpackedPath = "";
                         if (stateBlocked.installState == InstallState::INSTALLATION_BLOCKED) {
-                            auto blockedData = stateBlocked.blockedInstallData;
+                            // Issue ID 3: Copying BlockedInstallData structure unnecessarily
+                            // Fix: Use const auto& to reference the data without copying
+                            const auto& blockedData = stateBlocked.blockedInstallData;
                             if (Install(packageId, blockedData.version, blockedData.keyValues, blockedData.fileLocator, stateBlocked) == Core::ERROR_NONE) {
                                 LOGDBG("Blocked package installed. id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                                 state.installState = InstallState::UNINSTALLED;
@@ -979,7 +983,9 @@ namespace Plugin {
         #endif
         
         packagemanager::ConfigMetadataArray aConfigMetadata;
-        packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+        // Fix for Coverity issue 1074 - UNINIT: Initialize pmResult to ensure known value
+        packagemanager::Result pmResult = packagemanager::Result::FAILURE;
+        pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
         std::lock_guard<std::recursive_mutex> lock(mtxState);
         for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {

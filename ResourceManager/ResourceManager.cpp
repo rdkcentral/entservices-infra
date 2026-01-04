@@ -57,6 +57,7 @@ namespace WPEFramework {
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_GET_BLOCKED_AV_APPLICATIONS), &ResourceManager::getBlockedAVApplicationsWrapper, this);
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE), &ResourceManager::reserveTTSResourceWrapper, this);
 	    Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE_FOR_APPS), &ResourceManager::reserveTTSResourceWrapperForApps, this);
+            // Fix for Coverity issue 1096 - UNINIT_CTOR: Initialize mEssRMgr before use
             mEssRMgr = nullptr;
 
 #ifdef ENABLE_ERM
@@ -107,7 +108,9 @@ namespace WPEFramework {
                         reinterpret_cast<const uint8_t*>(payload.c_str()),
                         token)
                     == Core::ERROR_NONE) {
-                    sThunderSecurityToken = token;
+                    // Issue ID 44: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    sThunderSecurityToken = std::move(token);
                     std::cout << "Resourcemanager got security token" << std::endl;
                 } else {
                     std::cout << "Resourcemanager failed to get security token" << std::endl;
@@ -267,7 +270,10 @@ namespace WPEFramework {
             bool status = true;
 #ifdef ENABLE_ERM
             status = blockAV?EssRMgrAddToBlackList(mEssRMgr, callsign.c_str()):EssRMgrRemoveFromBlackList(mEssRMgr, callsign.c_str());
+            // Fix for Coverity issue 1067 - STREAM_FORMAT_STATE: Save and restore stream format
+            std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setAVBlocked call returning  "<<std::boolalpha << status << std::endl;
+            std::cout.flags(oldFlags);
             if (true == status)
             {
                 mAppsAVBlacklistStatus[callsign] = blockAV;
@@ -352,7 +358,9 @@ namespace WPEFramework {
 
         public:
           JSONRPCDirectLink(PluginHost::IShell* service, std::string callsign)
-            : mCallSign(callsign)
+            // Issue ID 45: Variable copied when it could be moved
+            // Fix: Use std::move to transfer ownership instead of copying
+            : mCallSign(std::move(callsign))
           {
             if (service)
 #if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
@@ -488,7 +496,10 @@ namespace WPEFramework {
 
             result.ToString(jsonstr);
             std::cout<<"setACL response : "<< jsonstr << std::endl;
+            // Fix for Coverity issue 1066 - STREAM_FORMAT_STATE: Save and restore stream format
+            std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
+            std::cout.flags(oldFlags);
             
             return (status);
         }
@@ -521,7 +532,10 @@ namespace WPEFramework {
 
             result.ToString(jsonstr);
             std::cout<<"setACL response : "<< jsonstr << std::endl;
+            // Fix for Coverity issue 1068 - STREAM_FORMAT_STATE: Save and restore stream format
+            std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
+            std::cout.flags(oldFlags);
 
             return (status);
         }

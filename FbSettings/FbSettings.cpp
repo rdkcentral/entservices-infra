@@ -77,7 +77,10 @@ namespace Plugin {
         ASSERT(service == mShell);
         mConnectionId = 0;
 
-        mDelegate->Cleanup();
+        // Fix for Coverity issue 340 - NULL_FIELD: Add null check before dereferencing mDelegate
+        if (mDelegate != nullptr) {
+            mDelegate->Cleanup();
+        }
         // Clean up the delegate
         mDelegate.reset();
 
@@ -129,7 +132,9 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string name = params.Get("value").String();
-                    return ResponseUtils::SetNullResponseForSuccess(SetDeviceName(name), result);
+                    // Issue ID 30: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    return ResponseUtils::SetNullResponseForSuccess(SetDeviceName(std::move(name)), result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -148,7 +153,9 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string countryCode = params.Get("value").String();
-                    return ResponseUtils::SetNullResponseForSuccess(SetCountryCode(countryCode),result);
+                    // Issue ID 31: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    return ResponseUtils::SetNullResponseForSuccess(SetCountryCode(std::move(countryCode)),result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;
@@ -163,7 +170,9 @@ namespace Plugin {
                 if (params.FromString(payload))
                 {
                     string timeZone = params.Get("value").String();
-                    return ResponseUtils::SetNullResponseForSuccess(SetTimeZone(timeZone),result);
+                    // Issue ID 32: Variable copied when it could be moved
+                    // Fix: Use std::move to transfer ownership instead of copying
+                    return ResponseUtils::SetNullResponseForSuccess(SetTimeZone(std::move(timeZone)),result);
                 }
                 result = "{\"error\":\"Invalid payload\"}";
                 return Core::ERROR_BAD_REQUEST;

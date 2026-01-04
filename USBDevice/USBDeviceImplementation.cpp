@@ -215,7 +215,9 @@ int USBDeviceImplementation::libUSBHotPlugCallbackDeviceAttached(libusb_context 
 			  	                       usbDevice.deviceName.c_str(),
 			  	                       usbDevice.devicePath.c_str());
 
-              USBDeviceImplementation::instance()->dispatchEvent(USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED, usbDevice);
+              // Issue ID 59: Variable copied when it could be moved
+              // Fix: Use std::move to transfer ownership instead of copying
+              USBDeviceImplementation::instance()->dispatchEvent(USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED, std::move(usbDevice));
           }
           else
           {
@@ -250,7 +252,9 @@ int USBDeviceImplementation::libUSBHotPlugCallbackDeviceDetached(libusb_context 
 			  	                       usbDevice.deviceName.c_str(),
 			  	                       usbDevice.devicePath.c_str());
 
-              USBDeviceImplementation::instance()->dispatchEvent(USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT, usbDevice);
+              // Issue ID 60: Variable copied when it could be moved
+              // Fix: Use std::move to transfer ownership instead of copying
+              USBDeviceImplementation::instance()->dispatchEvent(USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT, std::move(usbDevice));
           }
           else
           {
@@ -912,7 +916,9 @@ Core::hresult USBDeviceImplementation::Unregister(Exchange::IUSBDevice::INotific
 
 void USBDeviceImplementation::dispatchEvent(Event event, Exchange::IUSBDevice::USBDevice usbDevice)
 {
-    Core::IWorkerPool::Instance().Submit(Job::Create(this, event, usbDevice));
+    // Issue ID 61: Variable copied when it could be moved
+    // Fix: Use std::move to transfer ownership instead of copying
+    Core::IWorkerPool::Instance().Submit(Job::Create(this, event, std::move(usbDevice)));
 }
 
 void USBDeviceImplementation::Dispatch(Event event, const Exchange::IUSBDevice::USBDevice usbDevice)
@@ -957,14 +963,15 @@ Core::hresult USBDeviceImplementation::GetDeviceList(IUSBDeviceIterator*& device
     libusb_device **devs = nullptr;
     ssize_t devCount = 0;
 
-    _adminLock.Lock();
-
     LOGINFO("GetDeviceList");
 
+    // Coverity Issue 1059: SLEEP - Waiting while holding a lock
+    // Release lock before potentially blocking libusb_get_device_list() I/O operation
     devCount = libusb_get_device_list(NULL, &devs);
 
     LOGINFO("devCount:%zd", devCount);
 
+    _adminLock.Lock();
     if (devCount > 0) 
     {
         for (int index = 0; index < devCount; index++)

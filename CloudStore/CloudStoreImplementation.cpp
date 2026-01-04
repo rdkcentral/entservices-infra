@@ -40,7 +40,10 @@ namespace Plugin {
 
     uint32_t CloudStoreImplementation::Configure(PluginHost::IShell* service)
     {
-        ASSERT(_accountStore2 != nullptr);
+        // Fix for Coverity issue 336 - NULL_FIELD: Replace ASSERT with proper null check for _accountStore2
+        if (_accountStore2 == nullptr) {
+            return Core::ERROR_GENERAL;
+        }
 
         auto configConnection = _accountStore2->QueryInterface<Exchange::IConfiguration>();
         if (configConnection != nullptr) {

@@ -37,13 +37,15 @@ namespace Plugin {
         PluginHost::IShell* _service;
 
     public:
+        // Fix for Coverity issue 1088 - UNINIT_CTOR: Initialize _service in default constructor
         PluginInterfaceRef()
-            : _interface(nullptr)
+            : _interface(nullptr), _service(nullptr)
         {
         }
 
+        // Fix for Coverity issue 1095 - UNINIT_CTOR: Initialize _service in parameterized constructor
         PluginInterfaceRef(INTERFACE* interface, PluginHost::IShell* controller)
-            : _interface(interface)
+            : _interface(interface), _service(controller)
         {
         }
 
@@ -57,10 +59,12 @@ namespace Plugin {
         PluginInterfaceRef& operator=(const PluginInterfaceRef&) = delete;
 
         // use move
+        // Fix for Coverity issue 1098 - UNINIT_CTOR: Initialize _service in move constructor
         PluginInterfaceRef(PluginInterfaceRef&& other)
-            : _interface(other._interface)
+            : _interface(other._interface), _service(other._service)
         {
             other._interface = nullptr;
+            other._service = nullptr;
         }
 
         PluginInterfaceRef& operator=(PluginInterfaceRef&& other)
@@ -199,12 +203,14 @@ namespace Plugin {
             return std::move(PluginInterfaceRef<INTERFACE>(interface, _service));
         }
 
-        const uint32_t retryInterval() const
+        // Fix for Coverity issue 1013 - PW.USELESS_TYPE_QUALIFIER_ON_RETURN_TYPE: Remove const qualifier from return type
+        uint32_t retryInterval() const
         {
             return _retry_interval;
         }
 
-        const int retryCount() const
+        // Fix for Coverity issue 1014 - PW.USELESS_TYPE_QUALIFIER_ON_RETURN_TYPE: Remove const qualifier from return type
+        int retryCount() const
         {
             return _retry_count;
         }

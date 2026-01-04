@@ -112,7 +112,9 @@ namespace Plugin {
             USBStorageDeviceInfo params)
                 : _usbMass_StorageImplementation(usbMass_StorageImplementation)
                 , _event(event)
-                , _params(params) {
+                // Issue ID 71: Variable copied when it could be moved
+                // Fix: Use std::move for params to avoid unnecessary copy of USBStorageDeviceInfo
+                , _params(std::move(params)) {
                 if (_usbMass_StorageImplementation != nullptr) {
                     _usbMass_StorageImplementation->AddRef();
                 }
