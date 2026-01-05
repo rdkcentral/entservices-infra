@@ -984,7 +984,7 @@ namespace Plugin {
         
         packagemanager::ConfigMetadataArray aConfigMetadata;
         // Fix for Coverity issue 1074 - UNINIT: Initialize pmResult to ensure known value
-        packagemanager::Result pmResult = packagemanager::Result::FAILURE;
+        packagemanager::Result pmResult = packagemanager::Result::VERSION_MISMATCH;
         pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
         std::lock_guard<std::recursive_mutex> lock(mtxState);

@@ -105,10 +105,10 @@ namespace Plugin {
             , _store2(nullptr)
             , _store2Sink(*this)
             , _notification(*this)
+            , configure(nullptr) // Fix for Coverity issue 1097 - UNINIT_CTOR: Initialize configure
             , _storeInspector(nullptr)
             , _storeLimit(nullptr)
             , _storeCache(nullptr)
-            , configure(nullptr) // Fix for Coverity issue 1097 - UNINIT_CTOR: Initialize configure
         {
         }
         ~SharedStorage() override = default;

@@ -32,7 +32,7 @@ namespace WPEFramework {
 
         // Fix for Coverity issue 1076 - UNINIT_CTOR: Initialize mConnectionId in constructor
         NativeJS::NativeJS()
-            : PluginHost::IPlugin(), PluginHost::JSONRPC(), mService(nullptr), mNativeJS(nullptr), mConnectionId(0)
+            : PluginHost::IPlugin(), PluginHost::JSONRPC(), mService(nullptr), mConnectionId(0), mNativeJS(nullptr)
         {
             NativeJS::_instance = this;
         }

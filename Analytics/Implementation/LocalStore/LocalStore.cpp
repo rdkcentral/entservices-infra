@@ -135,9 +135,9 @@ namespace WPEFramework
                         && resultTable.NumRows() > 0)
                     {
                         // get start from first row's id value
-                        count.first = std::stoi(table[0][0].GetValue());
+                        count.first = std::stoi(resultTable[0][0].GetValue());
                         // get count from number of rows
-                        count.second = table.NumRows();
+                        count.second = resultTable.NumRows();
                     }
                 }
                 else
@@ -168,13 +168,13 @@ namespace WPEFramework
                     {
                         for (uint32_t rowIdx = 0; rowIdx < resultTable.NumRows(); rowIdx++)
                         {
-                            if (table[rowIdx].NumCols() < 2)
+                            if (resultTable[rowIdx].NumCols() < 2)
                             {
                                 LOGERR("Failed to get entries, invalid row");
                                 continue;
                             }
 
-                            std::string entry = table[rowIdx][1].GetValue();
+                            std::string entry = resultTable[rowIdx][1].GetValue();
                             // Issue ID 15: Variable copied when it could be moved
                             // Fix: Use std::move to transfer ownership instead of copying
                             entries.push_back(std::move(entry));

@@ -728,14 +728,10 @@ err_ret:
                     LOGERR("appInstanceId is not found ");
                     errorCode = "ERROR_INVALID_PARAM";
                     notifyParamCheckFailure = true;
-                }
-                }
-                else
-                {
-                    LOGERR("OCI Plugin object is not valid. Aborting Run.");
+                    mRuntimeManagerImplLock.Unlock();
                 }
             }
-            mRuntimeManagerImplLock.Unlock();
+            
             if(notifyParamCheckFailure)
             {
                 notifyParameterCheckFailure(appInstanceId, errorCode);

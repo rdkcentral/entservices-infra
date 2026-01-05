@@ -39,10 +39,10 @@ AppManagerImplementation::AppManagerImplementation()
 , mPersistentStoreRemoteStoreObject(nullptr)
 , mPackageManagerHandlerObject(nullptr)
 , mPackageManagerInstallerObject(nullptr)
+, mStorageManagerRemoteObject(nullptr) // Fix for Coverity issue 1087 - UNINIT_CTOR: Initialize mStorageManagerRemoteObject
 , mCurrentservice(nullptr)
 , mPackageManagerNotification(*this)
 , mAppManagerWorkerThread()
-, mStorageManagerRemoteObject(nullptr) // Fix for Coverity issue 1087 - UNINIT_CTOR: Initialize mStorageManagerRemoteObject
 {
     LOGINFO("Create AppManagerImplementation Instance");
     if (nullptr == AppManagerImplementation::_instance)
