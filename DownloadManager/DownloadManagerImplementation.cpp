@@ -112,6 +112,9 @@ namespace Plugin {
             DownloadManagerImplementation::Configuration config;
             config.FromString(service->ConfigLine());
 
+            // Issue ID 327: Data race condition - mDownloadPath accessed without mutex protection
+            // Fix: Protect mDownloadPath initialization with mAdminLock before thread creation
+            mAdminLock.Lock();
             if (config.downloadDir.IsSet() == true)
             {
                 mDownloadPath = config.downloadDir;
@@ -125,13 +128,13 @@ namespace Plugin {
             if (rc != 0 && errno != EEXIST)
             {
                 LOGERR("DM: Failed to create Download Path '%s' rc: %d errno=%d", mDownloadPath.c_str(), rc, errno);
+                mAdminLock.Unlock();
                 result = Core::ERROR_GENERAL;
             }
             else
             {
-                // Issue ID 327: Thread may access mDownloadPath before it's fully set
-                // Fix: Ensure thread-safe initialization by setting path before creating thread
                 LOGINFO("DM: Download path ready at '%s'", mDownloadPath.c_str());
+                mAdminLock.Unlock();
                 mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&DownloadManagerImplementation::downloaderRoutine, this, 1));
             }
         }

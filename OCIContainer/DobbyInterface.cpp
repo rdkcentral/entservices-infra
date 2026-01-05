@@ -34,7 +34,8 @@ namespace WPEC = WPEFramework::Core;
 namespace WPEJ = WPEFramework::Core::JSON;
 
 // Fix for Coverity issue 1077 - UNINIT_CTOR: Initialize mEventListenerId and mOmiListenerId in constructor
-DobbyInterface::DobbyInterface(): mEventHandler(nullptr), mEventListenerId(0), mOmiListenerId(0)
+// Member initialization order must match declaration order in header file
+DobbyInterface::DobbyInterface(): mEventListenerId(0), mOmiListenerId(0), mEventHandler(nullptr)
 {
 }
 
