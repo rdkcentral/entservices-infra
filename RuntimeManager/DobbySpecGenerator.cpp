@@ -276,6 +276,7 @@ Json::Value DobbySpecGenerator::createEnvVars(const ApplicationConfiguration& co
        env.append("QT_WAYLAND_INPUTDEVICE_INTEGRATION=skyq-input");
        env.append("QT_QPA_PLATFORM=wayland-sky-rdk");
    }
+   env.append("APPLICATION_TOKEN=" + config.mAppInstanceId);
    if (mAIConfiguration->getResourceManagerClientEnabled())
    {
        env.append("ESSRMGR_APPID=" + config.mAppId);
