@@ -97,10 +97,6 @@ namespace Plugin {
         ASSERT(notification != nullptr);
         Core::hresult result = Core::ERROR_NONE;
 
-        done = true;
-        cv.notify_one();
-        mDownloadThreadPtr->join();
-
         mAdminLock.Lock();
         auto item = std::find(mDownloaderNotifications.begin(), mDownloaderNotifications.end(), notification);
         if (item != mDownloaderNotifications.end()) {
@@ -170,6 +166,10 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
         LOGINFO();
+
+        done = true;
+        cv.notify_one();
+        mDownloadThreadPtr->join();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         if (nullptr != mTelemetryMetricsObject)
@@ -567,7 +567,7 @@ namespace Plugin {
                 if (nullptr != mStorageManagerObject) {
                     if(mStorageManagerObject->DeleteStorage(packageId, errorReason) == Core::ERROR_NONE) {
                         LOGINFO("DeleteStorage done");
-                        #ifdef USE_LIBPACKAGE
+                        #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
                         // XXX: what if DeleteStorage() fails, who Uninstall the package
                         packagemanager::Result pmResult = packageImpl->Uninstall(packageId);
                         if (pmResult == packagemanager::SUCCESS) {
@@ -738,7 +738,7 @@ namespace Plugin {
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-            #ifdef USE_LIBPACKAGE
+            #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
             string gatewayMetadataPath;
             bool locked = (state.mLockCount > 0);
             LOGDBG("id: %s ver: %s locked: %d", packageId.c_str(), version.c_str(), locked);
@@ -861,7 +861,7 @@ namespace Plugin {
         auto it = mState.find( { packageId, version } );
         if (it != mState.end()) {
             auto &state = it->second;
-            #ifdef USE_LIBPACKAGE
+            #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
             if (state.mLockCount) {
                 LOGDBG("id: %s ver: %s lock count:%d state:%d", packageId.c_str(), version.c_str(),
                     state.mLockCount, (int) state.installState);
@@ -947,7 +947,7 @@ namespace Plugin {
             return Core::ERROR_INVALID_SIGNATURE;
         }
 
-        #ifdef USE_LIBPACKAGE
+        #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
         packagemanager::ConfigMetaData metadata;
         packagemanager::Result pmResult = packageImpl->GetFileMetadata(fileLocator, id, version, metadata);
         if (pmResult == packagemanager::SUCCESS)
@@ -963,14 +963,21 @@ namespace Plugin {
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
+        #ifndef UNIT_TEST
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_INSTALLATION, nullptr);
         }
+        #endif
 
-        #ifdef USE_LIBPACKAGE
+        #if defined (USE_LIBPACKAGE) || defined(UNIT_TEST)
+
+        #if defined (USE_LIBPACKAGE)
         packageImpl = packagemanager::IPackageImpl::instance();
-
+        #elif defined(UNIT_TEST)
+        packageImpl = packagemanager::IPackageImplDummy::instance();
+        #endif
+        
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
@@ -982,10 +989,12 @@ namespace Plugin {
             mState.insert( { key, state } );
         }
         #endif
-
+    
+        #ifndef UNIT_TEST
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
+        #endif
         cacheInitialized = true;
          const std::string markerFile = PACKAGE_MANAGER_MARKER_FILE;
             std::ofstream file(markerFile);
@@ -1070,7 +1079,7 @@ namespace Plugin {
             string errorReason = "";
             if(mStorageManagerObject->CreateStorage(packageId, STORAGE_MAX_SIZE, path, errorReason) == Core::ERROR_NONE) {
                 LOGINFO("CreateStorage path [%s]", path.c_str());
-                #ifdef USE_LIBPACKAGE
+                #if defined(USE_LIBPACKAGE) || defined(UNIT_TEST)
                 packagemanager::ConfigMetaData config;
                 packagemanager::Result pmResult = packageImpl->Install(packageId, version, keyValues, fileLocator, config);
                 if (pmResult == packagemanager::SUCCESS) {
