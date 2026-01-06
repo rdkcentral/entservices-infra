@@ -537,10 +537,10 @@ err_ret:
             uid_t uid = mUserIdManager->getUserId(appId);
             gid_t gid = mUserIdManager->getAppsGid();
 
-            std::ifstream inFile("/tmp/specchange");
+            std::ifstream inFile("/tmp/uid");
             if (inFile.good())
             {
-                uid = 30490;
+                uid = 30002;
             }
             config.mUserId = uid;
             config.mGroupId = gid;
