@@ -712,7 +712,7 @@ err_ret:
                         {
                             LOGERR("Failed to Run Container %s",errorReason.c_str());
                             ralf::RalfPackageBuilder ralfBuilder;
-                            ralfBuilder.unmountOverlayfsIfExists(appPath);
+                            ralfBuilder.unmountOverlayfsIfExists(appInstanceId);
                         }
                         else
                         {
