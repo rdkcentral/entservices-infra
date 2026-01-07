@@ -134,6 +134,13 @@ namespace ralf
         ociConfigRootNode["process"]["env"].append("HOME=" + homePath);
         addMountEntry(ociConfigRootNode, appStoragePath, homePath);
         LOGDBG("Mounted application storage path %s to container HOME %s\n", appStoragePath.c_str(), homePath.c_str());
+
+        //Finally add rialto path to the environment variables if RIALTO_IN_DAC_FEATURE_ENABLED is defined
+        std::string rialtoSocketPath = "/tmp/rlto-" + appConfig.mAppInstanceId;;
+        ociConfigRootNode["process"]["env"].append("RIALTO_SOCKET_PATH=" + rialtoSocketPath);
+        LOGDBG("Added RIALTO_SOCKET environment variable with value %s\n", rialtoSocketPath.c_str());
+        addMountEntry(ociConfigRootNode, rialtoSocketPath, rialtoSocketPath);
+        LOGDBG("Mounted rialto socket path %s to container path %s\n", rialtoSocketPath.c_str(), rialtoSocketPath.c_str());
         return status;
     }
     bool RalfOCIConfigGenerator::generateHooksForOCIConfig(Json::Value &ociConfigRootNode)

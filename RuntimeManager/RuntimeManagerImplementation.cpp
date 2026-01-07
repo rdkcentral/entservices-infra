@@ -600,7 +600,7 @@ err_ret:
 
             if (!appId.empty())
             {
-                LOGINFO("Fetching storage info for appId: %s, userId: %d, groupId: %d", appId.c_str(), uid, gid);
+                LOGINFO("Fetching storage info for appId: %s, userId: %d, groupId: %d userid : %d groupid : %d", appId.c_str(), uid, gid,userId,groupId);
                 if (Core::ERROR_NONE == getAppStorageInfo(appId, appStorageInfo))
                 {
                     config.mAppStorageInfo.path = std::move(appStorageInfo.path);
@@ -646,8 +646,11 @@ err_ret:
 
             bool legacyContainer = true;
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
-             mRialtoConnector->initialize();
-            if (mRialtoConnector->createAppSession(appId,westerosSocket, appId))
+        {
+            mRialtoConnector->initialize();
+            //Let us create a rlto-sessionid value for rialto socket.
+            std::string rialtoSessionId = "rlto-" + appInstanceId;
+            if (mRialtoConnector->createAppSession(appId,westerosSocket, rialtoSessionId))
             {
                if (!mRialtoConnector->waitForStateChange(appId,RialtoServerStates::ACTIVE, RIALTO_TIMEOUT_MILLIS))
                 {
@@ -661,6 +664,7 @@ err_ret:
                status = Core::ERROR_GENERAL;
             }
             legacyContainer = false;
+        }
 #endif // RIALTO_IN_DAC_FEATURE_ENABLED
 
             LOGINFO("legacyContainer: %s", legacyContainer ? "true" : "false");
