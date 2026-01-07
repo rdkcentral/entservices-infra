@@ -298,27 +298,29 @@ Telemetry_L2test::~Telemetry_L2test()
     Core::hresult status = Core::ERROR_GENERAL;
     m_event_signalled = Telemetry_StateInvalid;
 
-    EXPECT_CALL(*p_powerManagerHalMock, PLAT_TERM())
-    .WillOnce(::testing::Return(PWRMGR_SUCCESS));
-
-    EXPECT_CALL(*p_powerManagerHalMock, PLAT_DS_TERM())
-    .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
-
-    /* DeActivate plugin in constructor */
-    status = DeactivateService("org.rdk.PersistentStore");
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    status = DeactivateService("org.rdk.UserSettings");
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    status = DeactivateService("org.rdk.PowerManager");
-
+    // Deactivate Telemetry first since it has COM-RPC connections to PowerManager and UserSettings
     if (m_telemetryplugin) {
         m_telemetryplugin->Unregister(&notify);
         m_telemetryplugin->Release();
     }
 
     status = DeactivateService("org.rdk.Telemetry");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    // Now deactivate services that Telemetry was connected to
+    status = DeactivateService("org.rdk.PersistentStore");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    status = DeactivateService("org.rdk.UserSettings");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_TERM())
+    .WillOnce(::testing::Return(PWRMGR_SUCCESS));
+
+    EXPECT_CALL(*p_powerManagerHalMock, PLAT_DS_TERM())
+    .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
+
+    status = DeactivateService("org.rdk.PowerManager");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     removeFile("/tmp/pwrmgr_restarted");

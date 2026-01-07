@@ -668,7 +668,7 @@ TEST_F(SharedStorage_L2test, SetValue_ACCOUNT_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
-                m_sharedstorageplugin->AddRef();
+
                 m_sharedstorageplugin->Register(&notify);
 
                 EXPECT_CALL(*GetMock(), UpdateValue(::testing::_, ::testing::_, ::testing::_))
@@ -720,7 +720,6 @@ TEST_F(SharedStorage_L2test, GetValue_ACCOUNT_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
-                m_sharedstorageplugin->AddRef();
 
                 EXPECT_CALL(*GetMock(), GetValue(::testing::_, ::testing::_, ::testing::_))
                     .WillOnce(::testing::Invoke(
@@ -777,7 +776,6 @@ TEST_F(SharedStorage_L2test, DeleteKey_ACCOUNT_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
-                m_sharedstorageplugin->AddRef();
 
                 EXPECT_CALL(*GetMock(), DeleteValue(::testing::_, ::testing::_, ::testing::_))
                     .WillOnce(::testing::Invoke(
@@ -817,7 +815,6 @@ TEST_F(SharedStorage_L2test, DeleteNamespace_ACCOUNT_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
-                m_sharedstorageplugin->AddRef();
 
                 EXPECT_CALL(*GetMock(), DeleteAllValues(::testing::_, ::testing::_, ::testing::_))
                     .WillOnce(::testing::Invoke(
@@ -868,7 +865,6 @@ TEST_F(SharedStorage_L2testDeviceScope, SetValue_DEVICE_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
-                m_sharedstorageplugin->AddRef();
                 m_sharedstorageplugin->Register(&notify);
 
                 status = m_sharedstorageplugin->SetValue(ScopeType::DEVICE, kAppId, kKey, kValue, kTtl, result);
@@ -909,7 +905,6 @@ TEST_F(SharedStorage_L2testDeviceScope, GetValue_DEVICE_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
-                m_sharedstorageplugin->AddRef();
 
                 status = m_sharedstorageplugin->GetValue(ScopeType::DEVICE, "ns1", "key1", value, ttl, success);
                 EXPECT_EQ(status, Core::ERROR_NONE);
@@ -952,7 +947,6 @@ TEST_F(SharedStorage_L2testDeviceScope, DeleteKey_DEVICE_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
-                m_sharedstorageplugin->AddRef();
 
                 status = m_sharedstorageplugin->DeleteKey(ScopeType::DEVICE, "ns1", "key1", result);
                 EXPECT_EQ(status, Core::ERROR_NONE);
@@ -985,7 +979,6 @@ TEST_F(SharedStorage_L2testDeviceScope, DeleteNamespace_DEVICE_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageplugin != nullptr);
             if (m_sharedstorageplugin) {
-                m_sharedstorageplugin->AddRef();
 
                 status = m_sharedstorageplugin->DeleteNamespace(ScopeType::DEVICE, "ns1", result);
                 EXPECT_EQ(status, Core::ERROR_NONE);
@@ -1019,7 +1012,6 @@ TEST_F(SharedStorage_L2testDeviceScope, GetKeys_DEVICE_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageinspectorplugin != nullptr);
             if (m_sharedstorageinspectorplugin) {
-                m_sharedstorageinspectorplugin->AddRef();
 
                 status = m_sharedstorageinspectorplugin->GetKeys(ScopeType::DEVICE, "ns1", keys, result);
                 EXPECT_EQ(status, Core::ERROR_NONE);
@@ -1061,7 +1053,6 @@ TEST_F(SharedStorage_L2testDeviceScope, GetNamespaces_DEVICE_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageinspectorplugin != nullptr);
             if (m_sharedstorageinspectorplugin) {
-                m_sharedstorageinspectorplugin->AddRef();
 
                 status = m_sharedstorageinspectorplugin->GetNamespaces(ScopeType::DEVICE, namespaces, result);
                 EXPECT_EQ(status, Core::ERROR_NONE);
@@ -1103,7 +1094,6 @@ TEST_F(SharedStorage_L2testDeviceScope, GetStorageSizes_DEVICE_Scope_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstorageinspectorplugin != nullptr);
             if (m_sharedstorageinspectorplugin) {
-                m_sharedstorageinspectorplugin->AddRef();
 
                 status = m_sharedstorageinspectorplugin->GetStorageSizes(ScopeType::DEVICE, storagelist, result);
                 EXPECT_EQ(status, Core::ERROR_NONE);
@@ -1143,7 +1133,6 @@ TEST_F(SharedStorage_L2testDeviceScope, Set_GetNamespaceStorageLimit_DEVICE_Scop
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstoragelimitplugin != nullptr);
             if (m_sharedstoragelimitplugin) {
-                m_sharedstoragelimitplugin->AddRef();
 
                 status = m_sharedstoragelimitplugin->SetNamespaceStorageLimit(ScopeType::DEVICE, "ns1", limit, result);
                 EXPECT_EQ(status, Core::ERROR_NONE);
@@ -1179,7 +1168,6 @@ TEST_F(SharedStorage_L2testDeviceScope, FlushCache_COMRPC)
         if (m_controller_sharedstorage) {
             EXPECT_TRUE(m_sharedstoragecacheplugin != nullptr);
             if (m_sharedstoragecacheplugin) {
-                m_sharedstoragecacheplugin->AddRef();
 
                 status = m_sharedstoragecacheplugin->FlushCache();
                 EXPECT_EQ(status, Core::ERROR_NONE);

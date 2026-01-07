@@ -313,6 +313,10 @@ AnalyticsTest::~AnalyticsTest()
 {
     uint32_t status = Core::ERROR_GENERAL;
 
+    // Deactivate SystemServices first since it has COM-RPC connection to PowerManager
+    status = DeactivateService("org.rdk.System");
+    EXPECT_EQ(Core::ERROR_NONE, status);
+
     EXPECT_CALL(*p_powerManagerHalMock, PLAT_TERM())
     .WillOnce(::testing::Return(PWRMGR_SUCCESS));
 
@@ -320,9 +324,6 @@ AnalyticsTest::~AnalyticsTest()
     .WillOnce(::testing::Return(DEEPSLEEPMGR_SUCCESS));
 
     status = DeactivateService("org.rdk.PowerManager");
-    EXPECT_EQ(Core::ERROR_NONE, status);
-
-    status = DeactivateService("org.rdk.System");
     EXPECT_EQ(Core::ERROR_NONE, status);
 
     ON_CALL(*p_rBusApiImplMock, rbus_close(::testing::_))
