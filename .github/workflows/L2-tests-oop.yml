@@ -157,6 +157,7 @@ jobs:
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/1004-Add-support-for-project-dir.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-733-Add-ENTOS-IDS.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Jsonrpc_dynamic_error_handling.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Increase_Timout_For_L2Tests_Plugin.patch
           cd -
       - name: Build Thunder
         run: >
@@ -181,7 +182,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-apis
           path: entservices-apis
-          ref: ${{env.INTERFACES_REF}}
+          ref: Test
           run: rm -rf $GITHUB_WORKSPACE/entservices-apis/jsonrpc/DTV.json
 
       - name: Copy all mock interface headers to entservices-apis
