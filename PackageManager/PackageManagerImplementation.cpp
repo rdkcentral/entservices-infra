@@ -18,7 +18,10 @@
 **/
 
 #include <chrono>
+#include <thread>     // For parallel preloading
 #include <inttypes.h> // Required for PRIu64
+#include <dirent.h>   // For directory scanning
+#include <sys/stat.h> // For stat()
 
 #include "PackageManagerImplementation.h"
 
@@ -960,6 +963,38 @@ namespace Plugin {
     }
 
     // Internal functions
+    // Helper function to scan for installed packages
+    std::vector<std::string> PackageManagerImplementation::GetInstalledPackagePaths()
+    {
+        std::vector<std::string> packagePaths;
+        const std::string packageDir = "/usr/lib";
+        
+        DIR* dir = opendir(packageDir.c_str());
+        if (!dir) {
+            LOGERR("Failed to open package directory: %s", packageDir.c_str());
+            return packagePaths;
+        }
+        
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            if (entry->d_type == DT_DIR && entry->d_name[0] != '.') {
+                // Check for package.wgt file in subdirectory
+                std::string packagePath = packageDir + "/" + entry->d_name + "/package.wgt";
+                
+                // Verify file exists
+                struct stat buffer;
+                if (stat(packagePath.c_str(), &buffer) == 0) {
+                    packagePaths.push_back(packagePath);
+                    LOGDBG("Found package: %s", packagePath.c_str());
+                }
+            }
+        }
+        closedir(dir);
+        
+        LOGINFO("Found %zu packages in %s", packagePaths.size(), packageDir.c_str());
+        return packagePaths;
+    }
+    
     void PackageManagerImplementation::InitializeState()
     {
         LOGDBG("entry");
@@ -974,12 +1009,49 @@ namespace Plugin {
 
         #if defined (USE_LIBPACKAGE)
         packageImpl = packagemanager::IPackageImpl::instance();
+         // Parallel preload optimization: pre-read packages into OS cache
+        auto preloadStart = std::chrono::steady_clock::now();
+        std::vector<std::string> packagePaths = GetInstalledPackagePaths();
+        
+        auto preloadFunc = [](const std::vector<std::string>& paths, size_t start, size_t end) {
+            for (size_t i = start; i < end && i < paths.size(); i++) {
+                FILE* f = fopen(paths[i].c_str(), "rb");
+                if (f) {
+                    char buffer[64 * 1024];
+                    while (fread(buffer, 1, sizeof(buffer), f) > 0) {}
+                    fclose(f);
+                }
+            }
+        };
+        const size_t numThreads = 4;
+        const size_t packagesPerThread = (packagePaths.size() + numThreads - 1) / numThreads;
+        std::vector<std::thread> preloadThreads;
+        
+        for (size_t i = 0; i < numThreads; i++) {
+            size_t start = i * packagesPerThread;
+            size_t end = start + packagesPerThread;
+            preloadThreads.emplace_back(preloadFunc, std::ref(packagePaths), start, end);
+        }
+        
+        for (auto& t : preloadThreads) {
+            t.join();
+        }
+        
+        auto preloadEnd = std::chrono::steady_clock::now();
+        auto preloadMs = std::chrono::duration_cast<std::chrono::milliseconds>(preloadEnd - preloadStart).count();
+        LOGINFO("Preloaded %zu packages in %lld ms using %zu threads", pac
+        
         #elif defined(UNIT_TEST)
         packageImpl = packagemanager::IPackageImplDummy::instance();
         #endif
         
         packagemanager::ConfigMetadataArray aConfigMetadata;
+        auto initStart = std::chrono::steady_clock::now();
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+        auto initEnd = std::chrono::steady_clock::now();
+        auto initMs = std::chrono::duration_cast<std::chrono::milliseconds>(initEnd - initStart).count();
+        LOGINFO("packageImpl->Initialize() completed in %lld ms (result=%d)", initMs, pmResult);
+        
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
         std::lock_guard<std::recursive_mutex> lock(mtxState);
         for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
