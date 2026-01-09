@@ -234,6 +234,7 @@ namespace Plugin {
 
         inline bool IsInstallBlocked(const string &packageId, const string &version, const packagemanager::NameValues &keyValues, const string &fileLocator);
         Core::hresult Install(const string &packageId, const string &version, const packagemanager::NameValues &keyValues, const string &fileLocator, State& state);
+        std::vector<std::string> GetInstalledPackagePaths();
 
         void InitializeState();
         void downloader(int n);
