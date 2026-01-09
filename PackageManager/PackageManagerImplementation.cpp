@@ -1039,7 +1039,7 @@ namespace Plugin {
         
         auto preloadEnd = std::chrono::steady_clock::now();
         auto preloadMs = std::chrono::duration_cast<std::chrono::milliseconds>(preloadEnd - preloadStart).count();
-        LOGINFO("Preloaded %zu packages in %lld ms using %zu threads", pac
+        LOGINFO("Preloaded %zu packages in %lld ms using %zu threads", packagePaths.size(), preloadMs, numThreads);
         
         #elif defined(UNIT_TEST)
         packageImpl = packagemanager::IPackageImplDummy::instance();
