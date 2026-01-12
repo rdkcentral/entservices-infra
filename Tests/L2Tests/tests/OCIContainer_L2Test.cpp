@@ -205,6 +205,9 @@ OCIContainer_L2Test::OCIContainer_L2Test()
     : L2TestMocks()
 {
     uint32_t status = Core::ERROR_GENERAL;
+    
+    // Reset event flags to ensure clean state for each test
+    m_event_signalled = OCICONTAINER_STATUS_INVALID;
 
     EXPECT_CALL(*p_ipcservicemock, start())
         .WillOnce(::testing::Return(true));
