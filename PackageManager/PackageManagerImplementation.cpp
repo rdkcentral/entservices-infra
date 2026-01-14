@@ -991,7 +991,7 @@ namespace Plugin {
                 if (!loadComplete.load()) {
                     auto now = std::chrono::steady_clock::now();
                     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - loadStartTime).count();
-                    LOGINFO("Package loading still in progress... (%lld seconds elapsed)", elapsed);
+                    LOGINFO("Package loading still in progress... (%lld seconds elapsed)", static_cast<long long>(elapsed));
                 }
             }
         });
@@ -1006,7 +1006,7 @@ namespace Plugin {
         auto loadDuration = std::chrono::duration_cast<std::chrono::milliseconds>(loadEndTime - loadStartTime).count();
         
         LOGINFO("Package loading complete: %zu packages loaded in %lld ms (%.2f seconds)", 
-                aConfigMetadata.size(), loadDuration, loadDuration / 1000.0);
+        aConfigMetadata.size(), static_cast<long long>(loadDuration), loadDuration / 1000.0);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
         // Parallel processing of package state insertion
         auto processStartTime = std::chrono::steady_clock::now();
@@ -1053,7 +1053,7 @@ namespace Plugin {
             
             auto processEndTime = std::chrono::steady_clock::now();
             auto processDuration = std::chrono::duration_cast<std::chrono::milliseconds>(processEndTime - processStartTime).count();
-            LOGINFO("Parallel processing complete in %lld ms", processDuration);
+            LOGINFO("Parallel processing complete in %lld ms", static_cast<long long>(processDuration));
         } else {
             // Sequential fallback
             LOGINFO("Using sequential processing (package count: %zu)", totalPackages);
@@ -1084,7 +1084,7 @@ namespace Plugin {
         
         auto totalEndTime = std::chrono::steady_clock::now();
         auto totalDuration = std::chrono::duration_cast<std::chrono::milliseconds>(totalEndTime - totalStartTime).count();
-        LOGINFO("Total initialization time: %lld ms / %.2f seconds", totalDuration, totalDuration / 1000.0);
+        LOGINFO("Total initialization time: %lld ms / %.2f seconds", static_cast<long long>(totalDuration), totalDuration / 1000.0);
         LOGINFO("PackageManager initialization complete");
     }
 
