@@ -130,17 +130,14 @@ namespace WPEFramework
 
             // Stop processing:
             RPC::IRemoteConnection* connection = service->RemoteConnection(mConnectionId);
-            //VARIABLE_IS_NOT_USED uint32_t result = mStorageManagerImpl->Release();
-            if (mStorageManagerImpl->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-                SYSLOG(Logging::Shutdown, (_T("StorageManager Plugin is not properly destructed.")));
-            }
+            VARIABLE_IS_NOT_USED uint32_t result = mStorageManagerImpl->Release();
 
             mStorageManagerImpl = nullptr;
 
             // It should have been the last reference we are releasing,
             // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
             // are leaking...
-            //ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
             // If this was running in a (container) process...
             if (nullptr != connection)
