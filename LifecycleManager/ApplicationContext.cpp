@@ -40,6 +40,7 @@ namespace WPEFramework
         , mMostRecentIntent("")
         , mState(nullptr)
         , mStateChangeId(0)
+        , mPendingStateTransition(false) // Coverity fix: 1145 - UNINIT_CTOR: Initialize mPendingStateTransition
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         , mRequestTime(0)
         , mRequestType(REQUEST_TYPE_NONE)

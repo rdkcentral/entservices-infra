@@ -317,12 +317,13 @@ namespace Plugin {
                     break;
                 case ACTION_TYPE_SHUTDOWN:
                     LOGINFO("Shutting down Analytics");
+                    // Coverity fix: 1138 - Don't lock here, loop will lock at beginning
                     return;
                 default:
                     break;
             }
-
-            lock.lock();
+            // Coverity fix: 1138 - Lock already held from loop start, no need to re-lock
+            // lock.lock();
         }
     }
 

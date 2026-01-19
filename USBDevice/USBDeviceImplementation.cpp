@@ -965,15 +965,16 @@ Core::hresult USBDeviceImplementation::GetDeviceList(IUSBDeviceIterator*& device
 
     LOGINFO("GetDeviceList");
 
-    // Coverity Issue 1059: SLEEP - Waiting while holding a lock
-    // Release lock before potentially blocking libusb_get_device_list() I/O operation
+    // Fix for Coverity issue 1143 (SLEEP) - Don't hold lock during blocking I/O operations
+    // libusb_get_device_list() and getUSBDeviceStructFromDeviceDescriptor() may perform blocking I/O
     devCount = libusb_get_device_list(NULL, &devs);
 
     LOGINFO("devCount:%zd", devCount);
 
-    _adminLock.Lock();
-    if (devCount > 0) 
+    if (devCount > 0)
     {
+        // Build the list without holding lock since usbDeviceList is local and
+        // getUSBDeviceStructFromDeviceDescriptor() may perform blocking I/O (file reads, sysfs access)
         for (int index = 0; index < devCount; index++)
         {
             Exchange::IUSBDevice::USBDevice usbDevice = {0};
@@ -1007,7 +1008,6 @@ Core::hresult USBDeviceImplementation::GetDeviceList(IUSBDeviceIterator*& device
         LOGWARN("USBDevice Not found");
         status = Core::ERROR_NONE;
     }
-    _adminLock.Unlock();
 
     return status;
 }

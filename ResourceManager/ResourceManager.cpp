@@ -52,21 +52,28 @@ namespace WPEFramework {
         ResourceManager* ResourceManager::_instance = nullptr;
         ResourceManager::ResourceManager()
             : PluginHost::JSONRPC()
+            // Fix for Coverity issue 1146 (UNINIT_CTOR): Initialize all member variables
+            , mDisableBlacklist(true)
+            , mDisableReserveTTS(true)
+            , mCurrentService(nullptr)
+#if defined(ENABLE_ERM) || defined(ENABLE_L1TEST)
+            , mEssRMgr(nullptr)
+#endif
         {
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_SET_AV_BLOCKED), &ResourceManager::setAVBlockedWrapper, this);
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_GET_BLOCKED_AV_APPLICATIONS), &ResourceManager::getBlockedAVApplicationsWrapper, this);
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE), &ResourceManager::reserveTTSResourceWrapper, this);
 	    Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE_FOR_APPS), &ResourceManager::reserveTTSResourceWrapperForApps, this);
-            // Fix for Coverity issue 1096 - UNINIT_CTOR: Initialize mEssRMgr before use
-            mEssRMgr = nullptr;
 
 #ifdef ENABLE_ERM
             mEssRMgr = EssRMgrCreate();
             std::cout<<"EssRMgrCreate "<<((mEssRMgr != nullptr)?"succeeded":"failed")<<std::endl;
 
             RFC_ParamData_t param;
-            mDisableBlacklist = true;
-            mDisableReserveTTS = true;
+            // Fix for Coverity issue 1146 (UNINIT_CTOR): Values now initialized in initialization list
+            // but can still be overridden by RFC settings
+            // mDisableBlacklist = true;
+            // mDisableReserveTTS = true;
 
             if (true == Utils::getRFCConfig("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Resourcemanager.Blacklist.Enable", param))
             {

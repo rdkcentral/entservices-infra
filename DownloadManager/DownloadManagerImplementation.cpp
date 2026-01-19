@@ -123,12 +123,13 @@ namespace Plugin {
             {
                 mDownloadId = static_cast<uint32_t>(config.downloadId.Value());
             }
+            // Coverity fix: 1140 - Unlock before mkdir to avoid holding lock during I/O
+            mAdminLock.Unlock();
 
             int rc = mkdir(mDownloadPath.c_str(), 0777);
             if (rc != 0 && errno != EEXIST)
             {
                 LOGERR("DM: Failed to create Download Path '%s' rc: %d errno=%d", mDownloadPath.c_str(), rc, errno);
-                mAdminLock.Unlock();
                 result = Core::ERROR_GENERAL;
             }
             else
@@ -431,17 +432,21 @@ namespace Plugin {
     {
         while (mDownloaderRunFlag)
         {
-            DownloadInfoPtr downloadRequest = pickDownloadJob();
+            DownloadInfoPtr downloadRequest = nullptr;
             // Issue ID 5: Condition checked outside lock, then wait called - race condition can cause indefinite wait
+            // Coverity fix: 1139 - Acquire lock once and use it for both check and wait
             // Fix: Use predicate-based wait to check condition atomically with the wait
-            if (downloadRequest == nullptr && mDownloaderRunFlag)
             {
-                LOGDBG("DM: Waiting for download request...");
                 std::unique_lock<std::mutex> lock(mQueueMutex);
-                mDownloadThreadCV.wait(lock, [this]() {
-                    return !mDownloaderRunFlag || pickDownloadJob() != nullptr;
-                });
                 downloadRequest = pickDownloadJob();
+                if (downloadRequest == nullptr && mDownloaderRunFlag)
+                {
+                    LOGDBG("DM: Waiting for download request...");
+                    mDownloadThreadCV.wait(lock, [this]() {
+                        return !mDownloaderRunFlag || pickDownloadJob() != nullptr;
+                    });
+                    downloadRequest = pickDownloadJob();
+                }
             }
 
             if (false == mDownloaderRunFlag)

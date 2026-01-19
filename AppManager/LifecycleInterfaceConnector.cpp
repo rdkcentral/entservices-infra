@@ -729,11 +729,12 @@ namespace WPEFramework
                     string appId = loadedAppsObject.HasLabel("appId")?loadedAppsObject["appId"].String():"";
                     LOGINFO("Loaded appId: %s", appId.c_str());
                     // Issue ID 26: Variable copied when it could be moved
-                    // Fix: Use std::move to transfer ownership instead of copying
-                    auto& appInfo = appManagerImplInstance->mAppInfo[std::move(appId)];
+                    // Coverity fix: 1137 - Don't move appId since it's used later, just use it as key
+                    auto& appInfo = appManagerImplInstance->mAppInfo[appId];
 
                     Exchange::IAppManager::LoadedAppInfo loadedAppInfo = {};
-		    loadedAppInfo.appId = appId;
+		    // Coverity fix: 1137 - Use std::move for appId assignment to avoid copy
+		    loadedAppInfo.appId = std::move(appId);
                     loadedAppInfo.type = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);
 		    loadedAppInfo.appInstanceId = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
 		    loadedAppInfo.activeSessionId = appInfo.activeSessionId = loadedAppsObject.HasLabel("activeSessionId")?loadedAppsObject["activeSessionId"].String():"";
