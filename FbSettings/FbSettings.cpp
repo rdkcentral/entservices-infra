@@ -65,8 +65,11 @@ namespace Plugin {
         mShell->AddRef();
 
         // Initialize the settings delegate
+        // Fix for Coverity issue 341 - NULL_FIELD: Add null check before dereferencing mDelegate
         mDelegate = std::make_shared<SettingsDelegate>();
-        mDelegate->setShell(mShell);
+        if (mDelegate != nullptr) {
+            mDelegate->setShell(mShell);
+        }
 
         return EMPTY_STRING;
     }

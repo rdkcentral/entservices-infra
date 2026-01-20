@@ -114,17 +114,16 @@ namespace Plugin {
 
             // Issue ID 327: Data race condition - mDownloadPath accessed without mutex protection
             // Fix: Protect mDownloadPath initialization with mAdminLock before thread creation
-            mAdminLock.Lock();
             if (config.downloadDir.IsSet() == true)
             {
                 mDownloadPath = config.downloadDir;
             }
             if (config.downloadId.IsSet() == true)
             {
+                std::lock_guard<std::mutex> lock(mQueueMutex);
                 mDownloadId = static_cast<uint32_t>(config.downloadId.Value());
             }
             // Coverity fix: 1140 - Unlock before mkdir to avoid holding lock during I/O
-            mAdminLock.Unlock();
 
             int rc = mkdir(mDownloadPath.c_str(), 0777);
             if (rc != 0 && errno != EEXIST)
@@ -438,21 +437,13 @@ namespace Plugin {
             // Fix: Use predicate-based wait to check condition atomically with the wait
             {
                 std::unique_lock<std::mutex> lock(mQueueMutex);
-                downloadRequest = pickDownloadJob();
-                if (downloadRequest == nullptr && mDownloaderRunFlag)
-                {
-                    LOGDBG("DM: Waiting for download request...");
-                    mDownloadThreadCV.wait(lock, [this]() {
-                        return !mDownloaderRunFlag || pickDownloadJob() != nullptr;
-                    });
-                    downloadRequest = pickDownloadJob();
-                }
-            }
+                mDownloadThreadCV.wait(lock, [&] {
+                    return !mDownloaderRunFlag || !mPriorityDownloadQueue.empty() || !mRegularDownloadQueue.empty();
+                });
+                if (!mDownloaderRunFlag)
+                    break;
 
-            if (false == mDownloaderRunFlag)
-            {
-                LOGINFO("DM: Downloader is shutting down - exiting thread!");
-                break;
+                downloadRequest = pickDownloadJob();
             }
 
             if (!downloadRequest)
@@ -580,7 +571,6 @@ namespace Plugin {
 
     DownloadManagerImplementation::DownloadInfoPtr DownloadManagerImplementation::pickDownloadJob(void)
     {
-        std::lock_guard<std::mutex> lock(mQueueMutex);
         if ((!mPriorityDownloadQueue.empty() || !mRegularDownloadQueue.empty()) && mCurrentDownload == nullptr)
         {
             if (!mPriorityDownloadQueue.empty())

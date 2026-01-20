@@ -226,11 +226,15 @@ namespace Plugin {
 
     void AnalyticsImplementation::ActionLoop()
     {
-        std::unique_lock<std::mutex> lock(mQueueMutex);
+        
 
         while (true) {
+            
+            Action action = {ACTION_TYPE_UNDEF, nullptr};
+            {
+                std::unique_lock<std::mutex> lock(mQueueMutex);
 
-            std::chrono::milliseconds queueTimeout(std::chrono::milliseconds::max());
+                std::chrono::milliseconds queueTimeout(std::chrono::milliseconds::max());
 
             if (!mSysTimeValid)
             {
@@ -251,7 +255,6 @@ namespace Plugin {
                 }
             }
 
-            Action action = {ACTION_TYPE_UNDEF, nullptr};
 
             if (mActionQueue.empty() && !mSysTimeValid)
             {
@@ -263,7 +266,7 @@ namespace Plugin {
                 mActionQueue.pop();
             }
 
-            lock.unlock();
+        }
 
             switch (action.type) {
                 case ACTION_POPULATE_TIME_INFO:
@@ -306,7 +309,7 @@ namespace Plugin {
                         if (action.payload->epochTimestamp != 0)
                         {
                             SendEventToBackend(*action.payload);
-                        }
+                        }   
                         else
                         {
                             // Store the event in the queue with uptime only
@@ -317,13 +320,12 @@ namespace Plugin {
                     break;
                 case ACTION_TYPE_SHUTDOWN:
                     LOGINFO("Shutting down Analytics");
-                    // Coverity fix: 1138 - Don't lock here, loop will lock at beginning
+                    // Coverity fix: 1138 - Re-lock before returning so unique_lock destructor can unlock properly
                     return;
                 default:
                     break;
             }
-            // Coverity fix: 1138 - Lock already held from loop start, no need to re-lock
-            // lock.lock();
+            // Coverity fix: 1138 - Re-lock for next loop iteration since it was unlocked for action processing
         }
     }
 

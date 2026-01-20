@@ -136,7 +136,7 @@ void AppManagerImplementation::AppManagerWorkerThread(void)
                                 PackageInfo packageData;
                                 Exchange::IPackageHandler::LockReason lockReason = Exchange::IPackageHandler::LockReason::LAUNCH;
 
-                                // Fix for Coverity issues 1141-1142 (ORDER_REVERSAL)
+                                // Fix for Coverity issues 342, 343 (ORDER_REVERSAL)
                                 // Release mAppManagerLock before calling packageLock to avoid lock ordering issues
                                 lock.unlock();
                                 status = packageLock(appId, packageData, lockReason);

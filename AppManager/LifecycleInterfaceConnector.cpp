@@ -728,12 +728,11 @@ namespace WPEFramework
                     JsonObject loadedAppsObject = loadedAppsJsonArray[i].Object();
                     string appId = loadedAppsObject.HasLabel("appId")?loadedAppsObject["appId"].String():"";
                     LOGINFO("Loaded appId: %s", appId.c_str());
-                    // Issue ID 26: Variable copied when it could be moved
-                    // Coverity fix: 1137 - Don't move appId since it's used later, just use it as key
+                    // Fix for Coverity issue 26 (COPY_INSTEAD_OF_MOVE)
+                    // appId is used as map key first, then moved to avoid unnecessary copy
                     auto& appInfo = appManagerImplInstance->mAppInfo[appId];
 
                     Exchange::IAppManager::LoadedAppInfo loadedAppInfo = {};
-		    // Coverity fix: 1137 - Use std::move for appId assignment to avoid copy
 		    loadedAppInfo.appId = std::move(appId);
                     loadedAppInfo.type = appManagerImplInstance->getInstallAppType(appInfo.packageInfo.type);
 		    loadedAppInfo.appInstanceId = appInfo.appInstanceId = loadedAppsObject.HasLabel("appInstanceID")?loadedAppsObject["appInstanceID"].String():"";
