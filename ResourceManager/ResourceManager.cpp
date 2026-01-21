@@ -52,13 +52,13 @@ namespace WPEFramework {
         ResourceManager* ResourceManager::_instance = nullptr;
         ResourceManager::ResourceManager()
             : PluginHost::JSONRPC()
-            // Fix for Coverity issue 1146 (UNINIT_CTOR): Initialize all member variables
-            , mDisableBlacklist(true)
-            , mDisableReserveTTS(true)
-            , mCurrentService(nullptr)
+            // Fix for Coverity issue 1146 (UNINIT_CTOR): Initialize all member variables in declaration order
 #if defined(ENABLE_ERM) || defined(ENABLE_L1TEST)
             , mEssRMgr(nullptr)
 #endif
+            , mDisableBlacklist(true)
+            , mDisableReserveTTS(true)
+            , mCurrentService(nullptr)
         {
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_SET_AV_BLOCKED), &ResourceManager::setAVBlockedWrapper, this);
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_GET_BLOCKED_AV_APPLICATIONS), &ResourceManager::getBlockedAVApplicationsWrapper, this);
