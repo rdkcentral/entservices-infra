@@ -23,6 +23,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_PREINSTALL_MANAGER_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_PREINSTALL_MANAGER_AUTOSTART false CACHE STRING "Automatically start start PreinstallManager plugin")
+set(PLUGIN_PREINSTALL_MANAGER_AI_PREINSTALL_DIRECTORY "" CACHE STRING "Directory path for preinstall packages")
 set(PLUGIN_PREINSTALL_MANAGER_EXTRA_LIBRARIES "")
 
 add_definitions(-DPREINSTALL_MANAGER_API_VERSION_NUMBER_MAJOR=1)

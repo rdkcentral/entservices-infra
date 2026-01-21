@@ -21,7 +21,6 @@
 
 #include "PreinstallManagerImplementation.h"
 
-#define AI_PREINSTALL_DIRECTORY "/opt/preinstall" //temporary directory for preinstall packages
 
 namespace WPEFramework
 {
@@ -32,7 +31,7 @@ namespace WPEFramework
     PreinstallManagerImplementation *PreinstallManagerImplementation::_instance = nullptr;
 
     PreinstallManagerImplementation::PreinstallManagerImplementation()
-        : mAdminLock(), mPreinstallManagerNotifications(), mCurrentservice(nullptr),
+        : mAdminLock(), mAiPreinstallDirectory(""), mPreinstallManagerNotifications(), mCurrentservice(nullptr),
           mPackageManagerInstallerObject(nullptr), mPackageManagerNotification(*this)
     {
         LOGINFO("Create PreinstallManagerImplementation Instance");
@@ -122,6 +121,13 @@ namespace WPEFramework
         {
             mCurrentservice = service;
             mCurrentservice->AddRef();
+                        PreinstallManagerImplementation::Configuration config;
+            config.FromString(service->ConfigLine());
+            if (!config.aiPreinstallDirectory.Value().empty())
+            {
+                mAiPreinstallDirectory = config.aiPreinstallDirectory.Value();
+            }
+            LOGINFO("aiPreinstallDirectory=%s", mAiPreinstallDirectory.c_str());
             result = Core::ERROR_NONE;
             LOGINFO("PreinstallManagerImplementation service configured successfully");
         }
@@ -266,11 +272,10 @@ namespace WPEFramework
     bool PreinstallManagerImplementation::readPreinstallDirectory(std::list<PackageInfo> &packages)
     {
         ASSERT(nullptr != mPackageManagerInstallerObject);
-        std::string preinstallDir = AI_PREINSTALL_DIRECTORY;
-        DIR *dir = opendir(preinstallDir.c_str());
+        DIR *dir = opendir(mAiPreinstallDirectory.c_str());
         if (!dir)
         {
-            LOGINFO("Failed to open directory: %s", preinstallDir.c_str());
+            LOGINFO("Failed to open directory: %s", mAiPreinstallDirectory.c_str());
             return false;
         }
 
@@ -283,7 +288,7 @@ namespace WPEFramework
             if (filename == "." || filename == "..")
                 continue;
 
-            std::string filepath = preinstallDir + "/" + filename;
+            std::string filepath = mAiPreinstallDirectory + "/" + filename;
 
             PackageInfo packageInfo;
             packageInfo.fileLocator = filepath + "/package.wgt";
