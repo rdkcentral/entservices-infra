@@ -49,8 +49,10 @@ namespace WPEFramework
             Event event = {EVENT_INITIALISE, std::string()};
             // Issue ID 310: Double unlock
             // Fix: Remove manual unlock - unique_lock will unlock automatically when going out of scope
-            std::unique_lock<std::mutex> lock(mQueueLock);
-            mQueue.push(event);
+            {
+                std::unique_lock<std::mutex> lock(mQueueLock);
+                mQueue.push(event);
+            }
             // lock.unlock() removed - destructor handles unlock
             mQueueCondition.notify_one();
         }
