@@ -390,13 +390,13 @@ namespace Plugin
                 {
                     // Issue IDs 46, 47: Variable copied when it could be moved
                     // Fix: Use std::move on parameter to avoid copy when value is no longer needed
-                    mVpuAccessBlacklist = parseStringArray(key, std::move(value));
+                    mVpuAccessBlacklist = parseStringArray(std::move(key), std::move(value));
                 }
                 else if (key == "appsRequiringDBus")
                 {
                     // Issue IDs 48, 49: Variable copied when it could be moved
                     // Fix: Use std::move on parameter to avoid copy when value is no longer needed
-                    mAppsRequiringDBus = parseStringArray(key, std::move(value));
+                    mAppsRequiringDBus = parseStringArray(std::move(key), std::move(value));
                 }
                 else if (key == "mapiPorts")
                 {
@@ -463,12 +463,12 @@ namespace Plugin
                 else if (key == "preloads")
                 {
                     // Issue ID 57: Variable copied when it could be moved
-                    // Fix: Use std::move to transfer ownership instead of copying
-                    mPreloads = std::move(parseStringArray(key, value));
+                    // Fix: Use std::move on parameters to avoid copy when value is no longer needed
+                    mPreloads = parseStringArray(std::move(key), std::move(value));
                 }
                 else if (key == "envVariables")
                 {
-                    mEnvVariables = parseStringArray(key, value);
+                    mEnvVariables = parseStringArray(std::move(key), std::move(value));
                 }
             }
         }

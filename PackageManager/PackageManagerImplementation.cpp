@@ -849,7 +849,7 @@ namespace Plugin {
         // Coverity fix 1074: Initialize remaining RuntimeConfig fields
         runtimeConfig.enableDebugger = false;
         runtimeConfig.logFileMaxSize = 0;
-        runtimeConfig.mapi = "";
+        runtimeConfig.mapi[0] = '\0'; // mapi is a char array, set to empty string
         runtimeConfig.resourceManagerClientEnabled = false;
     }
 

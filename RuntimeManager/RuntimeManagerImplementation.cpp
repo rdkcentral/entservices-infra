@@ -699,9 +699,9 @@ err_ret:
                             LOGINFO("Update Info for %s",appInstanceId.c_str());
                             if (!appId.empty())
                             {
-                                runtimeAppInfo.appId = std::move(appId);
+                                runtimeAppInfo.appId = appId;
                             }
-                            runtimeAppInfo.appInstanceId = std::move(appInstanceId);
+                            runtimeAppInfo.appInstanceId = appInstanceId;
                             runtimeAppInfo.descriptor = std::move(descriptor);
                             runtimeAppInfo.containerState = Exchange::IRuntimeManager::RUNTIME_STATE_STARTING;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
