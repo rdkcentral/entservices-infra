@@ -579,11 +579,15 @@ err_ret:
                 LOGERR("envVariables is empty inside Run()");
             }
 
-            if (!appId.empty())
+            // SLEEP (Coverity ID: 1062): Extract appId data and release lock before calling getAppStorageInfo which may make IPC calls to StorageManager
+            std::string appIdForStorage = appId;
+            mRuntimeManagerImplLock.Unlock();
+
+            if (!appIdForStorage.empty())
             {
                 appStorageInfo.userId = userId;
                 appStorageInfo.groupId = groupId;
-                if (Core::ERROR_NONE == getAppStorageInfo(appId, appStorageInfo))
+                if (Core::ERROR_NONE == getAppStorageInfo(appIdForStorage, appStorageInfo))
                 {
                     config.mAppStorageInfo.path = std::move(appStorageInfo.path);
                     config.mAppStorageInfo.userId = userId;
@@ -592,6 +596,8 @@ err_ret:
                     config.mAppStorageInfo.used = std::move(appStorageInfo.used);
                 }
             }
+
+            mRuntimeManagerImplLock.Lock();
 
             /* Creating Display */
             if(nullptr != mWindowManagerConnector)
@@ -668,8 +674,14 @@ err_ret:
                      xdgRuntimeDir.c_str(), waylandDisplay.c_str());
                 std::string command = "";
                 std::string appPath = runtimeConfigObject.unpackedPath;
-                if(isOCIPluginObjectValid())
+                
+                mRuntimeManagerImplLock.Unlock();
+                if(!isOCIPluginObjectValid())
                 {
+                    LOGERR("OCI Plugin object is not valid. Aborting Run.");
+                    return status;
+                }
+                    mRuntimeManagerImplLock.Lock();
                     string containerId = getContainerId(appInstanceId);
                     if (!containerId.empty())
                     {
@@ -707,11 +719,11 @@ err_ret:
                         errorCode = "ERROR_INVALID_PARAM";
                         notifyParamCheckFailure = true;
                     }
-                }
-                else
-                {
-                    LOGERR("OCI Plugin object is not valid. Aborting Run.");
-                }
+                // }
+                // else
+                // {
+                //     LOGERR("OCI Plugin object is not valid. Aborting Run.");
+                // }
             }
             mRuntimeManagerImplLock.Unlock();
             if(notifyParamCheckFailure)
