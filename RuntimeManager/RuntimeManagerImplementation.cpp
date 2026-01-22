@@ -1030,11 +1030,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is not found");
                 }
-            }
-            else
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
-            }
+            // }
+            // else
+            // {
+            //     LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
+            // }
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
             LOGINFO("Rialto session deactivate on terminate.");
             mRialtoConnector->deactivateSession(mRuntimeAppInfo[appInstanceId].appId);

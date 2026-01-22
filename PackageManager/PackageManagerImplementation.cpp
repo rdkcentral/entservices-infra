@@ -845,6 +845,12 @@ namespace Plugin {
         runtimeConfig.appPath = config.appPath;
         runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
+        
+        // Coverity fix 1074: Initialize remaining RuntimeConfig fields
+        runtimeConfig.enableDebugger = false;
+        runtimeConfig.logFileMaxSize = 0;
+        runtimeConfig.mapi = "";
+        runtimeConfig.resourceManagerClientEnabled = false;
     }
 
     Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version)
@@ -983,11 +989,7 @@ namespace Plugin {
         #endif
         
         packagemanager::ConfigMetadataArray aConfigMetadata;
-        // Fix for Coverity issue 1074 - UNINIT: Initialize pmResult to ensure known value
-        packagemanager::Result pmResult = packagemanager::Result::VERSION_MISMATCH;
-        // Fix for Coverity issue 1144 (UNINIT): Initialize status to prevent uninitialized use
-        InstallState status = InstallState::UNINSTALLED;
-        pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+        packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
         std::lock_guard<std::recursive_mutex> lock(mtxState);
         for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {

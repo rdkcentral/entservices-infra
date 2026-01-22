@@ -31,6 +31,7 @@ namespace WPEFramework
         ApplicationContext::ApplicationContext (std::string appId)
         : mPendingStateTransition(false) // Coverity fix: 1145 - UNINIT_CTOR: Initialize mPendingStateTransition
         , mPendingStates()// Fix for Coverity issue 1075 - UNINIT_CTOR: Initialize mPendingOldState
+        , mPendingOldState(Exchange::ILifecycleManager::LifecycleState::UNLOADED)
         , mPendingEventName("")
         , mAppInstanceId("")
         , mAppId(std::move(appId))
@@ -40,7 +41,6 @@ namespace WPEFramework
         , mMostRecentIntent("")
         , mState(nullptr)
         , mStateChangeId(0)
-        , mPendingOldState(LifecycleState::UNINITIALIZED) 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
         , mRequestTime(0)
         , mRequestType(REQUEST_TYPE_NONE)
