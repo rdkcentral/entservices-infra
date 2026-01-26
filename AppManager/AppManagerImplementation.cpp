@@ -117,7 +117,6 @@ void AppManagerImplementation::AppManagerWorkerThread(void)
         if (!sRunning || mAppRequestList.empty())
             continue;
 
-        Core::hresult status = Core::ERROR_GENERAL;
         request = mAppRequestList.front();
         mAppRequestList.pop_front();
     }
@@ -142,7 +141,7 @@ void AppManagerImplementation::AppManagerWorkerThread(void)
 
                                 // Fix for Coverity issues 342, 343 (ORDER_REVERSAL)
                                 // Release mAppManagerLock before calling packageLock to avoid lock ordering issues
-                                status = packageLock(appId, packageData, lockReason);
+                                Core::hresult status = packageLock(appId, packageData, lockReason);
                                 if (status == Core::ERROR_NONE)
                                 {
                                     WPEFramework::Exchange::RuntimeConfig runtimeConfig = packageData.configMetadata;
