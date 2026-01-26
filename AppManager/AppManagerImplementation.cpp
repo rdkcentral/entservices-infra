@@ -110,14 +110,18 @@ void AppManagerImplementation::AppManagerWorkerThread(void)
     while (sRunning)
     {
         std::shared_ptr<AppManagerRequest> request = nullptr;
+    {
         std::unique_lock<std::mutex> lock(mAppManagerLock);
         mAppRequestListCV.wait(lock, [this] {return !mAppRequestList.empty() || !sRunning;});
 
-        if (!mAppRequestList.empty() && sRunning)
-        {
-            Core::hresult status = Core::ERROR_GENERAL;
-            request = mAppRequestList.front();
-            mAppRequestList.pop_front();
+        if (!sRunning || mAppRequestList.empty())
+            continue;
+
+        Core::hresult status = Core::ERROR_GENERAL;
+        request = mAppRequestList.front();
+        mAppRequestList.pop_front();
+    }
+   
 
             if (request != nullptr)
             {
@@ -138,7 +142,6 @@ void AppManagerImplementation::AppManagerWorkerThread(void)
 
                                 // Fix for Coverity issues 342, 343 (ORDER_REVERSAL)
                                 // Release mAppManagerLock before calling packageLock to avoid lock ordering issues
-                                lock.unlock();
                                 status = packageLock(appId, packageData, lockReason);
                                 if (status == Core::ERROR_NONE)
                                 {
@@ -192,7 +195,7 @@ void AppManagerImplementation::AppManagerWorkerThread(void)
                     break; /* defult*/
                 }
             }
-        }
+
     }
     {
         std::lock_guard<std::mutex> lock(mAppManagerLock);

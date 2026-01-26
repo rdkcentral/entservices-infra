@@ -267,7 +267,8 @@ namespace Plugin {
                 // Coverity fix: 1131 - Use std::move for mountInfo in push_back
                 // Fix: Use std::move to transfer ownership instead of copying
                 mountInfo.partitionName = std::move(partition);
-                mountInfo.mountFlags = std::move(mountFlags);
+                // mountFlags is an enum, not moved (copy is appropriate for primitive types)
+                mountInfo.mountFlags = mountFlags;
                 mountInfo.mountPath = std::move(mountPoint);
 
                 // Coverity fix: Issue 5 (65) - Use std::move for mountInfo in push_back
