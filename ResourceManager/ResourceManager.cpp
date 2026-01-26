@@ -278,9 +278,9 @@ namespace WPEFramework {
 #ifdef ENABLE_ERM
             status = blockAV?EssRMgrAddToBlackList(mEssRMgr, callsign.c_str()):EssRMgrRemoveFromBlackList(mEssRMgr, callsign.c_str());
             // Fix for Coverity issue 1067 - STREAM_FORMAT_STATE: Save and restore stream format
-            std::ios::fmtflags oldFlags = std::cout.flags();
+            //std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setAVBlocked call returning  "<<std::boolalpha << status << std::endl;
-            std::cout.flags(oldFlags);
+            //std::cout.flags(oldFlags);
             if (true == status)
             {
                 mAppsAVBlacklistStatus[callsign] = blockAV;
@@ -504,9 +504,9 @@ namespace WPEFramework {
             result.ToString(jsonstr);
             std::cout<<"setACL response : "<< jsonstr << std::endl;
             // Fix for Coverity issue 1066 - STREAM_FORMAT_STATE: Save and restore stream format
-            std::ios::fmtflags oldFlags = std::cout.flags();
+            //std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
-            std::cout.flags(oldFlags);
+            //std::cout.flags(oldFlags);
             
             return (status);
         }
@@ -540,9 +540,9 @@ namespace WPEFramework {
             result.ToString(jsonstr);
             std::cout<<"setACL response : "<< jsonstr << std::endl;
             // Fix for Coverity issue 1068 - STREAM_FORMAT_STATE: Save and restore stream format
-            std::ios::fmtflags oldFlags = std::cout.flags();
+            //std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
-            std::cout.flags(oldFlags);
+            //std::cout.flags(oldFlags);
 
             return (status);
         }
