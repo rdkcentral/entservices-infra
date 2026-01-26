@@ -37,7 +37,7 @@ namespace WPEFramework {
         static Plugin::Metadata<Plugin::ResourceManager> metadata(
             // Version (Major, Minor, Patch)
             API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH,
-            // Preconditions
+            // Precondit ions
             {},
             // Terminations
             {},
