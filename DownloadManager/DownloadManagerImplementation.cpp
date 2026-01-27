@@ -134,7 +134,6 @@ namespace Plugin {
             else
             {
                 LOGINFO("DM: Download path ready at '%s'", mDownloadPath.c_str());
-                mAdminLock.Unlock();
                 mDownloadThreadPtr = std::unique_ptr<std::thread>(new std::thread(&DownloadManagerImplementation::downloaderRoutine, this, 1));
             }
         }
@@ -571,7 +570,8 @@ namespace Plugin {
 
     DownloadManagerImplementation::DownloadInfoPtr DownloadManagerImplementation::pickDownloadJob(void)
     {
-        std::lock_guard<std::mutex> lock(mQueueMutex);
+        // removeming lock to prevent double lock pickDownload is being called while holding lock itself
+        //std::lock_guard<std::mutex> lock(mQueueMutex);
         if ((!mPriorityDownloadQueue.empty() || !mRegularDownloadQueue.empty()) && mCurrentDownload == nullptr)
         {
             if (!mPriorityDownloadQueue.empty())
