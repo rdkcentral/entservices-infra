@@ -196,6 +196,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/entservices-apis
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-1007.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/comrpc-support-for-l2tests-plugin.patch
           cd -    
 
       - name: Build entservices-apis
