@@ -22,6 +22,7 @@
 #define MODULE_NAME Plugin_PersistentStore
 #endif
 
+#include <core/core.h>
 #include <plugins/plugins.h>
 
 #define PATH_ENV "PERSISTENTSTORE_PATH"

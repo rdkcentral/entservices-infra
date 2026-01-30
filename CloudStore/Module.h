@@ -22,6 +22,7 @@
 #define MODULE_NAME Plugin_CloudStore
 #endif
 
+#include <core/core.h>
 #include <plugins/plugins.h>
 
 #define URI_ENV "CLOUDSTORE_URI"
