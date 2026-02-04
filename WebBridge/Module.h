@@ -23,7 +23,11 @@
 #define MODULE_NAME Plugin_WebBridge
 #endif
 
+#if THUNDER_VERSION >= 5
+#include <core/core.h>
+#else
 #include <plugins/plugins.h>
+#endif
 
 #undef EXTERNAL
 #define EXTERNAL

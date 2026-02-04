@@ -22,8 +22,11 @@
 #define MODULE_NAME Plugin_AppGateway
 #endif
 
+#if THUNDER_VERSION >= 5
+#include <core/core.h>
+#else
 #include <plugins/plugins.h>
-#include <tracing/tracing.h>
+#endif
 
 #undef EXTERNAL
 #define EXTERNAL

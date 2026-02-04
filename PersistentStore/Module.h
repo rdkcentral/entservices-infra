@@ -22,7 +22,11 @@
 #define MODULE_NAME Plugin_PersistentStore
 #endif
 
+#if THUNDER_VERSION >= 5
+#include <core/core.h>
+#else
 #include <plugins/plugins.h>
+#endif
 
 #define PATH_ENV "PERSISTENTSTORE_PATH"
 #define MAXSIZE_ENV "PERSISTENTSTORE_MAXSIZE"

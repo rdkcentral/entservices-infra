@@ -24,7 +24,11 @@
 #endif
 
 #include <messaging/messaging.h>
+#if THUNDER_VERSION >= 5
+#include <core/core.h>
+#else
 #include <plugins/plugins.h>
+#endif
 #include <interfaces/definitions.h>
 
 #include <interfaces/IMessageControl.h>
