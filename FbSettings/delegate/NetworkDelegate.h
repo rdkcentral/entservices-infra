@@ -51,6 +51,7 @@ public:
     {
         if (mNetworkManager != nullptr)
         {
+            mNetworkManager->UnregisterInternetStatusChangeNotification(mNotificationHandler.baseInterface<Exchange::INetworkManager::IInternetStatusChangeNotification>());
             mNetworkManager->Release();
             mNetworkManager = nullptr;
         }
@@ -72,7 +73,7 @@ public:
             if (!mNotificationHandler.GetRegistered())
             {
                 LOGINFO("Registering for NetworkManager notifications");
-                mNetworkManager->Register(&mNotificationHandler);
+                mNetworkManager->RegisterInternetStatusChangeNotification(mNotificationHandler.baseInterface<Exchange::INetworkManager::IInternetStatusChangeNotification>());
                 mNotificationHandler.SetRegistered(true);
                 return true;
             }
@@ -204,25 +205,17 @@ public:
     }
 
 private:
-    class NetworkNotificationHandler : public Exchange::INetworkManager::INotification
+    class NetworkNotificationHandler : public Exchange::INetworkManager::IInternetStatusChangeNotification
     {
     public:
         NetworkNotificationHandler(NetworkDelegate &parent) : mParent(parent), registered(false) {}
         ~NetworkNotificationHandler() {}
 
-        void onInterfaceStateChange(const Exchange::INetworkManager::InterfaceState state, const string interface)
+        template <typename T>
+        T* baseInterface()
         {
-            LOGDBG("onInterfaceStateChange: interface=%s, state=%d", interface.c_str(), state);
-        }
-
-        void onActiveInterfaceChange(const string prevActiveInterface, const string currentActiveInterface)
-        {
-            LOGDBG("onActiveInterfaceChange: prev=%s, current=%s", prevActiveInterface.c_str(), currentActiveInterface.c_str());
-        }
-
-        void onIPAddressChange(const string interface, const string ipversion, const string ipaddress, const Exchange::INetworkManager::IPStatus status)
-        {
-            LOGDBG("onIPAddressChange: interface=%s, ip=%s, status=%d", interface.c_str(), ipaddress.c_str(), status);
+            static_assert(std::is_base_of<T, NetworkNotificationHandler>(), "base type mismatch");
+            return static_cast<T*>(this);
         }
 
         void onInternetStatusChange(const Exchange::INetworkManager::InternetStatus prevState, const Exchange::INetworkManager::InternetStatus currState, const string interface)
@@ -247,21 +240,6 @@ private:
             mParent.Dispatch("device.onNetworkChanged", jsonStream.str());
         }
 
-        void onAvailableSSIDs(const string jsonOfScanResults)
-        {
-            LOGDBG("onAvailableSSIDs received");
-        }
-
-        void onWiFiStateChange(const Exchange::INetworkManager::WiFiState state)
-        {
-            LOGDBG("onWiFiStateChange: state=%d", state);
-        }
-
-        void onWiFiSignalQualityChange(const string ssid, const string strength, const string noise, const string snr, const Exchange::INetworkManager::WiFiSignalQuality quality)
-        {
-            LOGDBG("onWiFiSignalQualityChange: ssid=%s", ssid.c_str());
-        }
-
         // Registration management methods
         void SetRegistered(bool state)
         {
@@ -276,7 +254,7 @@ private:
         }
 
         BEGIN_INTERFACE_MAP(NotificationHandler)
-        INTERFACE_ENTRY(Exchange::INetworkManager::INotification)
+        INTERFACE_ENTRY(Exchange::INetworkManager::IInternetStatusChangeNotification)
         END_INTERFACE_MAP
 
     private:
