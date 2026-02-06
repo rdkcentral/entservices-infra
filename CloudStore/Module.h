@@ -22,11 +22,8 @@
 #define MODULE_NAME Plugin_CloudStore
 #endif
 
-#if THUNDER_VERSION >= 5
 #include <core/core.h>
-#else
 #include <plugins/plugins.h>
-#endif
 
 #define URI_ENV "CLOUDSTORE_URI"
 #define TOKEN_ENV "CLOUDSTORE_TOKEN"

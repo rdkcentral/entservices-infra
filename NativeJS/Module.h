@@ -22,11 +22,8 @@
 #define MODULE_NAME NativeJS
 #endif
 
-#if THUNDER_VERSION >= 5
 #include <core/core.h>
-#else
 #include <plugins/plugins.h>
-#endif
 
 #undef EXTERNAL
 #define EXTERNAL

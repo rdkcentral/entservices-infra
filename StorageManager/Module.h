@@ -22,11 +22,8 @@
 #define MODULE_NAME Plugin_StorageManager
 #endif
 
-#if THUNDER_VERSION >= 5
 #include <core/core.h>
-#else
 #include <plugins/plugins.h>
-#endif
 
 #define PATH_ENV "STORAGE_MANAGER_PATH"
 
