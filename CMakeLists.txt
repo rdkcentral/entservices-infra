@@ -159,10 +159,6 @@ if(PLUGIN_PREINSTALL_MANAGER)
     add_subdirectory(PreinstallManager)
 endif()
 
-if(PLUGIN_MIGRATION)
-    add_subdirectory(Migration)
-endif()
-
 if(PLUGIN_APPGATEWAY)
     add_subdirectory(AppGateway)
 endif()
