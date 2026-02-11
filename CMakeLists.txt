@@ -107,10 +107,6 @@ if(PLUGIN_RDK_WINDOW_MANAGER)
     add_subdirectory(RDKWindowManager)
 endif()
 
-if(PLUGIN_CLOUDSTORE)
-    add_subdirectory(CloudStore)
-endif()
-
 if(PLUGIN_SHAREDSTORAGE)
     add_subdirectory(SharedStorage)
 endif()
