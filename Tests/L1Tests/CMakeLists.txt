@@ -121,11 +121,6 @@ set (APPMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/AppManager ${CMAKE_
 set (APPMANAGER_LIBS ${NAMESPACE}AppManager ${NAMESPACE}AppManagerImplementation)
 add_plugin_test_ex(PLUGIN_APPMANAGER tests/test_AppManager.cpp "${APPMANAGER_INC}" "${APPMANAGER_LIBS}")
 
-# PLUGIN_OCICONTAINER
-set (OCICONTAINER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/OCIContainer ${CMAKE_SOURCE_DIR}/../entservices-infra/OCIContainer/stubs)
-set (OCICONTAINER_LIBS ${NAMESPACE}OCIContainer)
-add_plugin_test_ex(PLUGIN_OCICONTAINER tests/test_OCIContainer.cpp "${OCICONTAINER_INC}" "${OCICONTAINER_LIBS}")
-
 # PLUGIN_RUNTIME_MANAGER
 set (RUNTIMEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/RuntimeManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (RUNTIMEMANAGER_LIBS ${NAMESPACE}RuntimeManager ${NAMESPACE}RuntimeManagerImplementation)
@@ -155,12 +150,6 @@ add_plugin_test_ex(PLUGIN_LIFECYCLE_MANAGER tests/test_LifecycleManager.cpp "${L
 set (MESSAGECONTROL_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/MessageControl ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (MESSAGECONTROL_LIBS ${NAMESPACE}MessageControl)
 add_plugin_test_ex(PLUGIN_MESSAGECONTROL tests/test_MessageControl.cpp "${MESSAGECONTROL_INC}" "${MESSAGECONTROL_LIBS}")
-
-
-# PLUGIN_MIGRATION
-set (MIGRATION_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/Migration ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-set (MIGRATION_LIBS ${NAMESPACE}Migration ${NAMESPACE}MigrationImplementation)
-add_plugin_test_ex(PLUGIN_MIGRATION tests/test_Migration.cpp "${MIGRATION_INC}" "${MIGRATION_LIBS}")
 
 # PLUGIN_PREINSTALL_MANAGER
 set (PREINSTALL_MANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/PreinstallManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
