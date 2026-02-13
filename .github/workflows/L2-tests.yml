@@ -421,7 +421,7 @@ jobs:
           -DPLUGIN_CLOUDSTORE=ON
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
-          -DRDK_SERVICE_L2_TEST=OFF
+          -DRDK_SERVICE_L2_TEST=ON
           -DDS_FOUND=ON
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           &&
@@ -675,6 +675,7 @@ jobs:
           -DPLUGIN_PERSISTENTSTORE=ON
           -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_SHAREDSTORAGE=ON
+          -DPLUGIN_CLOUDSTORE=ON
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
           -DPLUGIN_ANALYTICS=ON
@@ -686,7 +687,6 @@ jobs:
           -DPLUGIN_AVOUTPUT=OFF
           -DAVOUTPUT_TV=OFF
           -DPLUGIN_STORAGE_MANAGER=ON
-          -DPLUGIN_CLOUDSTORE=ON
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
