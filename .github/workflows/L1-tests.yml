@@ -63,7 +63,7 @@ jobs:
             !thunder/install/usr/lib/pkgconfig/gtest.pc
             !thunder/install/usr/lib/pkgconfig/gtest_main.pc
             !thunder/install/usr/lib/wpeframework/plugins
-          key: ${{ runner.os }}-${{ env.THUNDER_REF }}-${{ env.INTERFACES_REF }}-5
+          key: ${{ runner.os }}-${{ env.THUNDER_REF }}-${{ env.INTERFACES_REF }}-4
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -209,17 +209,6 @@ jobs:
           cmake --build build/Thunder -j8
           &&
           cmake --install build/Thunder
-
-      - name: Build and install Thunder interfaces
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          cmake --build build/Thunder --target interfaces -j8 || true
-          cmake --install build/Thunder
-
-      - name: Debug interfaces
-         run: |
-         echo "Looking for JPackageHandler.h"
-         find install -name JPackageHandler.h
 
       - name: Checkout entservices-apis
         if: steps.cache.outputs.cache-hit != 'true'
