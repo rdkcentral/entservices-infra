@@ -223,8 +223,6 @@ namespace Plugin {
 
                         return (*this);
                     }
-                    // Coverity Issue ID 331: MISSING_MOVE_ASSIGNMENT - Adding move assignment operator for efficiency
-                    // Fix: Implement move assignment operator to enable move semantics and improve performance
                     Measurement& operator=(Measurement&& RHS) noexcept
                     {
                         if (this != &RHS)

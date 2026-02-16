@@ -166,8 +166,6 @@ namespace Utils
     {
     public:
         Job(std::function<void()> work)
-            // Issue ID 73: Variable copied when it could be moved
-            // Fix: Use std::move to avoid unnecessary copy of work function
             : _work(std::move(work))
         {
         }

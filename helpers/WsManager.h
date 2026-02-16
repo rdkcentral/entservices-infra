@@ -402,8 +402,6 @@ public:
 
     void SetAuthHandler(const AuthHandler& handler) { _authHandler = handler; }
 
-    // Issue ID 75: Variable copied when it could be moved
-    // Fix: Use std::move to avoid unnecessary copy of handler function
     void SetDisconnectHandler(DisconnectHandler handler) { _disconnectHandler = std::move(handler); }
 
     // NEW: Setter for automation ID

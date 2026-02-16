@@ -84,9 +84,7 @@ namespace Plugin {
             message = _T("Couldn't create _store2 implementation instance");
         }
         
-        // Issue ID 297: Dereference after null check
-        // Fix: Check _store2 directly and return early if null to prevent dereference
-        if(_store2 == nullptr)
+        if(message != "" || _store2 == nullptr)
         {
             return message;
         }

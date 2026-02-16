@@ -33,8 +33,6 @@ namespace Plugin
 namespace WPEC = WPEFramework::Core;
 namespace WPEJ = WPEFramework::Core::JSON;
 
-// Fix for Coverity issue 1077 - UNINIT_CTOR: Initialize mEventListenerId and mOmiListenerId in constructor
-// Member initialization order must match declaration order in header file
 DobbyInterface::DobbyInterface(): mEventListenerId(0), mOmiListenerId(0), mEventHandler(nullptr)
 {
 }
@@ -747,7 +745,6 @@ void DobbyInterface::onContainerStateChanged(int32_t descriptor, const std::stri
  *
  * @return Descriptor value
  */
-// Fix for Coverity issue 1007, 1010 - PW.USELESS_TYPE_QUALIFIER_ON_RETURN_TYPE: Remove const qualifier from return type
 int DobbyInterface::GetContainerDescriptorFromId(const std::string& containerId)
 {
     const std::list<std::pair<int32_t, std::string>> containers = mDobbyProxy->listContainers();
@@ -806,7 +803,6 @@ const std::string DobbyInterface::GetContainerIdFromDescriptor(const int descrip
  * @param state      Container state
  * @param _this      Callback parameters, or in this case, the pointer to 'this'
  */
-// Fix for Coverity issue 1008, 1011 - PW.USELESS_TYPE_QUALIFIER_ON_RETURN_TYPE: Remove const qualifier from void return type
 void DobbyInterface::stateListener(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState state, const void* _this)
 {
     // Cast const void* back to DobbyInterface* type to get 'this'
@@ -835,7 +831,6 @@ void DobbyInterface::stateListener(int32_t descriptor, const std::string& name, 
  * @param err        Error type
  * @param _this      Callback parameters, or in this case, the pointer to 'this'
  */
-// Fix for Coverity issue 1009, 1012 - PW.USELESS_TYPE_QUALIFIER_ON_RETURN_TYPE: Remove const qualifier from void return type
 void DobbyInterface::omiErrorListener(const std::string& id, omi::IOmiProxy::ErrorType err, const void* _this)
 {
 

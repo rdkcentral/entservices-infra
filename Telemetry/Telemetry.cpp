@@ -48,7 +48,6 @@ namespace WPEFramework
      **/
     SERVICE_REGISTRATION(Telemetry, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
 
-    // Fix for Coverity issue 1085 - UNINIT_CTOR: Initialize configure in constructor
     Telemetry::Telemetry() : _service(nullptr), _connectionId(0), _telemetry(nullptr), _telemetryNotification(this), configure(nullptr)
     {
         SYSLOG(Logging::Startup, (_T("Telemetry Constructor")));

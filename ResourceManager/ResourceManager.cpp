@@ -64,8 +64,6 @@ namespace WPEFramework {
             std::cout<<"EssRMgrCreate "<<((mEssRMgr != nullptr)?"succeeded":"failed")<<std::endl;
 
             RFC_ParamData_t param;
-            //Fix for Coverity issue 1146 (UNINIT_CTOR): Values now initialized in initialization list
-            //but can still be overridden by RFC settings
             mDisableBlacklist = true;
             mDisableReserveTTS = true;
 			mCurrentService = nullptr;
@@ -110,8 +108,6 @@ namespace WPEFramework {
                         reinterpret_cast<const uint8_t*>(payload.c_str()),
                         token)
                     == Core::ERROR_NONE) {
-                    // Issue ID 44: Variable copied when it could be moved
-                    // Fix: Use std::move to transfer ownership instead of copying
                     sThunderSecurityToken = std::move(token);
                     std::cout << "Resourcemanager got security token" << std::endl;
                 } else {
@@ -272,7 +268,6 @@ namespace WPEFramework {
             bool status = true;
 #ifdef ENABLE_ERM
             status = blockAV?EssRMgrAddToBlackList(mEssRMgr, callsign.c_str()):EssRMgrRemoveFromBlackList(mEssRMgr, callsign.c_str());
-            // Fix for Coverity issue 1067 - STREAM_FORMAT_STATE: Save and restore stream format
             std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setAVBlocked call returning  "<<std::boolalpha << status << std::endl;
             std::cout.flags(oldFlags);
@@ -360,8 +355,6 @@ namespace WPEFramework {
 
         public:
           JSONRPCDirectLink(PluginHost::IShell* service, std::string callsign)
-            // Issue ID 45: Variable copied when it could be moved
-            // Fix: Use std::move to transfer ownership instead of copying
             : mCallSign(std::move(callsign))
           {
             if (service)
@@ -498,7 +491,6 @@ namespace WPEFramework {
 
             result.ToString(jsonstr);
             std::cout<<"setACL response : "<< jsonstr << std::endl;
-            // Fix for Coverity issue 1066 - STREAM_FORMAT_STATE: Save and restore stream format
             std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
             std::cout.flags(oldFlags);
@@ -534,7 +526,6 @@ namespace WPEFramework {
 
             result.ToString(jsonstr);
             std::cout<<"setACL response : "<< jsonstr << std::endl;
-            // Fix for Coverity issue 1068 - STREAM_FORMAT_STATE: Save and restore stream format
             std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
             std::cout.flags(oldFlags);

@@ -47,8 +47,6 @@ namespace WPEFramework
             mEventThread = std::thread(&SystemTime::EventLoop, this);
 
             Event event = {EVENT_INITIALISE, std::string()};
-            // Issue ID 310: Double unlock
-            // Fix: Remove manual unlock - unique_lock will unlock automatically when going out of scope
             {
                 std::unique_lock<std::mutex> lock(mQueueLock);
                 mQueue.push(event);
@@ -99,8 +97,6 @@ namespace WPEFramework
             std::string parametersString;
             parameters.ToString(parametersString);
             LOGINFO("onTimeStatusChanged: %s", parametersString.c_str());
-            // Issue ID 16: Variable copied when it could be moved
-            // Fix: Use std::move to transfer ownership instead of copying
             Event event = {EVENT_TIME_STATUS_CHANGED, std::move(parametersString)};
             std::lock_guard<std::mutex> lock(mQueueLock);
             mQueue.push(event);
@@ -112,8 +108,6 @@ namespace WPEFramework
             std::string parametersString;
             parameters.ToString(parametersString);
             LOGINFO("onTimeZoneDSTChanged: %s", parametersString.c_str());
-            // Issue ID 17: Variable copied when it could be moved
-            // Fix: Use std::move to transfer ownership instead of copying
             Event event = {EVENT_TIME_ZONE_CHANGED, std::move(parametersString)};
             std::lock_guard<std::mutex> lock(mQueueLock);
             mQueue.push(event);
@@ -225,8 +219,6 @@ namespace WPEFramework
                     if (mTimeZone != tz)
                     {
                         mTransitionMap.clear();
-                        // Issue ID 18: Variable copied when it could be moved
-                        // Fix: Use std::move to transfer ownership instead of copying
                         mTimeZone = std::move(tz);
                     }
                 }
@@ -457,8 +449,6 @@ namespace WPEFramework
                             if (mTimeZone != tz)
                             {
                                 mTransitionMap.clear();
-                                // Issue ID 19: Variable copied when it could be moved
-                                // Fix: Use std::move to transfer ownership instead of copying
                                 mTimeZone = std::move(tz);
                             }
                         }

@@ -48,7 +48,6 @@ namespace WPEFramework
      **/
     SERVICE_REGISTRATION(UserSettings, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
 
-    // Fix for Coverity issue 1086 - UNINIT_CTOR: Initialize configure in constructor
     UserSettings::UserSettings() : _service(nullptr), _connectionId(0), _userSetting(nullptr), _userSettingsInspector(nullptr), _usersettingsNotification(this), configure(nullptr)
     {
         SYSLOG(Logging::Startup, (_T("UserSettings Constructor")));

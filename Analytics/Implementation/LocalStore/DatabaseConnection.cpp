@@ -190,8 +190,6 @@ namespace WPEFramework {
                 // Handle result from DB query
                 if (DB_OK == queryRet) {
                     ret = true;
-                    // Issue ID 11: Variable copied when it could be moved
-                    // Fix: Use std::move to transfer ownership instead of copying
                     table = std::move(result);
                 } else {
                     LOGERR("Database %s query failed with error: %s db err code %d",

@@ -215,8 +215,6 @@ int USBDeviceImplementation::libUSBHotPlugCallbackDeviceAttached(libusb_context 
 			  	                       usbDevice.deviceName.c_str(),
 			  	                       usbDevice.devicePath.c_str());
 
-              // Issue ID 59: Variable copied when it could be moved
-              // Fix: Use std::move to transfer ownership instead of copying
               USBDeviceImplementation::instance()->dispatchEvent(USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_ARRIVED, std::move(usbDevice));
           }
           else
@@ -252,8 +250,6 @@ int USBDeviceImplementation::libUSBHotPlugCallbackDeviceDetached(libusb_context 
 			  	                       usbDevice.deviceName.c_str(),
 			  	                       usbDevice.devicePath.c_str());
 
-              // Issue ID 60: Variable copied when it could be moved
-              // Fix: Use std::move to transfer ownership instead of copying
               USBDeviceImplementation::instance()->dispatchEvent(USBDeviceImplementation::Event::USBDEVICE_HOTPLUG_EVENT_DEVICE_LEFT, std::move(usbDevice));
           }
           else
@@ -916,8 +912,6 @@ Core::hresult USBDeviceImplementation::Unregister(Exchange::IUSBDevice::INotific
 
 void USBDeviceImplementation::dispatchEvent(Event event, Exchange::IUSBDevice::USBDevice usbDevice)
 {
-    // Issue ID 61: Variable copied when it could be moved
-    // Fix: Use std::move to transfer ownership instead of copying
     Core::IWorkerPool::Instance().Submit(Job::Create(this, event, std::move(usbDevice)));
 }
 
@@ -965,8 +959,6 @@ Core::hresult USBDeviceImplementation::GetDeviceList(IUSBDeviceIterator*& device
 
     LOGINFO("GetDeviceList");
 
-    // Fix for Coverity issue 1059 (SLEEP) - Don't hold lock during blocking I/O operations
-    // libusb_get_device_list() and getUSBDeviceStructFromDeviceDescriptor() may perform blocking I/O
     devCount = libusb_get_device_list(NULL, &devs);
 
     LOGINFO("devCount:%zd", devCount);

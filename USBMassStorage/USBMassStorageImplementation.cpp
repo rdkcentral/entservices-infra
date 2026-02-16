@@ -205,8 +205,6 @@ namespace Plugin {
             {
                 string partition = "/dev/" + line.substr(line.find_last_of(' ') + 1); 
                 LOGINFO("Device path [%s], partition [%s]", storageDeviceInfo.devicePath.c_str(),partition.c_str());
-                // Issue ID 62: Variable copied when it could be moved
-                // Fix: Use std::move to transfer ownership instead of copying
                 partitions.push_back(std::move(partition));
             }
         }
@@ -261,17 +259,12 @@ namespace Plugin {
                     }
                     continue;
                 }
-                // Coverity fix: 1148 - Log before moving partition to avoid USE_AFTER_MOVE
                 LOGINFO("[%s] is mounted successfully.",partition.c_str());
-                // Issue IDs 63, 64, 65: Variables copied when they could be moved
-                // Coverity fix: 1131 - Use std::move for mountInfo in push_back
-                // Fix: Use std::move to transfer ownership instead of copying
                 mountInfo.partitionName = std::move(partition);
                 // mountFlags is an enum, not moved (copy is appropriate for primitive types)
                 mountInfo.mountFlags = mountFlags;
                 mountInfo.mountPath = std::move(mountPoint);
 
-                // Coverity fix: Issue 5 (65) - Use std::move for mountInfo in push_back
                 usbStorageMountInfo[storageDeviceInfo.deviceName].push_back(std::move(mountInfo));
                 success = true;
             }
@@ -329,9 +322,6 @@ namespace Plugin {
 
         if (mountInfoList == usbStorageMountInfo.end())
         {
-            // Issue ID 66: Variable copied when it could be moved
-            // Coverity fix: 1132 - Use reference capture to avoid copying deviceName
-            // Fix: Use reference capture to avoid copying deviceName
             const string& deviceName = storageDeviceInfo.deviceName;
 
             auto it = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [&deviceName](const USBStorageDeviceInfo& item){
@@ -382,9 +372,6 @@ namespace Plugin {
             }
             usbStorageMountInfo.erase(mountInfoList);
 
-            // Issue ID 67: Variable copied when it could be moved
-            // Coverity fix: 1133 - Use reference capture to avoid copying deviceName
-            // Fix: Use reference capture to avoid copying deviceName
             const string& deviceName = storageDeviceInfo.deviceName;
 
             auto it = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [&deviceName](const USBStorageDeviceInfo& item){
@@ -483,15 +470,11 @@ namespace Plugin {
                         }
                         else
                         {
-                            // Issue ID 68: Variable copied when it could be moved
-                            // Coverity fix: 1134 - Use std::move for storageDeviceInfo in push_back
-                            // Fix: Use std::move to avoid unnecessary copy of deviceName string
                             storageDeviceInfo.deviceName = std::move(actual_usbDevice_dev_list.deviceName);
                             storageDeviceInfo.devicePath = actual_usbDevice_dev_list.devicePath;
                             LOGINFO("Device path[%s] Name[%s]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str());
 
                             /* storage info list updated */
-                            // Coverity fix: Issue 8 (68) - Use std::move for storageDeviceInfo in push_back
                             USBMassStorageImplementation::_instance->usbStorageDeviceInfo.push_back(std::move(storageDeviceInfo));
                             emptyList = false;
                         }
@@ -696,13 +679,9 @@ namespace Plugin {
                 }
                 else
                 {
-                    // Issue ID 69: Variable copied when it could be moved
-                    // Coverity fix: 1135 - Use std::move for storageDeviceInfo in Job::Create
-                    // Fix: Use std::move to avoid unnecessary copy of devicePath string
                     storageDeviceInfo.devicePath = std::move(device.devicePath);
                     storageDeviceInfo.deviceName = device.deviceName;
                     LOGINFO("Device path[%s] Name[%s]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str());
-                    // Coverity fix: Issue 9 (69) - Use std::move for storageDeviceInfo in Job::Create
                     Core::IWorkerPool::Instance().Submit(USBMassStorageImplementation::Job::Create(USBMassStorageImplementation::_instance,
                                     USBMassStorageImplementation::USB_STORAGE_EVENT_MOUNT,
                                     std::move(storageDeviceInfo)));
@@ -725,15 +704,11 @@ namespace Plugin {
         {
             USBStorageDeviceInfo storageDeviceInfo = {};
 
-            // Issue ID 70: Variable copied when it could be moved
-            // Coverity fix: 1136 - Use std::move for storageDeviceInfo in Job::Create
-            // Fix: Use std::move to avoid unnecessary copy of devicePath string
             storageDeviceInfo.devicePath = std::move(device.devicePath);
             storageDeviceInfo.deviceName = device.deviceName;
 
             LOGINFO("Device path[%s] Name[%s]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str());
 
-            // Coverity fix: Issue 10 (70) - Use std::move for storageDeviceInfo in Job::Create
             Core::IWorkerPool::Instance().Submit(USBMassStorageImplementation::Job::Create(USBMassStorageImplementation::_instance,
                         USBMassStorageImplementation::USB_STORAGE_EVENT_UNMOUNT,
                         std::move(storageDeviceInfo)));

@@ -58,8 +58,6 @@ namespace WPEFramework
             if (conn->Connect(dbPath))
             {
                 status = true;
-                // Issue ID 14: Variable copied when it could be moved
-                // Fix: Use std::move to transfer ownership instead of copying
                 mDatabaseConnection = std::move(conn);
                 mPath = dbPath;
             }
@@ -129,7 +127,6 @@ namespace WPEFramework
                 std::string query = buildGetEventsQuery(table, start, maxCount);
                 if (!query.empty())
                 {
-                    // Fix for Coverity issue 1002 - PW.PARAMETER_HIDDEN: Rename local variable to avoid hiding parameter
                     DatabaseTable resultTable;
                     if (mDatabaseConnection->ExecAndGetResults(query, resultTable)
                         && resultTable.NumRows() > 0)
@@ -162,7 +159,6 @@ namespace WPEFramework
                 std::string query = buildGetEventsQuery(table, start, count);
                 if (!query.empty())
                 {
-                    // Fix for Coverity issue 1003 - PW.PARAMETER_HIDDEN: Rename local variable to avoid hiding parameter
                     DatabaseTable resultTable;
                     if (mDatabaseConnection->ExecAndGetResults(query, resultTable))
                     {
@@ -175,8 +171,6 @@ namespace WPEFramework
                             }
 
                             std::string entry = resultTable[rowIdx][1].GetValue();
-                            // Issue ID 15: Variable copied when it could be moved
-                            // Fix: Use std::move to transfer ownership instead of copying
                             entries.push_back(std::move(entry));
                         }
                     }
