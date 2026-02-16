@@ -85,14 +85,19 @@ namespace WPEFramework
 		LOGINFO("createApplication invoked");
 		if(mNativeJSRenderer)
 		{
+			LOGINFO("inside mNativeJSRender logic");
 			std::string optionsVal(options);
 			ModuleSettings moduleSettings;
 			moduleSettings.fromString(optionsVal);
+			LOGINFO("options are stored as modulesettings");
 			id = mNativeJSRenderer->createApplication(moduleSettings);
+			LOGINFO("id is created");
+			std::cout<<"id:"<<id<<std::endl;
 		}
 		else 
 		{
 			gPendingIdOptionsRequest = options;
+			LOGINFO("Pending request logic entered");
 		}
 		return (Core::ERROR_NONE);
 	}
