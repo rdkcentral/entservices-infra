@@ -75,10 +75,6 @@ if(PLUGIN_USBDEVICE)
     add_subdirectory(USBDevice)
 endif()
 
-if(PLUGIN_TELEMETRY)
-    add_subdirectory(Telemetry)
-endif()
-
 if(PLUGIN_MONITOR)
     add_subdirectory(Monitor)
 endif()
