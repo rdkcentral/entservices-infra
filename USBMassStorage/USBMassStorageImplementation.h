@@ -112,7 +112,7 @@ namespace Plugin {
             USBStorageDeviceInfo params)
                 : _usbMass_StorageImplementation(usbMass_StorageImplementation)
                 , _event(event)
-                , _params(params) {
+                , _params(std::move(params)) {
                 if (_usbMass_StorageImplementation != nullptr) {
                     _usbMass_StorageImplementation->AddRef();
                 }

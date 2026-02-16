@@ -165,7 +165,7 @@ namespace Plugin {
              std::string privacyMode;
              if (_userSettingsPlugin->GetPrivacyMode(privacyMode) == Core::ERROR_NONE)
              {
-                 notifyT2PrivacyMode(privacyMode);
+                 notifyT2PrivacyMode(std::move(privacyMode));
              }
              else
              {

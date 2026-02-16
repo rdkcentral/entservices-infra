@@ -33,7 +33,7 @@ namespace Plugin
 namespace WPEC = WPEFramework::Core;
 namespace WPEJ = WPEFramework::Core::JSON;
 
-DobbyInterface::DobbyInterface(): mEventHandler(nullptr)
+DobbyInterface::DobbyInterface(): mEventListenerId(0), mOmiListenerId(0), mEventHandler(nullptr)
 {
 }
 
@@ -745,7 +745,7 @@ void DobbyInterface::onContainerStateChanged(int32_t descriptor, const std::stri
  *
  * @return Descriptor value
  */
-const int DobbyInterface::GetContainerDescriptorFromId(const std::string& containerId)
+int DobbyInterface::GetContainerDescriptorFromId(const std::string& containerId)
 {
     const std::list<std::pair<int32_t, std::string>> containers = mDobbyProxy->listContainers();
 
@@ -803,7 +803,7 @@ const std::string DobbyInterface::GetContainerIdFromDescriptor(const int descrip
  * @param state      Container state
  * @param _this      Callback parameters, or in this case, the pointer to 'this'
  */
-const void DobbyInterface::stateListener(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState state, const void* _this)
+void DobbyInterface::stateListener(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState state, const void* _this)
 {
     // Cast const void* back to DobbyInterface* type to get 'this'
     DobbyInterface* __this = const_cast<DobbyInterface*>(reinterpret_cast<const DobbyInterface*>(_this));
@@ -831,7 +831,7 @@ const void DobbyInterface::stateListener(int32_t descriptor, const std::string& 
  * @param err        Error type
  * @param _this      Callback parameters, or in this case, the pointer to 'this'
  */
-const void DobbyInterface::omiErrorListener(const std::string& id, omi::IOmiProxy::ErrorType err, const void* _this)
+void DobbyInterface::omiErrorListener(const std::string& id, omi::IOmiProxy::ErrorType err, const void* _this)
 {
 
     // Cast const void* back to DobbyInterface* type to get 'this'

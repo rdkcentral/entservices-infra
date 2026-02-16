@@ -85,7 +85,7 @@ namespace WPEFramework {
             std::string mQuery;
             std::string mDatabaseName;
 
-            DatabaseQuery(std::string query, std::string dbName): mQuery(query), mDatabaseName(dbName) {}
+            DatabaseQuery(std::string query, std::string dbName): mQuery(std::move(query)), mDatabaseName(std::move(dbName)) {}
         };
 
         class DatabaseConnection {

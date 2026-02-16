@@ -58,7 +58,7 @@ namespace WPEFramework
             if (conn->Connect(dbPath))
             {
                 status = true;
-                mDatabaseConnection = conn;
+                mDatabaseConnection = std::move(conn);
                 mPath = dbPath;
             }
             else
@@ -127,14 +127,14 @@ namespace WPEFramework
                 std::string query = buildGetEventsQuery(table, start, maxCount);
                 if (!query.empty())
                 {
-                    DatabaseTable table;
-                    if (mDatabaseConnection->ExecAndGetResults(query, table)
-                        && table.NumRows() > 0)
+                    DatabaseTable resultTable;
+                    if (mDatabaseConnection->ExecAndGetResults(query, resultTable)
+                        && resultTable.NumRows() > 0)
                     {
                         // get start from first row's id value
-                        count.first = std::stoi(table[0][0].GetValue());
+                        count.first = std::stoi(resultTable[0][0].GetValue());
                         // get count from number of rows
-                        count.second = table.NumRows();
+                        count.second = resultTable.NumRows();
                     }
                 }
                 else
@@ -159,19 +159,19 @@ namespace WPEFramework
                 std::string query = buildGetEventsQuery(table, start, count);
                 if (!query.empty())
                 {
-                    DatabaseTable table;
-                    if (mDatabaseConnection->ExecAndGetResults(query, table))
+                    DatabaseTable resultTable;
+                    if (mDatabaseConnection->ExecAndGetResults(query, resultTable))
                     {
-                        for (uint32_t rowIdx = 0; rowIdx < table.NumRows(); rowIdx++)
+                        for (uint32_t rowIdx = 0; rowIdx < resultTable.NumRows(); rowIdx++)
                         {
-                            if (table[rowIdx].NumCols() < 2)
+                            if (resultTable[rowIdx].NumCols() < 2)
                             {
                                 LOGERR("Failed to get entries, invalid row");
                                 continue;
                             }
 
-                            std::string entry = table[rowIdx][1].GetValue();
-                            entries.push_back(entry);
+                            std::string entry = resultTable[rowIdx][1].GetValue();
+                            entries.push_back(std::move(entry));
                         }
                     }
                     else

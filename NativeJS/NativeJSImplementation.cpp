@@ -46,8 +46,8 @@ namespace WPEFramework
         Core::hresult NativeJSImplementation::Initialize(string waylandDisplay)
         {   
             std::cout << "initialize called on nativejs implementation " << std::endl;
-            mRenderThread = std::thread([=](std::string waylandDisplay) {
-                mNativeJSRenderer = std::make_shared<NativeJSRenderer>(waylandDisplay);
+            mRenderThread = std::thread([=](std::string display) {
+                mNativeJSRenderer = std::make_shared<NativeJSRenderer>(display);
                 //if (!gPendingUrlRequest.empty())
                 //{
 		//    ModuleSettings moduleSettings;
@@ -57,7 +57,9 @@ namespace WPEFramework
                 //    gPendingUrlOptionsRequest = "";
                 //}
 		
-		mNativeJSRenderer->run();
+		if (mNativeJSRenderer != nullptr) {
+		    mNativeJSRenderer->run();
+		}
 		
 		printf("After launch application execution ... \n"); fflush(stdout);
 		mNativeJSRenderer.reset();
@@ -103,7 +105,7 @@ namespace WPEFramework
 		if(mNativeJSRenderer)
 		{
 			std::string Url(url);
-			mNativeJSRenderer->runApplication(id, Url);
+			mNativeJSRenderer->runApplication(id, std::move(Url));
 		}
 		else
 		{
@@ -119,7 +121,7 @@ namespace WPEFramework
 		if(mNativeJSRenderer)
 		{
 			std::string Code(code);
-			mNativeJSRenderer->runJavaScript(id, Code);
+			mNativeJSRenderer->runJavaScript(id, std::move(Code));
 		}
 		else
 		{

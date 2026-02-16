@@ -223,6 +223,17 @@ namespace Plugin {
 
                         return (*this);
                     }
+                    Measurement& operator=(Measurement&& RHS) noexcept
+                    {
+                        if (this != &RHS)
+                        {
+                            Min = std::move(RHS.Min);
+                            Max = std::move(RHS.Max);
+                            Average = std::move(RHS.Average);
+                            Last = std::move(RHS.Last);
+                        }
+                        return (*this);
+                    }
                     Measurement& operator=(const Core::MeasurementType<uint64_t>& RHS)
                     {
                         Min = RHS.Min();

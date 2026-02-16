@@ -40,7 +40,9 @@ namespace Plugin {
 
     uint32_t CloudStoreImplementation::Configure(PluginHost::IShell* service)
     {
-        ASSERT(_accountStore2 != nullptr);
+        if (_accountStore2 == nullptr) {
+            return Core::ERROR_GENERAL;
+        }
 
         auto configConnection = _accountStore2->QueryInterface<Exchange::IConfiguration>();
         if (configConnection != nullptr) {

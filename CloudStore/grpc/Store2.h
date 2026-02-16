@@ -282,7 +282,7 @@ namespace Plugin {
 
                 if (status.ok()) {
                     if (response.has_value()) {
-                        auto v = response.value();
+                        const auto& v = response.value();
                         if (v.has_ttl()) {
                             ttl = v.ttl().seconds();
                             value = v.value();

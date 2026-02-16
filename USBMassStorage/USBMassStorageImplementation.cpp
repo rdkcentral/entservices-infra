@@ -205,7 +205,7 @@ namespace Plugin {
             {
                 string partition = "/dev/" + line.substr(line.find_last_of(' ') + 1); 
                 LOGINFO("Device path [%s], partition [%s]", storageDeviceInfo.devicePath.c_str(),partition.c_str());
-                partitions.push_back(partition);
+                partitions.push_back(std::move(partition));
             }
         }
         num_partitions = partitions.size();
@@ -260,11 +260,12 @@ namespace Plugin {
                     continue;
                 }
                 LOGINFO("[%s] is mounted successfully.",partition.c_str());
-                mountInfo.partitionName = partition;
+                mountInfo.partitionName = std::move(partition);
+                // mountFlags is an enum, not moved (copy is appropriate for primitive types)
                 mountInfo.mountFlags = mountFlags;
-                mountInfo.mountPath = mountPoint;
+                mountInfo.mountPath = std::move(mountPoint);
 
-                usbStorageMountInfo[storageDeviceInfo.deviceName].push_back(mountInfo);
+                usbStorageMountInfo[storageDeviceInfo.deviceName].push_back(std::move(mountInfo));
                 success = true;
             }
             else
@@ -321,9 +322,9 @@ namespace Plugin {
 
         if (mountInfoList == usbStorageMountInfo.end())
         {
-            string deviceName = storageDeviceInfo.deviceName;
+            const string& deviceName = storageDeviceInfo.deviceName;
 
-            auto it = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [deviceName](const USBStorageDeviceInfo& item){
+            auto it = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [&deviceName](const USBStorageDeviceInfo& item){
                         return item.deviceName == deviceName;
             });
             if (it != usbStorageDeviceInfo.end())
@@ -371,9 +372,9 @@ namespace Plugin {
             }
             usbStorageMountInfo.erase(mountInfoList);
 
-            string deviceName = storageDeviceInfo.deviceName;
+            const string& deviceName = storageDeviceInfo.deviceName;
 
-            auto it = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [deviceName](const USBStorageDeviceInfo& item){
+            auto it = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [&deviceName](const USBStorageDeviceInfo& item){
                         return item.deviceName == deviceName;
             });
             if (it != usbStorageDeviceInfo.end())
@@ -469,12 +470,12 @@ namespace Plugin {
                         }
                         else
                         {
-                            storageDeviceInfo.deviceName = actual_usbDevice_dev_list.deviceName;
+                            storageDeviceInfo.deviceName = std::move(actual_usbDevice_dev_list.deviceName);
                             storageDeviceInfo.devicePath = actual_usbDevice_dev_list.devicePath;
                             LOGINFO("Device path[%s] Name[%s]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str());
 
                             /* storage info list updated */
-                            USBMassStorageImplementation::_instance->usbStorageDeviceInfo.push_back(storageDeviceInfo);
+                            USBMassStorageImplementation::_instance->usbStorageDeviceInfo.push_back(std::move(storageDeviceInfo));
                             emptyList = false;
                         }
                     }
@@ -678,12 +679,12 @@ namespace Plugin {
                 }
                 else
                 {
-                    storageDeviceInfo.devicePath = device.devicePath;
+                    storageDeviceInfo.devicePath = std::move(device.devicePath);
                     storageDeviceInfo.deviceName = device.deviceName;
                     LOGINFO("Device path[%s] Name[%s]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str());
                     Core::IWorkerPool::Instance().Submit(USBMassStorageImplementation::Job::Create(USBMassStorageImplementation::_instance,
                                     USBMassStorageImplementation::USB_STORAGE_EVENT_MOUNT,
-                                    storageDeviceInfo));
+                                    std::move(storageDeviceInfo)));
                 }
             }
             else
@@ -703,14 +704,14 @@ namespace Plugin {
         {
             USBStorageDeviceInfo storageDeviceInfo = {};
 
-            storageDeviceInfo.devicePath = device.devicePath;
+            storageDeviceInfo.devicePath = std::move(device.devicePath);
             storageDeviceInfo.deviceName = device.deviceName;
 
             LOGINFO("Device path[%s] Name[%s]",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str());
 
             Core::IWorkerPool::Instance().Submit(USBMassStorageImplementation::Job::Create(USBMassStorageImplementation::_instance,
                         USBMassStorageImplementation::USB_STORAGE_EVENT_UNMOUNT,
-                        storageDeviceInfo));
+                        std::move(storageDeviceInfo)));
         }
         else
         {

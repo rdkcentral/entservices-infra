@@ -57,7 +57,7 @@ namespace WPEFramework {
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_GET_BLOCKED_AV_APPLICATIONS), &ResourceManager::getBlockedAVApplicationsWrapper, this);
             Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE), &ResourceManager::reserveTTSResourceWrapper, this);
 	    Register<JsonObject, JsonObject>(_T(RESOURCE_MANAGER_METHOD_RESERVE_TTS_RESOURCE_FOR_APPS), &ResourceManager::reserveTTSResourceWrapperForApps, this);
-            mEssRMgr = nullptr;
+			mEssRMgr = nullptr;
 
 #ifdef ENABLE_ERM
             mEssRMgr = EssRMgrCreate();
@@ -66,6 +66,7 @@ namespace WPEFramework {
             RFC_ParamData_t param;
             mDisableBlacklist = true;
             mDisableReserveTTS = true;
+			mCurrentService = nullptr;
 
             if (true == Utils::getRFCConfig("Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Resourcemanager.Blacklist.Enable", param))
             {
@@ -107,7 +108,7 @@ namespace WPEFramework {
                         reinterpret_cast<const uint8_t*>(payload.c_str()),
                         token)
                     == Core::ERROR_NONE) {
-                    sThunderSecurityToken = token;
+                    sThunderSecurityToken = std::move(token);
                     std::cout << "Resourcemanager got security token" << std::endl;
                 } else {
                     std::cout << "Resourcemanager failed to get security token" << std::endl;
@@ -267,7 +268,9 @@ namespace WPEFramework {
             bool status = true;
 #ifdef ENABLE_ERM
             status = blockAV?EssRMgrAddToBlackList(mEssRMgr, callsign.c_str()):EssRMgrRemoveFromBlackList(mEssRMgr, callsign.c_str());
+            std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setAVBlocked call returning  "<<std::boolalpha << status << std::endl;
+            std::cout.flags(oldFlags);
             if (true == status)
             {
                 mAppsAVBlacklistStatus[callsign] = blockAV;
@@ -352,7 +355,7 @@ namespace WPEFramework {
 
         public:
           JSONRPCDirectLink(PluginHost::IShell* service, std::string callsign)
-            : mCallSign(callsign)
+            : mCallSign(std::move(callsign))
           {
             if (service)
 #if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
@@ -488,7 +491,9 @@ namespace WPEFramework {
 
             result.ToString(jsonstr);
             std::cout<<"setACL response : "<< jsonstr << std::endl;
+            std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
+            std::cout.flags(oldFlags);
             
             return (status);
         }
@@ -521,7 +526,9 @@ namespace WPEFramework {
 
             result.ToString(jsonstr);
             std::cout<<"setACL response : "<< jsonstr << std::endl;
+            std::ios::fmtflags oldFlags = std::cout.flags();
             std::cout<<"setACL status  : "<<std::boolalpha << status << std::endl;
+            std::cout.flags(oldFlags);
 
             return (status);
         }

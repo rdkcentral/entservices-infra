@@ -68,10 +68,10 @@ namespace Plugin
             long unsigned mOmiListenerId;
             std::shared_ptr<IDobbyProxy> mDobbyProxy; // DobbyProxy instance
             std::shared_ptr<AI_IPC::IIpcService> mIpcService; // Ipc Service instance
-            const int GetContainerDescriptorFromId(const std::string& containerId);
+            int GetContainerDescriptorFromId(const std::string& containerId);
             const std::string GetContainerIdFromDescriptor(const int descriptor);
-            static const void stateListener(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState state, const void* _this);
-            static const void omiErrorListener(const std::string& id, omi::IOmiProxy::ErrorType err, const void* _this);
+            static void stateListener(int32_t descriptor, const std::string& name, IDobbyProxyEvents::ContainerState state, const void* _this);
+            static void omiErrorListener(const std::string& id, omi::IOmiProxy::ErrorType err, const void* _this);
             std::shared_ptr<omi::IOmiProxy> mOmiProxy;
             IEventHandler* mEventHandler;
     };

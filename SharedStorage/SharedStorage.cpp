@@ -83,7 +83,8 @@ namespace Plugin {
         else {
             message = _T("Couldn't create _store2 implementation instance");
         }
-        if(message != "")
+        
+        if(message != "" || _store2 == nullptr)
         {
             return message;
         }

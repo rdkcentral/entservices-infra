@@ -105,6 +105,7 @@ namespace Plugin {
             , _store2(nullptr)
             , _store2Sink(*this)
             , _notification(*this)
+            , configure(nullptr)
             , _storeInspector(nullptr)
             , _storeLimit(nullptr)
             , _storeCache(nullptr)
