@@ -730,9 +730,7 @@ public:
                  if (token.empty()) {
                      continue;
                  }
-                 // Issue ID 33: Variable copied when it could be moved
-                 // Fix: Use std::move to transfer ownership instead of copying
-                 std::string u = std::move(token);
+                 std::string u = token;
                  std::transform(u.begin(), u.end(), u.begin(), [](unsigned char c){ return static_cast<char>(::toupper(c)); });
 
                  // Stereo detection

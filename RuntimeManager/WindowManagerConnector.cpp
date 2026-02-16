@@ -152,8 +152,7 @@ void WindowManagerConnector::getDisplayInfo(const string& appInstanceId , string
     {
         // generate name as wst-appInstanceId and sanity check
         string displayName = "wst-" + appInstanceId;
-        // Coverity fix 334: Check xdgRuntimeDirFd is valid before calling faccessat
-        if (xdgRuntimeDirFd >= 0 && faccessat(xdgRuntimeDirFd, displayName.c_str(), F_OK, 0) != 0)
+        if (faccessat(xdgRuntimeDirFd, displayName.c_str(), F_OK, 0) != 0) //todo required for wst-appinstanceid?
         {
             waylandDisplayName = std::move(displayName);
         }
@@ -163,14 +162,10 @@ void WindowManagerConnector::getDisplayInfo(const string& appInstanceId , string
             waylandDisplayName = "testdisplay";
         }
     }
-    // Coverity fix 334: Only close if xdgRuntimeDirFd is valid
-    if (xdgRuntimeDirFd >= 0)
+    if (close(xdgRuntimeDirFd) < 0)
     {
-        if (close(xdgRuntimeDirFd) < 0)
-        {
-            printf("failed to close XDG_RUNTIME_DIR \n");
-            fflush(stdout);
-        }
+        printf("failed to close XDG_RUNTIME_DIR \n");
+        fflush(stdout);
     }
 
     LOGINFO("GetDisplayInfo::Returning display name [%s] for display [%s] \n", waylandDisplayName.c_str(), xdgDirectory.c_str());

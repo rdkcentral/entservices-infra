@@ -822,9 +822,7 @@ namespace Plugin {
         runtimeConfig.gpuMemoryLimit = config.gpuMemoryLimit;
 
         JsonArray vars = JsonArray();
-        // Issue ID 2: Range-based for loop copies each string instead of referencing
-        // Fix: Use const auto& to avoid copying strings in the loop
-        for (const auto& str: config.envVars) {
+        for (auto str: config.envVars) {
             vars.Add(str);
         }
         vars.ToString(runtimeConfig.envVariables);
@@ -845,12 +843,6 @@ namespace Plugin {
         runtimeConfig.appPath = config.appPath;
         runtimeConfig.command = config.command;
         runtimeConfig.runtimePath = config.runtimePath;
-        
-        // Coverity fix 1074: Initialize remaining RuntimeConfig fields
-        runtimeConfig.enableDebugger = false;
-        runtimeConfig.logFileMaxSize = 0;
-        runtimeConfig.mapi = false;
-        runtimeConfig.resourceManagerClientEnabled = false;
     }
 
     Core::hresult PackageManagerImplementation::Unlock(const string &packageId, const string &version)
@@ -882,9 +874,7 @@ namespace Plugin {
                         LOGDBG("blockedVer: '%s' state: %d", blockedVer.c_str(), (unsigned) stateBlocked.installState);
                         stateBlocked.unpackedPath = "";
                         if (stateBlocked.installState == InstallState::INSTALLATION_BLOCKED) {
-                            // Issue ID 3: Copying BlockedInstallData structure unnecessarily
-                            // Fix: Use const auto& to reference the data without copying
-                            const auto& blockedData = stateBlocked.blockedInstallData;
+                            auto blockedData = stateBlocked.blockedInstallData;
                             if (Install(packageId, blockedData.version, blockedData.keyValues, blockedData.fileLocator, stateBlocked) == Core::ERROR_NONE) {
                                 LOGDBG("Blocked package installed. id: %s ver: %s", packageId.c_str(), blockedVer.c_str());
                                 state.installState = InstallState::UNINSTALLED;

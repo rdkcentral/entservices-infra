@@ -282,18 +282,14 @@ namespace WPEFramework
             string lowerEvent = StringUtils::toLower(event);
             if (HandleNotifier(module, lowerEvent, false)) {
                 std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-                // Issue ID 28: Variable copied when it could be moved
-                // Fix: Use std::move to transfer ownership instead of copying
-                mRegisteredNotifications.erase(std::remove(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), NotificationKey{module, std::move(lowerEvent)}), mRegisteredNotifications.end());
+                mRegisteredNotifications.erase(std::remove(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), NotificationKey{module, lowerEvent}), mRegisteredNotifications.end());
             }
         }
 
         bool AppNotificationsImplementation::ThunderSubscriptionManager::IsNotificationRegistered(const string& module, const string& notification) const {
             string lowerEvent = StringUtils::toLower(notification);
             std::lock_guard<std::mutex> lock(mThunderSubscriberMutex);
-            // Issue ID 29: Variable copied when it could be moved
-            // Fix: Use std::move to transfer ownership instead of copying
-            return std::find(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), NotificationKey{module, std::move(lowerEvent)}) != mRegisteredNotifications.end();
+            return std::find(mRegisteredNotifications.begin(), mRegisteredNotifications.end(), NotificationKey{module, lowerEvent}) != mRegisteredNotifications.end();
         }
 
     }

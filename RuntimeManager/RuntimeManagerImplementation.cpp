@@ -579,15 +579,11 @@ err_ret:
                 LOGERR("envVariables is empty inside Run()");
             }
 
-            // SLEEP (Coverity ID: 1062): Extract appId data and release lock before calling getAppStorageInfo which may make IPC calls to StorageManager
-            std::string appIdForStorage = appId;
-            mRuntimeManagerImplLock.Unlock();
-
-            if (!appIdForStorage.empty())
+            if (!appId.empty())
             {
                 appStorageInfo.userId = userId;
                 appStorageInfo.groupId = groupId;
-                if (Core::ERROR_NONE == getAppStorageInfo(appIdForStorage, appStorageInfo))
+                if (Core::ERROR_NONE == getAppStorageInfo(appId, appStorageInfo))
                 {
                     config.mAppStorageInfo.path = std::move(appStorageInfo.path);
                     config.mAppStorageInfo.userId = userId;
@@ -596,8 +592,6 @@ err_ret:
                     config.mAppStorageInfo.used = std::move(appStorageInfo.used);
                 }
             }
-
-            mRuntimeManagerImplLock.Lock();
 
             /* Creating Display */
             if(nullptr != mWindowManagerConnector)
@@ -674,14 +668,8 @@ err_ret:
                      xdgRuntimeDir.c_str(), waylandDisplay.c_str());
                 std::string command = "";
                 std::string appPath = runtimeConfigObject.unpackedPath;
-                
-                mRuntimeManagerImplLock.Unlock();
-                if(!isOCIPluginObjectValid())
+                if(isOCIPluginObjectValid())
                 {
-                    LOGERR("OCI Plugin object is not valid. Aborting Run.");
-                    return status;
-                }
-                    mRuntimeManagerImplLock.Lock();
                     string containerId = getContainerId(appInstanceId);
                     if (!containerId.empty())
                     {
@@ -699,9 +687,9 @@ err_ret:
                             LOGINFO("Update Info for %s",appInstanceId.c_str());
                             if (!appId.empty())
                             {
-                                runtimeAppInfo.appId = appId;
+                                runtimeAppInfo.appId = std::move(appId);
                             }
-                            runtimeAppInfo.appInstanceId = appInstanceId;
+                            runtimeAppInfo.appInstanceId = std::move(appInstanceId);
                             runtimeAppInfo.descriptor = std::move(descriptor);
                             runtimeAppInfo.containerState = Exchange::IRuntimeManager::RUNTIME_STATE_STARTING;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -719,11 +707,11 @@ err_ret:
                         errorCode = "ERROR_INVALID_PARAM";
                         notifyParamCheckFailure = true;
                     }
-                // }
-                // else
-                // {
-                //     LOGERR("OCI Plugin object is not valid. Aborting Run.");
-                // }
+                }
+                else
+                {
+                    LOGERR("OCI Plugin object is not valid. Aborting Run.");
+                }
             }
             mRuntimeManagerImplLock.Unlock();
             if(notifyParamCheckFailure)
@@ -747,16 +735,11 @@ err_ret:
             /* Get current timestamp at the start of hibernate for telemetry */
             time_t requestTime = getCurrentTimestamp();
 #endif
-            // Issue ID:1053 Waiting while holding a lock
-            if(!isOCIPluginObjectValid())
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting Wake.");
-                return status;
-            }
+
             mRuntimeManagerImplLock.Lock();
 
-            // if(isOCIPluginObjectValid())
-            // {
+            if(isOCIPluginObjectValid())
+            {
                string containerId = getContainerId(appInstanceId);
                 if (!containerId.empty())
                 {
@@ -781,11 +764,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is not found or mOciContainerObject is not ready");
                 }
-            // }
-            // else
-            // {
-            //     LOGERR("OCI Plugin object is not valid. Aborting Hibernate.");
-            // }
+            }
+            else
+            {
+                LOGERR("OCI Plugin object is not valid. Aborting Hibernate.");
+            }
             mRuntimeManagerImplLock.Unlock();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -808,15 +791,10 @@ err_ret:
             /* Get current timestamp at the start of wake for telemetry */
             time_t requestTime = getCurrentTimestamp();
 #endif
-            // Issue ID:1051 Waiting while holding a lock
-            if(!isOCIPluginObjectValid())
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting Wake.");
-                return status;
-            }
+
             mRuntimeManagerImplLock.Lock();
-            //if(isOCIPluginObjectValid())
-            //{
+            if(isOCIPluginObjectValid())
+            {
                 string containerId = getContainerId(appInstanceId);
                 if (!containerId.empty())
                 {
@@ -849,11 +827,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is not found ");
                 }
-            //}
-            //else
-            // {
-            //     LOGERR("OCI Plugin object is not valid. Aborting Wake.");
-            // }
+            }
+            else
+            {
+                LOGERR("OCI Plugin object is not valid. Aborting Wake.");
+            }
             mRuntimeManagerImplLock.Unlock();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -876,16 +854,11 @@ err_ret:
             /* Get current timestamp at the start of suspend for telemetry */
             time_t requestTime = getCurrentTimestamp();
 #endif
-            // Issue ID:1054 Waiting while holding a lock
-            if(!isOCIPluginObjectValid())
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting Wake.");
-                return status;
-            }
+
             mRuntimeManagerImplLock.Lock();
 
-            // if(isOCIPluginObjectValid())
-            // {
+            if(isOCIPluginObjectValid())
+            {
                 string containerId = getContainerId(appInstanceId);
 
                 if (!containerId.empty())
@@ -909,11 +882,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is not found ");
                 }
-            // }
-            // else
-            // {
-            //     LOGERR("OCI Plugin object is not valid. Aborting Suspend.");
-            // }
+            }
+            else
+            {
+                LOGERR("OCI Plugin object is not valid. Aborting Suspend.");
+            }
             mRuntimeManagerImplLock.Unlock();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -936,15 +909,10 @@ err_ret:
             /* Get current timestamp at the start of resume for telemetry */
             time_t requestTime = getCurrentTimestamp();
 #endif
-            // Issue ID:1052 Waiting while holding a lock
-            if(!isOCIPluginObjectValid())
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting Wake.");
-                return status;
-            }
+
             mRuntimeManagerImplLock.Lock();
-            // if(isOCIPluginObjectValid())
-            // {
+            if(isOCIPluginObjectValid())
+            {
                 string containerId = getContainerId(appInstanceId);
 
                 if (!containerId.empty())
@@ -968,11 +936,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is empty ");
                 }
-            //}
-            // else
-            // {
-            //     LOGERR("OCI Plugin object is not valid. Aborting Resume.");
-            // }
+            }
+            else
+            {
+                LOGERR("OCI Plugin object is not valid. Aborting Resume.");
+            }
             mRuntimeManagerImplLock.Unlock();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -992,12 +960,7 @@ err_ret:
             /* Get current timestamp at the start of terminate for telemetry */
             time_t requestTime = getCurrentTimestamp();
 #endif
-            // Issue ID:1057 Waiting while holding a lock
-            if(!isOCIPluginObjectValid())
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
-                return status;
-            }
+
             mRuntimeManagerImplLock.Lock();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
@@ -1012,8 +975,8 @@ err_ret:
                 LOGERR("Terminate called for unknown appInstanceId: %s, skipping telemetry update", appInstanceId.c_str());
             }
 #endif
-            // if(isOCIPluginObjectValid())
-            // {
+            if(isOCIPluginObjectValid())
+            {
                 string containerId = getContainerId(appInstanceId);
 
                 if (!containerId.empty())
@@ -1042,11 +1005,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is not found");
                 }
-            // }
-            // else
-            // {
-            //     LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
-            // }
+            }
+            else
+            {
+                LOGERR("OCI Plugin object is not valid. Aborting Terminate.");
+            }
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
             LOGINFO("Rialto session deactivate on terminate.");
             mRialtoConnector->deactivateSession(mRuntimeAppInfo[appInstanceId].appId);
@@ -1070,12 +1033,6 @@ err_ret:
             /* Get current timestamp at the start of terminate for telemetry */
             time_t requestTime = getCurrentTimestamp();
 #endif
-            // Issue ID:1058 Waiting while holding a lock
-            if(!isOCIPluginObjectValid())
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting Kill.");
-                return status;
-            }
 
             mRuntimeManagerImplLock.Lock();
 
@@ -1091,8 +1048,8 @@ err_ret:
                 LOGERR("Kill called for unknown appInstanceId: %s, skipping telemetry update", appInstanceId.c_str());
             }
 #endif
-            // if(isOCIPluginObjectValid())
-            // {
+            if(isOCIPluginObjectValid())
+            {
                 string containerId = getContainerId(appInstanceId);
 
                 if (!containerId.empty())
@@ -1115,11 +1072,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is not found");
                 }
-            // }
-            // else
-            // {
-            //     LOGERR("OCI Plugin object is not valid. Aborting Kill.");
-            // }
+            }
+            else
+            {
+                LOGERR("OCI Plugin object is not valid. Aborting Kill.");
+            }
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
             LOGINFO("Rialto Session deactivate on kill..");
             mRialtoConnector->deactivateSession(mRuntimeAppInfo[appInstanceId].appId);
@@ -1140,16 +1097,10 @@ err_ret:
             std::string errorReason = "";
             bool success = false;
 
-            // Issue ID:1055 Waiting while holding a lock
-            if(!isOCIPluginObjectValid())
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting GetInfo.");
-                return status;
-            }
             mRuntimeManagerImplLock.Lock();
 
-            // if(isOCIPluginObjectValid())
-            // {
+            if(isOCIPluginObjectValid())
+            {
                 string containerId = getContainerId(appInstanceId);
 
                 if (!containerId.empty())
@@ -1168,11 +1119,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is not found or mOciContainerObject is not ready");
                 }
-            // }
-            // else
-            // {
-            //     LOGERR("OCI Plugin object is not valid. Aborting GetInfo.");
-            // }
+            }
+            else
+            {
+                LOGERR("OCI Plugin object is not valid. Aborting GetInfo.");
+            }
             mRuntimeManagerImplLock.Unlock();
             return status;
         }
@@ -1182,18 +1133,11 @@ err_ret:
             Core::hresult status = Core::ERROR_GENERAL;
             std::string errorReason = "";
             bool success = false;
-            
-            // Issue ID:1056 Waiting while holding a lock
-            if(!isOCIPluginObjectValid())
-            {
-                LOGERR("OCI Plugin object is not valid. Aborting Annotate.");
-                return status;
-            }
 
             mRuntimeManagerImplLock.Lock();
 
-            // if(isOCIPluginObjectValid())
-            // {
+            if(isOCIPluginObjectValid())
+            {
                 string containerId = getContainerId(appInstanceId);
 
                 if (!containerId.empty())
@@ -1215,11 +1159,11 @@ err_ret:
                 {
                     LOGERR("appInstanceId is empty ");
                 }
-            // }
-            // else
-            // {
-            //     LOGERR("OCI Plugin object is not valid. Aborting GetInfo.");
-            // }
+            }
+            else
+            {
+                LOGERR("OCI Plugin object is not valid. Aborting GetInfo.");
+            }
             mRuntimeManagerImplLock.Unlock();
             return status;
         }

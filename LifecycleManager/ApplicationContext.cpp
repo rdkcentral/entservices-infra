@@ -29,9 +29,8 @@ namespace WPEFramework
 	}
 
         ApplicationContext::ApplicationContext (std::string appId)
-        : mPendingStateTransition(false) // Coverity fix: 1145 - UNINIT_CTOR: Initialize mPendingStateTransition
-        , mPendingStates()// Fix for Coverity issue 1075 - UNINIT_CTOR: Initialize mPendingOldState
-        , mPendingOldState(Exchange::ILifecycleManager::LifecycleState::UNLOADED)
+        : mPendingStateTransition(false)
+        , mPendingStates()
         , mPendingEventName("")
         , mAppInstanceId("")
         , mAppId(std::move(appId))
