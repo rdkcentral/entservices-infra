@@ -25,6 +25,12 @@
 
 #include "rfcapi.h"
 
+#if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
+#include "pwrMgr.h"
+#include "UtilsIarm.h"
+#endif /* USE_IARMBUS || USE_IARM_BUS */
+
+
 #ifdef HAS_RBUS
 #include "rbus.h"
 
@@ -52,7 +58,6 @@ static rbusError_t rbusHandleStatus = RBUS_ERROR_NOT_INITIALIZED;
 static rbusHandle_t rbusHandle;
 
 #endif
-using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -63,12 +68,10 @@ namespace Plugin {
     TelemetryImplementation::TelemetryImplementation()
     : _adminLock()
     , _service(nullptr)
-    , _pwrMgrNotification(*this)
 #ifdef HAS_RBUS
     , _userSettingsPlugin(nullptr)
     , _userSettingsNotification(*this)
 #endif
-    , _registeredEventHandlers(false)
     {
         LOGINFO("Create TelemetryImplementation Instance");
         TelemetryImplementation::_instance = this;
@@ -77,14 +80,6 @@ namespace Plugin {
 
     TelemetryImplementation::~TelemetryImplementation()
     {
-         if (_powerManagerPlugin) {
-		 // Unregister from PowerManagerPlugin Notification
-		_powerManagerPlugin->Unregister(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>());
-                _powerManagerPlugin.Reset();
-            }
-
-            LOGINFO("Call TelemetryImplementation destructor\n");
-            _registeredEventHandlers = false;
 
             TelemetryImplementation::_instance = nullptr;
             _service = nullptr;
@@ -341,47 +336,56 @@ namespace Plugin {
         return result;
     }
     
-    void TelemetryImplementation::InitializePowerManager()
-    {
-        LOGINFO("Connect the COM-RPC socket\n");
-        _powerManagerPlugin = PowerManagerInterfaceBuilder(_T("org.rdk.PowerManager"))
-                            .withIShell(_service)
-                            .withRetryIntervalMS(200)
-                            .withRetryCount(25)
-                            .createInterface();
-
-        registerEventHandlers();
-    }
     
     
-    void TelemetryImplementation::registerEventHandlers()
-    {
-        ASSERT (_powerManagerPlugin);
-
-        if(!_registeredEventHandlers && _powerManagerPlugin) 
+ 
+#if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
+        void Telemetry::InitializeIARM()
         {
-            _registeredEventHandlers = true;
-            _powerManagerPlugin->Register(_pwrMgrNotification.baseInterface<Exchange::IPowerManager::IModeChangedNotification>());
-        }
-    }
-
-    void TelemetryImplementation::onPowerModeChanged(const PowerState currentState, const PowerState newState)
-    {
-        JsonObject params;
-
-        if (WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY == newState ||
-            WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY_LIGHT_SLEEP == newState)
-        {
-            if (WPEFramework::Exchange::IPowerManager::POWER_STATE_ON == currentState)
+            if (Utils::IARM::init())
             {
-                Core::IWorkerPool::Instance().Submit(Job::Create( this,TELEMETRY_EVENT_UPLOADREPORT, params));
+                IARM_Result_t res;
+                IARM_CHECK( IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, _powerEventHandler));
             }
         }
-        else if(WPEFramework::Exchange::IPowerManager::POWER_STATE_STANDBY_DEEP_SLEEP == newState)
+
+        void Telemetry::DeinitializeIARM()
         {
-            Core::IWorkerPool::Instance().Submit(Job::Create( this,TELEMETRY_EVENT_ABORTREPORT, params));
+            if (Utils::IARM::isConnected())
+            {
+                IARM_Result_t res;
+                IARM_CHECK( IARM_Bus_RemoveEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED,_powerEventHandler) );
+            }
         }
-    }
+
+        void _powerEventHandler(const char *owner, IARM_EventId_t eventId,
+                void *data, size_t len)
+        {
+            if (IARM_BUS_PWRMGR_EVENT_MODECHANGED == eventId)
+            {
+                if (nullptr == Telemetry::_instance)
+                {
+                    LOGERR("Telemetry::_instance is NULL.\n");
+                    return;
+                }
+
+                IARM_Bus_PWRMgr_EventData_t *eventData = (IARM_Bus_PWRMgr_EventData_t *)data;
+
+                if (IARM_BUS_PWRMGR_POWERSTATE_STANDBY == eventData->data.state.newState ||
+                      IARM_BUS_PWRMGR_POWERSTATE_STANDBY_LIGHT_SLEEP == eventData->data.state.newState)
+                {
+                    if (IARM_BUS_PWRMGR_POWERSTATE_ON == eventData->data.state.curState)
+                    {
+                        TelemetryImplementation::_instance->UploadReport();
+                    }
+                }
+                else if(IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP == eventData->data.state.newState)
+                {
+                     TelemetryImplementation::_instance->AbortReport();
+               }
+            }
+        }
+#endif /* defined(USE_IARMBUS) || defined(USE_IARM_BUS) */
 
     void TelemetryImplementation::dispatchEvent(Event event, const JsonValue &params)
     {

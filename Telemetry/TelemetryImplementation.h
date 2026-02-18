@@ -33,43 +33,13 @@
 #include <com/com.h>
 #include <core/core.h>
 
-using namespace WPEFramework;
-using PowerState = WPEFramework::Exchange::IPowerManager::PowerState;
-using ThermalTemperature = WPEFramework::Exchange::IPowerManager::ThermalTemperature;
 
 namespace WPEFramework {
 namespace Plugin {
     class TelemetryImplementation : public Exchange::ITelemetry, public Exchange::IConfiguration
     {
         private:
-            class PowerManagerNotification : public Exchange::IPowerManager::IModeChangedNotification {
-            private:
-                PowerManagerNotification(const PowerManagerNotification&) = delete;
-                PowerManagerNotification& operator=(const PowerManagerNotification&) = delete;
 
-            public:
-                explicit PowerManagerNotification(TelemetryImplementation& parent)
-                    : _parent(parent)
-                {
-                }
-                ~PowerManagerNotification() override = default;
-
-            public:
-                void OnPowerModeChanged(const PowerState currentState, const PowerState newState) override
-                {
-                    _parent.onPowerModeChanged(currentState, newState);
-                }
-
-                template <typename T>
-                T* baseInterface()
-                {
-                    static_assert(std::is_base_of<T, PowerManagerNotification>(), "base type mismatch");
-                    return static_cast<T*>(this);
-                }
-
-                BEGIN_INTERFACE_MAP(PowerManagerNotification)
-                INTERFACE_ENTRY(Exchange::IPowerManager::IModeChangedNotification)
-                END_INTERFACE_MAP
 
             private:
                 TelemetryImplementation& _parent;
@@ -102,6 +72,10 @@ namespace Plugin {
                 TelemetryImplementation& _parent;
             };
 #endif
+if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
+            void InitializeIARM();
+            void DeinitializeIARM();
+#endif /* defined(USE_IARMBUS) || defined(USE_IARM_BUS) */
 
     public:
         // We do not allow this plugin to be copied !!
@@ -174,9 +148,6 @@ namespace Plugin {
         Core::hresult UploadReport() override;
         Core::hresult AbortReport() override;
 
-        void InitializePowerManager();
-        void onPowerModeChanged(const PowerState currentState, const PowerState newState);
-        void registerEventHandlers();
 
         // IConfiguration interface
         uint32_t Configure(PluginHost::IShell* service) override;
@@ -192,13 +163,10 @@ namespace Plugin {
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         std::list<Exchange::ITelemetry::INotification*> _telemetryNotification;
-        PowerManagerInterfaceRef _powerManagerPlugin;
-        Core::Sink<PowerManagerNotification> _pwrMgrNotification;
 #ifdef HAS_RBUS
         Exchange::IUserSettings* _userSettingsPlugin;
         Core::Sink<UserSettingsNotification> _userSettingsNotification;
 #endif
-        bool _registeredEventHandlers;
         
         void dispatchEvent(Event, const JsonValue &params);
         void Dispatch(Event event, const JsonValue params);
