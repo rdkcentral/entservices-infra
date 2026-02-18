@@ -140,6 +140,13 @@ jobs:
           path: entservices-infra
           ref: develop
 
+      - name: Checkout entservices-usersettings
+        if: ${{ inputs.caller_source == 'local' }}
+        uses: actions/checkout@v3
+        with:
+          path: entservices-usersettings
+          ref: develop
+
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v3
@@ -409,6 +416,7 @@ jobs:
           &&
           cmake --install build/mocks
 
+      
       - name: Build entservices-infra
         run: >
           cmake -G Ninja
