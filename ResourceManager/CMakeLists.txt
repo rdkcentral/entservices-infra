@@ -24,6 +24,7 @@ set(PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES "")
 set(PLUGIN_RESOURCE_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start ResourceManager plugin")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         ResourceManager.cpp
@@ -34,7 +35,12 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
-target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+target_include_directories(${MODULE_NAME} PRIVATE ../helpers)
+
+target_link_libraries(${MODULE_NAME} PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+)
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
@@ -70,9 +76,16 @@ if (RDK_SERVICE_L2_TEST)
 endif (RDK_SERVICE_L2_TEST)
 
 if (RDK_SERVICES_L1_TEST OR RDK_SERVICE_L2_TEST)
-    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
+    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
+            ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+            ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+            ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
 else()
-    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins -lessosrmgr ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
+    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
+            ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+            ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+            -lessosrmgr
+            ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
 endif()
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
