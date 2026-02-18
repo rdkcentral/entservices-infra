@@ -1,4 +1,12 @@
 precondition = ["Platform"]
 callsign = "org.rdk.ResourceManager"
-autostart = "true"
+autostart = "@PLUGIN_RESOURCE_MANAGER_AUTOSTART@"
 startuporder = "@PLUGIN_RESOURCE_MANAGER_STARTUPORDER@"
+
+configuration = JSON()
+rootobject = JSON()
+
+rootobject.add("mode", "@PLUGIN_RESOURCE_MANAGER_MODE@")
+rootobject.add("locator", "lib@PLUGIN_IMPLEMENTATION@.so")
+
+configuration.add("root", rootobject)
