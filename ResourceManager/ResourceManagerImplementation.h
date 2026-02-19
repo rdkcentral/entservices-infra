@@ -37,12 +37,10 @@
 
 namespace WPEFramework {
     namespace Plugin {
-        class ResourceManagerImplementation : public Exchange::IResourceManager {
+        class ResourceManagerImplementation : public Exchange::IResourceManager, public Exchange::IConfiguration {
             public:
                 ResourceManagerImplementation();
                 ~ResourceManagerImplementation() override;
-
-                static ResourceManagerImplementation* instance(ResourceManagerImplementation *resourceManagerImpl = nullptr);
 
                 
                 ResourceManagerImplementation(const ResourceManagerImplementation&) = delete;
@@ -50,20 +48,19 @@ namespace WPEFramework {
 
                 BEGIN_INTERFACE_MAP(ResourceManagerImplementation)
                     INTERFACE_ENTRY(Exchange::IResourceManager)
+                    INTERFACE_ENTRY(Exchange::IConfiguration)
                 END_INTERFACE_MAP
 
             public:
 
                 // IResourceManager interface method
-                Core::hresult SetAVBlocked(const string& appId, const bool blocked, Exchange::IResourceManager::SetAVBlockedResult& result) override;
+                Core::hresult SetAVBlocked(const string& appId, const bool blocked, Exchange::IResourceManager::Result& result) override;
                 Core::hresult GetBlockedAVApplications(IStringIterator*& clients, bool& success) const override;
-                Core::hresult ReserveTTSResource(const string& appId, Exchange::IResourceManager::TTSResult& ttsResult) override;
-                Core::hresult ReserveTTSResourceForApps(IStringIterator* const appids, Exchange::IResourceManager::TTSResult& ttsResult) override;
+                Core::hresult ReserveTTSResource(const string& appId, Exchange::IResourceManager::Result& result) override;
+                Core::hresult ReserveTTSResourceForApps(IStringIterator* const appids, Exchange::IResourceManager::Result& result) override;
 
-                // Configuration method to set service interface
-                void Configure(PluginHost::IShell* service);
-
-                static ResourceManagerImplementation* _instance;
+                // IConfiguration interface
+                uint32_t Configure(PluginHost::IShell* service) override;
 
             private:
                 mutable Core::CriticalSection _adminLock;

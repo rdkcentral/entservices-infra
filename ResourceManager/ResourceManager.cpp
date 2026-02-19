@@ -18,7 +18,6 @@
  **/
 
 #include "ResourceManager.h"
-#include "ResourceManagerImplementation.h"
 
 #define API_VERSION_NUMBER_MAJOR 1
 #define API_VERSION_NUMBER_MINOR 0
@@ -72,16 +71,29 @@ namespace WPEFramework {
 
             if (nullptr != _resourceManager)
             {
-                // Configure the implementation with service interface
-                // This is needed for inter-plugin calls (e.g., to TextToSpeech)
-                Plugin::ResourceManagerImplementation* implementation = 
-                    Plugin::ResourceManagerImplementation::instance();
-                if (implementation != nullptr) {
-                    implementation->Configure(_service);
+                // Configure the implementation with service interface via IConfiguration
+                Exchange::IConfiguration* configure = _resourceManager->QueryInterface<Exchange::IConfiguration>();
+                if (configure != nullptr)
+                {
+                    uint32_t result = configure->Configure(_service);
+                    configure->Release();
+                    if (result != Core::ERROR_NONE)
+                    {
+                        SYSLOG(Logging::Startup, (_T("ResourceManager::Initialize: Failed to configure implementation")));
+                        message = _T("ResourceManager could not be configured");
+                    }
+                }
+                else
+                {
+                    SYSLOG(Logging::Startup, (_T("ResourceManager::Initialize: Implementation did not provide IConfiguration interface")));
+                    message = _T("ResourceManager implementation did not provide a configuration interface");
                 }
 
-                // Register JSON-RPC interface
-                Exchange::JResourceManager::Register(*this, _resourceManager);
+                if (message.empty())
+                {
+                    // Register JSON-RPC interface
+                    Exchange::JResourceManager::Register(*this, _resourceManager);
+                }
             }
             else
             {
