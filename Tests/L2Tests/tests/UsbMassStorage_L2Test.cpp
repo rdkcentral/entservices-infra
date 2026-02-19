@@ -26,6 +26,8 @@
 #include <fstream>
 #include <interfaces/IUSBDevice.h>
 #include <interfaces/IUSBMassStorage.h>
+#include <thread>
+#include <chrono>
 
 #define TEST_LOG(x, ...) fprintf(stderr, "\033[1;32m[%s:%d](%s)<PID:%d><TID:%d>" x "\n\033[0m", __FILE__, __LINE__, __FUNCTION__, getpid(), gettid(), ##__VA_ARGS__); fflush(stderr);
 
@@ -276,6 +278,17 @@ USBMassStorageTest::~USBMassStorageTest()
             // No return value needed as function returns void
         }));
 
+	// Release COM-RPC interface objects if they were created
+    if (m_usbmassstorageplugin != nullptr) {
+        m_usbmassstorageplugin->Release();
+        m_usbmassstorageplugin = nullptr;
+    }
+    
+    if (m_controller_usbmassstorage != nullptr) {
+        m_controller_usbmassstorage->Release();
+        m_controller_usbmassstorage = nullptr;
+    }
+
     TEST_LOG("DeActivate USBDevice plugin");
 
     status = DeactivateService("org.rdk.UsbMassStorage");
@@ -283,7 +296,7 @@ USBMassStorageTest::~USBMassStorageTest()
 
     status = DeactivateService("org.rdk.UsbDevice");
     EXPECT_EQ(Core::ERROR_NONE, status);
-    sleep(5);
+	std::this_thread::sleep_for(std::chrono::seconds(2));
 
 }
 
