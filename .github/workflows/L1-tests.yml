@@ -416,7 +416,6 @@ jobs:
           &&
           cmake --install build/mocks
 
-      
       - name: Build entservices-infra
         run: >
           cmake -G Ninja
@@ -503,7 +502,6 @@ jobs:
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
           -DPLUGIN_MIGRATION=ON
           -DENABLE_UNIT_TESTS=ON
@@ -588,7 +586,6 @@ jobs:
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
           -DPLUGIN_LIFECYCLE_MANAGER=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_MESSAGECONTROL=ON
           -DPLUGIN_MIGRATION=ON
           -DENABLE_UNIT_TESTS=ON
