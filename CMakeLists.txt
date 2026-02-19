@@ -111,10 +111,6 @@ if(PLUGIN_CLOUDSTORE)
     add_subdirectory(CloudStore)
 endif()
 
-if(PLUGIN_SHAREDSTORAGE)
-    add_subdirectory(SharedStorage)
-endif()
-
 if(PLUGIN_WEBBRIDGE)
     add_subdirectory(WebBridge)
 endif()
