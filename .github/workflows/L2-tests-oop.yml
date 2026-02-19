@@ -127,7 +127,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
-          ref: develop
+          ref: fix/ci-job-isolation-parallel-execution
 
       - name: Apply  ThunderTools
         run: |
@@ -486,28 +486,28 @@ jobs:
 
       - name: Set up files
         run: >
-          sudo mkdir -p -m 777
-          /opt/persistent
-          /opt/secure
-          /opt/secure/reboot
-          /opt/secure/persistent
-          /opt/secure/persistent/System
+          mkdir -p -m 777
+          ${JOB_TMP_DIR}/opt/persistent
+          ${JOB_TMP_DIR}/opt/secure
+          ${JOB_TMP_DIR}/opt/secure/reboot
+          ${JOB_TMP_DIR}/opt/secure/persistent
+          ${JOB_TMP_DIR}/opt/secure/persistent/System
           /tmp/secure/persistent
           /tmp/persistent
           /tmp/persistent/rdkservicestore
-          /opt/logs
-          /lib/rdk
-          /run/media/sda1/logs/PreviousLogs
-          /run/media/sda2/logs/PreviousLogs
-          /run/sda1/UsbTestFWUpdate
-          /run/sda1/UsbProdFWUpdate
-          /run/media/sda1/Logs
-          /run/sda2
-          /tmp/bus/usb/devices/100-123
-          /tmp/bus/usb/devices/101-124
-          /tmp/block/sda/device
-          /tmp/block/sdb/device
-          /dev/disk/by-id
+          ${JOB_TMP_DIR}/opt/logs
+          ${JOB_TMP_DIR}/lib/rdk
+          ${JOB_TMP_DIR}/run/media/sda1/logs/PreviousLogs
+          ${JOB_TMP_DIR}/run/media/sda2/logs/PreviousLogs
+          ${JOB_TMP_DIR}/run/sda1/UsbTestFWUpdate
+          ${JOB_TMP_DIR}/run/sda1/UsbProdFWUpdate
+          ${JOB_TMP_DIR}/run/media/sda1/Logs
+          ${JOB_TMP_DIR}/run/sda2
+          ${JOB_TMP_DIR}/tmp/bus/usb/devices/100-123
+          ${JOB_TMP_DIR}/tmp/bus/usb/devices/101-124
+          ${JOB_TMP_DIR}/tmp/block/sda/device
+          ${JOB_TMP_DIR}/tmp/block/sdb/device
+          ${JOB_TMP_DIR}/dev/disk/by-id
           /dev &&
           if [ ! -f mknod /dev/sda c 240 0 ]; then mknod /dev/sda c 240 0; fi &&
           if [ ! -f mknod /dev/sda1 c 240 0 ]; then mknod /dev/sda1 c 240 0; fi &&
@@ -517,65 +517,65 @@ jobs:
           if [ ! -f mknod /dev/sdb2 c 240 0 ]; then mknod /dev/sdb2 c 240 0; fi
           &&
           sudo touch
-          /opt/standbyReason.txt
-          /opt/tmtryoptout
-          /opt/fwdnldstatus.txt
-          /opt/dcm.properties
-          /etc/device.properties
-          /etc/dcm.properties
-          /etc/authService.conf
-          /version.txt
-          /run/media/sda1/logs/PreviousLogs/logFile.txt
-          /run/media/sda1/logs/test.txt
-          /run/media/sda1/logs/test.png
-          /run/media/sda1/logs/test.docx
-          /run/media/sda2/logs/test.txt
-          /run/media/sda2/logs/test.png
-          /run/media/sda1/Logs/5C3400F15492_Logs_12-05-22-10-41PM.tgz
-          /run/sda1/HSTP11MWR_5.11p5s1_VBN_sdy.bin
-          /run/sda1/UsbTestFWUpdate/HSTP11MWR_3.11p5s1_VBN_sdy.bin
-          /run/sda1/UsbProdFWUpdate/HSTP11MWR_4.11p5s1_VBN_sdy.bin
-          /lib/rdk/getMaintenanceStartTime.sh
-          /tmp/opkg.conf
+          ${JOB_TMP_DIR}/opt/standbyReason.txt
+          ${JOB_TMP_DIR}/opt/tmtryoptout
+          ${JOB_TMP_DIR}/opt/fwdnldstatus.txt
+          ${JOB_TMP_DIR}/opt/dcm.properties
+          ${JOB_TMP_DIR}/etc/device.properties
+          ${JOB_TMP_DIR}/etc/dcm.properties
+          ${JOB_TMP_DIR}/etc/authService.conf
+          ${JOB_TMP_DIR}/version.txt
+          ${JOB_TMP_DIR}/run/media/sda1/logs/PreviousLogs/logFile.txt
+          ${JOB_TMP_DIR}/run/media/sda1/logs/test.txt
+          ${JOB_TMP_DIR}/run/media/sda1/logs/test.png
+          ${JOB_TMP_DIR}/run/media/sda1/logs/test.docx
+          ${JOB_TMP_DIR}/run/media/sda2/logs/test.txt
+          ${JOB_TMP_DIR}/run/media/sda2/logs/test.png
+          ${JOB_TMP_DIR}/run/media/sda1/Logs/5C3400F15492_Logs_12-05-22-10-41PM.tgz
+          ${JOB_TMP_DIR}/run/sda1/HSTP11MWR_5.11p5s1_VBN_sdy.bin
+          ${JOB_TMP_DIR}/run/sda1/UsbTestFWUpdate/HSTP11MWR_3.11p5s1_VBN_sdy.bin
+          ${JOB_TMP_DIR}/run/sda1/UsbProdFWUpdate/HSTP11MWR_4.11p5s1_VBN_sdy.bin
+          ${JOB_TMP_DIR}/lib/rdk/getMaintenanceStartTime.sh
+          ${JOB_TMP_DIR}/tmp/opkg.conf
           /tmp/system_service_temp.conf
           /tmp/secure/persistent/rdkservicestore
-          /tmp/bus/usb/devices/100-123/serial
-          /tmp/bus/usb/devices/101-124/serial
-          /tmp/block/sda/device/vendor
-          /tmp/block/sda/device/model
-          /tmp/block/sdb/device/vendor
-          /tmp/block/sdb/device/model
+          ${JOB_TMP_DIR}/tmp/bus/usb/devices/100-123/serial
+          ${JOB_TMP_DIR}/tmp/bus/usb/devices/101-124/serial
+          ${JOB_TMP_DIR}/tmp/block/sda/device/vendor
+          ${JOB_TMP_DIR}/tmp/block/sda/device/model
+          ${JOB_TMP_DIR}/tmp/block/sdb/device/vendor
+          ${JOB_TMP_DIR}/tmp/block/sdb/device/model
           &&
           sudo chmod -R 777
-          /opt/standbyReason.txt
-          /opt/tmtryoptout
-          /opt/fwdnldstatus.txt
-          /opt/dcm.properties
-          /etc/device.properties
-          /etc/dcm.properties          
-          /etc/authService.conf
-          /version.txt
-          /lib/rdk/getMaintenanceStartTime.sh
-          /tmp/opkg.conf
+          ${JOB_TMP_DIR}/opt/standbyReason.txt
+          ${JOB_TMP_DIR}/opt/tmtryoptout
+          ${JOB_TMP_DIR}/opt/fwdnldstatus.txt
+          ${JOB_TMP_DIR}/opt/dcm.properties
+          ${JOB_TMP_DIR}/etc/device.properties
+          ${JOB_TMP_DIR}/etc/dcm.properties          
+          ${JOB_TMP_DIR}/etc/authService.conf
+          ${JOB_TMP_DIR}/version.txt
+          ${JOB_TMP_DIR}/lib/rdk/getMaintenanceStartTime.sh
+          ${JOB_TMP_DIR}/tmp/opkg.conf
           /tmp/system_service_temp.conf
           /tmp/persistent/rdkservicestore
           /tmp/secure/persistent/rdkservicestore
-          /tmp/bus/usb/devices/100-123/serial
-          /tmp/block/sda/device/vendor
-          /tmp/block/sda/device/model
-          /tmp/bus/usb/devices/101-124/serial
-          /tmp/block/sdb/device/vendor
-          /tmp/block/sdb/device/model
+          ${JOB_TMP_DIR}/tmp/bus/usb/devices/100-123/serial
+          ${JOB_TMP_DIR}/tmp/block/sda/device/vendor
+          ${JOB_TMP_DIR}/tmp/block/sda/device/model
+          ${JOB_TMP_DIR}/tmp/bus/usb/devices/101-124/serial
+          ${JOB_TMP_DIR}/tmp/block/sdb/device/vendor
+          ${JOB_TMP_DIR}/tmp/block/sdb/device/model
           &&
-          cd /dev/disk/by-id/
+          cd ${JOB_TMP_DIR}/dev/disk/by-id/
           &&
-          sudo ln -s ../../sda /dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
+          sudo ln -s ../../sda ${JOB_TMP_DIR}/dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
           &&
-          sudo ln -s ../../sdb /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
+          sudo ln -s ../../sdb ${JOB_TMP_DIR}/dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
           &&
-          ls -l /dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
+          ls -l ${JOB_TMP_DIR}/dev/disk/by-id/usb-Generic_Flash_Disk_B32FD507-0
           &&
-          ls -l /dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
+          ls -l ${JOB_TMP_DIR}/dev/disk/by-id/usb-JetFlash_Transcend_16GB_UEUIRCXT-0
 
       - name: Download pact_verifier_cli
         run: |
@@ -584,6 +584,7 @@ jobs:
 
       - name: Run unit tests without valgrind
         run: >
+          export TEST_ROOT_DIR=${JOB_TMP_DIR}
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           RdkServicesL2Test &&
@@ -593,6 +594,7 @@ jobs:
       - name: Run unit tests with valgrind
         if: ${{ !env.ACT }}
         run: >
+          export TEST_ROOT_DIR=${JOB_TMP_DIR}
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
           valgrind
@@ -646,4 +648,13 @@ jobs:
             rdkL2TestOOPResultsWithoutValgrind.json
             rdkL2TestOOPResultsWithValgrind.json
           if-no-files-found: warn
+      
+      # ISOLATION FIX: Cleanup isolated workspace
+      - name: Cleanup isolated workspace
+        if: always()
+        run: |
+          if [ -n "${JOB_TMP_DIR}" ] && [ -d "${JOB_TMP_DIR}" ]; then
+            rm -rf "${JOB_TMP_DIR}"
+            echo "Cleaned up isolated workspace: ${JOB_TMP_DIR}"
+          fi
 
