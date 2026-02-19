@@ -1,5 +1,4 @@
 name: L2-tests-OOP
-
 on:
   workflow_call:
     inputs:
