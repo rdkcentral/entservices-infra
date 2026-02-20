@@ -34,10 +34,6 @@ if(PLUGIN_APPMANAGER)
     set(SRC_FILES ${SRC_FILES} tests/AppManager_L2Test.cpp)
 endif()
 
-if(PLUGIN_USERSETTINGS)
-    set(SRC_FILES ${SRC_FILES} tests/UserSettings_L2Test.cpp)
-endif()
-
 if(PLUGIN_STORAGE_MANAGER)
     set(SRC_FILES ${SRC_FILES} tests/StorageManager_L2Test.cpp)
 endif()

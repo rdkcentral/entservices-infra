@@ -55,10 +55,6 @@ if(DISABLE_SECURITY_TOKEN)
     add_definitions(-DDISABLE_SECURITY_TOKEN)
 endif()
 
-if(PLUGIN_USERSETTINGS)
-    add_subdirectory(UserSettings)
-endif()
-
 if(PLUGIN_OCICONTAINER)
     add_subdirectory(OCIContainer)
 endif()
