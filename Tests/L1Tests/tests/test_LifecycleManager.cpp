@@ -229,8 +229,8 @@ protected:
         client = "test.client";
         minutes = 24;
         
-        runtimeConfigObject = {
-            true,true,true,1024,512,"test.env.variables",1,1,1024,true,"test.dial.id","test.command","test.app.type","test.app.path","test.runtime.path","test.logfile.path",1024,"test.log.levels",true,"test.fkps.files","test.firebolt.version",true,"test.unpacked.path"
+        runtimeConfigObject = Exchange::RuntimeConfig{
+            true,true,true,1024,512,"test.env.variables",1,1,1024,"true","test.dial.id","test.command","test.app.type","test.app.path","test.runtime.path","test.logfile.path",1024,"test.log.levels","true","test.fkps.files","test.firebolt.version","true","test.unpacked.path"
         };
 
         // Initialize event parameters and event data
