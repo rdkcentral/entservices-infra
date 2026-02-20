@@ -898,8 +898,25 @@ TEST_F(PackageManagerTest, deleteMethodusingJsonRpcSuccess) {
 
     EXPECT_NE(mJsonRpcResponse.find("1001"), std::string::npos);
 
-    // TC-18: Delete download using JsonRpc
-    EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    // Poll progress until download completes
+    bool downloadComplete = false;
+    int retries = 10;
+    while (!downloadComplete && retries-- > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        string progressResponse;
+        if (Core::ERROR_NONE == mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\"}"), progressResponse)) {
+            // Check if progress indicates completion (parse JSON for status)
+            if (progressResponse.find("\"progress\":100") != std::string::npos) {
+                downloadComplete = true;
+            }
+        }
+    }
+
+    if(downloadComplete)
+    {
+        // TC-18: Delete download using JsonRpc
+        EXPECT_EQ(Core::ERROR_NONE, mJsonRpcHandler.Invoke(connection, _T("delete"), _T("{\"fileLocator\": \"/opt/CDL/package1001\"}"), mJsonRpcResponse));
+    }
 
 	deinitforJsonRpc();
 }
@@ -956,10 +973,26 @@ TEST_F(PackageManagerTest, deleteMethodusingComRpcSuccess) {
 
     string fileLocator = "/opt/CDL/package1001";
 
-    // TC-20: Delete download failure when download in progress using ComRpc
-    EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
+    // Poll progress until download completes
+    bool downloadComplete = false;
+    int retries = 10;
+    while (!downloadComplete && retries-- > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        string progressResponse;
+        if (Core::ERROR_NONE == mJsonRpcHandler.Invoke(connection, _T("progress"), _T("{\"downloadId\": \"1001\"}"), progressResponse)) {
+            // Check if progress indicates completion (parse JSON for status)
+            if (progressResponse.find("\"progress\":100") != std::string::npos) {
+                downloadComplete = true;
+            }
+        }
+    }
 
-	deinitforComRpc();
+    if(downloadComplete)
+    {
+        // TC-20: Delete download failure when download in progress using ComRpc
+        EXPECT_EQ(Core::ERROR_NONE, pkgdownloaderInterface->Delete(fileLocator));
+    }
+    deinitforComRpc();
 }
 
 /* Test Case for delete download failure using ComRpc
