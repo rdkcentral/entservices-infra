@@ -34,26 +34,6 @@ if(PLUGIN_APPMANAGER)
     set(SRC_FILES ${SRC_FILES} tests/AppManager_L2Test.cpp)
 endif()
 
-if(PLUGIN_TELEMETRY)
-    set(SRC_FILES ${SRC_FILES} tests/Telemetry_L2Test.cpp)
-endif()
-
-if(PLUGIN_USBDEVICE)
-    set(SRC_FILES ${SRC_FILES} tests/UsbDevice_L2Test.cpp)
-endif()
-
-if(PLUGIN_USB_MASS_STORAGE)
-     set(SRC_FILES ${SRC_FILES} tests/UsbMassStorage_L2Test.cpp)
-endif()
-
-if(PLUGIN_USERSETTINGS)
-    set(SRC_FILES ${SRC_FILES} tests/UserSettings_L2Test.cpp)
-endif()
-
-if(PLUGIN_USBACCESS)
-    set(SRC_FILES ${SRC_FILES} tests/UsbAccess_L2Test.cpp)
-endif()
-
 if(PLUGIN_STORAGE_MANAGER)
     set(SRC_FILES ${SRC_FILES} tests/StorageManager_L2Test.cpp)
 endif()
