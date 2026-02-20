@@ -33,8 +33,6 @@ if(COMCAST_CONFIG)
     include(services.cmake)
 endif()
 
-option(PLUGIN_OCICONTAINER "Include OCIContainer plugin" OFF)
-
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 
@@ -55,28 +53,12 @@ if(DISABLE_SECURITY_TOKEN)
     add_definitions(-DDISABLE_SECURITY_TOKEN)
 endif()
 
-if(PLUGIN_OCICONTAINER)
-    add_subdirectory(OCIContainer)
-endif()
-
-if(PLUGIN_PERSISTENTSTORE)
-    add_subdirectory(PersistentStore)
-endif()
-
-if(PLUGIN_MONITOR)
-    add_subdirectory(Monitor)
-endif()
-
 if(PLUGIN_RDKSHELL)
     add_subdirectory(RDKShell)
 endif()
 
 if(PLUGIN_RUSTADAPTER)
     add_subdirectory(RustAdapter)
-endif()
-
-if(PLUGIN_MESSAGECONTROL)
-    add_subdirectory(MessageControl)
 endif()
 
 if (PLUGIN_RESOURCEMANAGER)
@@ -89,14 +71,6 @@ endif()
 
 if(PLUGIN_RDK_WINDOW_MANAGER)
     add_subdirectory(RDKWindowManager)
-endif()
-
-if(PLUGIN_CLOUDSTORE)
-    add_subdirectory(CloudStore)
-endif()
-
-if(PLUGIN_SHAREDSTORAGE)
-    add_subdirectory(SharedStorage)
 endif()
 
 if(PLUGIN_WEBBRIDGE)
@@ -141,10 +115,6 @@ endif()
 
 if(PLUGIN_PREINSTALL_MANAGER)
     add_subdirectory(PreinstallManager)
-endif()
-
-if(PLUGIN_MIGRATION)
-    add_subdirectory(Migration)
 endif()
 
 if(PLUGIN_APPGATEWAY)
