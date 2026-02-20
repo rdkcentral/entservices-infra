@@ -64,7 +64,10 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(TelemetryImplementation, 1, 0);
     TelemetryImplementation* TelemetryImplementation::_instance = nullptr;
-    
+#if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
+        static void _powerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+#endif /* defined(USE_IARMBUS) || defined(USE_IARM_BUS) */
+
     TelemetryImplementation::TelemetryImplementation()
     : _adminLock()
     , _service(nullptr)
@@ -83,6 +86,7 @@ namespace Plugin {
 
             TelemetryImplementation::_instance = nullptr;
             _service = nullptr;
+
 #ifdef HAS_RBUS
             if (RBUS_ERROR_SUCCESS == rbusHandleStatus) {
                 rbus_close(rbusHandle);
@@ -95,6 +99,9 @@ namespace Plugin {
                  _userSettingsPlugin = nullptr;
             }
 #endif
+#if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
+            DeinitializeIARM();
+#endif /* defined(USE_IARMBUS) || defined(USE_IARM_BUS) */
     }
 
     Core::hresult TelemetryImplementation::Register(Exchange::ITelemetry::INotification *notification)
@@ -326,13 +333,14 @@ namespace Plugin {
         ASSERT(service != nullptr);
         _service = service;
         _service->AddRef();
-        InitializePowerManager();
 
 #ifdef HAS_RBUS        
         getPrivacyMode();
 #endif        
         setRFCReportProfiles();
-        
+#if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
+        InitializeIARM(); 
+#endif /* defined(USE_IARMBUS) || defined(USE_IARM_BUS) */        
         return result;
     }
     
@@ -340,7 +348,7 @@ namespace Plugin {
     
  
 #if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
-        void Telemetry::InitializeIARM()
+        void TelemetryImplementation::InitializeIARM()
         {
             if (Utils::IARM::init())
             {
@@ -349,7 +357,7 @@ namespace Plugin {
             }
         }
 
-        void Telemetry::DeinitializeIARM()
+        void TelemetryImplementation::DeinitializeIARM()
         {
             if (Utils::IARM::isConnected())
             {
@@ -363,9 +371,9 @@ namespace Plugin {
         {
             if (IARM_BUS_PWRMGR_EVENT_MODECHANGED == eventId)
             {
-                if (nullptr == Telemetry::_instance)
+                if (nullptr == TelemetryImplementation::_instance)
                 {
-                    LOGERR("Telemetry::_instance is NULL.\n");
+                    LOGERR("TelemetryImplementation::_instance is NULL.\n");
                     return;
                 }
 

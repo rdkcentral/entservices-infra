@@ -40,11 +40,6 @@ namespace Plugin {
     {
         private:
 
-
-            private:
-                TelemetryImplementation& _parent;
-            };
-
 #ifdef HAS_RBUS
             class UserSettingsNotification : public Exchange::IUserSettings::INotification {
             private:
@@ -72,7 +67,7 @@ namespace Plugin {
                 TelemetryImplementation& _parent;
             };
 #endif
-if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
+#if defined(USE_IARMBUS) || defined(USE_IARM_BUS)
             void InitializeIARM();
             void DeinitializeIARM();
 #endif /* defined(USE_IARMBUS) || defined(USE_IARM_BUS) */
