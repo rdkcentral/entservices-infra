@@ -59,20 +59,12 @@ if(PLUGIN_USERSETTINGS)
     add_subdirectory(UserSettings)
 endif()
 
-if(PLUGIN_USB_MASS_STORAGE)
-    add_subdirectory(USBMassStorage)
-endif()
-
 if(PLUGIN_OCICONTAINER)
     add_subdirectory(OCIContainer)
 endif()
 
 if(PLUGIN_PERSISTENTSTORE)
     add_subdirectory(PersistentStore)
-endif()
-
-if(PLUGIN_USBDEVICE)
-    add_subdirectory(USBDevice)
 endif()
 
 if(PLUGIN_MONITOR)
