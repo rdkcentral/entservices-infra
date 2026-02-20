@@ -1201,7 +1201,6 @@ TEST_F(AppManagerTest, SetAndGetAppPropertyComRpcConnectionSuccessCase)
             ASSERT_TRUE(mAppmanagerPlugin!= nullptr);
             if (mAppmanagerPlugin)
             {
-                mAppmanagerPlugin->AddRef();
 
                 string appId = "com.example.myapp";
                 string key = "delay";
@@ -1271,7 +1270,6 @@ TEST_F(AppManagerTest, PreLoadLaunchCloseAndTerminateAppComRpcConnectionSuccessC
             ASSERT_TRUE(mAppmanagerPlugin!= nullptr);
             if (mAppmanagerPlugin)
             {
-                mAppmanagerPlugin->AddRef();
 
                 string appId = "com.example.myapp";
                 string launchArgs = "{\"key1\":\"38\"}";
@@ -1378,7 +1376,6 @@ TEST_F(AppManagerTest, PreLoadLaunchCloseAppComRpcConnectionSuccessCase)
             ASSERT_TRUE(mAppmanagerPlugin!= nullptr);
             if (mAppmanagerPlugin)
             {
-                mAppmanagerPlugin->AddRef();
 
                 string appId = "com.example.myapp";
                 string launchArgs = "{\"key1\":\"38\"}";
