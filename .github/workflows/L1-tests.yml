@@ -92,7 +92,12 @@ jobs:
         run: |
            sudo apt update
            sudo apt install -y libunwind-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-
+      
+      - name: Install yaml-cpp
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y libyaml-cpp-dev
+    
       - name: Build trower-base64
         run: |
             if [ ! -d "trower-base64" ]; then
