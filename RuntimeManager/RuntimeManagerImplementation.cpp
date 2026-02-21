@@ -39,7 +39,7 @@ namespace WPEFramework
         , mUserIdManager(nullptr)
         , mRuntimeAppPortal("")
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-        , mTelemetryMetricsObject(nullptr)
+        , mTelemetryPluginObject(nullptr)
 #endif
         {
             LOGINFO("Create RuntimeManagerImplementation Instance");
@@ -249,13 +249,13 @@ namespace WPEFramework
                 mCurrentservice->AddRef();
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-                if (nullptr == (mTelemetryMetricsObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetryMetrics>("org.rdk.TelemetryMetrics")))
+                if (nullptr == (mTelemetryPluginObject = mCurrentservice->QueryInterfaceByCallsign<WPEFramework::Exchange::ITelemetry>("org.rdk.Telemetry")))
                 {
-                    LOGERR("mTelemetryMetricsObject is null \n");
+                    LOGERR("mTelemetryPluginObject is null \n");
                 }
                 else
                 {
-                    LOGINFO("created TelemetryMetrics Object");
+                    LOGINFO("created Telemetry Object");
                 }
 #endif
                 /* Create Storage Manager Plugin Object */
@@ -1250,6 +1250,7 @@ err_ret:
 
             JsonObject jsonParam;
             std::string telemetryMetrics = "";
+            std::string appMarker = "";
 
             int duration = static_cast<int>(currentTime - requestTime);
             TelemetryMarker telemetryMarker = getTelemetryMarker(marker);
@@ -1280,12 +1281,14 @@ err_ret:
                     return;
             }
             jsonParam["appId"] = appId;
+            jsonParam["markerName"] = marker;
             jsonParam.ToString(telemetryMetrics);
 
-            if(nullptr != mTelemetryMetricsObject)
+            if(nullptr != mTelemetryPluginObject)
             {
-                LOGINFO("Record appId %s marker %s start time %d",appId.c_str(), marker.c_str(), duration);
-                mTelemetryMetricsObject->Record(appId, telemetryMetrics, marker);
+                appMarker = appId + ":" + marker;
+                LOGINFO("Record appMarker %s start time %d",appMarker.c_str(), duration);
+                mTelemetryPluginObject->Record(appMarker, telemetryMetrics);
             }
         }
 #endif
