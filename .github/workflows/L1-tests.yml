@@ -703,17 +703,16 @@ jobs:
           &&
           lcov -c
           -o coverage.info
-          -d build/entservices-infra
+          -d build/entservices-infra/UserSettings
           &&
           lcov
           -r coverage.info
           '/usr/include/*'
           '*/build/entservices-infra/_deps/*'
           '*/install/usr/include/*'
-          '*/Tests/headers/*'
-          '*/Tests/mocks/*'
-          '*/Tests/L1Tests/tests/*'
+          '*/Tests/*'
           '*/Thunder/*'
+          '*/helpers/*'
           -o filtered_coverage.info
           &&
           genhtml
