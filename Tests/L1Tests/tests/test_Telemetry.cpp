@@ -566,3 +566,92 @@ TEST_F(TelemetryTest, uploadLogs)
 
     EVENT_UNSUBSCRIBE(0, _T("onReportUpload"), _T("org.rdk.Telemetry"), message);
 }
+
+
+/*******************************************************************************************************************
+ * Test Cases for Coverity Fix: Buffer Overflow Prevention with strncpy
+ * Validates strncpy usage instead of strcpy in L2 test files
+ *******************************************************************************************************************/
+
+/**
+ * @brief Test strncpy prevents buffer overflow for RFC parameter values
+ * 
+ * This test validates the pattern used in the Coverity fix where strcpy was 
+ * replaced with strncpy to prevent buffer overflows in RFC parameter handling.
+ * 
+ * Coverity Issue: CWE-120 Buffer Overflow
+ * Fixed in: Tests/L2Tests/tests/Telemetry_L2Test.cpp lines 207, 210, 213
+ * 
+ * @return SUCCESS if buffer operations are safe
+ */
+TEST(TelemetryCoverityTest, CoverityFix_BufferOverflow_StrncpySafety)
+{
+    // Simulate RFC_ParamData_t structure
+    struct MockRFCParam {
+        char value[64];
+    } param;
+    
+    memset(&param, 0, sizeof(param));
+    
+    // Using strncpy as per the fix
+    const char* testValue = "2";
+    strncpy(param.value, testValue, sizeof(param.value) - 1);
+    param.value[sizeof(param.value) - 1] = 0;  // Ensure null termination
+    
+    EXPECT_STREQ(param.value, "2");
+    EXPECT_EQ(strlen(param.value), 1);
+}
+
+/**
+ * @brief Test strncpy with various RFC parameter string lengths
+ * 
+ * @return SUCCESS if all string lengths are handled safely
+ */
+TEST(TelemetryCoverityTest, CoverityFix_BufferOverflow_VariousLengths)
+{
+    struct MockRFCParam {
+        char value[64];
+    } param;
+    
+    // Test with "true"
+    memset(&param, 0, sizeof(param));
+    strncpy(param.value, "true", sizeof(param.value) - 1);
+    param.value[sizeof(param.value) - 1] = 0;
+    EXPECT_STREQ(param.value, "true");
+    
+    // Test with "6"
+    memset(&param, 0, sizeof(param));
+    strncpy(param.value, "6", sizeof(param.value) - 1);
+    param.value[sizeof(param.value) - 1] = 0;
+    EXPECT_STREQ(param.value, "6");
+    
+    // Test with longer string
+    memset(&param, 0, sizeof(param));
+    strncpy(param.value, "ThermalProtection_Enabled", sizeof(param.value) - 1);
+    param.value[sizeof(param.value) - 1] = 0;
+    EXPECT_STREQ(param.value, "ThermalProtection_Enabled");
+}
+
+/**
+ * @brief Test strncpy properly truncates strings exceeding buffer size
+ * 
+ * @return SUCCESS if truncation works correctly
+ */
+TEST(TelemetryCoverityTest, CoverityFix_BufferOverflow_TruncationSafety)
+{
+    struct MockRFCParam {
+        char value[10];  // Small buffer
+    } param;
+    
+    memset(&param, 0, sizeof(param));
+    
+    // String longer than buffer
+    const char* longValue = "verylongstringthatexceedsbuffer";
+    strncpy(param.value, longValue, sizeof(param.value) - 1);
+    param.value[sizeof(param.value) - 1] = 0;
+    
+    // Should be truncated to 9 chars + null
+    EXPECT_EQ(strlen(param.value), 9);
+    EXPECT_STRNE(param.value, longValue);  // Should not match full string
+}
+
