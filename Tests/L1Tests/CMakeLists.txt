@@ -111,11 +111,6 @@ set (USB_MASS_STORAGE_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/USBMassStorag
 set (USB_MASS_STORAGE_LIBS ${NAMESPACE}USBMassStorage ${NAMESPACE}USBMassStorageImplementation)
 add_plugin_test_ex(PLUGIN_USB_MASS_STORAGE tests/test_USBMassStorage.cpp "${USB_MASS_STORAGE_INC}" "${USB_MASS_STORAGE_LIBS}")
 
-# PLUGIN_TELEMETRY
-set (TELEMETRY_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/Telemetry ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-set (TELEMETRY_LIBS ${NAMESPACE}Telemetry ${NAMESPACE}TelemetryImplementation)
-add_plugin_test_ex(PLUGIN_TELEMETRY tests/test_Telemetry.cpp "${TELEMETRY_INC}" "${TELEMETRY_LIBS}")
-
 # PLUGIN_APPMANAGER
 set (APPMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/AppManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (APPMANAGER_LIBS ${NAMESPACE}AppManager ${NAMESPACE}AppManagerImplementation)
