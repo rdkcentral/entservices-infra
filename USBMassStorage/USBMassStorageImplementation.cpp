@@ -179,6 +179,7 @@ namespace Plugin {
 
     bool USBMassStorageImplementation::DeviceMount(const USBStorageDeviceInfo &storageDeviceInfo)
     {
+        printf("3.DeviceMount:Getting Mount Points for Device: %s\n", storageDeviceInfo.deviceName.c_str());
         ifstream partitionsFile("/proc/partitions");
         std::vector<std::string> partitions;
         USBStorageMountFlags mountFlags = USBStorageMountFlags::READ_WRITE;
@@ -201,6 +202,7 @@ namespace Plugin {
 
         while (getline(partitionsFile, line))
         {
+            printf("line: %s\n", line.c_str()); 
             if (line.find(partitionPath) != std::string::npos && line != partitionPath)
             {
                 string partition = "/dev/" + line.substr(line.find_last_of(' ') + 1); 
@@ -278,7 +280,7 @@ namespace Plugin {
     void USBMassStorageImplementation::DispatchMountEvent(const USBStorageDeviceInfo &storageDeviceInfo)
     {
         Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator* mountPoints = nullptr;
-
+        printf("DispatchMountEvent for Device: %s\n", storageDeviceInfo.deviceName.c_str());
         if ( true == DeviceMount(storageDeviceInfo))
         {
             if (usbStorageMountInfo[storageDeviceInfo.deviceName].empty())
@@ -287,6 +289,7 @@ namespace Plugin {
             }
             else
             {
+                printf("Mount info list updated for Device: %s\n", storageDeviceInfo.deviceName.c_str());
                 usbStorageDeviceInfo.push_back(storageDeviceInfo);
                 /* mount info list updated, and Iterator create to send to clients */
                 mountPoints = (Core::Service<RPC::IteratorType<Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator>> \
@@ -297,6 +300,7 @@ namespace Plugin {
             if (mountPoints != nullptr)
             {
                 std::list<Exchange::IUSBMassStorage::INotification*>::const_iterator index(_usbStorageNotification.begin());
+                printf("Notifying mount event for Device: %s\n", storageDeviceInfo.deviceName.c_str());
                 while (index != _usbStorageNotification.end())
                 {
                     mountPoints->Reset(0);
@@ -507,16 +511,20 @@ namespace Plugin {
         }
         else
         {
+            printf("1.GetMountPoints:Getting Mount Points for Device: %s\n", deviceName.c_str());
             auto it = USBMassStorageImplementation::_instance->usbStorageMountInfo.find(deviceName);
+            printf("Mount info list size: %zu\n", USBMassStorageImplementation::_instance->usbStorageMountInfo.size());
             if (it == USBMassStorageImplementation::_instance->usbStorageMountInfo.end())
             {
                 auto itr = std::find_if(usbStorageDeviceInfo.begin(), usbStorageDeviceInfo.end(), [deviceName](const USBStorageDeviceInfo& item){
                             return item.deviceName == deviceName;
+                printf("2.GetMountPoints:Device found in storage info list: %s\n", deviceName.c_str());
                 });
 
                 if (itr != usbStorageDeviceInfo.end())
                 {
                     USBStorageDeviceInfo storageDeviceInfo = *itr;
+                    printf("Device path[%s] Name[%s]\n",storageDeviceInfo.devicePath.c_str(),storageDeviceInfo.deviceName.c_str());
                     if ( nullptr == USBMassStorageImplementation::_instance )
                     {
                         LOGERR("instance is null");

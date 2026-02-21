@@ -188,6 +188,7 @@ void USBDeviceImplementation::libUSBEventsHandlingThread(void)
 
 int USBDeviceImplementation::libUSBHotPlugCallbackDeviceAttached(libusb_context *ctx, libusb_device *dev, libusb_hotplug_event event, void *user_data)
 {
+      printf("CALLBACK DEVICE ATTACHED\n");
       Exchange::IUSBDevice::USBDevice usbDevice = {0};
 
       (void)ctx;
@@ -912,13 +913,14 @@ Core::hresult USBDeviceImplementation::Unregister(Exchange::IUSBDevice::INotific
 
 void USBDeviceImplementation::dispatchEvent(Event event, Exchange::IUSBDevice::USBDevice usbDevice)
 {
+    printf("DISPATCH EVENT");
     Core::IWorkerPool::Instance().Submit(Job::Create(this, event, usbDevice));
 }
 
 void USBDeviceImplementation::Dispatch(Event event, const Exchange::IUSBDevice::USBDevice usbDevice)
 {
      _adminLock.Lock();
-
+     printf("DISPATCH");
      std::list<Exchange::IUSBDevice::INotification*>::const_iterator index(_usbDeviceNotification.begin());
 
      switch(event) {
