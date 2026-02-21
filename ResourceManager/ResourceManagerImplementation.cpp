@@ -26,6 +26,7 @@
 #include "ResourceManagerImplementation.h"
 #include "UtilsgetRFCConfig.h"
 #include "UtilsLogging.h"
+#include "UtilsJsonRpc.h"
 
 static std::string sThunderSecurityToken;
 
@@ -40,15 +41,7 @@ namespace WPEFramework {
 
         SERVICE_REGISTRATION(ResourceManagerImplementation, 1, 0, 0);
 
-        ResourceManagerImplementation* ResourceManagerImplementation::_instance = nullptr;
-
-    /* static */ ResourceManagerImplementation* ResourceManagerImplementation::instance(ResourceManagerImplementation* resourceManagerImpl)
-    {
-        if (resourceManagerImpl != nullptr) {
-            _instance = resourceManagerImpl;
-        }
-        return _instance;
-    }
+    ResourceManagerImplementation* ResourceManagerImplementation::_instance = nullptr;
 
     ResourceManagerImplementation::ResourceManagerImplementation()
         : _adminLock()
@@ -98,46 +91,12 @@ namespace WPEFramework {
         }
 #endif
 
-        if (_service != nullptr) {
-            _service->Release();
-            _service = nullptr;
-        }
-
         if (_instance == this) {
             _instance = nullptr;
         }
     }
 
-    void ResourceManagerImplementation::Configure(PluginHost::IShell* service)
-    {
-        LOGINFO("ResourceManagerImplementation::Configure");
-
-        if (service != nullptr && _service == nullptr) {
-            _service = service;
-            _service->AddRef();
-
-            // Acquire security token for inter-plugin communication
-            auto security = _service->QueryInterfaceByCallsign<PluginHost::IAuthenticate>("SecurityAgent");
-            if (security != nullptr) {
-                string payload = "http://localhost";
-                string token;
-                if (security->CreateToken(
-                        static_cast<uint16_t>(payload.length()),
-                        reinterpret_cast<const uint8_t*>(payload.c_str()),
-                        token) == Core::ERROR_NONE) {
-                    sThunderSecurityToken = token;
-                    std::cout << "ResourceManagerImplementation got security token" << std::endl;
-                } else {
-                    std::cout << "ResourceManagerImplementation failed to get security token" << std::endl;
-                }
-                security->Release();
-            } else {
-                std::cout << "ResourceManagerImplementation: No security agent" << std::endl;
-            }
-        }
-    }
-
-    /* virtual */ Core::hresult ResourceManagerImplementation::SetAVBlocked(const string& appId, const bool blocked, Exchange::IResourceManager::SetAVBlockedResult& result) /* override */
+    /* virtual */ Core::hresult ResourceManagerImplementation::SetAVBlocked(const string& appId, const bool blocked, Exchange::IResourceManager::Success& result) /* override */
     {
         LOGINFO("SetAVBlocked: appId=%s, blocked=%s", appId.c_str(), blocked ? "true" : "false");
         
@@ -404,7 +363,7 @@ namespace WPEFramework {
       }
     };
 
-    /* virtual */ Core::hresult ResourceManagerImplementation::ReserveTTSResource(const string& appId, Exchange::IResourceManager::TTSResult& ttsResult) /* override */
+    /* virtual */ Core::hresult ResourceManagerImplementation::ReserveTTSResource(const string& appId, Exchange::IResourceManager::Success& result) /* override */
     {
         LOGINFO("ReserveTTSResource: appId=%s", appId.c_str());
         
@@ -478,11 +437,11 @@ namespace WPEFramework {
 
         _adminLock.Unlock();
 
-        ttsResult.success = success;
+        result.success = success;
         return returnCode;
     }
 
-    /* virtual */ Core::hresult ResourceManagerImplementation::ReserveTTSResourceForApps(IStringIterator* const appids, Exchange::IResourceManager::TTSResult& ttsResult) /* override */
+    /* virtual */ Core::hresult ResourceManagerImplementation::ReserveTTSResourceForApps(IStringIterator* const appids, Exchange::IResourceManager::Success& result) /* override */
     {
         LOGINFO("ReserveTTSResourceForApps");
         
@@ -492,7 +451,7 @@ namespace WPEFramework {
         if (appids == nullptr) {
             LOGERR("AppIds iterator is null");
             success = false;
-            ttsResult.success = success;
+            result.success = success;
             return Core::ERROR_NONE; 
         }
 
@@ -576,7 +535,7 @@ namespace WPEFramework {
 
         _adminLock.Unlock();
 
-        ttsResult.success = success;
+        result.success = success;
         return returnCode;
     }
 
