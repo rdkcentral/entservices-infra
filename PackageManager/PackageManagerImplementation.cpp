@@ -18,6 +18,8 @@
 **/
 
 #include <chrono>
+#include <atomic>
+#include <algorithm>
 #include <inttypes.h> // Required for PRIu64
 
 #include "PackageManagerImplementation.h"
@@ -962,7 +964,8 @@ namespace Plugin {
     // Internal functions
     void PackageManagerImplementation::InitializeState()
     {
-        LOGDBG("entry");
+        LOGINFO("PackageManager initialization starting with parallel processing optimization");
+        auto totalStartTime = std::chrono::steady_clock::now();
         #ifndef UNIT_TEST
         PluginHost::ISubSystem* subSystem = mCurrentservice->SubSystems();
         if (subSystem != nullptr) {
@@ -977,35 +980,112 @@ namespace Plugin {
         #elif defined(UNIT_TEST)
         packageImpl = packagemanager::IPackageImplDummy::instance();
         #endif
+         LOGINFO("Starting package loading - this is the main bottleneck...");
+        auto loadStartTime = std::chrono::steady_clock::now();
         
+        // Create progress monitoring thread
+        std::atomic<bool> loadComplete(false);
+        std::thread progressThread([&loadComplete, loadStartTime]() {
+            while (!loadComplete.load()) {
+                std::this_thread::sleep_for(std::chrono::seconds(10));
+                if (!loadComplete.load()) {
+                    auto now = std::chrono::steady_clock::now();
+                    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - loadStartTime).count();
+                    LOGINFO("Package loading still in progress... (%lld seconds elapsed)", static_cast<long long>(elapsed));
+                }
+            }
+        });
         packagemanager::ConfigMetadataArray aConfigMetadata;
         packagemanager::Result pmResult = packageImpl->Initialize(configStr, aConfigMetadata);
+        loadComplete.store(true);
+        if (progressThread.joinable()) {
+            progressThread.join();
+        }
+        
+        auto loadEndTime = std::chrono::steady_clock::now();
+        auto loadDuration = std::chrono::duration_cast<std::chrono::milliseconds>(loadEndTime - loadStartTime).count();
+        
+        LOGINFO("Package loading complete: %zu packages loaded in %lld ms (%.2f seconds)", 
+        aConfigMetadata.size(), static_cast<long long>(loadDuration), loadDuration / 1000.0);
         LOGDBG("aConfigMetadata.count:%zu pmResult=%d", aConfigMetadata.size(), pmResult);
-        std::lock_guard<std::recursive_mutex> lock(mtxState);
-        for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
-            StateKey key = it->first;
-            State state(it->second);
-            state.installState = InstallState::INSTALLED;
-            mState.insert( { key, state } );
+        // Parallel processing of package state insertion
+        auto processStartTime = std::chrono::steady_clock::now();
+        const size_t totalPackages = aConfigMetadata.size();
+        const size_t numThreads = std::min<size_t>(4, std::max<size_t>(1, totalPackages / 16));
+        
+        LOGINFO("Processing %zu packages using %zu parallel threads", totalPackages, numThreads);
+        
+        if (numThreads > 1 && totalPackages > 0) {
+            // Parallel processing with multiple threads
+            std::vector<std::future<std::map<StateKey, State>>> futures;
+            const size_t chunkSize = (totalPackages + numThreads - 1) / numThreads;
+            
+            for (size_t threadIdx = 0; threadIdx < numThreads; ++threadIdx) {
+                size_t startIdx = threadIdx * chunkSize;
+                size_t endIdx = std::min(startIdx + chunkSize, totalPackages);
+                
+                if (startIdx >= totalPackages) break;
+                
+                LOGDBG("Thread %zu: processing packages %zu to %zu", threadIdx, startIdx, endIdx - 1);
+                
+                futures.push_back(std::async(std::launch::async, [startIdx, endIdx, &aConfigMetadata]() {
+                    std::map<StateKey, State> localState;
+                    auto it = aConfigMetadata.begin();
+                    std::advance(it, startIdx);
+
+                    for (size_t i = startIdx; i < endIdx && it != aConfigMetadata.end(); ++i, ++it) {
+                        StateKey key = it->first;
+                        State state(it->second);
+                        state.installState = InstallState::INSTALLED;
+                        localState.insert({key, state});
+                    }
+                    return localState;
+                }));
+            }
+            
+            // Collect results from all threads
+            std::lock_guard<std::recursive_mutex> lock(mtxState);
+            for (size_t i = 0; i < futures.size(); ++i) {
+                auto localState = futures[i].get();
+                mState.insert(localState.begin(), localState.end());
+                LOGDBG("Merged results from thread %zu (%zu packages)", i, localState.size());
+            }
+            
+            auto processEndTime = std::chrono::steady_clock::now();
+            auto processDuration = std::chrono::duration_cast<std::chrono::milliseconds>(processEndTime - processStartTime).count();
+            LOGINFO("Parallel processing complete in %lld ms", static_cast<long long>(processDuration));
+        } else {
+            // Sequential fallback
+            LOGINFO("Using sequential processing (package count: %zu)", totalPackages);
+            std::lock_guard<std::recursive_mutex> lock(mtxState);
+            for (auto it = aConfigMetadata.begin(); it != aConfigMetadata.end(); ++it ) {
+                StateKey key = it->first;
+                State state(it->second);
+                state.installState = InstallState::INSTALLED;
+                mState.insert( { key, state } );
+            }
         }
         #endif
-    
         #ifndef UNIT_TEST
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::INSTALLATION, nullptr);
         }
         #endif
         cacheInitialized = true;
-         const std::string markerFile = PACKAGE_MANAGER_MARKER_FILE;
-            std::ofstream file(markerFile);
-            if (file.is_open()) {
-               file << "PackageManager initialized successfully\n";
-               file.close();
-               LOGINFO("Marker file created: %s", markerFile.c_str());
-            } else {
-               LOGERR("Failed to create marker file: %s", markerFile.c_str());
-            }
-        LOGDBG("exit");
+        const std::string markerFile = PACKAGE_MANAGER_MARKER_FILE;
+        std::ofstream file(markerFile);
+        if (file.is_open()) {
+            file << "PackageManager initialized successfully\n";
+            file.close();
+            LOGINFO("Marker file created: %s", markerFile.c_str());
+        } else {
+            LOGERR("Failed to create marker file: %s", markerFile.c_str());
+        }
+        
+        auto totalEndTime = std::chrono::steady_clock::now();
+        auto totalDuration = std::chrono::duration_cast<std::chrono::milliseconds>(totalEndTime - totalStartTime).count();
+        LOGINFO("Total initialization time: %lld ms / %.2f seconds", static_cast<long long>(totalDuration), totalDuration / 1000.0);
+        LOGINFO("PackageManager initialization complete");
     }
 
     void PackageManagerImplementation::downloader(int n)
