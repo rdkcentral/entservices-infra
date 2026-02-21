@@ -140,7 +140,16 @@ jobs:
           repository: rdkcentral/entservices-infra
           path: entservices-infra
           ref: develop
-
+          
+      # Rialto checkout 
+      - name: Checkout rialto
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/RuntimeManager/rialto
+          git clone https://github.com/rdkcentral/rialto.git
+         # cp rialto/serverManager/public/include/*  $GITHUB_WORKSPACE/RuntimeManager/rialto/
+          ls $GITHUB_WORKSPACE/RuntimeManager/rialto/
+          echo work space dir $GITHUB_WORKSPACE
+          
       - name: Checkout googletest
         uses: actions/checkout@v3
         with:
@@ -260,6 +269,7 @@ jobs:
           headers/Dobby
           headers/Dobby/Public/Dobby
           headers/Dobby/IpcService
+          headers/rialto
           &&
           cd headers
           &&
@@ -318,8 +328,9 @@ jobs:
           Dobby/DobbyProxy.h
           Dobby/Public/Dobby/IDobbyProxy.h
           Dobby/IpcService/IpcFactory.h
+          rialto/ServerManagerServiceFactory.h
           &&
-          cp -r /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h /usr/include/libdrm/drm.h /usr/include/libdrm/drm_mode.h /usr/include/xf86drm.h .
+          cp -r  /usr/include/gstreamer-1.0/gst /usr/include/glib-2.0/* /usr/lib/x86_64-linux-gnu/glib-2.0/include/* /usr/local/include/trower-base64/base64.h /usr/include/libdrm/drm.h /usr/include/libdrm/drm_mode.h /usr/include/xf86drm.h .
 
       - name: Set clang toolchain
         if: ${{ matrix.compiler == 'clang' }}
