@@ -46,10 +46,6 @@ if(PLUGIN_USB_MASS_STORAGE)
      set(SRC_FILES ${SRC_FILES} tests/UsbMassStorage_L2Test.cpp)
 endif()
 
-if(PLUGIN_USERSETTINGS)
-    set(SRC_FILES ${SRC_FILES} tests/UserSettings_L2Test.cpp)
-endif()
-
 if(PLUGIN_USBACCESS)
     set(SRC_FILES ${SRC_FILES} tests/UsbAccess_L2Test.cpp)
 endif()

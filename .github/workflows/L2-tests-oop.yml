@@ -1,5 +1,4 @@
 name: L2-tests-OOP
-
 on:
   workflow_call:
     inputs:
@@ -399,7 +398,6 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RFC=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DPLUGIN_PERSISTENTSTORE=ON
-          -DPLUGIN_USERSETTINGS=ON
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
@@ -479,7 +477,6 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RFC=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DPLUGIN_PERSISTENTSTORE=ON
-          -DPLUGIN_USERSETTINGS=ON
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
