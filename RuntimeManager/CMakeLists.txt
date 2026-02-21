@@ -60,6 +60,8 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
+include_directories(Gateway)
+add_subdirectory(Gateway)
 set (RUNTIMEMANAGER_SOURCES)
 list(APPEND RUNTIMEMANAGER_SOURCES  RuntimeManagerImplementation.cpp)
 list(APPEND RUNTIMEMANAGER_SOURCES  DobbySpecGenerator.cpp)
@@ -111,9 +113,55 @@ set(RUNTIME_MANAGER_INCLUDES $ENV{RUNTIME_MANAGER_INCLUDES})
 separate_arguments(RUNTIME_MANAGER_INCLUDES)
 include_directories(BEFORE ${RUNTIME_MANAGER_INCLUDES})
 
+find_path(LIBIPTC_INCLUDE_DIR NAMES libiptc/libiptc.h)
+find_library(LIBIPTC_LIBRARY NAMES iptc libiptc)
+find_path(LIBIP4TC_INCLUDE_DIR NAMES linux/netfilter_ipv4/ip_tables.h)
+find_library(LIBIP4TC_LIBRARY NAMES ip4tc libip4tc)
+
+include(FindPackageHandleStandardArgs)
+
+find_package_handle_standard_args(LIBIPTC
+	    DEFAULT_MSG LIBIPTC_LIBRARY LIBIPTC_INCLUDE_DIR)
+
+mark_as_advanced(LIBIPTC_LIBRARY LIBIPTC_INCLUDE_DIR)
+
+    if(LIBIPTC_FOUND)
+	        set(LIBIPTC_INCLUDE_DIRS ${LIBIPTC_INCLUDE_DIR})
+		    set(LIBIPTC_LIBRARIES ${LIBIPTC_LIBRARY})
+	    endif()
+
+	    if(LIBIPTC_FOUND AND NOT TARGET LibIptc::LibIptc)
+		        add_library(LibIptc::LibIptc SHARED IMPORTED)
+			    set_target_properties(LibIptc::LibIptc PROPERTIES
+				            IMPORTED_LOCATION "${LIBIPTC_LIBRARY}"
+					            INTERFACE_INCLUDE_DIRECTORIES "${LIBIPTC_INCLUDE_DIR}")
+				    endif()
+
+				    # IPv4 tables
+				    find_package_handle_standard_args(LIBIP4TC
+					        DEFAULT_MSG LIBIP4TC_LIBRARY LIBIP4TC_INCLUDE_DIR)
+
+					mark_as_advanced(LIBIP4TC_LIBRARY LIBIP4TC_INCLUDE_DIR)
+
+					if(LIBIP4TC_FOUND)
+						    set(LIBIP4TC_INCLUDE_DIRS ${LIBIP4TC_INCLUDE_DIR})
+						        set(LIBIP4TC_LIBRARIES ${LIBIP4TC_LIBRARY})
+						endif()
+
+						if(LIBIP4TC_FOUND AND NOT TARGET LibIptc::LibIp4tc)
+							    add_library(LibIptc::LibIp4tc SHARED IMPORTED)
+							        set_target_properties(LibIptc::LibIp4tc PROPERTIES
+									        IMPORTED_LOCATION "${LIBIP4TC_LIBRARY}"
+										        INTERFACE_INCLUDE_DIRECTORIES "${LIBIP4TC_INCLUDE_DIR}")
+									endif()
+
 target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE
     CompileSettingsDebug::CompileSettingsDebug ${NAMESPACE}Plugins::${NAMESPACE}Plugins  
-    ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES})
+    ${PLUGIN_RUNTIME_MANAGER_EXTRA_LIBRARIES}
+    Gateway
+    ip4tc
+    ip6tc
+    )
 
 if(RDK_SERVICES_L1_TEST)
     set(JSONCPP_INCLUDE_PATH "/usr/include/jsoncpp" CACHE PATH "Path to jsoncpp includes")
