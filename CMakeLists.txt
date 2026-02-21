@@ -91,10 +91,6 @@ if(PLUGIN_RUSTADAPTER)
     add_subdirectory(RustAdapter)
 endif()
 
-if(PLUGIN_MESSAGECONTROL)
-    add_subdirectory(MessageControl)
-endif()
-
 if (PLUGIN_RESOURCEMANAGER)
     add_subdirectory(ResourceManager)
 endif()
