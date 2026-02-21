@@ -112,11 +112,7 @@ namespace Plugin {
 
        public:
             static Core::ProxyType<Core::IDispatch> Create(USBDeviceImplementation *usbDeviceImplementation, Event event, Exchange::IUSBDevice::USBDevice usbDevice) {
-#ifndef USE_THUNDER_R4
-                return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(usbDeviceImplementation, event, usbDevice)));
-#else
                 return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(usbDeviceImplementation, event, usbDevice)));
-#endif
             }
 
             virtual void Dispatch() {

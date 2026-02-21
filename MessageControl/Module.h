@@ -24,6 +24,7 @@
 #endif
 
 #include <messaging/messaging.h>
+#include <core/core.h>
 #include <plugins/plugins.h>
 #include <interfaces/definitions.h>
 

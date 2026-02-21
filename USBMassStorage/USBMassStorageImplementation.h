@@ -130,11 +130,7 @@ namespace Plugin {
 
        public:
             static Core::ProxyType<Core::IDispatch> Create(USBMassStorageImplementation* usb_mass_storageImplementation, Event event, USBStorageDeviceInfo params ) {
-#ifndef USE_THUNDER_R4
-                return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(usb_mass_storageImplementation, event, params)));
-#else
                 return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(usb_mass_storageImplementation, event, params)));
-#endif
             }
 
             virtual void Dispatch() {
