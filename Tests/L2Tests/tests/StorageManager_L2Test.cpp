@@ -317,7 +317,7 @@ TEST_F(StorageManagerTest, CreateStorageUsingComRpcSuccessExistingIfStorageNotAc
     EXPECT_EQ(Core::ERROR_NONE, mStorageManagerPlugin->CreateStorage(appId, size, path, errorReason));
 
     EXPECT_CALL(*p_wrapsImplMock, access(::testing::_, ::testing::_))
-        .WillOnce([](const char* pathname, int mode) {
+        .WillRepeatedly([](const char* pathname, int mode) {
             // Simulate Not accessible
             return 1;
     });
