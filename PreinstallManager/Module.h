@@ -23,8 +23,7 @@
 #define MODULE_NAME Plugin_PreinstallManager
 #endif
 
+#include <core/core.h>
 #include <plugins/plugins.h>
-#include <tracing/tracing.h>
 
 #undef EXTERNAL
-#define EXTERNAL
