@@ -187,8 +187,8 @@ namespace Plugin {
         Core::hresult GetPreferredCaptionsLanguages(string &preferredLanguages) const override;
         Core::hresult SetPreferredClosedCaptionService(const string& service) override;
         Core::hresult GetPreferredClosedCaptionService(string &service) const override;
-        Core::hresult SetPrivacyMode(const string& privacyMode);
-        Core::hresult GetPrivacyMode(string &privacyMode) const;
+        uint32_t SetPrivacyMode(const string& privacyMode);
+        uint32_t GetPrivacyMode(string &privacyMode) const;
         Core::hresult SetPinControl(const bool pinControl) override;
         Core::hresult GetPinControl(bool &pinControl) const override;
         Core::hresult SetViewingRestrictions(const string& viewingRestrictions) override;
@@ -240,6 +240,13 @@ namespace Plugin {
         void Dispatch(Event event, const JsonValue params);
 
         friend class Job;
+
+    public:
+        void AddRef() const override;
+        uint32_t Release() const override;
+
+    private:
+        mutable std::atomic<uint32_t> _refCount{1};
     };
 } // namespace Plugin
 } // namespace WPEFramework
