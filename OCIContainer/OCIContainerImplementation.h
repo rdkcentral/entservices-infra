@@ -70,11 +70,7 @@ namespace Plugin
                 public:
                         static Core::ProxyType<Core::IDispatch> Create(OCIContainerImplementation *runtimeManagerImplementation, EventNames event, JsonObject params)
                         {
-#ifndef  USE_THUNDER_R4
-                            return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(runtimeManagerImplementation, event, params)));
-#else
                             return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(runtimeManagerImplementation, event, params)));
-#endif
                         }
 
                         virtual void Dispatch()

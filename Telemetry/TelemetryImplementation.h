@@ -149,11 +149,7 @@ namespace Plugin {
 
        public:
             static Core::ProxyType<Core::IDispatch> Create(TelemetryImplementation* telemetryImplementation, Event event, JsonValue  params ) {
-#ifndef USE_THUNDER_R4
-                return (Core::proxy_cast<Core::IDispatch>(Core::ProxyType<Job>::Create(telemetryImplementation, event, params)));
-#else
                 return (Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(telemetryImplementation, event, params)));
-#endif
             }
 
             virtual void Dispatch() {
