@@ -20,61 +20,48 @@
 #pragma once
 
 #include "Module.h"
-
-#include <com/com.h>
-#include <core/core.h>
-#include <plugins/plugins.h>
-#include <interfaces/Ids.h>
 #include <interfaces/IResourceManager.h>
-#include "UtilsLogging.h"
 
-#if defined(ENABLE_ERM) || defined(ENABLE_L1TEST)
-#include <map>
-#include "essos-resmgr.h"
+#ifdef ENABLE_ERM
+#include <essos-resmgr.h>
 #endif
-
-#include <vector>
 
 namespace WPEFramework {
-    namespace Plugin {
-        class ResourceManagerImplementation : public Exchange::IResourceManager {
-            public:
-                ResourceManagerImplementation();
-                ~ResourceManagerImplementation() override;
+namespace Plugin {
 
-                static ResourceManagerImplementation* instance(ResourceManagerImplementation *resourceManagerImpl = nullptr);
+    class ResourceManagerImplementation : public Exchange::IResourceManager
+    {
+    public:
+        ResourceManagerImplementation(const ResourceManagerImplementation&) = delete;
+        ResourceManagerImplementation& operator=(const ResourceManagerImplementation&) = delete;
 
-                
-                ResourceManagerImplementation(const ResourceManagerImplementation&) = delete;
-                ResourceManagerImplementation& operator=(const ResourceManagerImplementation&) = delete;
+        ResourceManagerImplementation();
+        ~ResourceManagerImplementation() override;
 
-                BEGIN_INTERFACE_MAP(ResourceManagerImplementation)
-                    INTERFACE_ENTRY(Exchange::IResourceManager)
-                END_INTERFACE_MAP
+        BEGIN_INTERFACE_MAP(ResourceManagerImplementation)
+            INTERFACE_ENTRY(Exchange::IResourceManager)
+        END_INTERFACE_MAP
 
-            public:
+        // IResourceManager interface implementation
+        Core::hresult SetAVBlocked(const string& appId, const bool blocked, Success& result) override;
+        Core::hresult GetBlockedAVApplications(IStringIterator*& clients, bool& success) const override;
+        Core::hresult ReserveTTSResource(const string& appId, Success& result) override;
+        Core::hresult ReserveTTSResourceForApps(IStringIterator* const appids, Success& result) override;
 
-                // IResourceManager interface method
-                Core::hresult SetAVBlocked(const string& appId, const bool blocked, Exchange::IResourceManager::SetAVBlockedResult& result) override;
-                Core::hresult GetBlockedAVApplications(IStringIterator*& clients, bool& success) const override;
-                Core::hresult ReserveTTSResource(const string& appId, Exchange::IResourceManager::TTSResult& ttsResult) override;
-                Core::hresult ReserveTTSResourceForApps(IStringIterator* const appids, Exchange::IResourceManager::TTSResult& ttsResult) override;
+    public:
+        static ResourceManagerImplementation* _instance;
 
-                // Configuration method to set service interface
-                void Configure(PluginHost::IShell* service);
+    private:
+        mutable Core::CriticalSection _adminLock;
+        PluginHost::IShell* _service;
 
-                static ResourceManagerImplementation* _instance;
-
-            private:
-                mutable Core::CriticalSection _adminLock;
-                PluginHost::IShell* _service;
-
-#if defined(ENABLE_ERM) || defined(ENABLE_L1TEST) 
-                EssRMgr* mEssRMgr;
+#if defined(ENABLE_ERM) || defined(ENABLE_L1TEST)
+        EssRMgr* mEssRMgr;
 #endif
-                bool mDisableBlacklist;
-                bool mDisableReserveTTS;
-                std::map<std::string, bool> mAppsAVBlacklistStatus;
-        };
+        bool mDisableBlacklist;
+        bool mDisableReserveTTS;
+        mutable std::map<std::string, bool> mAppsAVBlacklistStatus;
+    };
+
 } // namespace Plugin
 } // namespace WPEFramework
