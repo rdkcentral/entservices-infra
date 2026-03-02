@@ -46,10 +46,6 @@ if(PLUGIN_USB_MASS_STORAGE)
      set(SRC_FILES ${SRC_FILES} tests/UsbMassStorage_L2Test.cpp)
 endif()
 
-if(PLUGIN_USERSETTINGS)
-    set(SRC_FILES ${SRC_FILES} tests/UserSettings_L2Test.cpp)
-endif()
-
 if(PLUGIN_USBACCESS)
     set(SRC_FILES ${SRC_FILES} tests/UsbAccess_L2Test.cpp)
 endif()
@@ -69,6 +65,11 @@ endif()
 if(PLUGIN_OCICONTAINER)
     set(SRC_FILES ${SRC_FILES} tests/OCIContainer_L2Test.cpp)
 endif()
+
+message(STATUS "L2Tests SRC_FILES = [${SRC_FILES}]")
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}")
+message(STATUS "CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 
 add_library(${MODULE_NAME} SHARED ${SRC_FILES})
 
