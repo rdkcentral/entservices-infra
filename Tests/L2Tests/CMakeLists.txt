@@ -34,10 +34,6 @@ if(PLUGIN_APPMANAGER)
     set(SRC_FILES ${SRC_FILES} tests/AppManager_L2Test.cpp)
 endif()
 
-if(PLUGIN_TELEMETRY)
-    set(SRC_FILES ${SRC_FILES} tests/Telemetry_L2Test.cpp)
-endif()
-
 if(PLUGIN_USBDEVICE)
     set(SRC_FILES ${SRC_FILES} tests/UsbDevice_L2Test.cpp)
 endif()
