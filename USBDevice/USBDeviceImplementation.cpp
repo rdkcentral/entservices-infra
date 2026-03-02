@@ -917,6 +917,7 @@ void USBDeviceImplementation::dispatchEvent(Event event, Exchange::IUSBDevice::U
 
 void USBDeviceImplementation::Dispatch(Event event, const Exchange::IUSBDevice::USBDevice usbDevice)
 {
+    LOGINFO("Dispatch Event");
      _adminLock.Lock();
 
      std::list<Exchange::IUSBDevice::INotification*>::const_iterator index(_usbDeviceNotification.begin());
