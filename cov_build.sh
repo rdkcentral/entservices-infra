@@ -25,6 +25,7 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -DPLUGIN_USB_MASS_STORAGE=ON \
 -DPLUGIN_OCICONTAINER=ON \
 -DPLUGIN_TELEMETRY=ON \
+-DPLUGIN_MIGRATION=ON \
 -DCMAKE_CXX_FLAGS="-DEXCEPTIONS_ENABLE=ON \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/audiocapturemgr \
