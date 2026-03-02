@@ -151,10 +151,6 @@ if(PLUGIN_SCENESET)
     add_subdirectory(SceneSet)
 endif()
 
-if(PLUGIN_TELEMETRYMETRICS)
-    add_subdirectory(TelemetryMetrics)
-endif()
-
 if(PLUGIN_PREINSTALL_MANAGER)
     add_subdirectory(PreinstallManager)
 endif()
