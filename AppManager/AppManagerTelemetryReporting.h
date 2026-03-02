@@ -20,13 +20,18 @@
 #pragma once
 
 #include "AppManagerImplementation.h"
-#include <interfaces/ITelemetryMetrics.h>
+#include <interfaces/ITelemetry.h>
 
 #define TELEMETRY_MARKER_LAUNCH_TIME                         "OverallLaunchTime_split"
 #define TELEMETRY_MARKER_LAUNCH_ERROR                        "AppLaunchError_split"
 #define TELEMETRY_MARKER_CLOSE_TIME                          "AppCloseTime_split"
 #define TELEMETRY_MARKER_CLOSE_ERROR                         "AppCloseError_split"
 #define TELEMETRY_MARKER_APP_CRASHED                         "AppCrashed_split"
+
+#define TELEMETRY_MARKER_LAUNCH_TIME_FILTER                  "totalLaunchTime,appManagerLaunchTime,packageManagerLockTime,lifecycleManagerSpawnTime,windowManagerCreateDisplayTime,runtimeManagerRunTime,storageManagerLaunchTime,fireboltGatewayLaunchTime,appId,appInstanceId,appVersion,runtimeId,runtimeVersion,launchType,markerName"
+#define TELEMETRY_MARKER_LAUNCH_ERROR_FILTER                 "errorCode,markerName"
+#define TELEMETRY_MARKER_CLOSE_TIME_FILTER                   "totalCloseTime,appManagerCloseTime,packageManagerUnlockTime,lifecycleManagerSetTargetStateTime,windowManagerDestroyTime,runtimeManagerTerminateTime,storageManagerTime,fireboltGatewayTerminateTime,appId,appInstanceId,appVersion,closeType,markerName"
+#define TELEMETRY_MARKER_CLOSE_ERROR_FILTER                  "errorCode,markerName"
 
 namespace WPEFramework
 {
@@ -48,11 +53,11 @@ class AppManagerTelemetryReporting
     private /*methods*/:
         AppManagerTelemetryReporting();
         ~AppManagerTelemetryReporting();
-        Core::hresult createTelemetryMetricsPluginObject();
+        Core::hresult createTelemetryPluginObject();
 
     private /*members*/:
         mutable Core::CriticalSection mAdminLock;
-        Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
+        Exchange::ITelemetry* mTelemetryPluginObject;
         PluginHost::IShell* mCurrentservice;
 };
 

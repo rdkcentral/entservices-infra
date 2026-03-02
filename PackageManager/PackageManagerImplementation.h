@@ -43,7 +43,7 @@
 #include "HttpClient.h"
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-#include <interfaces/ITelemetryMetrics.h>
+#include <interfaces/ITelemetry.h>
 
 #define TELEMETRY_MARKER_LAUNCH_TIME             "OverallLaunchTime_split"
 #define TELEMETRY_MARKER_CLOSE_TIME              "AppCloseTime_split"
@@ -51,6 +51,13 @@
 #define TELEMETRY_MARKER_INSTALL_ERROR           "InstallError_split"
 #define TELEMETRY_MARKER_UNINSTALL_TIME          "UninstallTime_split"
 #define TELEMETRY_MARKER_UNINSTALL_ERROR         "UninstallError_split"
+
+#define TELEMETRY_MARKER_LAUNCH_TIME_FILTERS     "totalLaunchTime,appManagerLaunchTime,packageManagerLockTime,lifecycleManagerSpawnTime,windowManagerCreateDisplayTime,runtimeManagerRunTime,storageManagerLaunchTime,fireboltGatewayLaunchTime,appId,appInstanceId,appVersion,runtimeId,runtimeVersion,launchType,markerName"
+#define TELEMETRY_MARKER_CLOSE_TIME_FILTERS      "totalCloseTime,appManagerCloseTime,packageManagerUnlockTime,lifecycleManagerSetTargetStateTime,windowManagerDestroyTime,runtimeManagerTerminateTime,storageManagerTime,fireboltGatewayTerminateTime,appId,appInstanceId,appVersion,closeType,markerName"
+#define TELEMETRY_MARKER_INSTALL_TIME_FILTERS    "installTime,markerName"
+#define TELEMETRY_MARKER_UNINSTALL_TIME_FILTERS  "uninstallTime,markerName"
+#define TELEMETRY_MARKER_ERROR_FILTERS           "errorCode,markerName"
+
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
 
 #define PACKAGE_MANAGER_MARKER_FILE              "/tmp/package_manager_ready"
@@ -315,7 +322,7 @@ namespace Plugin {
         PluginHost::IShell* mCurrentservice;
         Exchange::IStorageManager* mStorageManagerObject;
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
-        Exchange::ITelemetryMetrics* mTelemetryMetricsObject;
+        Exchange::ITelemetry* mTelemetryPluginObject;
 #endif /* ENABLE_AIMANAGERS_TELEMETRY_METRICS */
     };
 } // namespace Plugin
