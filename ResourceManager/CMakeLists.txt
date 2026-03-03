@@ -53,11 +53,12 @@ install(TARGETS ${MODULE_NAME}
 
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
     ResourceManagerImplementation.cpp
-    Module.cpp)
-    
+    Module.cpp
+)
+
 include_directories(
    ../helpers)
-   
+
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES)
