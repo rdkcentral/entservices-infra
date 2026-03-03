@@ -163,19 +163,6 @@ if(PLUGIN_MIGRATION)
     add_subdirectory(Migration)
 endif()
 
-if(PLUGIN_APPGATEWAY)
-    add_subdirectory(AppGateway)
-endif()
-
-if(PLUGIN_APPNOTIFICATIONS)
-    add_subdirectory(AppNotifications)
-endif()
-
-if(PLUGIN_FBSETTINGS)
-	add_subdirectory(FbSettings)
-endif()
-
-
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
