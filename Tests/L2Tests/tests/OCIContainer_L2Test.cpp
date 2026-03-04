@@ -205,6 +205,9 @@ OCIContainer_L2Test::OCIContainer_L2Test()
     : L2TestMocks()
 {
     uint32_t status = Core::ERROR_GENERAL;
+    
+    // Reset event flags to ensure clean state for each test
+    m_event_signalled = OCICONTAINER_STATUS_INVALID;
 
     EXPECT_CALL(*p_ipcservicemock, start())
         .WillOnce(::testing::Return(true));
@@ -371,7 +374,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -412,7 +414,6 @@ TEST_F(OCIContainer_L2Test, GetContainerInfo_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
                     .WillOnce(::testing::Return(containerslist));
@@ -465,7 +466,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_STARTING_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -509,7 +509,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_RUNNING_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -554,7 +553,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_STOPPING_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -599,7 +597,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_PAUSED_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -644,7 +641,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_STOPPED_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -690,7 +686,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_HIBERNATING_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -735,7 +730,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_HIBERNATED_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -781,7 +775,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_AWAKENING_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -826,7 +819,6 @@ TEST_F(OCIContainer_L2Test, ListContainer_INVALID_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -873,7 +865,6 @@ TEST_F(OCIContainer_L2Test, StartContainer_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 m_OCIContainerplugin->Register(&notify);
 
                 EXPECT_CALL(*p_dobbyProxyMock, startContainerFromBundle(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
@@ -927,7 +918,6 @@ TEST_F(OCIContainer_L2Test, StartContainerFromDobbySpec_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 EXPECT_CALL(*p_dobbyProxyMock, startContainerFromSpec(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
                     .WillOnce(::testing::Return(91));
@@ -969,7 +959,6 @@ TEST_F(OCIContainer_L2Test, StopContainer_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 m_OCIContainerplugin->Register(&notify);
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
@@ -1025,7 +1014,6 @@ TEST_F(OCIContainer_L2Test, PauseContainer_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 m_OCIContainerplugin->Register(&notify);
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
@@ -1079,7 +1067,6 @@ TEST_F(OCIContainer_L2Test, ResumeContainer_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -1123,7 +1110,6 @@ TEST_F(OCIContainer_L2Test, HibernateContainer_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 m_OCIContainerplugin->Register(&notify);
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
@@ -1179,7 +1165,6 @@ TEST_F(OCIContainer_L2Test, WakeupContainer_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 m_OCIContainerplugin->Register(&notify);
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
@@ -1233,7 +1218,6 @@ TEST_F(OCIContainer_L2Test, ExecuteCommand_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -1275,7 +1259,6 @@ TEST_F(OCIContainer_L2Test, Annotate_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -1317,7 +1300,6 @@ TEST_F(OCIContainer_L2Test, RemoveAnnotation_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -1359,7 +1341,6 @@ TEST_F(OCIContainer_L2Test, Mount_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -1401,7 +1382,6 @@ TEST_F(OCIContainer_L2Test, Unmount_COMRPC)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -1910,7 +1890,6 @@ TEST_F(OCIContainer_L2Test, ContainerStopped_EventTest)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 m_OCIContainerplugin->Register(&notify);
 
                 EXPECT_CALL(*p_mockOmiProxy, umountCryptedBundle(::testing::_))
@@ -1956,7 +1935,6 @@ TEST_F(OCIContainer_L2Test, ContainerStarted_EventTest)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 m_OCIContainerplugin->Register(&notify);
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
@@ -1998,7 +1976,6 @@ TEST_F(OCIContainer_L2Test, ContainerFailed_EventTest)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 m_OCIContainerplugin->Register(&notify);
 
                 EXPECT_CALL(*p_dobbyProxyMock, stopContainer(91, ::testing::_))
@@ -2160,7 +2137,6 @@ TEST_F(OCIContainer_L2Test, GetContainerState_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist;
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2200,7 +2176,6 @@ TEST_F(OCIContainer_L2Test, GetContainerInfo_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
                     .WillOnce(::testing::Return(containerslist));
@@ -2242,7 +2217,6 @@ TEST_F(OCIContainer_L2Test, StartContainer_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 EXPECT_CALL(*p_dobbyProxyMock, startContainerFromBundle(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
                     .WillOnce(::testing::Return(-1));
@@ -2282,7 +2256,6 @@ TEST_F(OCIContainer_L2Test, StartContainerFromDobbySpecErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 EXPECT_CALL(*p_dobbyProxyMock, startContainerFromSpec(::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_, ::testing::_))
                     .WillOnce(::testing::Return(-1));
@@ -2321,7 +2294,6 @@ TEST_F(OCIContainer_L2Test, StopContainer_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2363,7 +2335,6 @@ TEST_F(OCIContainer_L2Test, PauseContainer_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2404,7 +2375,6 @@ TEST_F(OCIContainer_L2Test, ResumeContainer_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2446,7 +2416,6 @@ TEST_F(OCIContainer_L2Test, HibernateContainer_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2488,7 +2457,6 @@ TEST_F(OCIContainer_L2Test, WakeupContainer_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2530,7 +2498,6 @@ TEST_F(OCIContainer_L2Test, ExecuteCommand_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2572,7 +2539,6 @@ TEST_F(OCIContainer_L2Test, Annotate_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2614,7 +2580,6 @@ TEST_F(OCIContainer_L2Test, RemoveAnnotation_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2656,7 +2621,6 @@ TEST_F(OCIContainer_L2Test, Mount_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())
@@ -2698,7 +2662,6 @@ TEST_F(OCIContainer_L2Test, Unmount_ErrorCase)
         if (m_controller_OCIcontainer) {
             EXPECT_TRUE(m_OCIContainerplugin != nullptr);
             if (m_OCIContainerplugin) {
-                m_OCIContainerplugin->AddRef();
 
                 std::list<std::pair<int32_t, std::string>> containerslist = { { 91, "com.bskyb.epgui" }, { 94, "Netflix" } };
                 EXPECT_CALL(*p_dobbyProxyMock, listContainers())

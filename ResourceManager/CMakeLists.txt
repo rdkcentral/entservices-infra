@@ -17,11 +17,16 @@
 
 set(PLUGIN_NAME ResourceManager)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
-set(PLUGIN_RESOURCE_MANAGER_AUTOSTART true CACHE STRING "Automatically start ResourceManager plugin")
+set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
+
+set(PLUGIN_RESOURCE_MANAGER_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
+set(PLUGIN_RESOURCE_MANAGER_AUTOSTART false CACHE STRING "Automatically start ResourceManager plugin")
 set(PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES "")
-set(PLUGIN_RESOURCE_MANAGER_STARTUPORDER "" CACHE STRING "Automatically start ResourceManager plugin")
+set(PLUGIN_RESOURCE_MANAGER_STARTUPORDER "" CACHE STRING "To configure startup order of ResourceManager plugin")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         ResourceManager.cpp
@@ -32,10 +37,28 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
-target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME})
-
-target_include_directories(${MODULE_NAME} PRIVATE ../helpers )
 set_source_files_properties(ResourceManager.cpp PROPERTIES COMPILE_FLAGS "-fexceptions")
+
+target_link_libraries(${MODULE_NAME}
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
+
+install(TARGETS ${MODULE_NAME}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+
+add_library(${PLUGIN_IMPLEMENTATION} SHARED
+    ResourceManagerImplementation.cpp
+    Module.cpp
+)
+
+include_directories(
+   ../helpers)
+
+set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES)
 
 set(RESOURCE_MANAGER_INCLUDES $ENV{RESOURCE_MANAGER_INCLUDES})
 separate_arguments(RESOURCE_MANAGER_INCLUDES)
@@ -46,28 +69,33 @@ if (RDK_SERVICES_L1_TEST)
     add_definitions(-DENABLE_L1TEST)
 endif(RDK_SERVICES_L1_TEST)
 
-if (RDK_SERVICES_L1_TEST OR RDK_SERVICE_L2_TEST)
-    target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
-else()
-    target_link_libraries(${MODULE_NAME} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins -lessosrmgr ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
-endif()
-
 if (RDK_SERVICE_L2_TEST)
-    target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME})
-    target_compile_options(${MODULE_NAME} PRIVATE -Wno-error)
-
-    find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
-    if (TESTMOCKLIB_LIBRARIES)
-        message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")
-        target_link_libraries(${MODULE_NAME} PRIVATE ${TESTMOCKLIB_LIBRARIES})
-    else (TESTMOCKLIB_LIBRARIES)
-        message ("Require ${TESTMOCKLIB_LIBRARIES} library")
-    endif (TESTMOCKLIB_LIBRARIES)
-    add_definitions(-DENABLE_L1TEST)
-    add_definitions(-DENABLE_ERM)
+   find_library(TESTMOCKLIB_LIBRARIES NAMES TestMocklib)
+   if (TESTMOCKLIB_LIBRARIES)
+       message ("linking mock libraries ${TESTMOCKLIB_LIBRARIES} library")
+       target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${TESTMOCKLIB_LIBRARIES})
+   else (TESTMOCKLIB_LIBRARIES)
+       message ("Require ${TESTMOCKLIB_LIBRARIES} library")
+   endif (TESTMOCKLIB_LIBRARIES)
+   add_definitions(-DENABLE_ERM)
 endif (RDK_SERVICES_L2_TEST)
 
-install(TARGETS ${MODULE_NAME}
-        DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+if (RDK_SERVICES_L1_TEST OR RDK_SERVICE_L2_TEST)
+    target_link_libraries(${PLUGIN_IMPLEMENTATION}
+        PRIVATE
+            CompileSettingsDebug::CompileSettingsDebug
+            ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+            ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
+else()
+    target_link_libraries(${PLUGIN_IMPLEMENTATION}
+        PRIVATE
+            CompileSettingsDebug::CompileSettingsDebug
+            ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+            -lessosrmgr
+            ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
+endif()
+
+install(TARGETS ${PLUGIN_IMPLEMENTATION}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

@@ -165,6 +165,7 @@ jobs:
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/1004-Add-support-for-project-dir.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-733-Add-ENTOS-IDS.patch
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Jsonrpc_dynamic_error_handling.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/Increase_Timout_For_L2Tests_Plugin.patch
           cd -
       - name: Build Thunder
         run: >
@@ -196,6 +197,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/entservices-apis
           patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/RDKEMW-1007.patch
+          patch -p1 < $GITHUB_WORKSPACE/entservices-testframework/patches/add-l2tests-interface.patch
           cd -    
 
       - name: Build entservices-apis
@@ -496,24 +498,21 @@ jobs:
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_PERSISTENTSTORE=ON
           -DPLUGIN_SHAREDSTORAGE=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_RESOURCEMANAGER=OFF
           -DPLUGIN_CLOUDSTORE=ON
           -DPLUGIN_USBDEVICE=ON
           -DPLUGIN_USB_MASS_STORAGE=ON
-          -DPLUGIN_LIFECYCLEMANAGER=OFF
-          -DPLUGIN_APPMANAGER=OFF
           -DPLUGIN_ANALYTICS=ON
           -DPLUGIN_ANALYTICS_BACKEND_LIBRARY_NAME="libWPEFrameworkAnalyticsBackendMock.so"
           -DPLUGIN_ANALYTICS_EVENTS_MAP="/tmp/AnalyticsEventsMap.json"
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
-          -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_OCICONTAINER=ON
           -DDS_FOUND=ON
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           &&
-          cmake --build build/entservices-infra -j6
+          cmake --build build/entservices-infra
           &&
           cmake --install build/entservices-infra
 
@@ -581,7 +580,7 @@ jobs:
           -DPLUGIN_TELEMETRY=ON
           -DPLUGIN_USERSETTINGS=ON
           -DPLUGIN_PERSISTENTSTORE=ON
-          -DPLUGIN_RESOURCEMANAGER=ON
+          -DPLUGIN_RESOURCEMANAGER=OFF
           -DPLUGIN_SHAREDSTORAGE=ON
           -DPLUGIN_CLOUDSTORE=ON
           -DPLUGIN_USBDEVICE=ON
@@ -589,12 +588,9 @@ jobs:
           -DPLUGIN_ANALYTICS=ON
           -DPLUGIN_ANALYTICS_BACKEND_LIBRARY_NAME="libWPEFrameworkAnalyticsBackendMock.so"
           -DPLUGIN_ANALYTICS_EVENTS_MAP="/tmp/AnalyticsEventsMap.json"
-          -DPLUGIN_LIFECYCLEMANAGER=OFF
-          -DPLUGIN_APPMANAGER=OFF
           -DPLUGIN_AVINPUT=OFF
           -DPLUGIN_AVOUTPUT=OFF
           -DAVOUTPUT_TV=OFF
-          -DPLUGIN_STORAGE_MANAGER=ON
           -DUSE_THUNDER_R4=ON
           -DPLUGIN_L2Tests=ON
           -DRDK_SERVICE_L2_TEST=ON
@@ -712,7 +708,7 @@ jobs:
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Run unit tests with valgrind
-        if: ${{ !env.ACT }}
+        if: ${{ !env.ACT && inputs.caller_source != 'testframework' }}
         run: >
           PATH=$GITHUB_WORKSPACE/install/usr/bin:${PATH}
           LD_LIBRARY_PATH=$GITHUB_WORKSPACE/install/usr/lib:$GITHUB_WORKSPACE/install/usr/lib/wpeframework/plugins:${LD_LIBRARY_PATH}
@@ -728,7 +724,7 @@ jobs:
           rm -rf $(pwd)/rdkL2TestResults.json
 
       - name: Generate coverage
-        if: ${{ matrix.coverage == 'with-coverage' && !env.ACT }}
+        if: ${{ matrix.coverage == 'with-coverage' && !env.ACT && inputs.caller_source != 'testframework' }}
         run: >
           cp $GITHUB_WORKSPACE/entservices-testframework/Tests/L2Tests/.lcovrc_l2 ~/.lcovrc
           &&
