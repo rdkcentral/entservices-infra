@@ -103,10 +103,6 @@ if (PLUGIN_ANALYTICS)
     add_subdirectory(Analytics)
 endif()
 
-if(PLUGIN_RDK_WINDOW_MANAGER)
-    add_subdirectory(RDKWindowManager)
-endif()
-
 if(PLUGIN_CLOUDSTORE)
     add_subdirectory(CloudStore)
 endif()
@@ -119,28 +115,8 @@ if(PLUGIN_WEBBRIDGE)
     add_subdirectory(WebBridge)
 endif()
 
-if(PLUGIN_LIFECYCLE_MANAGER)
-    add_subdirectory(LifecycleManager)
-endif()
-
-if(PLUGIN_APPMANAGER)
-    add_subdirectory(AppManager)
-endif()
-
-if(PLUGIN_RUNTIME_MANAGER)
-	add_subdirectory(RuntimeManager)
-endif()
-
 if(PLUGIN_STORAGE_MANAGER)
 	add_subdirectory(StorageManager)
-endif()
-
-if(PLUGIN_PACKAGE_MANAGER)
-    add_subdirectory(PackageManager)
-endif()
-
-if(PLUGIN_DOWNLOADMANAGER)
-    add_subdirectory(DownloadManager)
 endif()
 
 if(PLUGIN_NATIVEJS)
@@ -155,26 +131,9 @@ if(PLUGIN_TELEMETRYMETRICS)
     add_subdirectory(TelemetryMetrics)
 endif()
 
-if(PLUGIN_PREINSTALL_MANAGER)
-    add_subdirectory(PreinstallManager)
-endif()
-
 if(PLUGIN_MIGRATION)
     add_subdirectory(Migration)
 endif()
-
-if(PLUGIN_APPGATEWAY)
-    add_subdirectory(AppGateway)
-endif()
-
-if(PLUGIN_APPNOTIFICATIONS)
-    add_subdirectory(AppNotifications)
-endif()
-
-if(PLUGIN_FBSETTINGS)
-	add_subdirectory(FbSettings)
-endif()
-
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
