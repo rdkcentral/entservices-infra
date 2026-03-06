@@ -37,6 +37,8 @@
 #include "DobbyEventListener.h"
 #include "UserIdManager.h"
 
+class WebInspector;
+
 #ifdef RIALTO_IN_DAC_FEATURE_ENABLED
 #include "RialtoConnector.h"
 #define RIALTO_TIMEOUT_MILLIS 5000
@@ -223,6 +225,8 @@ namespace WPEFramework
                 Exchange::IOCIContainer* mOciContainerObject;
                 std::list<Exchange::IRuntimeManager::INotification*> mRuntimeManagerNotification;
                 std::map<std::string, RuntimeAppInfo> mRuntimeAppInfo;
+		        std::map<std::string, std::shared_ptr<WebInspector>> mWebInspectors;
+                std::map<uint16_t, bool> mPortAvailability;
                 Exchange::IStorageManager *mStorageManagerObject;
                 WindowManagerConnector* mWindowManagerConnector;
                 DobbyEventListener *mDobbyEventListener;
