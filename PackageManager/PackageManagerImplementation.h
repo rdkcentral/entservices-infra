@@ -27,6 +27,8 @@
 #include <condition_variable>
 #include <fstream>
 #include <cstdio>
+#include <future>
+#include <atomic>
 
 #ifdef USE_LIBPACKAGE
 #include <IPackageImpl.h>
