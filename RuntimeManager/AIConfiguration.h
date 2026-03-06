@@ -54,6 +54,7 @@ namespace Plugin
             std::string getDialUsn() const;
             std::map<std::string, size_t> getIonHeapQuotas() const;
             void printAIConfiguration();
+            void readFromYamlConfigFile();
 
             // system configuration
             std::list<std::string> getPreloads() const;
@@ -85,6 +86,7 @@ namespace Plugin
             // system configuration
             std::list<std::string> mPreloads;
             std::list<std::string> mEnvVariables;
+            std::list<std::string> mSvpFiles;
     };
 } /* namespace Plugin */
 } /* namespace WPEFramework */
