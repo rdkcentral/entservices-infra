@@ -47,9 +47,11 @@ namespace WPEFramework
             mEventThread = std::thread(&SystemTime::EventLoop, this);
 
             Event event = {EVENT_INITIALISE, std::string()};
-            std::unique_lock<std::mutex> lock(mQueueLock);
-            mQueue.push(event);
-            lock.unlock();
+            {
+                std::unique_lock<std::mutex> lock(mQueueLock);
+                mQueue.push(event);
+            }
+            // lock.unlock() removed - destructor handles unlock
             mQueueCondition.notify_one();
         }
 
@@ -95,7 +97,7 @@ namespace WPEFramework
             std::string parametersString;
             parameters.ToString(parametersString);
             LOGINFO("onTimeStatusChanged: %s", parametersString.c_str());
-            Event event = {EVENT_TIME_STATUS_CHANGED, parametersString};
+            Event event = {EVENT_TIME_STATUS_CHANGED, std::move(parametersString)};
             std::lock_guard<std::mutex> lock(mQueueLock);
             mQueue.push(event);
             mQueueCondition.notify_one();
@@ -106,7 +108,7 @@ namespace WPEFramework
             std::string parametersString;
             parameters.ToString(parametersString);
             LOGINFO("onTimeZoneDSTChanged: %s", parametersString.c_str());
-            Event event = {EVENT_TIME_ZONE_CHANGED, parametersString};
+            Event event = {EVENT_TIME_ZONE_CHANGED, std::move(parametersString)};
             std::lock_guard<std::mutex> lock(mQueueLock);
             mQueue.push(event);
             mQueueCondition.notify_one();
@@ -217,7 +219,7 @@ namespace WPEFramework
                     if (mTimeZone != tz)
                     {
                         mTransitionMap.clear();
-                        mTimeZone = tz;
+                        mTimeZone = std::move(tz);
                     }
                 }
                 else
@@ -447,7 +449,7 @@ namespace WPEFramework
                             if (mTimeZone != tz)
                             {
                                 mTransitionMap.clear();
-                                mTimeZone = tz;
+                                mTimeZone = std::move(tz);
                             }
                         }
                         else

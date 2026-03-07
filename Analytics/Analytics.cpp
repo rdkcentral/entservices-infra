@@ -42,7 +42,7 @@ namespace {
 namespace Plugin {
     SERVICE_REGISTRATION(Analytics, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
 
-    Analytics::Analytics(): mConnectionId(0), mAnalytics(nullptr)
+    Analytics::Analytics(): mService(nullptr), mConnectionId(0), mAnalytics(nullptr)
     {
         SYSLOG(Logging::Startup, (_T("Analytics Constructor")));
     }
