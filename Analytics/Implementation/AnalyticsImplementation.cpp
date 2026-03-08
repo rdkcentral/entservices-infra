@@ -73,7 +73,6 @@ namespace Plugin {
         {
             std::unique_lock<std::mutex> lock(mQueueMutex);
             mActionQueue.push({ACTION_TYPE_SHUTDOWN, nullptr});
-            // lock.unlock() removed - destructor handles unlock
         }
         mQueueCondition.notify_one();
         mThread.join();
@@ -146,7 +145,6 @@ namespace Plugin {
         {
             std::unique_lock<std::mutex> lock(mQueueMutex);
             mActionQueue.push({ACTION_TYPE_SEND_EVENT, std::move(event)});
-            // lock.unlock() removed - destructor handles unlock
         }
         mQueueCondition.notify_one();
         return Core::ERROR_NONE;

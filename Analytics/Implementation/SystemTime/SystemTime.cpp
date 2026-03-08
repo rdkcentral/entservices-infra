@@ -51,7 +51,6 @@ namespace WPEFramework
                 std::unique_lock<std::mutex> lock(mQueueLock);
                 mQueue.push(event);
             }
-            // lock.unlock() removed - destructor handles unlock
             mQueueCondition.notify_one();
         }
 
