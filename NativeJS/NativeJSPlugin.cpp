@@ -31,7 +31,7 @@ namespace WPEFramework {
         NativeJS* NativeJS::_instance = nullptr;
 
         NativeJS::NativeJS()
-            : PluginHost::IPlugin(), PluginHost::JSONRPC(), mService(nullptr), mNativeJS(nullptr)
+            : PluginHost::IPlugin(), PluginHost::JSONRPC(), mService(nullptr), mConnectionId(0), mNativeJS(nullptr)
         {
             NativeJS::_instance = this;
         }
@@ -72,7 +72,7 @@ namespace WPEFramework {
                    waylandDisplay = display;
                 }
             }
-            mNativeJS->Initialize(waylandDisplay);
+            mNativeJS->Initialize(std::move(waylandDisplay));
 	    Exchange::JNativeJS::Register(*this, mNativeJS);
             return "";
         }

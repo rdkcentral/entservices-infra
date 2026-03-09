@@ -190,7 +190,7 @@ namespace WPEFramework {
                 // Handle result from DB query
                 if (DB_OK == queryRet) {
                     ret = true;
-                    table = result;
+                    table = std::move(result);
                 } else {
                     LOGERR("Database %s query failed with error: %s db err code %d",
                         mDatabaseName.c_str(),
