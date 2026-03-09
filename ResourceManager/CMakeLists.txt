@@ -27,6 +27,7 @@ set(PLUGIN_RESOURCE_MANAGER_STARTUPORDER "" CACHE STRING "To configure startup o
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(RFC)
 
 add_library(${MODULE_NAME} SHARED
         ResourceManager.cpp
@@ -56,8 +57,9 @@ add_library(${PLUGIN_IMPLEMENTATION} SHARED
     Module.cpp
 )
 
-include_directories(
-   ../helpers)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ${RFC_INCLUDE_DIRS} ../helpers)
+#include_directories(
+#   ../helpers)
 
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
     CXX_STANDARD 11
@@ -88,14 +90,16 @@ if (RDK_SERVICES_L1_TEST OR RDK_SERVICE_L2_TEST)
         PRIVATE
             CompileSettingsDebug::CompileSettingsDebug
             ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-            ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
+            ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES}
+	    ${RFC_LIBRARIES})
 else()
     target_link_libraries(${PLUGIN_IMPLEMENTATION}
         PRIVATE
             CompileSettingsDebug::CompileSettingsDebug
             ${NAMESPACE}Plugins::${NAMESPACE}Plugins
             -lessosrmgr
-            ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
+            ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES}
+	    ${RFC_LIBRARIES})
 endif()
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
