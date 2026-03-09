@@ -70,9 +70,10 @@ namespace Plugin {
     AnalyticsImplementation::~AnalyticsImplementation()
     {
         LOGINFO("AnalyticsImplementation::~AnalyticsImplementation()");
-        std::unique_lock<std::mutex> lock(mQueueMutex);
-        mActionQueue.push({ACTION_TYPE_SHUTDOWN, nullptr});
-        lock.unlock();
+        {
+            std::unique_lock<std::mutex> lock(mQueueMutex);
+            mActionQueue.push({ACTION_TYPE_SHUTDOWN, nullptr});
+        }
         mQueueCondition.notify_one();
         mThread.join();
     }
@@ -141,9 +142,10 @@ namespace Plugin {
             event->uptimeTimestamp = GetCurrentUptimeInMs();
         }
 
-        std::unique_lock<std::mutex> lock(mQueueMutex);
-        mActionQueue.push({ACTION_TYPE_SEND_EVENT, event});
-        lock.unlock();
+        {
+            std::unique_lock<std::mutex> lock(mQueueMutex);
+            mActionQueue.push({ACTION_TYPE_SEND_EVENT, std::move(event)});
+        }
         mQueueCondition.notify_one();
         return Core::ERROR_NONE;
     }
@@ -220,11 +222,15 @@ namespace Plugin {
 
     void AnalyticsImplementation::ActionLoop()
     {
-        std::unique_lock<std::mutex> lock(mQueueMutex);
+        
 
         while (true) {
+            
+            Action action = {ACTION_TYPE_UNDEF, nullptr};
+            {
+                std::unique_lock<std::mutex> lock(mQueueMutex);
 
-            std::chrono::milliseconds queueTimeout(std::chrono::milliseconds::max());
+                std::chrono::milliseconds queueTimeout(std::chrono::milliseconds::max());
 
             if (!mSysTimeValid)
             {
@@ -245,7 +251,6 @@ namespace Plugin {
                 }
             }
 
-            Action action = {ACTION_TYPE_UNDEF, nullptr};
 
             if (mActionQueue.empty() && !mSysTimeValid)
             {
@@ -257,7 +262,7 @@ namespace Plugin {
                 mActionQueue.pop();
             }
 
-            lock.unlock();
+        }
 
             switch (action.type) {
                 case ACTION_POPULATE_TIME_INFO:
@@ -300,7 +305,7 @@ namespace Plugin {
                         if (action.payload->epochTimestamp != 0)
                         {
                             SendEventToBackend(*action.payload);
-                        }
+                        }   
                         else
                         {
                             // Store the event in the queue with uptime only
@@ -315,8 +320,6 @@ namespace Plugin {
                 default:
                     break;
             }
-
-            lock.lock();
         }
     }
 
