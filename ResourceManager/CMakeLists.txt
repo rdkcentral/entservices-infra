@@ -98,6 +98,10 @@ else()
             ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
 endif()
 
+if(BUILD_ENABLE_ERM)
+    target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE essosrmgr)
+endif()
+
 find_library(RFC_LIBRARIES NAMES rfcapi)
 if (RFC_LIBRARIES)
     find_path(RFC_INCLUDE_DIRS NAMES rfcapi.h REQUIRED)
