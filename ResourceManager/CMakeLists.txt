@@ -47,14 +47,6 @@ target_link_libraries(${MODULE_NAME}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
-        
-find_library(RFC_LIBRARIES NAMES rfcapi)
-if (RFC_LIBRARIES)
-    find_path(RFC_INCLUDE_DIRS NAMES rfcapi.h REQUIRED)
-    target_include_directories(${MODULE_NAME} PRIVATE ${RFC_INCLUDE_DIRS})
-    target_link_libraries(${MODULE_NAME} PRIVATE ${RFC_LIBRARIES})
-    target_compile_definitions(${MODULE_NAME} PRIVATE WITH_RFC)
-endif ()
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
@@ -105,6 +97,14 @@ else()
             -lessosrmgr
             ${PLUGIN_RESOURCE_MANAGER_EXTRA_LIBRARIES})
 endif()
+
+find_library(RFC_LIBRARIES NAMES rfcapi)
+if (RFC_LIBRARIES)
+    find_path(RFC_INCLUDE_DIRS NAMES rfcapi.h REQUIRED)
+    target_include_directories((${PLUGIN_IMPLEMENTATION} PRIVATE ${RFC_INCLUDE_DIRS})
+    target_link_libraries((${PLUGIN_IMPLEMENTATION} PRIVATE ${RFC_LIBRARIES})
+    target_compile_definitions((${PLUGIN_IMPLEMENTATION} PRIVATE WITH_RFC)
+endif ()
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
