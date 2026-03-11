@@ -22,6 +22,7 @@
 #define MODULE_NAME Plugin_LifecycleManager
 #endif
 
+#include <core/core.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
 
