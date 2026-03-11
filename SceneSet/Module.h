@@ -28,4 +28,3 @@
 #include <messaging/messaging.h>
 
 #undef EXTERNAL
-#define EXTERNAL
