@@ -73,10 +73,6 @@ if(PLUGIN_WEBBRIDGE)
     add_subdirectory(WebBridge)
 endif()
 
-if(PLUGIN_STORAGE_MANAGER)
-	add_subdirectory(StorageManager)
-endif()
-
 if(PLUGIN_NATIVEJS)
     add_subdirectory(NativeJS)
 endif()
@@ -89,30 +85,6 @@ if(PLUGIN_TELEMETRYMETRICS)
     add_subdirectory(TelemetryMetrics)
 endif()
 
-<<<<<<< HEAD
-if(PLUGIN_MIGRATION)
-    add_subdirectory(Migration)
-endif()
-
-=======
-if(PLUGIN_PREINSTALL_MANAGER)
-    add_subdirectory(PreinstallManager)
-endif()
-
-if(PLUGIN_APPGATEWAY)
-    add_subdirectory(AppGateway)
-endif()
-
-if(PLUGIN_APPNOTIFICATIONS)
-    add_subdirectory(AppNotifications)
-endif()
-
-if(PLUGIN_FBSETTINGS)
-	add_subdirectory(FbSettings)
-endif()
-
-
->>>>>>> 56923ffa2253728267d2efb9f53bae68f3bff8d0
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
