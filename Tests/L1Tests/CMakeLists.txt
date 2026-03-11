@@ -139,7 +139,8 @@ add_plugin_test_ex(PLUGIN_USERSETTINGS tests/test_UserSettings.cpp "${USERSETTIN
 
 # PLUGIN_RESOURCEMANAGER
 set (RESOURCEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/ResourceManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-add_plugin_test_ex(PLUGIN_RESOURCEMANAGER tests/test_ResourceManager.cpp "${RESOURCEMANAGER_INC}" "${NAMESPACE}ResourceManager")
+set (RESOURCEMANAGER_LIBS ${NAMESPACE}ResourceManager ${NAMESPACE}ResourceManagerImplementation)
+add_plugin_test_ex(PLUGIN_RESOURCEMANAGER tests/test_ResourceManager.cpp "${RESOURCEMANAGER_INC}" "${RESOURCEMANAGER_LIBS}")
 
 #PLUGIN_STORAGE_MANAGER
 set (STORAGE_MANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/StorageManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)

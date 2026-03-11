@@ -155,6 +155,7 @@ jobs:
           mkdir -p $GITHUB_WORKSPACE/westeros-minimal
           cd $GITHUB_WORKSPACE/westeros-minimal
           git init
+          git remote remove origin 2>/dev/null || true
           git remote add origin https://code.rdkcentral.com/r/components/opensource/westeros
           git config core.sparseCheckout true
           git pull --depth=1 origin master
@@ -488,7 +489,7 @@ jobs:
           -DPLUGIN_USB_MASS_STORAGE=ON
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
-          -DPLUGIN_RESOURCEMANAGER=OFF
+          -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
@@ -571,7 +572,7 @@ jobs:
           -DHIDE_NON_EXTERNAL_SYMBOLS=OFF
           -DPLUGIN_OCICONTAINER=ON
           -DPLUGIN_USERSETTINGS=ON
-          -DPLUGIN_RESOURCEMANAGER=OFF
+          -DPLUGIN_RESOURCEMANAGER=ON
           -DPLUGIN_APPMANAGER=ON
           -DPLUGIN_STORAGE_MANAGER=ON
           -DPLUGIN_RUNTIME_MANAGER=ON
