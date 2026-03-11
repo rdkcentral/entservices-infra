@@ -22,8 +22,8 @@
 #include "Module.h"
 #include <interfaces/IResourceManager.h>
 
-#ifdef ENABLE_ERM
-#include <essos-resmgr.h>
+#if defined(ENABLE_ERM) || defined(ENABLE_L1TEST)
+#include "essos-resmgr.h"
 #endif
 
 namespace WPEFramework {
@@ -51,7 +51,8 @@ namespace Plugin {
     public:
         static ResourceManagerImplementation* _instance;
 
-    private:
+    // Changed to protected for testing purpose
+    protected:
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
 
