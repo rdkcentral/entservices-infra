@@ -447,6 +447,12 @@ int SocketServer::ReadResponse(Response& rsp)
     uint8_t* buffer;
     buffer = (uint8_t*)malloc(header.json_len+1);
 
+    if (buffer == nullptr)
+    {
+      LOGERR("Failed to allocate memory for JSON response");
+      return -1;
+    }
+
     if ((rc = ReadExact(buffer, (int)header.json_len)) <= 0)
     {
       free(buffer);
@@ -454,8 +460,14 @@ int SocketServer::ReadResponse(Response& rsp)
     }
     
     buffer[header.json_len] = 0;
-    rsp.json = (char*)buffer;
+    rsp.json = strdup((char*)buffer);
     free(buffer);
+
+    if (rsp.json == nullptr)
+    {
+      LOGERR("Failed to duplicate JSON string");
+      return -1;
+    }
   }
   return 0;
 }

@@ -45,6 +45,11 @@ DobbySpecGenerator::DobbySpecGenerator(): mIonMemoryPluginData(Json::objectValue
 {
     LOGINFO("DobbySpecGenerator()");
     mAIConfiguration = new AIConfiguration();
+    if (mAIConfiguration == nullptr)
+    {
+        LOGERR("Failed to allocate AIConfiguration");
+        return;
+    }
     mAIConfiguration->initialize();
     initialiseIonHeapsJson();
 //TODO SUPPORT THIS
