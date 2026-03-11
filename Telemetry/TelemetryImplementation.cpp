@@ -74,7 +74,6 @@ namespace Plugin {
     {
         LOGINFO("Create TelemetryImplementation Instance");
         TelemetryImplementation::_instance = this;
-        Utils::Telemetry::init();
     }
 
     TelemetryImplementation::~TelemetryImplementation()
