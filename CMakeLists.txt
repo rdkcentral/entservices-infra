@@ -33,8 +33,6 @@ if(COMCAST_CONFIG)
     include(services.cmake)
 endif()
 
-option(PLUGIN_OCICONTAINER "Include OCIContainer plugin" OFF)
-
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 
@@ -55,34 +53,6 @@ if(DISABLE_SECURITY_TOKEN)
     add_definitions(-DDISABLE_SECURITY_TOKEN)
 endif()
 
-if(PLUGIN_USERSETTINGS)
-    add_subdirectory(UserSettings)
-endif()
-
-if(PLUGIN_USB_MASS_STORAGE)
-    add_subdirectory(USBMassStorage)
-endif()
-
-if(PLUGIN_OCICONTAINER)
-    add_subdirectory(OCIContainer)
-endif()
-
-if(PLUGIN_PERSISTENTSTORE)
-    add_subdirectory(PersistentStore)
-endif()
-
-if(PLUGIN_USBDEVICE)
-    add_subdirectory(USBDevice)
-endif()
-
-if(PLUGIN_TELEMETRY)
-    add_subdirectory(Telemetry)
-endif()
-
-if(PLUGIN_MONITOR)
-    add_subdirectory(Monitor)
-endif()
-
 if(PLUGIN_RDKSHELL)
     add_subdirectory(RDKShell)
 endif()
@@ -91,24 +61,12 @@ if(PLUGIN_RUSTADAPTER)
     add_subdirectory(RustAdapter)
 endif()
 
-if(PLUGIN_MESSAGECONTROL)
-    add_subdirectory(MessageControl)
-endif()
-
 if (PLUGIN_RESOURCEMANAGER)
     add_subdirectory(ResourceManager)
 endif()
 
 if (PLUGIN_ANALYTICS)
     add_subdirectory(Analytics)
-endif()
-
-if(PLUGIN_CLOUDSTORE)
-    add_subdirectory(CloudStore)
-endif()
-
-if(PLUGIN_SHAREDSTORAGE)
-    add_subdirectory(SharedStorage)
 endif()
 
 if(PLUGIN_WEBBRIDGE)
@@ -131,10 +89,30 @@ if(PLUGIN_TELEMETRYMETRICS)
     add_subdirectory(TelemetryMetrics)
 endif()
 
+<<<<<<< HEAD
 if(PLUGIN_MIGRATION)
     add_subdirectory(Migration)
 endif()
 
+=======
+if(PLUGIN_PREINSTALL_MANAGER)
+    add_subdirectory(PreinstallManager)
+endif()
+
+if(PLUGIN_APPGATEWAY)
+    add_subdirectory(AppGateway)
+endif()
+
+if(PLUGIN_APPNOTIFICATIONS)
+    add_subdirectory(AppNotifications)
+endif()
+
+if(PLUGIN_FBSETTINGS)
+	add_subdirectory(FbSettings)
+endif()
+
+
+>>>>>>> 56923ffa2253728267d2efb9f53bae68f3bff8d0
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
