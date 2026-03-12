@@ -43,9 +43,9 @@ namespace Plugin {
         END_INTERFACE_MAP
 
         // IResourceManager interface implementation
-        Core::hresult SetAVBlocked(const string& appId, const bool blocked, Success& result) override;
+        Core::hresult SetAVBlocked(const string& appid, const bool blocked, Success& result) override;
         Core::hresult GetBlockedAVApplications(IStringIterator*& clients, bool& success) const override;
-        Core::hresult ReserveTTSResource(const string& appId, Success& result) override;
+        Core::hresult ReserveTTSResource(const string& appid, Success& result) override;
         Core::hresult ReserveTTSResourceForApps(IStringIterator* const appids, Success& result) override;
 
     public:
