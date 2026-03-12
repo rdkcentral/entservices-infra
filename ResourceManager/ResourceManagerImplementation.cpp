@@ -96,9 +96,9 @@ namespace WPEFramework {
         }
     }
 
-    /* virtual */ Core::hresult ResourceManagerImplementation::SetAVBlocked(const string& appId, const bool blocked, Exchange::IResourceManager::Success& result) /* override */
+    /* virtual */ Core::hresult ResourceManagerImplementation::SetAVBlocked(const string& appid, const bool blocked, Exchange::IResourceManager::Success& result) /* override */
     {
-        LOGINFO("SetAVBlocked: appId=%s, blocked=%s", appId.c_str(), blocked ? "true" : "false");
+        LOGINFO("SetAVBlocked: appid=%s, blocked=%s", appid.c_str(), blocked ? "true" : "false");
         
         Core::hresult retVal = Core::ERROR_GENERAL;
         result.success = false;
@@ -109,23 +109,23 @@ namespace WPEFramework {
             // Check if ERM is available and blacklist is not disabled
             if ((nullptr != mEssRMgr) && (false == mDisableBlacklist)) {
                 
-                std::cout << "appid: " << appId << std::endl;
+                std::cout << "appid: " << appid << std::endl;
                 std::cout << "blocked: " << std::boolalpha << blocked << std::endl;
 
 #ifdef ENABLE_ERM
                 bool status = blocked ? 
-                    EssRMgrAddToBlackList(mEssRMgr, appId.c_str()) : 
-                    EssRMgrRemoveFromBlackList(mEssRMgr, appId.c_str());
+                    EssRMgrAddToBlackList(mEssRMgr, appid.c_str()) : 
+                    EssRMgrRemoveFromBlackList(mEssRMgr, appid.c_str());
                 
                 std::cout << "setAVBlocked call returning " << std::boolalpha << status << std::endl;
                 
                 if (true == status) {
-                    mAppsAVBlacklistStatus[appId] = blocked;
+                    mAppsAVBlacklistStatus[appid] = blocked;
                     std::cout << "mAppsAVBlacklistStatus updated" << std::endl;
                     retVal = Core::ERROR_NONE;
                     result.success = true;
                 } else {
-                    LOGERR("ERM failed to %s application: %s", blocked ? "block" : "unblock", appId.c_str());
+                    LOGERR("ERM failed to %s application: %s", blocked ? "block" : "unblock", appid.c_str());
                     retVal = Core::ERROR_GENERAL;
                 }
 #else
@@ -363,9 +363,9 @@ namespace WPEFramework {
       }
     };
 
-    /* virtual */ Core::hresult ResourceManagerImplementation::ReserveTTSResource(const string& appId, Exchange::IResourceManager::Success& result) /* override */
+    /* virtual */ Core::hresult ResourceManagerImplementation::ReserveTTSResource(const string& appid, Exchange::IResourceManager::Success& result) /* override */
     {
-        LOGINFO("ReserveTTSResource: appId=%s", appId.c_str());
+        LOGINFO("ReserveTTSResource: appid=%s", appid.c_str());
         
         Core::hresult returnCode = Core::ERROR_NONE;  
         bool success = false;
@@ -376,7 +376,7 @@ namespace WPEFramework {
             // Check if ReserveTTS is disabled by RFC
             if (false == mDisableReserveTTS) {
                 
-                std::cout << "appid: " << appId << std::endl;
+                std::cout << "appid: " << appid << std::endl;
                 
                 // Prepare parameters for TTS setACL call
                 JsonObject params;
@@ -386,7 +386,7 @@ namespace WPEFramework {
                 JsonArray accessList;
                 
                 // Build the access list structure for TTS
-                clientList.Add(appId);
+                clientList.Add(appid);
                 clientParam.Set("method", "speak");
                 clientParam["apps"] = clientList;
                 accessList.Add(clientParam);
@@ -416,11 +416,11 @@ namespace WPEFramework {
                 if (status) {
                     returnCode = Core::ERROR_NONE;
                     success = true;
-                    LOGINFO("Successfully reserved TTS resource for: %s", appId.c_str());
+                    LOGINFO("Successfully reserved TTS resource for: %s", appid.c_str());
                 } else {
                     returnCode = Core::ERROR_NONE; 
                     success = false;              
-                    LOGERR("Failed to reserve TTS resource for: %s", appId.c_str());
+                    LOGERR("Failed to reserve TTS resource for: %s", appid.c_str());
                 }
                 
             } else {
