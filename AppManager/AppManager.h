@@ -60,12 +60,10 @@ namespace Plugin {
 
                 void Activated(RPC::IRemoteConnection*) override
                 {
-                    LOGINFO("AppManager Notification Activated");
                 }
 
                 void Deactivated(RPC::IRemoteConnection *connection) override
                 {
-                    LOGINFO("AppManager Notification Deactivated");
                     _parent.Deactivated(connection);
                 }
 
