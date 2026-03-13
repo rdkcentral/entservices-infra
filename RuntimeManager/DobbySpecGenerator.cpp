@@ -44,8 +44,11 @@ namespace
 DobbySpecGenerator::DobbySpecGenerator(): mIonMemoryPluginData(Json::objectValue), mPackageMountPoint("/package"), mRuntimeMountPoint("/runtime"), mGstRegistrySourcePath(""), mGstRegistryDestinationPath("/tmp/gstreamer-cached-registry.bin")
 {
     LOGINFO("DobbySpecGenerator()");
-    mAIConfiguration = new AIConfiguration();
-    mAIConfiguration->initialize();
+    mAIConfiguration = std::make_unique<AIConfiguration>();
+    if (mAIConfiguration)
+    {
+        mAIConfiguration->initialize();
+    }
     initialiseIonHeapsJson();
 //TODO SUPPORT THIS
 /*
@@ -63,10 +66,6 @@ DobbySpecGenerator::DobbySpecGenerator(): mIonMemoryPluginData(Json::objectValue
 DobbySpecGenerator::~DobbySpecGenerator()
 {
     LOGINFO("~DobbySpecGenerator()");
-    if (nullptr != mAIConfiguration)
-    {
-        delete mAIConfiguration;
-    }
 }
 
 Json::Value DobbySpecGenerator::getWorkingDir(const ApplicationConfiguration& config, const WPEFramework::Exchange::RuntimeConfig& runtimeConfig) const
@@ -92,13 +91,12 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     resultSpec = "";
 
     std::ifstream inFile("/tmp/specchange");
-    if (inFile.good())
+    if (inFile.is_open())
     {
-        inFile.open("/tmp/specchange"); //open the input file
         std::stringstream strStream;
-        strStream << inFile.rdbuf(); //read the file
-        resultSpec = strStream.str(); //str holds the content of the file
-        std::cout << resultSpec << "\n"; //you can do anything with the string!!!
+        strStream << inFile.rdbuf();
+        resultSpec = strStream.str();
+        std::cout << resultSpec << "\n";
         inFile.close();
         JsonObject parameters;
         parameters.FromString(resultSpec.c_str());
