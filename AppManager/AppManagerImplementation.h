@@ -25,7 +25,7 @@
 #include <interfaces/IStore2.h>
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IAppPackageManager.h>
-#include <interfaces/IStorageManager.h>
+#include <interfaces/IAppStorageManager.h>
 #include "tracing/Logging.h"
 #include <com/com.h>
 #include <core/core.h>

@@ -21,7 +21,7 @@
 
 #include "Module.h"
 #include <interfaces/json/JStorageManager.h>
-#include <interfaces/IStorageManager.h>
+#include <interfaces/IAppStorageManager.h>
 #include <interfaces/IConfiguration.h>
 
 namespace WPEFramework {
