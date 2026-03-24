@@ -20,7 +20,7 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/IAppStorageManager.h>
+#include <interfaces/IStorageManager.h>
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IStore2.h>
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS

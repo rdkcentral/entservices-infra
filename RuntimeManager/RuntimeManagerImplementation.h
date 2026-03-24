@@ -26,7 +26,7 @@
 #include "tracing/Logging.h"
 #include <mutex>
 #include <interfaces/IOCIContainer.h>
-#include <interfaces/IAppStorageManager.h>
+#include <interfaces/IStorageManager.h>
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
 #include <interfaces/ITelemetryMetrics.h>
 #endif

@@ -38,7 +38,7 @@
 #include "Module.h"
 #include "UtilsLogging.h"
 #include <interfaces/IAppPackageManager.h>
-#include <interfaces/IAppStorageManager.h>
+#include <interfaces/IStorageManager.h>
 
 #include "HttpClient.h"
 
