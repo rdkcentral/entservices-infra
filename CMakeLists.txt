@@ -129,6 +129,10 @@ if(PLUGIN_FBSETTINGS)
 	add_subdirectory(FbSettings)
 endif()
 
+if(PLUGIN_GSTREAMERSERVICE)
+    add_subdirectory(GstreamerService)
+endif()
+
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")

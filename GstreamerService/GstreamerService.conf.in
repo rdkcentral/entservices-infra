@@ -1,0 +1,11 @@
+autostart = "@PLUGIN_GSTREAMERSERVICE_AUTOSTART@"
+precondition = ["Platform"]
+callsign = "org.rdk.GstreamerService"
+startuporder = "@PLUGIN_GSTREAMERSERVICE_STARTUPORDER@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_GSTREAMERSERVICE_MODE@")
+root.add("locator", "lib@PLUGIN_IMPLEMENTATION@.so")
+configuration.add("root", root)
