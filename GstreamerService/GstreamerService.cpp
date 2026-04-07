@@ -71,15 +71,14 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
+        // Register for COM-RPC connection/disconnection notifications
+        _service->Register(&_notification);
+
         _gstreamerService = service->Root<Exchange::IGstreamerService>(_connectionId, 2000, _T("GstreamerServiceImplementation"));
 
         if (_gstreamerService != nullptr) {
-            // Register notification handler for out-of-process plugin
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-            if (connection != nullptr) {
-                connection->Register(&_notification);
-                connection->Release();
-            }
+            // Register for custom plugin notifications (event relay)
+            _gstreamerService->Register(&_notification);
 
             // Configure the implementation
             Exchange::IConfiguration* configure = _gstreamerService->QueryInterface<Exchange::IConfiguration>();
@@ -106,16 +105,15 @@ namespace Plugin {
         SYSLOG(Logging::Shutdown, (string(_T("GstreamerService::Deinitialize"))));
         ASSERT(service == _service);
 
+        // Unregister from the Framework Shell (stops state change events)
+        _service->Unregister(&_notification);
+
         if (_gstreamerService != nullptr) {
+            // Unregister from the Target Plugin (stops custom events)
+            _gstreamerService->Unregister(&_notification);
+
             // Unregister JSON-RPC interface
             Exchange::JGstreamerService::Unregister(*this);
-
-            // Unregister notification handler
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-            if (connection != nullptr) {
-                connection->Unregister(&_notification);
-                connection->Release();
-            }
 
             // Release the implementation
             VARIABLE_IS_NOT_USED uint32_t result = _gstreamerService->Release();
@@ -127,12 +125,13 @@ namespace Plugin {
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
             // If this was running in a (container) process...
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
             if (connection != nullptr)
             {
-                // Lets trigger a cleanup sequence for
-                // out-of-process code. Which will guard
-                // that unwilling processes, get shot if
-                // not stopped friendly :~)
+                // Lets trigger the cleanup sequence for
+                // out-of-process code, which ensures that
+                // unresponsive processes are terminated
+                // if they do not stop gracefully.
                 connection->Terminate();
                 connection->Release();
             }
@@ -140,10 +139,8 @@ namespace Plugin {
 
         _connectionId = 0;
 
-        if (_service != nullptr) {
-            _service->Release();
-            _service = nullptr;
-        }
+        _service->Release();
+        _service = nullptr;
 
         SYSLOG(Logging::Shutdown, (string(_T("GstreamerService de-initialized"))));
     }

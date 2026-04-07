@@ -35,7 +35,6 @@ namespace Plugin {
         SYSLOG(Logging::Startup, (_T("GstreamerServiceImplementation Constructor")));
         
         // Initialize GStreamer
-        gst_init(nullptr, nullptr);
     }
 
     GstreamerServiceImplementation::~GstreamerServiceImplementation()
@@ -49,8 +48,6 @@ namespace Plugin {
             _shell = nullptr;
         }
 
-        // Deinitialize GStreamer
-        gst_deinit();
     }
 
     uint32_t GstreamerServiceImplementation::Configure(PluginHost::IShell* shell)
@@ -58,7 +55,8 @@ namespace Plugin {
         ASSERT(shell != nullptr);
         
         _adminLock.Lock();
-        
+        gst_init(nullptr, nullptr);
+
         _shell = shell;
         _shell->AddRef();
         

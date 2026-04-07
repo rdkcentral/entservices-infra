@@ -46,8 +46,9 @@ namespace WPEFramework {
             GstreamerService(const GstreamerService&) = delete;
             GstreamerService& operator=(const GstreamerService&) = delete;
 
-            // Notification handler for out-of-process plugin failures
-            class Notification : public RPC::IRemoteConnection::INotification {
+            // Notification handler for out-of-process plugin failures and event relay
+            class Notification : public RPC::IRemoteConnection::INotification,
+                                 public Exchange::IGstreamerService::INotification {
             public:
                 explicit Notification(GstreamerService* parent)
                     : _parent(*parent)
@@ -62,7 +63,12 @@ namespace WPEFramework {
                 Notification& operator=(Notification&&) = delete;
                 Notification& operator=(const Notification&) = delete;
 
-            public:
+                BEGIN_INTERFACE_MAP(Notification)
+                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+                INTERFACE_ENTRY(Exchange::IGstreamerService::INotification)
+                END_INTERFACE_MAP
+
+                // RPC::IRemoteConnection::INotification
                 void Activated(RPC::IRemoteConnection* /* connection */) override
                 {
                 }
@@ -71,9 +77,15 @@ namespace WPEFramework {
                     _parent.Deactivated(connection);
                 }
 
-                BEGIN_INTERFACE_MAP(Notification)
-                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
-                END_INTERFACE_MAP
+                // Exchange::IGstreamerService::INotification - relay as JSON-RPC
+                void OnPipelineStateChanged(const string& state) override
+                {
+                    Exchange::JGstreamerService::Event::OnPipelineStateChanged(_parent, state);
+                }
+                void OnError(const string& errorMessage) override
+                {
+                    Exchange::JGstreamerService::Event::OnError(_parent, errorMessage);
+                }
 
             private:
                 GstreamerService& _parent;
