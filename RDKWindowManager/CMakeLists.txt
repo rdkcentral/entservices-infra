@@ -61,7 +61,7 @@ add_library(${PLUGIN_IMPLEMENTATION} SHARED
     RDKWindowManagerImplementation.cpp
     Module.cpp)
 
-include_directories(../helpers)
+include_directories(helpers)
 
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
         CXX_STANDARD 11
