@@ -58,61 +58,60 @@ namespace WPEFramework
             if (!dir)
             {
                 LOGERR("Failed to open storage directory: %s. Error: %s", mBaseStoragePath.c_str(), strerror(errno));
+                return status;
             }
-            else
+
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != nullptr)
             {
-                struct dirent* entry;
-                while ((entry = readdir(dir)) != nullptr)
+                LOGINFO("entry->d_name: %s", entry->d_name);
+                if (entry->d_type != DT_DIR || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || !isValidAppStorageDirectory(entry->d_name))
                 {
-                    LOGINFO("entry->d_name: %s", entry->d_name);
-                    if (entry->d_type != DT_DIR || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || !isValidAppStorageDirectory(entry->d_name))
-                    {
-                        LOGERR("entry->d_name: %s d_type : %d - not a directory, it is [.] or [..], or invalid appId - SKIPPED\n", entry->d_name, entry->d_type);
-                        continue;
-                    }
-
-                    std::string appId = entry->d_name;
-
-                    //capture the path
-                    std::string appFilePath = mBaseStoragePath + '/' + appId;
-
-                    //get the uid, gid by stat
-                    struct stat dirStat;
-                    if (stat(appFilePath.c_str(), &dirStat) == -1)
-                    {
-                        LOGERR("unable to get the status of app directory. appFilePath: %s", appFilePath.c_str());
-                        continue;
-                    }
-
-                    //update the StorageAppInfo object and populate the Map
-                    StorageAppInfo storageInfo;
-                    storageInfo.path    = std::move(appFilePath);
-                    storageInfo.uid     = static_cast<uint32_t>(dirStat.st_uid);
-                    storageInfo.gid     = static_cast<uint32_t>(dirStat.st_gid);
-
-                    //get the quotaKB
-                    status = appQuotaSizeProperty(GET, appId, &storageInfo.quotaKB);
-                    if (Core::ERROR_NONE != status)
-                    {
-                        LOGERR("appQuotaSizeProperty Failed for App Quota size retrivel, appId:%s!!!", appId.c_str());
-                        storageInfo.quotaKB = 0;
-                    }
-
-                    storageInfo.usedKB  = static_cast<uint32_t>(getDirectorySizeInBytes(storageInfo.path) / 1024); //get the used size
-
-                    LOGINFO("Retrieved storageInfo for appId: %s " \
-                    "userId: %d groupId: %d quotaKB: %u usedKB: %u path: %s",
-                    appId.c_str(), storageInfo.uid, storageInfo.gid, storageInfo.quotaKB, storageInfo.usedKB, storageInfo.path.c_str());
-
-                    if(!createAppStorageInfoByAppID(appId,storageInfo))
-                    {
-                        LOGERR("Failed to create storage at mStorageAppInfo\n");
-                        status = Core::ERROR_GENERAL;
-                    }
+                    LOGERR("entry->d_name: %s d_type : %d - not a directory, it is [.] or [..], or invalid appId - SKIPPED\n", entry->d_name, entry->d_type);
+                    continue;
                 }
-                closedir(dir);
+
+                std::string appId = entry->d_name;
+
+                //capture the path
+                std::string appFilePath = mBaseStoragePath + '/' + appId;
+
+                //get the uid, gid by stat
+                struct stat dirStat;
+                if (stat(appFilePath.c_str(), &dirStat) == -1)
+                {
+                    LOGERR("unable to get the status of app directory. appFilePath: %s", appFilePath.c_str());
+                    continue;
+                }
+
+                //update the StorageAppInfo object and populate the Map
+                StorageAppInfo storageInfo;
+                storageInfo.path    = std::move(appFilePath);
+                storageInfo.uid     = static_cast<uint32_t>(dirStat.st_uid);
+                storageInfo.gid     = static_cast<uint32_t>(dirStat.st_gid);
+
+                //get the quotaKB
+                status = appQuotaSizeProperty(GET, appId, &storageInfo.quotaKB);
+                if (Core::ERROR_NONE != status)
+                {
+                    LOGERR("appQuotaSizeProperty Failed for App Quota size retrivel, appId:%s!!!", appId.c_str());
+                    storageInfo.quotaKB = 0;
+                }
+
+                storageInfo.usedKB  = static_cast<uint32_t>(getDirectorySizeInBytes(storageInfo.path) / 1024); //get the used size
+
+                LOGINFO("Retrieved storageInfo for appId: %s " \
+                "userId: %d groupId: %d quotaKB: %u usedKB: %u path: %s",
+                appId.c_str(), storageInfo.uid, storageInfo.gid, storageInfo.quotaKB, storageInfo.usedKB, storageInfo.path.c_str());
+
+                if(!createAppStorageInfoByAppID(appId,storageInfo))
+                {
+                    LOGERR("Failed to create storage at mStorageAppInfo\n");
+                    status = Core::ERROR_GENERAL;
+                }
             }
-        return status;
+            closedir(dir);
+            return status;
         }
 
         Core::hresult RequestHandler::createPersistentStoreRemoteStoreObject()
@@ -898,38 +897,37 @@ namespace WPEFramework
             if (!dir)
             {
                 errorReason = "Failed to open storage directory: " + mBaseStoragePath;
+                return status;
             }
-            else
+
+            bool deletionFailed = false;
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != nullptr)
             {
-                bool deletionFailed = false;
-                struct dirent* entry;
-                while ((entry = readdir(dir)) != nullptr)
+                if (entry->d_type != DT_DIR || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                 {
-                    if (entry->d_type != DT_DIR || strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-                    {
-                        continue;
-                    }
-
-                    string appDirName = entry->d_name;
-                    if (std::find(exemptedIdsStrList.begin(), exemptedIdsStrList.end(), appDirName) != exemptedIdsStrList.end())
-                    {
-                        LOGINFO("Skipping exempted app directory: %s", appDirName.c_str());
-                        continue;
-                    }
-
-                    Core::hresult deleteStatus = deleteDirectoryEntries(appDirName, errorReason);
-                    if (deleteStatus != Core::ERROR_NONE)
-                    {
-                        LOGERR("Error deleting directory entries for: %s", appDirName.c_str());
-                        deletionFailed = true;
-                    }
+                    continue;
                 }
-                closedir(dir);
 
-                if (!deletionFailed)
+                string appDirName = entry->d_name;
+                if (std::find(exemptedIdsStrList.begin(), exemptedIdsStrList.end(), appDirName) != exemptedIdsStrList.end())
                 {
-                    status = Core::ERROR_NONE;
+                    LOGINFO("Skipping exempted app directory: %s", appDirName.c_str());
+                    continue;
                 }
+
+                Core::hresult deleteStatus = deleteDirectoryEntries(appDirName, errorReason);
+                if (deleteStatus != Core::ERROR_NONE)
+                {
+                    LOGERR("Error deleting directory entries for: %s", appDirName.c_str());
+                    deletionFailed = true;
+                }
+            }
+            closedir(dir);
+
+            if (!deletionFailed)
+            {
+                status = Core::ERROR_NONE;
             }
             return status;
         }
