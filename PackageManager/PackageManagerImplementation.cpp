@@ -1087,9 +1087,17 @@ namespace Plugin {
                     state.installState = InstallState::INSTALLED;
                 } else {
                     state.installState = InstallState::INSTALL_FAILURE;
-                    state.failReason = (pmResult == packagemanager::Result::VERSION_MISMATCH) ?
-                        FailReason::PACKAGE_MISMATCH_FAILURE : FailReason::SIGNATURE_VERIFICATION_FAILURE;
-                    LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
+                    switch (pmResult) {
+    			case packagemanager::Result::VERSION_MISMATCH:
+				state.failReason = FailReason::PACKAGE_MISMATCH_FAILURE;
+			        break;
+		    	case packagemanager::Result::PERSISTENCE_FAILURE:
+        			state.failReason = FailReason::PERSISTENCE_FAILURE;
+			        break;
+			default:
+			        state.failReason = FailReason::SIGNATURE_VERIFICATION_FAILURE;
+		    }
+		    LOGERR("Install failed reason %s", getFailReason(state.failReason).c_str());
                 }
                 LOGDBG("Package: %s Version: %s result=%d", packageId.c_str(), version.c_str(), result);
                 NotifyInstallStatus(packageId, version, state);
