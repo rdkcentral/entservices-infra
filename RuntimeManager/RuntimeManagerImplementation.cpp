@@ -19,6 +19,8 @@
 
 #include "RuntimeManagerImplementation.h"
 #include "DobbySpecGenerator.h"
+#include "ContainerUtils.h"
+#include "WebInspector.h"
 #include <errno.h>
 #include <fstream>
 
@@ -520,6 +522,7 @@ err_ret:
             bool displayResult = false;
             bool notifyParamCheckFailure = false;
             std::string errorCode = "";
+
 
 #ifdef ENABLE_AIMANAGERS_TELEMETRY_METRICS
             /* Get current timestamp at the start of run for telemetry */
@@ -1188,11 +1191,67 @@ err_ret:
 
         void RuntimeManagerImplementation::onOCIContainerStartedEvent(std::string name, JsonObject& data)
         {
+            LOGINFO("Container name: %s", name.c_str());        
+            #ifdef RDK_APPMANAGERS_DEBUG
+            const in_addr_t addr = ContainerUtils::getContainerIpAddress(name);
+            if (addr != 0)
+            {
+                struct in_addr ip_addr;
+                ip_addr.s_addr = addr;
+                LOGINFO("Container %s started with IP address: %s", name.c_str(), inet_ntoa(ip_addr));
+                
+                uint16_t debugPort = 0;
+                           
+                for (uint16_t port = 2000; port <= 2100; ++port)
+                {
+                    if (mPortAvailability.find(port) == mPortAvailability.end() || !mPortAvailability[port])
+                    {
+                        debugPort = port;
+                        break;
+                    }
+                }
+                
+                if (debugPort != 0)
+                {
+                    auto webInspector = WebInspector::attach(name, addr, debugPort);
+                    if (webInspector)
+                    {
+                        mWebInspectors[name] = webInspector;
+                        mPortAvailability[debugPort] = true;
+                        LOGINFO("WebInspector attached for container %s on host port %d ", name.c_str(), debugPort);
+                    }
+                    else
+                    {
+                        LOGWARN("WebInspector::attach failed for container %s on port %d", name.c_str(), debugPort);
+                    }
+                }
+                else
+                {
+                    LOGERR("No available debug ports for container %s", name.c_str());
+                }
+            }
+            else
+            {
+                LOGERR("Failed to get IP address for container '%s'", name.c_str());
+            }
+			#endif
+            
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERSTARTED, data);
         }
 
         void RuntimeManagerImplementation::onOCIContainerStoppedEvent(std::string name, JsonObject& data)
         {
+		   #ifdef RDK_APPMANAGERS_DEBUG
+            auto it = mWebInspectors.find(name);
+            if (it != mWebInspectors.end())
+            {
+                uint16_t freedPort = it->second->debugPort();
+                LOGINFO("Detaching WebInspector for container %s, freeing debug port %d", name.c_str(), freedPort);
+                mWebInspectors.erase(it);
+                mPortAvailability[freedPort] = false;
+                LOGINFO("Debug port %d flag reset to available for reuse", freedPort);
+            }
+			#endif
             dispatchEvent(RuntimeManagerImplementation::RuntimeEventType::RUNTIME_MANAGER_EVENT_CONTAINERSTOPPED, data);
         }
 
