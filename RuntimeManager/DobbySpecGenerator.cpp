@@ -160,13 +160,11 @@ bool DobbySpecGenerator::generate(const ApplicationConfiguration& config, const 
     cpuObj["cores"] = getCpuCores();
     spec["cpu"] = std::move(cpuObj);
 
-#if (AI_BUILD_TYPE == AI_DEBUG)
     Json::Value consoleObj;
     consoleObj["limit"] = mAIConfiguration->getContainerConsoleLogCap();
-    //TODO: SUPPORT Read console path from runtime config: RDKEMW-4432
-    consoleObj["path"] = "/tmp/container.log";
+    //RDKEMW-5331: Update log path to create individual log files for each app in the apps directory
+    consoleObj["path"] = "/opt/logs/apps/" + config.mAppId + ".log";
     spec["console"] = std::move(consoleObj);
-#endif // (AI_BUILD_TYPE == AI_DEBUG)
 
     Json::Value etcObj;
     Json::Value hostsArray(Json::arrayValue);
