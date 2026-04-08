@@ -89,14 +89,20 @@ namespace WPEFramework
                     if(result != Core::ERROR_NONE)
                     {
                         message = _T("mStorageManagerImpl could not be configured");
+                        mConfigure->Release();
+                        mConfigure = nullptr;
+                    }
+                    else
+                    {
+                        // Invoking Plugin API register to wpeframework
+                        Exchange::JStorageManager::Register(*this, mStorageManagerImpl);
                     }
                 }
                 else
                 {
                     message = _T("mStorageManagerImpl implementation did not provide a configuration interface");
                 }
-                // Invoking Plugin API register to wpeframework
-                Exchange::JStorageManager::Register(*this, mStorageManagerImpl);
+                
             }
         }
         else
