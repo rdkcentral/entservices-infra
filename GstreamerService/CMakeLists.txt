@@ -1,47 +1,31 @@
-# ------------------------------------------------------------------------------
-# Plugin metadata
-# ------------------------------------------------------------------------------
-
-cmake_minimum_required(VERSION 3.8)
-
-if(NOT NAMESPACE)
-    set(NAMESPACE "WPEFramework")
-endif()
+# If not stated otherwise in this file or this component's LICENSE file the
+# following copyright and licenses apply:
+#
+# Copyright 2024 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 set(PLUGIN_NAME GstreamerService)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLUGIN_IMPLEMENTATION ${MODULE_NAME}Implementation)
 
-set(VERSION_MAJOR 1)
-set(VERSION_MINOR 0)
-set(VERSION_PATCH 0)
-
-set(MODULE_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
-
-add_compile_definitions(GSTREAMERSERVICE_MAJOR_VERSION=${VERSION_MAJOR})
-add_compile_definitions(GSTREAMERSERVICE_MINOR_VERSION=${VERSION_MINOR})
-add_compile_definitions(GSTREAMERSERVICE_PATCH_VERSION=${VERSION_PATCH})
-
-message(STATUS "Building ${MODULE_NAME} v${MODULE_VERSION}")
-
-# ------------------------------------------------------------------------------
-# Build options
-# ------------------------------------------------------------------------------
-
-set(PLUGIN_GSTREAMERSERVICE_STARTUPORDER "" CACHE STRING "Startup order")
-set(PLUGIN_GSTREAMERSERVICE_AUTOSTART "false" CACHE STRING "Autostart plugin")
-set(PLUGIN_GSTREAMERSERVICE_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
-
-# ------------------------------------------------------------------------------
-# Dependencies
-# ------------------------------------------------------------------------------
+set(PLUGIN_GSTREAMERSERVICE_AUTOSTART   "false" CACHE STRING "Automatically start GstreamerService plugin")
+set(PLUGIN_GSTREAMERSERVICE_STARTUPORDER ""      CACHE STRING "Startup order of GstreamerService plugin")
+set(PLUGIN_GSTREAMERSERVICE_MODE        "Local"  CACHE STRING "Run mode: Local (out-of-process), Inline or Remote")
 
 find_package(${NAMESPACE}Plugins     REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(CompileSettingsDebug CONFIG REQUIRED)
-
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
+find_package(GStreamer                REQUIRED)
 
 if(USE_THUNDER_R4)
     find_package(${NAMESPACE}COM       REQUIRED)
@@ -49,19 +33,16 @@ else()
     find_package(${NAMESPACE}Protocols REQUIRED)
 endif()
 
-# ------------------------------------------------------------------------------
-# Plugin shared library (Thunder host side - stub)
-# ------------------------------------------------------------------------------
-
+# ---------------------------------------------------------------------------
+# Plugin library  (in-process proxy – lives in the Thunder framework process)
+# ---------------------------------------------------------------------------
 add_library(${MODULE_NAME} SHARED
     GstreamerService.cpp
-    Module.cpp
-)
+    Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-    CXX_STANDARD 11
-    CXX_STANDARD_REQUIRED YES
-)
+    CXX_STANDARD          11
+    CXX_STANDARD_REQUIRED YES)
 
 target_compile_definitions(${MODULE_NAME} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME})
 
@@ -69,47 +50,32 @@ target_include_directories(${MODULE_NAME} PRIVATE ../helpers)
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-)
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins
-)
+    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-# ------------------------------------------------------------------------------
-# Implementation shared library (runs out-of-process)
-# ------------------------------------------------------------------------------
-
+# ---------------------------------------------------------------------------
+# Implementation library  (out-of-process host – owns the GStreamer pipeline)
+# ---------------------------------------------------------------------------
 add_library(${PLUGIN_IMPLEMENTATION} SHARED
     GstreamerServiceImplementation.cpp
-    Module.cpp
-)
+    Module.cpp)
 
 set_target_properties(${PLUGIN_IMPLEMENTATION} PROPERTIES
-    CXX_STANDARD 11
-    CXX_STANDARD_REQUIRED YES
-)
+    CXX_STANDARD          11
+    CXX_STANDARD_REQUIRED YES)
 
 target_compile_definitions(${PLUGIN_IMPLEMENTATION} PRIVATE MODULE_NAME=Plugin_${PLUGIN_NAME}Implementation)
 
-target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE
-    ${GSTREAMER_INCLUDE_DIRS}
-    ../helpers
-)
+target_include_directories(${PLUGIN_IMPLEMENTATION} PRIVATE ../helpers)
 
 target_link_libraries(${PLUGIN_IMPLEMENTATION}
     PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ${GSTREAMER_LIBRARIES}
-)
-
-target_link_directories(${PLUGIN_IMPLEMENTATION} PRIVATE
-    ${GSTREAMER_LIBRARY_DIRS}
-)
+        GStreamer::GStreamer)
 
 if(USE_THUNDER_R4)
     target_link_libraries(${PLUGIN_IMPLEMENTATION} PRIVATE ${NAMESPACE}COM::${NAMESPACE}COM)
@@ -118,11 +84,7 @@ else()
 endif()
 
 install(TARGETS ${PLUGIN_IMPLEMENTATION}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins
-)
+    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-# ------------------------------------------------------------------------------
-# Generate plugin configuration
-# ------------------------------------------------------------------------------
-
+# Generate the Thunder JSON config file from GstreamerService.conf.in
 write_config(${PLUGIN_NAME})

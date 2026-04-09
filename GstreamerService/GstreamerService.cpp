@@ -18,142 +18,127 @@
  */
 
 #include "GstreamerService.h"
-#include <interfaces/IConfiguration.h>
 
-
-#define API_VERSION_NUMBER_MAJOR    GSTREAMERSERVICE_MAJOR_VERSION
-#define API_VERSION_NUMBER_MINOR    GSTREAMERSERVICE_MINOR_VERSION
-#define API_VERSION_NUMBER_PATCH    GSTREAMERSERVICE_PATCH_VERSION
+#define API_VERSION_NUMBER_MAJOR 1
+#define API_VERSION_NUMBER_MINOR 0
+#define API_VERSION_NUMBER_PATCH 0
 
 namespace WPEFramework {
-
-namespace {
-    static Plugin::Metadata<Plugin::GstreamerService> metadata(
-        // Version (Major, Minor, Patch)
-        API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH,
-        // Preconditions
-        {},
-        // Terminations
-        {},
-        // Controls
-        {}
-    );
-}
-
-namespace Plugin {
-    SERVICE_REGISTRATION(GstreamerService, API_VERSION_NUMBER_MAJOR, API_VERSION_NUMBER_MINOR, API_VERSION_NUMBER_PATCH);
-
-    GstreamerService::GstreamerService()
-        : _service(nullptr)
-        , _gstreamerService(nullptr)
-        , _connectionId(0)
-        , _notification(this)
-    {
-        SYSLOG(Logging::Startup, (_T("GstreamerService Constructor")));
+    namespace {
+        static Plugin::Metadata<Plugin::GstreamerService> metadata(
+            API_VERSION_NUMBER_MAJOR,
+            API_VERSION_NUMBER_MINOR,
+            API_VERSION_NUMBER_PATCH,
+            {}, // Preconditions
+            {}, // Terminations
+            {}  // Controls
+        );
     }
 
-    GstreamerService::~GstreamerService()
-    {
-        SYSLOG(Logging::Shutdown, (string(_T("GstreamerService Destructor"))));
-    }
+    namespace Plugin {
 
-    /* virtual */ const string GstreamerService::Initialize(PluginHost::IShell* service)
-    {
-        ASSERT(service != nullptr);
-        ASSERT(_service == nullptr);
-        ASSERT(_gstreamerService == nullptr);
-        ASSERT(_connectionId == 0);
+        SERVICE_REGISTRATION(GstreamerService,
+            API_VERSION_NUMBER_MAJOR,
+            API_VERSION_NUMBER_MINOR,
+            API_VERSION_NUMBER_PATCH);
 
-        SYSLOG(Logging::Startup, (_T("GstreamerService::Initialize: PID=%u"), getpid()));
-
-        string message;
-
-        _service = service;
-        _service->AddRef();
-
-        // Register for COM-RPC connection/disconnection notifications
-        _service->Register(&_notification);
-
-        _gstreamerService = service->Root<Exchange::IGstreamerService>(_connectionId, 2000, _T("GstreamerServiceImplementation"));
-
-        if (_gstreamerService != nullptr) {
-            // Register for custom plugin notifications (event relay)
-            _gstreamerService->Register(&_notification);
-
-            // Configure the implementation
-            Exchange::IConfiguration* configure = _gstreamerService->QueryInterface<Exchange::IConfiguration>();
-            if (configure != nullptr) {
-                configure->Configure(service);
-                configure->Release();
-            }
-
-            // Register JSON-RPC interface
-            Exchange::JGstreamerService::Register(*this, _gstreamerService);
-        }
-        else
+        GstreamerService::GstreamerService()
+            : _service(nullptr)
+            , _connectionId(0)
+            , _gstreamerService(nullptr)
+            , _notification(this)
         {
-            message = _T("GstreamerService could not be instantiated");
-            SYSLOG(Logging::Startup, (_T("GstreamerService::Initialize: Failed to initialize GstreamerService plugin")));
+            SYSLOG(Logging::Startup, (_T("GstreamerService Constructor")));
         }
 
-        // On success return empty, to indicate there is no error text.
-        return message;
-    }
+        GstreamerService::~GstreamerService()
+        {
+            SYSLOG(Logging::Shutdown, (string(_T("GstreamerService Destructor"))));
+        }
 
-    /* virtual */ void GstreamerService::Deinitialize(PluginHost::IShell* service)
-    {
-        SYSLOG(Logging::Shutdown, (string(_T("GstreamerService::Deinitialize"))));
-        ASSERT(service == _service);
+        const string GstreamerService::Initialize(PluginHost::IShell* service)
+        {
+            string message{};
 
-        // Unregister from the Framework Shell (stops state change events)
-        _service->Unregister(&_notification);
+            ASSERT(nullptr != service);
+            ASSERT(nullptr == _service);
+            ASSERT(nullptr == _gstreamerService);
+            ASSERT(0 == _connectionId);
 
-        if (_gstreamerService != nullptr) {
-            // Unregister from the Target Plugin (stops custom events)
-            _gstreamerService->Unregister(&_notification);
+            SYSLOG(Logging::Startup, (_T("GstreamerService::Initialize: PID=%u"), getpid()));
 
-            // Unregister JSON-RPC interface
-            Exchange::JGstreamerService::Unregister(*this);
+            _service = service;
+            _service->AddRef();
+            _service->Register(&_notification);
 
-            // Release the implementation
-            VARIABLE_IS_NOT_USED uint32_t result = _gstreamerService->Release();
-            _gstreamerService = nullptr;
+            _gstreamerService = _service->Root<Exchange::IGstreamerService>(
+                _connectionId, 2000, _T("GstreamerServiceImplementation"));
 
-            // It should have been the last reference we are releasing,
-            // so it should end up in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            if (nullptr != _gstreamerService) {
+                _gstreamerService->Register(&_notification);
+                Exchange::JGstreamerService::Register(*this, _gstreamerService);
+                LOGINFO("GstreamerService initialized successfully");
+            } else {
+                SYSLOG(Logging::Startup,
+                    (_T("GstreamerService::Initialize: Failed to instantiate GstreamerServiceImplementation")));
+                message = _T("GstreamerServiceImplementation could not be instantiated");
+            }
 
-            // If this was running in a (container) process...
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-            if (connection != nullptr)
-            {
-                // Lets trigger the cleanup sequence for
-                // out-of-process code, which ensures that
-                // unresponsive processes are terminated
-                // if they do not stop gracefully.
-                connection->Terminate();
-                connection->Release();
+            if (!message.empty()) {
+                LOGERR("'%s'", message.c_str());
+                Deinitialize(service);
+            }
+
+            return message;
+        }
+
+        void GstreamerService::Deinitialize(PluginHost::IShell* service)
+        {
+            ASSERT(_service == service);
+            SYSLOG(Logging::Shutdown, (string(_T("GstreamerService::Deinitialize"))));
+
+            if (nullptr != _gstreamerService) {
+                _gstreamerService->Unregister(&_notification);
+                Exchange::JGstreamerService::Unregister(*this);
+
+                RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+                VARIABLE_IS_NOT_USED uint32_t result = _gstreamerService->Release();
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                if (nullptr != connection) {
+                    connection->Terminate();
+                    connection->Release();
+                }
+
+                _gstreamerService = nullptr;
+            }
+
+            if (nullptr != _service) {
+                _service->Unregister(&_notification);
+                _service->Release();
+                _service = nullptr;
+            }
+
+            _connectionId = 0;
+            SYSLOG(Logging::Shutdown, (string(_T("GstreamerService de-initialized"))));
+        }
+
+        string GstreamerService::Information() const
+        {
+            return ("GstreamerService: manages GStreamer pipelines via Thunder");
+        }
+
+        void GstreamerService::Deactivated(RPC::IRemoteConnection* connection)
+        {
+            if (connection->Id() == _connectionId) {
+                ASSERT(nullptr != _service);
+                Core::IWorkerPool::Instance().Submit(
+                    PluginHost::IShell::Job::Create(
+                        _service,
+                        PluginHost::IShell::DEACTIVATED,
+                        PluginHost::IShell::FAILURE));
             }
         }
 
-        _connectionId = 0;
-
-        _service->Release();
-        _service = nullptr;
-
-        SYSLOG(Logging::Shutdown, (string(_T("GstreamerService de-initialized"))));
-    }
-
-    void GstreamerService::Deactivated(RPC::IRemoteConnection* connection)
-    {
-        if (connection->Id() == _connectionId) {
-
-            ASSERT(_service != nullptr);
-
-            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
-        }
-    }
-
-} // namespace Plugin
+    } // namespace Plugin
 } // namespace WPEFramework

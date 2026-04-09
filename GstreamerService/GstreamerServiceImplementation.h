@@ -21,121 +21,63 @@
 
 #include "Module.h"
 #include <interfaces/IGstreamerService.h>
-#include <interfaces/IConfiguration.h>
-#include <mutex>
+#include "UtilsLogging.h"
+
+#include <com/com.h>
+#include <core/core.h>
+
+#include <list>
 #include <gst/gst.h>
 
 namespace WPEFramework {
-namespace Plugin {
+    namespace Plugin {
 
-    class GstreamerServiceImplementation 
-        : public Exchange::IGstreamerService
-        , public Exchange::IConfiguration {
-    private:
-        GstreamerServiceImplementation(const GstreamerServiceImplementation&) = delete;
-        GstreamerServiceImplementation& operator=(const GstreamerServiceImplementation&) = delete;
-
-        // Notification dispatcher for sending events
-        class NotificationDispatcher {
+        class GstreamerServiceImplementation : public Exchange::IGstreamerService {
         public:
-            NotificationDispatcher() : _adminLock(), _observers() {}
-            ~NotificationDispatcher() = default;
+            GstreamerServiceImplementation();
+            ~GstreamerServiceImplementation() override;
 
-            void Register(Exchange::IGstreamerService::INotification* notification)
-            {
-                _adminLock.Lock();
+            GstreamerServiceImplementation(const GstreamerServiceImplementation&)            = delete;
+            GstreamerServiceImplementation& operator=(const GstreamerServiceImplementation&) = delete;
 
-                ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
+            BEGIN_INTERFACE_MAP(GstreamerServiceImplementation)
+            INTERFACE_ENTRY(Exchange::IGstreamerService)
+            END_INTERFACE_MAP
 
-                notification->AddRef();
-                _observers.push_back(notification);
+            // ----- IGstreamerService -----
+            Core::hresult Register(Exchange::IGstreamerService::INotification* notification) override;
+            Core::hresult Unregister(Exchange::IGstreamerService::INotification* notification) override;
 
-                _adminLock.Unlock();
-            }
-
-            void Unregister(Exchange::IGstreamerService::INotification* notification)
-            {
-                _adminLock.Lock();
-
-                auto index = std::find(_observers.begin(), _observers.end(), notification);
-
-                ASSERT(index != _observers.end());
-
-                if (index != _observers.end()) {
-                    (*index)->Release();
-                    _observers.erase(index);
-                }
-
-                _adminLock.Unlock();
-            }
-
-            void NotifyPipelineStateChanged(const string& state)
-            {
-                _adminLock.Lock();
-
-                for (auto* observer : _observers) {
-                    observer->OnPipelineStateChanged(state);
-                }
-
-                _adminLock.Unlock();
-            }
-
-            void NotifyError(const string& errorMessage)
-            {
-                _adminLock.Lock();
-
-                for (auto* observer : _observers) {
-                    observer->OnError(errorMessage);
-                }
-
-                _adminLock.Unlock();
-            }
+            Core::hresult StartPipeline(const string& pipelineConfig) override;
+            Core::hresult StopPipeline() override;
+            Core::hresult GetPipelineStatus(string& status /* @out */) const override;
+            Core::hresult PlayPause() override;
+            Core::hresult Seek(const int64_t offset) override;
+            Core::hresult GetPosition(int64_t& position /* @out */, int64_t& duration /* @out*/) const override;
+            Core::hresult SetWindowVisible(const bool visible) override;
 
         private:
-            Core::CriticalSection _adminLock;
-            std::list<Exchange::IGstreamerService::INotification*> _observers;
+            // GStreamer bus watch: dispatches pipeline messages (STATE_CHANGED, ERROR, EOS)
+            // from the GMainLoop thread to the appropriate notification handler.
+            static gboolean BusCallback(GstBus* bus, GstMessage* msg, gpointer data);
+
+            // Bring the pipeline to GST_STATE_NULL, unref all elements, and stop the
+            // GMainLoop thread. Safe to call even if no pipeline has been created yet.
+            void CleanupPipeline();
+
+            // Helpers that iterate _notificationClients and fire the named event.
+            void FirePipelineStateChanged(const string& state);
+            void FireError(const string& errorMessage);
+
+            string GetGstStateAsString(GstState state) const;
+
+        private:
+            mutable Core::CriticalSection                             _adminLock;
+            std::list<Exchange::IGstreamerService::INotification*>    _notificationClients;
+
+            GstElement* _pipeline;
+            guint       _busWatchId;
         };
 
-    public:
-        GstreamerServiceImplementation();
-        ~GstreamerServiceImplementation() override;
-
-        BEGIN_INTERFACE_MAP(GstreamerServiceImplementation)
-        INTERFACE_ENTRY(Exchange::IGstreamerService)
-        INTERFACE_ENTRY(Exchange::IConfiguration)
-        END_INTERFACE_MAP
-
-        // IGstreamerService interface
-        Core::hresult StartPipeline(const string& pipelineConfig) override;
-        Core::hresult StopPipeline() override;
-        Core::hresult GetPipelineStatus(string& status /* @out */) const override;
-        Core::hresult PlayPause() override;
-        Core::hresult Seek(const int64_t offset) override;
-        Core::hresult GetPosition(int64_t& position /* @out */, int64_t& duration /* @out*/) const override;
-        Core::hresult SetWindowVisible(const bool visible) override;
-        // Notification registration/unregistration
-        Core::hresult Register(Exchange::IGstreamerService::INotification* notification) override;
-        Core::hresult Unregister(Exchange::IGstreamerService::INotification* notification) override;
-
-        // IConfiguration interface
-        uint32_t Configure(PluginHost::IShell* shell) override;
-
-    private:
-        // GStreamer callback for bus messages
-        static gboolean BusCallback(GstBus* bus, GstMessage* msg, gpointer data);
-
-        // Helper methods
-        void CleanupPipeline();
-        string GetGstStateAsString(GstState state) const;
-
-    private:
-        mutable Core::CriticalSection _adminLock;
-        PluginHost::IShell* _shell;
-        GstElement* _pipeline;
-        GstBus* _bus;
-        guint _busWatchId;
-        NotificationDispatcher _notificationDispatcher;
-    };
-
-} // namespace Plugin
+    } // namespace Plugin
 } // namespace WPEFramework
