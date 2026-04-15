@@ -27,6 +27,7 @@
 #include <core/core.h>
 
 #include <list>
+#include <thread>
 #include <gst/gst.h>
 
 namespace WPEFramework {
@@ -75,8 +76,10 @@ namespace WPEFramework {
             mutable Core::CriticalSection                             _adminLock;
             std::list<Exchange::IGstreamerService::INotification*>    _notificationClients;
 
-            GstElement* _pipeline;
-            guint       _busWatchId;
+            GstElement*  _pipeline;
+            guint        _busWatchId;
+            GMainLoop*   _mainLoop;
+            std::thread  _mainLoopThread;
         };
 
     } // namespace Plugin

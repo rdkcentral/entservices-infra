@@ -33,6 +33,7 @@ namespace WPEFramework {
             , _notificationClients()
             , _pipeline(nullptr)
             , _busWatchId(0)
+            , _mainLoop(nullptr)
         {
             gst_init(nullptr, nullptr);
             SYSLOG(Logging::Startup, (_T("GstreamerServiceImplementation: GStreamer initialised")));
@@ -110,6 +111,14 @@ namespace WPEFramework {
             GstBus* bus = gst_pipeline_get_bus(GST_PIPELINE(_pipeline));
             _busWatchId = gst_bus_add_watch(bus, GstreamerServiceImplementation::BusCallback, this);
             gst_object_unref(bus);
+
+            // Start a GMainLoop in a background thread.
+            // GStreamer bus watches require a running GLib main loop to dispatch
+            // messages (errors, EOS, state-change notifications) asynchronously.
+            _mainLoop = g_main_loop_new(nullptr, FALSE);
+            _mainLoopThread = std::thread([this]() {
+                g_main_loop_run(_mainLoop);
+            });
 
             GstStateChangeReturn ret = gst_element_set_state(_pipeline, GST_STATE_PLAYING);
 
@@ -356,6 +365,16 @@ namespace WPEFramework {
 
                 gst_object_unref(_pipeline);
                 _pipeline = nullptr;
+            }
+
+            // Stop the GMainLoop and wait for the thread to exit.
+            if (_mainLoop != nullptr) {
+                g_main_loop_quit(_mainLoop);
+                if (_mainLoopThread.joinable()) {
+                    _mainLoopThread.join();
+                }
+                g_main_loop_unref(_mainLoop);
+                _mainLoop = nullptr;
             }
         }
 
