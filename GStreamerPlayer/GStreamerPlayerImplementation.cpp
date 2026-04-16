@@ -87,10 +87,10 @@ Core::hresult GStreamerPlayerImplementation::Seek(const int32_t offset)
     pos += offset * GST_SECOND;
     if (pos < 0) pos = 0;
 
-    gst_element_seek_simple(_pipeline,
-        GST_FORMAT_TIME,
-        GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT,
-        pos);
+gst_element_seek_simple(_pipeline,
+    GST_FORMAT_TIME,
+    static_cast<GstSeekFlags>(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT),
+    pos);
 
     return Core::ERROR_NONE;
 }
