@@ -18,6 +18,8 @@
  */
 
 #include "GStreamerPlayerImplementation.h"
+#include <gst/gst.h>
+#include <algorithm>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -35,7 +37,7 @@ GStreamerPlayerImplementation::~GStreamerPlayerImplementation()
     Cleanup();
 }
 
-Core::hresult GStreamerPlayerImplementation::Start(const string& uri)
+Core::hresult GStreamerPlayerImplementation::Start(const std::string& uri)
 {
     Cleanup();
 
@@ -60,6 +62,9 @@ Core::hresult GStreamerPlayerImplementation::Stop()
 
 Core::hresult GStreamerPlayerImplementation::PlayPause()
 {
+    if (!_pipeline)
+        return Core::ERROR_ILLEGAL_STATE;
+
     GstState state;
     gst_element_get_state(_pipeline, &state, nullptr, 0);
 
@@ -73,7 +78,10 @@ Core::hresult GStreamerPlayerImplementation::PlayPause()
 
 Core::hresult GStreamerPlayerImplementation::Seek(const int32_t offset)
 {
-    gint64 pos;
+    if (!_pipeline)
+        return Core::ERROR_ILLEGAL_STATE;
+
+    gint64 pos = 0;
     gst_element_query_position(_pipeline, GST_FORMAT_TIME, &pos);
 
     pos += offset * GST_SECOND;
@@ -89,14 +97,31 @@ Core::hresult GStreamerPlayerImplementation::Seek(const int32_t offset)
 
 Core::hresult GStreamerPlayerImplementation::SetVolume(const double volume)
 {
+    if (!_pipeline)
+        return Core::ERROR_ILLEGAL_STATE;
+
     double v = std::max(0.0, std::min(1.0, volume));
     g_object_set(_pipeline, "volume", v, NULL);
+
     return Core::ERROR_NONE;
 }
 
-Core::hresult GStreamerPlayerImplementation::GetState(string& state) const
+Core::hresult GStreamerPlayerImplementation::GetState(std::string& state) const
 {
-    state = "UNKNOWN";
+    if (!_pipeline) {
+        state = "STOPPED";
+        return Core::ERROR_NONE;
+    }
+
+    GstState gstState;
+    gst_element_get_state(_pipeline, &gstState, nullptr, 0);
+
+    switch (gstState) {
+        case GST_STATE_PLAYING: state = "PLAYING"; break;
+        case GST_STATE_PAUSED: state = "PAUSED"; break;
+        default: state = "STOPPED"; break;
+    }
+
     return Core::ERROR_NONE;
 }
 
@@ -121,10 +146,12 @@ void GStreamerPlayerImplementation::Cleanup()
     }
 }
 
-void GStreamerPlayerImplementation::NotifyState(const string& state)
+void GStreamerPlayerImplementation::NotifyState(const std::string& state)
 {
     for (auto* c : _clients) {
-        c->OnStateChanged(state);
+        if (c) {
+            c->OnStateChanged(state);
+        }
     }
 }
 
