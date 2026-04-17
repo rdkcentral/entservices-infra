@@ -28,6 +28,7 @@
 
 #include "../../Module.h"
 #include "ISystemTime.h"
+#include <interfaces/ISystemServices.h>
 
 namespace WPEFramework
 {
@@ -44,6 +45,38 @@ namespace WPEFramework
             TimeZoneAccuracy GetTimeZoneOffset(int32_t &offsetSec) override;
 
         private:
+            class SystemServicesNotification : public Exchange::ISystemServices::INotification
+            {
+            private:
+                SystemServicesNotification(const SystemServicesNotification&) = delete;
+                SystemServicesNotification& operator=(const SystemServicesNotification&) = delete;
+
+            public:
+                explicit SystemServicesNotification(SystemTime& parent)
+                    : _parent(parent)
+                {
+                }
+                ~SystemServicesNotification() override = default;
+
+            public:
+                void OnTimeStatusChanged(const string& TimeQuality, const string& TimeSrc, const string& Time) override
+                {
+                    _parent.onTimeStatusChanged(TimeQuality, TimeSrc, Time);
+                }
+
+                void OnTimeZoneDSTChanged(const Exchange::ISystemServices::TimeZoneDSTChangedInfo& timeZoneDSTChangedInfo) override
+                {
+                    _parent.onTimeZoneDSTChanged(timeZoneDSTChangedInfo);
+                }
+
+                BEGIN_INTERFACE_MAP(SystemServicesNotification)
+                INTERFACE_ENTRY(Exchange::ISystemServices::INotification)
+                END_INTERFACE_MAP
+
+            private:
+                SystemTime& _parent;
+            };
+
             enum EventType
             {
                 EVENT_UNDEF,
@@ -59,11 +92,11 @@ namespace WPEFramework
                 std::string payload;
             };
 
-            void onTimeStatusChanged(const JsonObject& parameters);
-            void onTimeZoneDSTChanged(const JsonObject& parameters);
+            void onTimeStatusChanged(const string& TimeQuality, const string& TimeSrc, const string& Time);
+            void onTimeZoneDSTChanged(const Exchange::ISystemServices::TimeZoneDSTChangedInfo& timeZoneDSTChangedInfo);
 
-            void CreateSystemLink();
-            void SubscribeForEvents();
+            void InitializeSystemServices();
+            void RegisterSystemEventHandlers();
             void UpdateTimeStatus();
             void UpdateTimeZone();
             std::pair<TimeZoneAccuracy, int32_t> ParseTimeZone();
@@ -77,7 +110,11 @@ namespace WPEFramework
 
             std::thread mEventThread;
             std::mutex mLock;
-            std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> mSystemLink;
+
+            Exchange::ISystemServices* _systemServicesPlugin;
+            Core::Sink<SystemServicesNotification> _systemServicesNotification;
+            bool _registeredSystemEventHandlers;
+
             std::string mTimeQuality;
             std::string mTimeZone;
             std::string mTimeZoneAccuracyString;
