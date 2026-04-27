@@ -374,7 +374,7 @@ TEST_F(AnalyticsTest, SendAndReceiveSignleEventQueued)
     paramsJson["eventSource"] = "L2Test";
     paramsJson["eventSourceVersion"] = "1.0.0";
     JsonObject eventPayload;
-    eventPayload["data"] = "random data";
+    eventPayload["data"] = "randomdata";
     string eventPayloadStr;
     eventPayload.ToString(eventPayloadStr);
     paramsJson["eventPayload"] = eventPayloadStr;
@@ -396,7 +396,7 @@ TEST_F(AnalyticsTest, SendAndReceiveSignleEventQueued)
     JsonObject eventObj = eventArray[0].Object();
     JsonObject eventPayloadObj = eventObj["eventPayload"].Object();
     EXPECT_TRUE(eventPayloadObj.HasLabel("data"));
-    EXPECT_EQ(eventPayloadObj["data"].String(), "random data");
+    EXPECT_EQ(eventPayloadObj["data"].String(), "randomdata");
 }
 
 TEST_F(AnalyticsTest, EventsMapping)
