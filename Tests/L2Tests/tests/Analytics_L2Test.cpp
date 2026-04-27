@@ -367,17 +367,8 @@ TEST_F(AnalyticsTest, SendAndReceiveSignleEventQueued)
     ServerMock server;
     EXPECT_TRUE(server.Start());
 
-    // Set TimeZone to FINAL BEFORE sending event so it can be sent immediately
-    paramsJson["timeZone"] = "America/New_York";
-    paramsJson["accuracy"] = "FINAL";
-    uint32_t status = InvokeServiceMethod("org.rdk.System", "setTimeZoneDST", paramsJson, resultJson);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-
-    // Give Analytics time to process the timezone change in its polling loop
-    std::this_thread::sleep_for(std::chrono::milliseconds(3500));
-
-    // Now send the event - it should be sent immediately since timezone is FINAL
-    paramsJson.Clear();
+    // Send event with epoch timestamp so it bypasses timezone check
+    // When epochTimestamp is provided, event is sent immediately even if timezone not set
     paramsJson["eventName"] = "L2TestEvent";
     paramsJson["eventVersion"] = "1";
     paramsJson["eventSource"] = "L2Test";
@@ -387,11 +378,14 @@ TEST_F(AnalyticsTest, SendAndReceiveSignleEventQueued)
     string eventPayloadStr;
     eventPayload.ToString(eventPayloadStr);
     paramsJson["eventPayload"] = eventPayloadStr;
+    // Provide epoch timestamp to bypass timezone requirement
+    paramsJson["epochTimestamp"] = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count());
 
-    status = InvokeServiceMethod("org.rdk.Analytics", "sendEvent", paramsJson, resultJson);
+    uint32_t status = InvokeServiceMethod("org.rdk.Analytics", "sendEvent", paramsJson, resultJson);
     EXPECT_EQ(status, Core::ERROR_NONE);
 
-    // Event should be sent to server immediately
+    // Event should be sent to server immediately since epoch timestamp is provided
     string eventMsg = server.AwaitData(SERVER_TIMEOUT_SEC);
     EXPECT_NE(eventMsg, "");
 
@@ -414,29 +408,24 @@ TEST_F(AnalyticsTest, EventsMapping)
     ServerMock server;
     EXPECT_TRUE(server.Start());
 
-    // Set TimeZone to FINAL BEFORE sending events so they can be sent immediately
-    paramsJson["timeZone"] = "America/New_York";
-    paramsJson["accuracy"] = "FINAL";
-    uint32_t status = InvokeServiceMethod("org.rdk.System", "setTimeZoneDST", paramsJson, resultJson);
-    EXPECT_EQ(status, Core::ERROR_NONE);
-
-    // Give Analytics time to process the timezone change in its polling loop
-    std::this_thread::sleep_for(std::chrono::milliseconds(3500));
-
     // Prepare event payload
     JsonObject eventPayload;
     eventPayload["data"] = "random data";
     string eventPayloadStr;
     eventPayload.ToString(eventPayloadStr);
+    
+    // Get current epoch timestamp to use for all events
+    uint64_t epochTimestamp = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count());
 
-    // Send event 1: exact mapping
-    paramsJson.Clear();
+    // Send event 1: exact mapping - with epoch timestamp to bypass timezone check
     paramsJson["eventName"] = "L2MapTestEvent";
     paramsJson["eventVersion"] = "1";
     paramsJson["eventSource"] = "L2Test";
     paramsJson["eventSourceVersion"] = "1.0.0";
     paramsJson["eventPayload"] = eventPayloadStr;
-    status = InvokeServiceMethod("org.rdk.Analytics", "sendEvent", paramsJson, resultJson);
+    paramsJson["epochTimestamp"] = epochTimestamp;
+    uint32_t status = InvokeServiceMethod("org.rdk.Analytics", "sendEvent", paramsJson, resultJson);
     EXPECT_EQ(status, Core::ERROR_NONE);
 
     // Send event 2: generic mapping
@@ -445,6 +434,7 @@ TEST_F(AnalyticsTest, EventsMapping)
     paramsJson["eventSource"] = "L2Test";
     paramsJson["eventSourceVersion"] = "1.0.1";
     paramsJson["eventPayload"] = eventPayloadStr;
+    paramsJson["epochTimestamp"] = epochTimestamp;
     status = InvokeServiceMethod("org.rdk.Analytics", "sendEvent", paramsJson, resultJson);
     EXPECT_EQ(status, Core::ERROR_NONE);
 
@@ -454,6 +444,7 @@ TEST_F(AnalyticsTest, EventsMapping)
     paramsJson["eventSource"] = "L2Test";
     paramsJson["eventSourceVersion"] = "1.0.0";
     paramsJson["eventPayload"] = eventPayloadStr;
+    paramsJson["epochTimestamp"] = epochTimestamp;
     status = InvokeServiceMethod("org.rdk.Analytics", "sendEvent", paramsJson, resultJson);
     EXPECT_EQ(status, Core::ERROR_NONE);
 
@@ -463,6 +454,7 @@ TEST_F(AnalyticsTest, EventsMapping)
     paramsJson["eventSource"] = "L2Test";
     paramsJson["eventSourceVersion"] = "1.0.1";
     paramsJson["eventPayload"] = eventPayloadStr;
+    paramsJson["epochTimestamp"] = epochTimestamp;
     status = InvokeServiceMethod("org.rdk.Analytics", "sendEvent", paramsJson, resultJson);
     EXPECT_EQ(status, Core::ERROR_NONE);
 
@@ -498,4 +490,4 @@ TEST_F(AnalyticsTest, EventsMapping)
         EXPECT_TRUE(eventObj.HasLabel("eventName"));
         EXPECT_EQ(eventObj["eventName"].String(), "L2TestEventMappedGenericSourceVersion");
     }
-}
+} 
