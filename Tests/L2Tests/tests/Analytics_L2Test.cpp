@@ -490,4 +490,4 @@ TEST_F(AnalyticsTest, EventsMapping)
         EXPECT_TRUE(eventObj.HasLabel("eventName"));
         EXPECT_EQ(eventObj["eventName"].String(), "L2TestEventMappedGenericSourceVersion");
     }
-} 
+}
