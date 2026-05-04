@@ -27,6 +27,7 @@
 #include "UtilsgetRFCConfig.h"
 #include "UtilsLogging.h"
 #include "UtilsJsonRpc.h"
+#include "UtilsController.h"
 
 static std::string sThunderSecurityToken;
 
@@ -399,10 +400,11 @@ namespace WPEFramework {
                 // Call TTS service using JSONRPCDirectLink
                 uint32_t ret = Core::ERROR_GENERAL;
                 
-                if (_service != nullptr) {
-                    ret = JSONRPCDirectLink(_service, "org.rdk.TextToSpeech").Invoke<JsonObject, JsonObject>(20000, "setACL", params, ttsResponse);
+                auto ttsClient = Utils::getThunderControllerClient("org.rdk.TextToSpeech.1");
+                if (ttsClient != nullptr) {
+                    ret = ttsClient->Invoke<JsonObject, JsonObject>(20000, "setACL", params, ttsResponse);
                 } else {
-                    LOGERR("Service interface not available for TTS call");
+                    LOGERR("Failed to create Thunder client for TTS call");
                 }
                 
                 bool status = ((Core::ERROR_NONE == ret) && 
@@ -497,10 +499,11 @@ namespace WPEFramework {
                 // Call TTS service using JSONRPCDirectLink
                 uint32_t ret = Core::ERROR_GENERAL;
                 
-                if (_service != nullptr) {
-                    ret = JSONRPCDirectLink(_service, "org.rdk.TextToSpeech").Invoke<JsonObject, JsonObject>(20000, "setACL", params, ttsResponse);
+                auto ttsClient = Utils::getThunderControllerClient("org.rdk.TextToSpeech.1");
+                if (ttsClient != nullptr) {
+                    ret = ttsClient->Invoke<JsonObject, JsonObject>(20000, "setACL", params, ttsResponse);
                 } else {
-                    LOGERR("Service interface not available for TTS call");
+                    LOGERR("Failed to create Thunder client for TTS call");
                 }
                 
                 bool status = ((Core::ERROR_NONE == ret) && 
