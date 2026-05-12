@@ -21,9 +21,6 @@ When adding a new plugin in `CMakeLists.txt`, you **must** also update the follo
 
    If you add your plugin in `CMakeLists.txt` as:
    ```cmake
-   if (PLUGIN_RESOURCEMANAGER)
-       add_subdirectory(ResourceManager)
-   endif()
    if (PLUGIN_MY_NEW_PLUGIN)
        add_subdirectory(MyNewPlugin)
    endif()
