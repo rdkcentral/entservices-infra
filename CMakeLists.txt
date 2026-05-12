@@ -61,10 +61,6 @@ if(PLUGIN_RUSTADAPTER)
     add_subdirectory(RustAdapter)
 endif()
 
-if (PLUGIN_RESOURCEMANAGER)
-    add_subdirectory(ResourceManager)
-endif()
-
 if (PLUGIN_ANALYTICS)
     add_subdirectory(Analytics)
 endif()
