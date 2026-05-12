@@ -463,6 +463,7 @@ int USBDeviceImplementation::libUSBHotPlugCallbackDeviceDetached(libusb_context 
 //                        Empty string if the file does not exist or the device has no serial number.
 void USBDeviceImplementation::getDeviceSerialNumber(const string& sysfsPath, string& serialNumber)
 {
+    serialNumber.clear();
     char path[256] = {0};
 
     std::snprintf(path, sizeof(path), "%s/%s/serial", PLUGIN_USBDEVICE_PATH, sysfsPath.c_str());
