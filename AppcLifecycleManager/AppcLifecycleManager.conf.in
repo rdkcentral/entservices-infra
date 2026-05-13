@@ -1,0 +1,6 @@
+precondition = ["Platform"]
+callsign = "org.rdk.AppcLifecycleManager"
+autostart = "@PLUGIN_APPC_LIFECYCLE_MANAGER_AUTOSTART@"
+startuporder = "@PLUGIN_APPC_LIFECYCLE_MANAGER_STARTUPORDER@"
+
+configuration = JSON()
