@@ -173,14 +173,15 @@ namespace WPEFramework
 
         void SystemTime::UpdateTimeStatus()
         {
-            if (_systemServicesPlugin != nullptr)
+            Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+            if (systemServicesPlugin != nullptr)
             {
                 string TimeQuality;
                 string TimeSrc;
                 string Time;
                 bool success = false;
 
-                uint32_t result = _systemServicesPlugin->GetTimeStatus(TimeQuality, TimeSrc, Time, success);
+                uint32_t result = systemServicesPlugin->GetTimeStatus(TimeQuality, TimeSrc, Time, success);
                 if (result == Core::ERROR_NONE && success)
                 {
                     std::lock_guard<std::mutex> guard(mLock);
@@ -200,6 +201,8 @@ namespace WPEFramework
                     std::lock_guard<std::mutex> guard(mLock);
                     mIsSystemTimeAvailable = true;
                 }
+                systemServicesPlugin->Release();
+                systemServicesPlugin = nullptr;
             }
             else
             {
@@ -211,13 +214,14 @@ namespace WPEFramework
 
         void SystemTime::UpdateTimeZone()
         {
-            if (_systemServicesPlugin != nullptr)
+            Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+            if (systemServicesPlugin != nullptr)
             {
                 string timeZone;
                 string accuracy;
                 bool success = false;
 
-                uint32_t result = _systemServicesPlugin->GetTimeZoneDST(timeZone, accuracy, success);
+                uint32_t result = systemServicesPlugin->GetTimeZoneDST(timeZone, accuracy, success);
                 if (result == Core::ERROR_NONE && success)
                 {
                     std::lock_guard<std::mutex> guard(mLock);
@@ -240,6 +244,9 @@ namespace WPEFramework
                 {
                     LOGERR("GetTimeZoneDST failed");
                 }
+                 systemServicesPlugin->Release();
+                 systemServicesPlugin = nullptr;
+                 
             }
         }
 
