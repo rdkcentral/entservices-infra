@@ -202,7 +202,6 @@ namespace WPEFramework
                     mIsSystemTimeAvailable = true;
                 }
                 systemServicesPlugin->Release();
-                systemServicesPlugin = nullptr;
             }
             else
             {
@@ -245,8 +244,7 @@ namespace WPEFramework
                     LOGERR("GetTimeZoneDST failed");
                 }
                  systemServicesPlugin->Release();
-                 systemServicesPlugin = nullptr;
-                 
+                                 
             }
         }
 
