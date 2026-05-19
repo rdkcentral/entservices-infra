@@ -240,8 +240,9 @@ namespace WPEFramework
                     LOGERR("Resolver Failure");
                 }
             } else {
-                LOGERR("No App ID found for connection %d. Terminate connection", connectionId);
-                mWsManager.Close(connectionId);
+                // No App ID means the disconnect handler already ran and removed it from
+                // the registry. The connection is already gone; no explicit close needed.
+                LOGWARN("No App ID found for connection %d, connection already disconnected", connectionId);
             }
         }
 
