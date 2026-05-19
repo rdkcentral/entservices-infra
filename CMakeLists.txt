@@ -81,6 +81,10 @@ if(PLUGIN_TELEMETRYMETRICS)
     add_subdirectory(TelemetryMetrics)
 endif()
 
+# Keep a fallback install rule so CMake always generates an 'install' target.
+# This prevents Yocto do_install failures when no plugin is enabled on a platform.
+install(CODE "message(STATUS \"No installable plugins enabled\")")
+
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
