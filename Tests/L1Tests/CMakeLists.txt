@@ -111,10 +111,6 @@ set (USERSETTINGS_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/UserSettings ${CM
 set (USERSETTINGS_LIBS ${NAMESPACE}UserSettings ${NAMESPACE}UserSettingsImplementation)
 add_plugin_test_ex(PLUGIN_USERSETTINGS tests/test_UserSettings.cpp "${USERSETTINGS_INC}" "${USERSETTINGS_LIBS}")
 
-# PLUGIN_RESOURCEMANAGER
-set (RESOURCEMANAGER_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/ResourceManager ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
-add_plugin_test_ex(PLUGIN_RESOURCEMANAGER tests/test_ResourceManager.cpp "${RESOURCEMANAGER_INC}" "${NAMESPACE}ResourceManager")
-
 # PLUGIN_MESSAGECONTROL
 set (MESSAGECONTROL_INC ${CMAKE_SOURCE_DIR}/../entservices-infra/MessageControl ${CMAKE_SOURCE_DIR}/../entservices-infra/helpers)
 set (MESSAGECONTROL_LIBS ${NAMESPACE}MessageControl)

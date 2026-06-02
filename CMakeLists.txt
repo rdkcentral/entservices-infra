@@ -61,10 +61,6 @@ if(PLUGIN_RUSTADAPTER)
     add_subdirectory(RustAdapter)
 endif()
 
-if (PLUGIN_RESOURCEMANAGER)
-    add_subdirectory(ResourceManager)
-endif()
-
 if (PLUGIN_ANALYTICS)
     add_subdirectory(Analytics)
 endif()
@@ -84,6 +80,9 @@ endif()
 if(PLUGIN_TELEMETRYMETRICS)
     add_subdirectory(TelemetryMetrics)
 endif()
+
+# This prevents Yocto do_install failures when no plugin is enabled on a platform.
+install(CODE "message(STATUS \"No installable plugins enabled\")")
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")

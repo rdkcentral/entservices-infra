@@ -38,10 +38,6 @@ if(PLUGIN_STORAGE_MANAGER)
     set(SRC_FILES ${SRC_FILES} tests/StorageManager_L2Test.cpp)
 endif()
 
-if(PLUGIN_RESOURCEMANAGER)
-    set(SRC_FILES ${SRC_FILES} tests/ResourceManager_L2Test.cpp)
-endif()
-
 add_library(${MODULE_NAME} SHARED ${SRC_FILES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES

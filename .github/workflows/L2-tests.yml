@@ -140,18 +140,6 @@ jobs:
           path: googletest
           ref: v1.15.0
 
-      # Fetching only the required essos-resmgr.h file from the Westeros repo to avoid full repo clone and to remove header file dependency
-      - name: Fetch only essos-resmgr.h from Westeros repo using sparse-checkout
-        run: |
-          mkdir -p $GITHUB_WORKSPACE/westeros-minimal
-          cd $GITHUB_WORKSPACE/westeros-minimal
-          git init
-          git remote add origin https://code.rdkcentral.com/r/components/opensource/westeros
-          git config core.sparseCheckout true
-          git pull --depth=1 origin master
-          mkdir -p $GITHUB_WORKSPACE/entservices-infra/ResourceManager
-          cp essos/essos-resmgr.h $GITHUB_WORKSPACE/entservices-infra/ResourceManager/
-
       - name: Apply patches ThunderTools
         run: |  
           cd $GITHUB_WORKSPACE/ThunderTools
@@ -406,7 +394,6 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsExtODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvTypes.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/essos-resmgr.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Dobby.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/i_omi_proxy.hpp
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/omi_proxy.hpp
@@ -487,7 +474,6 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsExtODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvTypes.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/essos-resmgr.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Telemetry.h
           -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format=
           -Wl,-wrap,system -Wl,-wrap,popen -Wl,-wrap,syslog -Wl,-wrap,v_secure_system -Wl,-wrap,v_secure_popen -Wl,-wrap,v_secure_pclose -Wl,-wrap,unlink
@@ -567,7 +553,6 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsExtODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvTypes.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/essos-resmgr.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Telemetry.h
           -Wall -Wno-unused-result -Wno-deprecated-declarations -Wno-error=format=
           -Wl,-wrap,popen -Wl,-wrap,syslog -Wl,-wrap,v_secure_system -Wl,-wrap,v_secure_popen -Wl,-wrap,v_secure_pclose -Wl,-wrap,unlink
@@ -647,7 +632,6 @@ jobs:
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsExtODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvSettingsODM.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/tvTypes.h
-          -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/essos-resmgr.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/Dobby.h
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/i_omi_proxy.hpp
           -include $GITHUB_WORKSPACE/entservices-testframework/Tests/mocks/omi_proxy.hpp
@@ -672,7 +656,6 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DPLUGIN_PERSISTENTSTORE=ON
           -DPLUGIN_SHAREDSTORAGE=ON
-          -DPLUGIN_RESOURCEMANAGER=OFF
           -DPLUGIN_CLOUDSTORE=ON
           -DPLUGIN_ANALYTICS=ON
           -DPLUGIN_ANALYTICS_BACKEND_LIBRARY_NAME="libWPEFrameworkAnalyticsBackendMock.so"
@@ -750,7 +733,6 @@ jobs:
           -DCMAKE_DISABLE_FIND_PACKAGE_RFC=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_RBus=ON
           -DPLUGIN_PERSISTENTSTORE=ON
-          -DPLUGIN_RESOURCEMANAGER=OFF
           -DPLUGIN_SHAREDSTORAGE=ON
           -DPLUGIN_CLOUDSTORE=ON
           -DPLUGIN_ANALYTICS=ON
