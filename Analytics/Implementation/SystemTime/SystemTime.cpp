@@ -115,19 +115,19 @@ namespace WPEFramework
             mQueueCondition.notify_one();
         }
 
-        void SystemTime::onTimeZoneDSTChanged(const Exchange::ISystemServices::TimeZoneDSTChangedInfo& timeZoneDSTChangedInfo)
+        void SystemTime::onTimeZoneDSTChanged(const string& oldTimeZone, const string& newTimeZone, const string& oldAccuracy, const string& newAccuracy)
         {
             LOGINFO("onTimeZoneDSTChanged: oldTimeZone=%s, newTimeZone=%s, oldAccuracy=%s, newAccuracy=%s",
-                    timeZoneDSTChangedInfo.oldTimeZone.c_str(),
-                    timeZoneDSTChangedInfo.newTimeZone.c_str(),
-                    timeZoneDSTChangedInfo.oldAccuracy.c_str(),
-                    timeZoneDSTChangedInfo.newAccuracy.c_str());
+                    oldTimeZone.c_str(),
+                    newTimeZone.c_str(),
+                    oldAccuracy.c_str(),
+                    newAccuracy.c_str());
 
             JsonObject parameters;
-            parameters["oldTimeZone"] = timeZoneDSTChangedInfo.oldTimeZone;
-            parameters["newTimeZone"] = timeZoneDSTChangedInfo.newTimeZone;
-            parameters["oldAccuracy"] = timeZoneDSTChangedInfo.oldAccuracy;
-            parameters["newAccuracy"] = timeZoneDSTChangedInfo.newAccuracy;
+            parameters["oldTimeZone"] = oldTimeZone;
+            parameters["newTimeZone"] = newTimeZone;
+            parameters["oldAccuracy"] = oldAccuracy;
+            parameters["newAccuracy"] = newAccuracy;
 
             std::string parametersString;
             parameters.ToString(parametersString);

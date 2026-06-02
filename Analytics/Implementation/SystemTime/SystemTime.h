@@ -64,9 +64,9 @@ namespace WPEFramework
                     _parent.onTimeStatusChanged(TimeQuality, TimeSrc, Time);
                 }
 
-                void OnTimeZoneDSTChanged(const Exchange::ISystemServices::TimeZoneDSTChangedInfo& timeZoneDSTChangedInfo) override
+                void OnTimeZoneDSTChanged(const string& oldTimeZone, const string& newTimeZone, const string& oldAccuracy, const string& newAccuracy) override
                 {
-                    _parent.onTimeZoneDSTChanged(timeZoneDSTChangedInfo);
+                    _parent.onTimeZoneDSTChanged(oldTimeZone, newTimeZone, oldAccuracy, newAccuracy);
                 }
 
                 BEGIN_INTERFACE_MAP(SystemServicesNotification)
@@ -93,7 +93,7 @@ namespace WPEFramework
             };
 
             void onTimeStatusChanged(const string& TimeQuality, const string& TimeSrc, const string& Time);
-            void onTimeZoneDSTChanged(const Exchange::ISystemServices::TimeZoneDSTChangedInfo& timeZoneDSTChangedInfo);
+            void onTimeZoneDSTChanged(const string& oldTimeZone, const string& newTimeZone, const string& oldAccuracy, const string& newAccuracy);
 
             void InitializeSystemServices();
             void RegisterSystemEventHandlers();
