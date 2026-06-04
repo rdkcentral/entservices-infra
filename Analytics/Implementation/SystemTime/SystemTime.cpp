@@ -34,7 +34,6 @@ namespace WPEFramework
                                                             mQueueCondition(),
                                                             mQueue(),
                                                             mLock(),
-                                                            _systemServicesPlugin(nullptr),
                                                             _systemServicesNotification(*this),
                                                             _registeredSystemEventHandlers(false),
                                                             mTimeQuality(TIME_QUALITY_STALE),
@@ -65,15 +64,16 @@ namespace WPEFramework
             mQueueCondition.notify_one();
             mEventThread.join();
 
-            if (_systemServicesPlugin != nullptr)
+	    Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+
+            if (systemServicesPlugin != nullptr)
             {
                 if (_registeredSystemEventHandlers)
                 {
-                    _systemServicesPlugin->Unregister(&_systemServicesNotification);
+                    systemServicesPlugin->Unregister(&_systemServicesNotification);
                     _registeredSystemEventHandlers = false;
                 }
-                _systemServicesPlugin->Release();
-                _systemServicesPlugin = nullptr;
+                systemServicesPlugin->Release();
             }
         }
 
@@ -139,26 +139,10 @@ namespace WPEFramework
 
         void SystemTime::InitializeSystemServices()
         {
-            if (_systemServicesPlugin == nullptr)
+            Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+            if (systemServicesPlugin != nullptr)
             {
-                _systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
-                if (_systemServicesPlugin != nullptr)
-                {
-                    LOGINFO("SystemServices plugin obtained successfully");
-                    RegisterSystemEventHandlers();
-                }
-                else
-                {
-                    LOGERR("Failed to get SystemServices instance");
-                }
-            }
-        }
-
-        void SystemTime::RegisterSystemEventHandlers()
-        {
-            if (_systemServicesPlugin != nullptr)
-            {
-                if (Core::ERROR_NONE == _systemServicesPlugin->Register(&_systemServicesNotification))
+                if (Core::ERROR_NONE == systemServicesPlugin->Register(&_systemServicesNotification))
                 {
                     LOGINFO("ISystemServices::Register event registered");
                     _registeredSystemEventHandlers = true;
@@ -168,6 +152,7 @@ namespace WPEFramework
                     LOGERR("Failed to register ISystemServices::Register event");
                     _registeredSystemEventHandlers = false;
                 }
+		systemServicesPlugin->Release();
             }
         }
 

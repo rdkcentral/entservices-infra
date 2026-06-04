@@ -96,7 +96,6 @@ namespace WPEFramework
             void onTimeZoneDSTChanged(const string& oldTimeZone, const string& newTimeZone, const string& oldAccuracy, const string& newAccuracy);
 
             void InitializeSystemServices();
-            void RegisterSystemEventHandlers();
             void UpdateTimeStatus();
             void UpdateTimeZone();
             std::pair<TimeZoneAccuracy, int32_t> ParseTimeZone();
@@ -111,7 +110,6 @@ namespace WPEFramework
             std::thread mEventThread;
             std::mutex mLock;
 
-            Exchange::ISystemServices* _systemServicesPlugin;
             Core::Sink<SystemServicesNotification> _systemServicesNotification;
             bool _registeredSystemEventHandlers;
 
