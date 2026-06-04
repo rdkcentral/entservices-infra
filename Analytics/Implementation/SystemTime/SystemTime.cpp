@@ -64,7 +64,7 @@ namespace WPEFramework
             mQueueCondition.notify_one();
             mEventThread.join();
 
-	    Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+            Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
 
             if (systemServicesPlugin != nullptr)
             {
@@ -152,7 +152,7 @@ namespace WPEFramework
                     LOGERR("Failed to register ISystemServices::Register event");
                     _registeredSystemEventHandlers = false;
                 }
-		systemServicesPlugin->Release();
+                systemServicesPlugin->Release();
             }
         }
 
