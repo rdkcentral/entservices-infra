@@ -403,19 +403,9 @@ namespace WPEFramework
                 {
                 case EVENT_INITIALISE:
                 {
-                    if (_systemServicesPlugin == nullptr)
-                    {
-                        InitializeSystemServices();
-                        if (_systemServicesPlugin != nullptr)
-                        {
-                            UpdateTimeStatus();
-                            UpdateTimeZone();
-                        }
-                        else
-                        {
-                            LOGERR("Failed to get SystemServices instance");
-                        }
-                    }
+                    InitializeSystemServices();
+                    UpdateTimeStatus();
+                    UpdateTimeZone();
                 }
                 break;
                 case EVENT_TIME_STATUS_CHANGED:
