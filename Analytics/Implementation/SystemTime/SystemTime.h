@@ -111,7 +111,6 @@ namespace WPEFramework
             std::mutex mLock;
 
             Core::Sink<SystemServicesNotification> _systemServicesNotification;
-            bool _registeredSystemEventHandlers;
 
             std::string mTimeQuality;
             std::string mTimeZone;

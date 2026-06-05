@@ -35,7 +35,6 @@ namespace WPEFramework
                                                             mQueue(),
                                                             mLock(),
                                                             _systemServicesNotification(*this),
-                                                            _registeredSystemEventHandlers(false),
                                                             mTimeQuality(TIME_QUALITY_STALE),
                                                             mTimeZone(),
                                                             mTimeZoneAccuracyString(),
@@ -68,11 +67,7 @@ namespace WPEFramework
 
             if (systemServicesPlugin != nullptr)
             {
-                if (_registeredSystemEventHandlers)
-                {
-                    systemServicesPlugin->Unregister(&_systemServicesNotification);
-                    _registeredSystemEventHandlers = false;
-                }
+                systemServicesPlugin->Unregister(&_systemServicesNotification);
                 systemServicesPlugin->Release();
             }
         }
@@ -145,12 +140,10 @@ namespace WPEFramework
                 if (Core::ERROR_NONE == systemServicesPlugin->Register(&_systemServicesNotification))
                 {
                     LOGINFO("ISystemServices::Register event registered");
-                    _registeredSystemEventHandlers = true;
                 }
                 else
                 {
                     LOGERR("Failed to register ISystemServices::Register event");
-                    _registeredSystemEventHandlers = false;
                 }
                 systemServicesPlugin->Release();
             }
