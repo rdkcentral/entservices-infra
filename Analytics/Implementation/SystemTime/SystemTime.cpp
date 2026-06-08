@@ -20,9 +20,7 @@
 #include "UtilsLogging.h"
 #include "secure_wrapper.h"
 
-#define JSONRPC_THUNDER_TIMEOUT 2000
-#define THUNDER_ACCESS_DEFAULT_VALUE "127.0.0.1:9998"
-#define SYSTEM_CALLSIGN "org.rdk.System.1"
+#define SYSTEM_CALLSIGN "org.rdk.System"
 
 namespace WPEFramework
 {
@@ -36,7 +34,7 @@ namespace WPEFramework
                                                             mQueueCondition(),
                                                             mQueue(),
                                                             mLock(),
-                                                            mSystemLink(nullptr),
+                                                            _systemServicesNotification(*this),
                                                             mTimeQuality(TIME_QUALITY_STALE),
                                                             mTimeZone(),
                                                             mTimeZoneAccuracyString(),
@@ -64,10 +62,13 @@ namespace WPEFramework
             }
             mQueueCondition.notify_one();
             mEventThread.join();
-            if (mSystemLink != nullptr)
+
+            Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+
+            if (systemServicesPlugin != nullptr)
             {
-                mSystemLink->Unsubscribe(JSONRPC_THUNDER_TIMEOUT, _T("onTimeStatusChanged"));
-                mSystemLink->Unsubscribe(JSONRPC_THUNDER_TIMEOUT, _T("onTimeZoneDSTChanged"));
+                systemServicesPlugin->Unregister(&_systemServicesNotification);
+                systemServicesPlugin->Release();
             }
         }
 
@@ -91,110 +92,98 @@ namespace WPEFramework
             return ACC_UNDEFINED;
         }
 
-        void SystemTime::onTimeStatusChanged(const JsonObject& parameters)
+        void SystemTime::onTimeStatusChanged(const string& TimeQuality, const string& TimeSrc, const string& Time)
         {
+            LOGINFO("onTimeStatusChanged: TimeQuality=%s, TimeSrc=%s, Time=%s",
+                    TimeQuality.c_str(), TimeSrc.c_str(), Time.c_str());
+
+            JsonObject parameters;
+            parameters["TimeQuality"] = TimeQuality;
+            parameters["TimeSrc"] = TimeSrc;
+            parameters["Time"] = Time;
+
             std::string parametersString;
             parameters.ToString(parametersString);
-            LOGINFO("onTimeStatusChanged: %s", parametersString.c_str());
             Event event = {EVENT_TIME_STATUS_CHANGED, std::move(parametersString)};
             std::lock_guard<std::mutex> lock(mQueueLock);
             mQueue.push(event);
             mQueueCondition.notify_one();
         }
 
-        void SystemTime::onTimeZoneDSTChanged(const JsonObject& parameters)
+        void SystemTime::onTimeZoneDSTChanged(const string& oldTimeZone, const string& newTimeZone, const string& oldAccuracy, const string& newAccuracy)
         {
+            LOGINFO("onTimeZoneDSTChanged: oldTimeZone=%s, newTimeZone=%s, oldAccuracy=%s, newAccuracy=%s",
+                    oldTimeZone.c_str(),
+                    newTimeZone.c_str(),
+                    oldAccuracy.c_str(),
+                    newAccuracy.c_str());
+
+            JsonObject parameters;
+            parameters["oldTimeZone"] = oldTimeZone;
+            parameters["newTimeZone"] = newTimeZone;
+            parameters["oldAccuracy"] = oldAccuracy;
+            parameters["newAccuracy"] = newAccuracy;
+
             std::string parametersString;
             parameters.ToString(parametersString);
-            LOGINFO("onTimeZoneDSTChanged: %s", parametersString.c_str());
             Event event = {EVENT_TIME_ZONE_CHANGED, std::move(parametersString)};
             std::lock_guard<std::mutex> lock(mQueueLock);
             mQueue.push(event);
             mQueueCondition.notify_one();
         }
 
-        void SystemTime::CreateSystemLink()
+        void SystemTime::InitializeSystemServices()
         {
-            if (mSystemLink == nullptr)
+            Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+            if (systemServicesPlugin != nullptr)
             {
-                std::string thunderAccessValue = THUNDER_ACCESS_DEFAULT_VALUE;
-                char *thunderAccessValueEnv = getenv("THUNDER_ACCESS_VALUE");
-                if (NULL != thunderAccessValueEnv)
+                if (Core::ERROR_NONE == systemServicesPlugin->Register(&_systemServicesNotification))
                 {
-                    thunderAccessValue = thunderAccessValueEnv;
-                }
-
-                // Generate jsonrpc token
-                std::string token;
-                // TODO: use interfaces and remove token
-                auto security = mShell->QueryInterfaceByCallsign<PluginHost::IAuthenticate>("SecurityAgent");
-                if (security != nullptr)
-                {
-                    std::string payload = "http://localhost";
-                    if (security->CreateToken(
-                            static_cast<uint16_t>(payload.length()),
-                            reinterpret_cast<const uint8_t *>(payload.c_str()),
-                            token) == Core::ERROR_NONE)
-                    {
-                        LOGINFO("Got security token\n");
-                    }
-                    else
-                    {
-                        LOGINFO("Failed to get security token\n");
-                    }
-                    security->Release();
+                    LOGINFO("ISystemServices::Register event registered");
                 }
                 else
                 {
-                    LOGINFO("No security agent\n");
+                    LOGERR("Failed to register ISystemServices::Register event");
                 }
-
-                std::string query = "token=" + token;
-                Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T(thunderAccessValue)));
-                mSystemLink = std::make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>>(SYSTEM_CALLSIGN, "", false, query);
-            }
-        }
-
-        void SystemTime::SubscribeForEvents()
-        {
-            if (mSystemLink != nullptr)
-            {
-                uint32_t ret = mSystemLink->Subscribe<JsonObject>(JSONRPC_THUNDER_TIMEOUT, _T("onTimeStatusChanged"), &SystemTime::onTimeStatusChanged, this);
-                if (ret != Core::ERROR_NONE)
-                {
-                    LOGERR("Failed to subscribe to onTimeStatusChanged");
-                }
-
-                ret = mSystemLink->Subscribe<JsonObject>(JSONRPC_THUNDER_TIMEOUT, _T("onTimeZoneDSTChanged"), &SystemTime::onTimeZoneDSTChanged, this);
-                if (ret != Core::ERROR_NONE)
-                {
-                    LOGERR("Failed to subscribe to onTimeZoneDSTChanged");
-                }
+                systemServicesPlugin->Release();
             }
         }
 
         void SystemTime::UpdateTimeStatus()
         {
-            JsonObject params;
-            JsonObject response;
-
-            uint32_t result = mSystemLink->Invoke<JsonObject, JsonObject>(JSONRPC_THUNDER_TIMEOUT, "getTimeStatus", params, response);
-            if (result == Core::ERROR_NONE && response.HasLabel("TimeQuality"))
+            Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+            if (systemServicesPlugin != nullptr)
             {
-                std::lock_guard<std::mutex> guard(mLock);
-                mTimeQuality = response["TimeQuality"].String();
-                if (mTimeQuality == TIME_QUALITY_GOOD || mTimeQuality == TIME_QUALITY_SECURE)
+                string TimeQuality;
+                string TimeSrc;
+                string Time;
+                bool success = false;
+
+                uint32_t result = systemServicesPlugin->GetTimeStatus(TimeQuality, TimeSrc, Time, success);
+                if (result == Core::ERROR_NONE && success)
                 {
-                    mIsSystemTimeAvailable = true;
+                    std::lock_guard<std::mutex> guard(mLock);
+                    mTimeQuality = TimeQuality;
+                    if (mTimeQuality == TIME_QUALITY_GOOD || mTimeQuality == TIME_QUALITY_SECURE)
+                    {
+                        mIsSystemTimeAvailable = true;
+                    }
+                    else
+                    {
+                        mIsSystemTimeAvailable = false;
+                    }
                 }
                 else
                 {
-                    mIsSystemTimeAvailable = false;
+                    LOGERR("GetTimeStatus not available, assuming time is OK");
+                    std::lock_guard<std::mutex> guard(mLock);
+                    mIsSystemTimeAvailable = true;
                 }
+                systemServicesPlugin->Release();
             }
             else
             {
-                LOGERR("getTimeStatus not available, assuming time is OK");
+                LOGERR("SystemServices plugin not initialized, assuming time is OK");
                 std::lock_guard<std::mutex> guard(mLock);
                 mIsSystemTimeAvailable = true;
             }
@@ -202,30 +191,38 @@ namespace WPEFramework
 
         void SystemTime::UpdateTimeZone()
         {
-            JsonObject params;
-            JsonObject response;
-            // Get timeZone from System.1.getTimeZoneDST
-            uint32_t result = mSystemLink->Invoke<JsonObject, JsonObject>(JSONRPC_THUNDER_TIMEOUT, "getTimeZoneDST", params, response);
-            if (result == Core::ERROR_NONE && response.HasLabel("timeZone") && response.HasLabel("accuracy"))
+            Exchange::ISystemServices* systemServicesPlugin = mShell->QueryInterfaceByCallsign<Exchange::ISystemServices>(SYSTEM_CALLSIGN);
+            if (systemServicesPlugin != nullptr)
             {
-                std::string tz = response["timeZone"].String();
-                std::string accuracy = response["accuracy"].String();
+                string timeZone;
+                string accuracy;
+                bool success = false;
 
-                std::lock_guard<std::mutex> guard(mLock);
-                mTimeZoneAccuracyString = accuracy;
-                if (accuracy == "FINAL")
+                uint32_t result = systemServicesPlugin->GetTimeZoneDST(timeZone, accuracy, success);
+                if (result == Core::ERROR_NONE && success)
                 {
-                    if (mTimeZone != tz)
+                    std::lock_guard<std::mutex> guard(mLock);
+                    mTimeZoneAccuracyString = accuracy;
+                    if (accuracy == "FINAL")
                     {
+                        if (mTimeZone != timeZone)
+                        {
+                            mTransitionMap.clear();
+                            mTimeZone = std::move(timeZone);
+                        }
+                    }
+                    else
+                    {
+                        mTimeZone.clear();
                         mTransitionMap.clear();
-                        mTimeZone = std::move(tz);
                     }
                 }
                 else
                 {
-                    mTimeZone.clear();
-                    mTransitionMap.clear();
+                    LOGERR("GetTimeZoneDST failed");
                 }
+                 systemServicesPlugin->Release();
+                                 
             }
         }
 
@@ -399,20 +396,9 @@ namespace WPEFramework
                 {
                 case EVENT_INITIALISE:
                 {
-                    if (mSystemLink == nullptr)
-                    {
-                        CreateSystemLink();
-                        if (mSystemLink != nullptr)
-                        {
-                            SubscribeForEvents();
-                            UpdateTimeStatus();
-                            UpdateTimeZone();
-                        }
-                        else
-                        {
-                            LOGERR("Failed to create JSONRPC link with %s", SYSTEM_CALLSIGN);
-                        }
-                    }
+                    InitializeSystemServices();
+                    UpdateTimeStatus();
+                    UpdateTimeZone();
                 }
                 break;
                 case EVENT_TIME_STATUS_CHANGED:
