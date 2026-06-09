@@ -166,11 +166,20 @@ RemotePlugin::Inbound(const uint32_t id,
   return {};
 }
 
+#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4) &&  (THUNDER_VERSION_PATCH == 3))
+uint32_t
+RemotePlugin::AddRef() const
+{
+  // TODO
+  return 0;
+}
+#else
 void
 RemotePlugin::AddRef() const
 {
   // TODO
 }
+#endif
 
 uint32_t
 RemotePlugin::Release() const
