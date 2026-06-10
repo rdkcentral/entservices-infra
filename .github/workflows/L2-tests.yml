@@ -7,6 +7,9 @@ on:
         description: "Specifies the source type (e.g., local or test framework) for the workflow."
         required: true
         type: string
+    secrets:
+      RDKCM_RDKE:
+        required: true    
 
 env:
   BUILD_TYPE: Debug
@@ -127,6 +130,7 @@ jobs:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
           ref: develop
+          token: ${{ secrets.RDKCM_RDKE }}
 
       - name: Checkout googletest
         if: steps.cache.outputs.cache-hit != 'true'
