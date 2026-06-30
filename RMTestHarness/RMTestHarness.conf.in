@@ -1,0 +1,5 @@
+callsign = "org.rdk.RMTestHarness"
+configuration = JSON()
+root = JSON()
+root.add("mode", "Local")
+configuration.add("root", root)

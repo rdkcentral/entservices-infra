@@ -80,6 +80,10 @@ endif()
 if(PLUGIN_TELEMETRYMETRICS)
     add_subdirectory(TelemetryMetrics)
 endif()
+if(PLUGIN_RMTESTHARNESS)
+       add_subdirectory(RMTestHarness)
+endif()
+
 
 # This prevents Yocto do_install failures when no plugin is enabled on a platform.
 install(CODE "message(STATUS \"No installable plugins enabled\")")

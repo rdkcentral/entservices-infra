@@ -1,0 +1,462 @@
+{
+  "$schema": "https://raw.githubusercontent.com/rdkcentral/rdkservices/main/Tools/json_generator/schemas/interface.schema.json",
+  "jsonrpc": "2.0",
+  "info": {
+    "title": "RMTestHarness API",
+    "class": "RMTestHarness",
+    "description": "Native test harness for Essos Resource Manager certification."
+  },
+  "common": {
+    "$ref": "../common/common.json"
+  },
+  "definitions": {
+    "clientid": {
+      "summary": "Logical client identifier",
+      "type": "string",
+      "example": "client1"
+    },
+    "resourcetype": {
+      "summary": "Essos resource type",
+      "type": "integer",
+      "example": 0
+    },
+    "resourceid": {
+      "summary": "Assigned resource ID",
+      "type": "integer",
+      "example": 1
+    },
+    "requestid": {
+      "summary": "Resource request ID",
+      "type": "integer",
+      "example": 5
+    },
+    "usage": {
+      "summary": "Essos usage bitmask",
+      "type": "integer",
+      "example": 7
+    },
+    "priority": {
+      "summary": "Resource arbitration priority",
+      "type": "integer",
+      "example": 100
+    },
+    "eventrecord": {
+      "summary": "Recorded RM callback event",
+      "type": "object",
+      "properties": {
+        "event": {
+          "type": "string",
+          "example": "granted"
+        },
+        "type": {
+          "$ref": "#/definitions/resourcetype"
+        },
+        "id": {
+          "$ref": "#/definitions/resourceid"
+        },
+        "timestampMs": {
+          "type": "number",
+          "example": 123456789
+        }
+      }
+    }
+  },
+  "methods": {
+    "ping": {
+      "summary": "Checks whether the harness is alive.",
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "RMTestHarness alive"
+          }
+        }
+      }
+    },
+    "initClient": {
+      "summary": "Creates a logical RM client context.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "$ref": "#/definitions/clientid"
+          }
+        },
+        "required": ["clientId"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    },
+    "destroyClient": {
+      "summary": "Destroys a logical RM client context.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "$ref": "#/definitions/clientid"
+          }
+        },
+        "required": ["clientId"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    },
+    "requestResource": {
+      "summary": "Requests a resource for the specified client.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "$ref": "#/definitions/clientid"
+          },
+          "type": {
+            "$ref": "#/definitions/resourcetype"
+          },
+          "usage": {
+            "$ref": "#/definitions/usage"
+          },
+          "priority": {
+            "$ref": "#/definitions/priority"
+          },
+          "asyncEnable": {
+            "type": "boolean",
+            "example": true
+          },
+          "info": {
+            "type": "object",
+            "properties": {
+              "maxWidth": {
+                "type": "integer",
+                "example": 1920
+              },
+              "maxHeight": {
+                "type": "integer",
+                "example": 1080
+              }
+            }
+          }
+        },
+        "required": ["clientId", "type", "usage", "priority"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "requestId": {
+            "$ref": "#/definitions/requestid"
+          },
+          "assignedId": {
+            "$ref": "#/definitions/resourceid"
+          },
+          "assignedCaps": {
+            "type": "integer",
+            "example": 65536
+          }
+        }
+      }
+    },
+    "releaseResource": {
+      "summary": "Releases an assigned resource.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "$ref": "#/definitions/clientid"
+          },
+          "type": {
+            "$ref": "#/definitions/resourcetype"
+          },
+          "assignedId": {
+            "$ref": "#/definitions/resourceid"
+          }
+        },
+        "required": ["clientId", "type", "assignedId"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    },
+    "setPriority": {
+      "summary": "Updates priority for a pending request.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "$ref": "#/definitions/clientid"
+          },
+          "type": {
+            "$ref": "#/definitions/resourcetype"
+          },
+          "requestId": {
+            "$ref": "#/definitions/requestid"
+          },
+          "priority": {
+            "$ref": "#/definitions/priority"
+          }
+        },
+        "required": ["clientId", "type", "requestId", "priority"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    },
+    "setUsage": {
+      "summary": "Updates usage for a pending request.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "$ref": "#/definitions/clientid"
+          },
+          "type": {
+            "$ref": "#/definitions/resourcetype"
+          },
+          "requestId": {
+            "$ref": "#/definitions/requestid"
+          },
+          "usage": {
+            "$ref": "#/definitions/usage"
+          },
+          "info": {
+            "type": "object",
+            "properties": {
+              "maxWidth": {
+                "type": "integer",
+                "example": 1280
+              },
+              "maxHeight": {
+                "type": "integer",
+                "example": 720
+              }
+            }
+          }
+        },
+        "required": ["clientId", "type", "requestId", "usage"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    },
+    "getEvents": {
+      "summary": "Returns callback events recorded for a client.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "$ref": "#/definitions/clientid"
+          }
+        },
+        "required": ["clientId"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/eventrecord"
+            }
+          }
+        }
+      }
+    },
+    "getCount": {
+      "summary": "Returns the count of resources for the given type.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/resourcetype"
+          }
+        },
+        "required": ["type"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "count": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      }
+    },
+    "getOwner": {
+      "summary": "Returns the owner for a resource instance.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/resourcetype"
+          },
+          "id": {
+            "$ref": "#/definitions/resourceid"
+          }
+        },
+        "required": ["type", "id"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "client": {
+            "type": "integer",
+            "example": 2
+          },
+          "priority": {
+            "type": "integer",
+            "example": 100
+          }
+        }
+      }
+    },
+    "getState": {
+      "summary": "Returns the state for a resource instance.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/resourcetype"
+          },
+          "id": {
+            "$ref": "#/definitions/resourceid"
+          }
+        },
+        "required": ["type", "id"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "state": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      }
+    },
+    "getCaps": {
+      "summary": "Returns resource capabilities.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/resourcetype"
+          },
+          "id": {
+            "$ref": "#/definitions/resourceid"
+          }
+        },
+        "required": ["type", "id"]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "capabilities": {
+            "type": "integer",
+            "example": 65536
+          },
+          "info": {
+            "type": "object",
+            "properties": {
+              "maxWidth": {
+                "type": "integer",
+                "example": 1920
+              },
+              "maxHeight": {
+                "type": "integer",
+                "example": 1080
+              }
+            }
+          }
+        }
+      }
+    },
+    "getAVState": {
+      "summary": "Returns aggregate AV state.",
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "state": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      }
+    },
+    "cleanupAll": {
+      "summary": "Releases/destroys all harness client contexts.",
+      "result": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      }
+    }
+  }
+}

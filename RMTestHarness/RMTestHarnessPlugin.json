@@ -1,0 +1,8 @@
+{
+  "org.rdk.RMTestHarness",  "info": {
+    "locator": "libWPEFrameworkRMTestHarness.so",
+    "classname": "RMTestHarness",
+    "autostart": false
+  }
+}
+    "title": "RMTestHarness",
