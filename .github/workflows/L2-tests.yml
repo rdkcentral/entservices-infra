@@ -389,6 +389,7 @@ jobs:
           -DPLUGIN_PERSISTENTSTORE_PATH="/tmp/secure/persistent/rdkservicestore"
           -DPLUGIN_PERSISTENTSTORE_LEGACYPATH="/tmp/persistent/rdkservicestore"
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers
+          -I $GITHUB_WORKSPACE/entservices-helpers/helpers
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/ds
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/iarmbus
           -I $GITHUB_WORKSPACE/entservices-testframework/Tests/headers/rdk/iarmmgrs-hal
