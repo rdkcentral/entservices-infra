@@ -163,7 +163,8 @@ namespace WPEFramework
                 if (result == Core::ERROR_NONE && success)
                 {
                     std::lock_guard<std::mutex> guard(mLock);
-                    mTimeQuality = TimeQuality;
+                    //coverity fix: COPY_INSTEAD_OF_MOVE - use std::move for TimeQuality
+                    mTimeQuality = std::move(TimeQuality);
                     if (mTimeQuality == TIME_QUALITY_GOOD || mTimeQuality == TIME_QUALITY_SECURE)
                     {
                         mIsSystemTimeAvailable = true;
