@@ -301,11 +301,20 @@ WPEFramework::Plugin::Rust::LocalPlugin::Inbound(const uint32_t id,
   return {};
 }
 
+#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4) &&  (THUNDER_VERSION_PATCH == 3))
+uint32_t
+WPEFramework::Plugin::Rust::LocalPlugin::AddRef() const
+{
+  // TODO
+  return 0;
+}
+#else
 void
 WPEFramework::Plugin::Rust::LocalPlugin::AddRef() const
 {
   // TODO
 }
+#endif
 
 uint32_t
 WPEFramework::Plugin::Rust::LocalPlugin::Release() const
