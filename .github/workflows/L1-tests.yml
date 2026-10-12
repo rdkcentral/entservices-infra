@@ -179,14 +179,6 @@ jobs:
           cmake --build build/Thunder -j8
           &&
           cmake --install build/Thunder
-          -DBUILD_TYPE=Debug
-          -DBINDING=127.0.0.1
-          -DPORT=55555
-          -DEXCEPTIONS_ENABLE=ON
-          &&
-          cmake --build build/Thunder -j8
-          &&
-          cmake --install build/Thunder
 
       - name: Checkout entservices-apis
         uses: actions/checkout@v3
