@@ -113,7 +113,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-systemservices
           path: entservices-systemservices
-          ref: develop
+          ref: feature/RDKEMW-19415_ds_comrpc
 
       - name: Checkout entservices-powermanager
         uses: actions/checkout@v3
