@@ -30,7 +30,7 @@
 #include <queue>
 #include <unordered_map>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     class AnalyticsImplementation : public Exchange::IAnalytics, public Exchange::IConfiguration {
     private:

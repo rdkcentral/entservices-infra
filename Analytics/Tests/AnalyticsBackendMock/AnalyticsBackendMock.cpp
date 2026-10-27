@@ -31,7 +31,7 @@
 #define SERVER_URL "http://localhost:12345"
 #endif // SERVER_URL
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     #define TABLE_NAME      "events"
@@ -225,13 +225,13 @@ namespace Plugin {
         ISystemTimePtr mSysTime;
     };
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 
 extern "C" {
 
-    WPEFramework::Plugin::IAnalyticsBackend* Create()
+    Thunder::Plugin::IAnalyticsBackend* Create()
     {
-        return new WPEFramework::Plugin::AnalyticsBackendMock();
+        return new Thunder::Plugin::AnalyticsBackendMock();
     }
 
 }

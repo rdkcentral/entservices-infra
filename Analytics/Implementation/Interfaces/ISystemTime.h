@@ -24,7 +24,7 @@
 
 #include <plugins/IShell.h>
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {

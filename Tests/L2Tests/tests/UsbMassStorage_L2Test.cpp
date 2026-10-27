@@ -71,9 +71,9 @@ class AsyncHandlerMock_UsbMassStorage
 #define MOCK_USB_DEVICE_PORT_2          124
 
 using ::testing::NiceMock;
-using namespace WPEFramework;
+using namespace Thunder;
 using testing::StrictMock;
-using ::WPEFramework::Exchange::IUSBMassStorage;
+using ::Thunder::Exchange::IUSBMassStorage;
 
 typedef enum : uint32_t {
     USBMassStorage_OnDeviceMounted= 0x00000001,
@@ -93,7 +93,7 @@ class USBMassStorageNotificationHandler : public Exchange::IUSBMassStorage::INot
         /** @brief Event signalled flag */
         uint32_t m_event_signalled;
 
-        std::vector<WPEFramework::Exchange::IUSBMassStorage::USBStorageMountInfo> m_usb_mass_storage;
+        std::vector<Thunder::Exchange::IUSBMassStorage::USBStorageMountInfo> m_usb_mass_storage;
 
         BEGIN_INTERFACE_MAP(Notification)
         INTERFACE_ENTRY(Exchange::IUSBMassStorage::INotification)
@@ -481,7 +481,7 @@ TEST_F(USBMassStorageTest, comrpc_getpartitionInfo_success)
     Core::Sink<USBMassStorageNotificationHandler> notification;
     uint32_t signalled = USBMassStorage_StateInvalid;
     Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator* mountPoints = {};
-    WPEFramework::Exchange::IUSBMassStorage::USBStoragePartitionInfo partitionInfo = {};
+    Thunder::Exchange::IUSBMassStorage::USBStoragePartitionInfo partitionInfo = {};
     
     TEST_LOG("** Test Case Started **");
 
@@ -601,7 +601,7 @@ TEST_F(USBMassStorageTest, comrpc_getpartitionInfo_success)
                         status = m_usbmassstorageplugin->GetPartitionInfo(mountPointsArray[i].mountPath, partitionInfo);
                         EXPECT_EQ(status, Core::ERROR_NONE);
 
-                        EXPECT_EQ(partitionInfo.fileSystem, WPEFramework::Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT);
+                        EXPECT_EQ(partitionInfo.fileSystem, Thunder::Exchange::IUSBMassStorage::USBStorageFileSystem::VFAT);
                         EXPECT_EQ(partitionInfo.size, 51200); 
                         EXPECT_EQ(partitionInfo.numSectors, 1024);
                         EXPECT_EQ(partitionInfo.sectorSize, 512);
@@ -944,7 +944,7 @@ TEST_F(USBMassStorageTest, comrpc_open_failure)
     Core::Sink<USBMassStorageNotificationHandler> notification;
     uint32_t signalled = USBMassStorage_StateInvalid;
     Exchange::IUSBMassStorage::IUSBStorageMountInfoIterator* mountPoints = {};
-    WPEFramework::Exchange::IUSBMassStorage::USBStoragePartitionInfo partitionInfo = {};
+    Thunder::Exchange::IUSBMassStorage::USBStoragePartitionInfo partitionInfo = {};
     
     TEST_LOG("** Test Case Started **");
 

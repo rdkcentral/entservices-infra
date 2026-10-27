@@ -19,7 +19,7 @@
 #include "DatabaseConnection.h"
 #include "UtilsLogging.h"
 
-namespace WPEFramework {
+namespace Thunder {
     namespace Plugin {
 
         DatabaseConnection::DatabaseConnection(): mDatabaseName(), mDataBaseHandle(NULL), mMutex() {}
@@ -255,4 +255,4 @@ namespace WPEFramework {
         }
 
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

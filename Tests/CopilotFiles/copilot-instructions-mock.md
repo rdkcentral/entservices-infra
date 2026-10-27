@@ -1,4 +1,4 @@
-# WPEFramework Plugin Mock Generation Guide
+# Thunder Plugin Mock Generation Guide
 
 ### Mock Generation Objectives
 

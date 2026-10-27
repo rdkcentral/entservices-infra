@@ -26,7 +26,7 @@
 
 
 // Interface for Analytics Backends
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     struct IAnalyticsBackend {

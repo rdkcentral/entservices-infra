@@ -29,7 +29,7 @@
 #include "ILocalStore.h"
 #include "DatabaseConnection.h"
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {

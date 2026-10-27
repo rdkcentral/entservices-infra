@@ -26,7 +26,7 @@
 #include <map>
 #include <unordered_set>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 class BaseEventDelegate
 {

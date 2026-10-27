@@ -23,7 +23,7 @@
 
 extern char **environ;
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace
     {
@@ -131,4 +131,4 @@ namespace WPEFramework
         return status;
     }
 
-} // namespace WPEFramework
+} // namespace Thunder

@@ -75,7 +75,7 @@
                 ]"
 
 using ::testing::NiceMock;
-using namespace WPEFramework;
+using namespace Thunder;
 using testing::StrictMock;
 
 char gPipeBuffer[4 * 1024];

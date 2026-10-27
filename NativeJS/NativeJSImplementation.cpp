@@ -21,7 +21,7 @@
 
 using namespace std;
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {
@@ -158,4 +158,4 @@ namespace WPEFramework
 		return (Core::ERROR_NONE);
 	}
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

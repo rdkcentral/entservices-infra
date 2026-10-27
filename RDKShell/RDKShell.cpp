@@ -57,123 +57,123 @@
 #define API_VERSION_NUMBER_MINOR 4
 #define API_VERSION_NUMBER_PATCH 6
 
-const string WPEFramework::Plugin::RDKShell::SERVICE_NAME = "org.rdk.RDKShell";
+const string Thunder::Plugin::RDKShell::SERVICE_NAME = "org.rdk.RDKShell";
 //methods
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_MOVE_TO_FRONT = "moveToFront";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_MOVE_TO_BACK = "moveToBack";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_MOVE_BEHIND = "moveBehind";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_FOCUS = "setFocus";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_FOCUSED = "getFocused";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_KILL = "kill";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ADD_KEY_INTERCEPT = "addKeyIntercept";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ADD_KEY_INTERCEPTS = "addKeyIntercepts";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_KEY_INTERCEPT = "removeKeyIntercept";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ADD_KEY_LISTENER = "addKeyListener";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_KEY_LISTENER = "removeKeyListener";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ADD_KEY_METADATA_LISTENER = "addKeyMetadataListener";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_KEY_METADATA_LISTENER = "removeKeyMetadataListener";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_INJECT_KEY = "injectKey";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GENERATE_KEYS = "generateKey";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_SCREEN_RESOLUTION = "getScreenResolution";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_SCREEN_RESOLUTION = "setScreenResolution";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_CREATE_DISPLAY = "createDisplay";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_CLIENTS = "getClients";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_Z_ORDER = "getZOrder";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_BOUNDS = "getBounds";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_BOUNDS = "setBounds";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_VISIBILITY = "getVisibility";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_VISIBILITY = "setVisibility";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_OPACITY = "getOpacity";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_OPACITY = "setOpacity";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_SCALE = "getScale";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_SCALE = "setScale";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_HOLE_PUNCH = "getHolePunch";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_HOLE_PUNCH = "setHolePunch";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_LOG_LEVEL = "getLogLevel";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_LOG_LEVEL = "setLogLevel";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SHOW_SPLASH_LOGO = "showSplashLogo";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_HIDE_SPLASH_LOGO = "hideSplashLogo";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_ANIMATION = "removeAnimation";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ADD_ANIMATION = "addAnimation";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_INACTIVITY_REPORTING = "enableInactivityReporting";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_INACTIVITY_INTERVAL = "setInactivityInterval";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_RESET_INACTIVITY_TIME = "resetInactivityTime";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SCALE_TO_FIT = "scaleToFit";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH = "launch";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_APP = "launchApplication";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SUSPEND = "suspend";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SUSPEND_APP = "suspendApplication";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_RESUME_APP = "resumeApplication";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_DESTROY = "destroy";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_AVAILABLE_TYPES = "getAvailableTypes";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_STATE = "getState";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_SYSTEM_MEMORY = "getSystemMemory";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_SYSTEM_RESOURCE_INFO = "getSystemResourceInfo";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_MEMORY_MONITOR = "setMemoryMonitor";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SHOW_WATERMARK = "showWatermark";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SHOW_FULL_SCREEN_IMAGE = "showFullScreenImage";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_HIDE_FULL_SCREEN_IMAGE = "hideFullScreenImage";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_FACTORY_APP = "launchFactoryApp";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_FACTORY_APP_SHORTCUT = "launchFactoryAppShortcut";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_RESIDENT_APP = "launchResidentApp";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_TOGGLE_FACTORY_APP = "toggleFactoryApp";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_EXIT_AGING_MODE = "exitAgingMode";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_KEYREPEATS = "enableKeyRepeats";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_KEYREPEATS_ENABLED = "getKeyRepeatsEnabled";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_TOPMOST = "setTopmost";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_VIRTUAL_RESOLUTION = "getVirtualResolution";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_VIRTUAL_RESOLUTION = "setVirtualResolution";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_VIRTUAL_DISPLAY = "enableVirtualDisplay";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_VIRTUAL_DISPLAY_ENABLED = "getVirtualDisplayEnabled";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_LAST_WAKEUP_KEY = "getLastWakeupKey";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_HIDE_ALL_CLIENTS = "hideAllClients";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_IGNORE_KEY_INPUTS = "ignoreKeyInputs";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_SCREENSHOT = "getScreenshot";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_EASTER_EGGS = "enableEasterEggs";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_LOGS_FLUSHING = "enableLogsFlushing";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_LOGS_FLUSHING_ENABLED = "getLogsFlushingEnabled";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ADD_EASTER_EGGS = "addEasterEggs";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_EASTER_EGGS = "removeEasterEggs";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_EASTER_EGGS = "getEasterEggs";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SHOW_CURSOR = "showCursor";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_HIDE_CURSOR = "hideCursor";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_CURSOR_SIZE = "getCursorSize";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_CURSOR_SIZE = "setCursorSize";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_INPUT_EVENTS = "enableInputEvents";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_AV_BLOCKED = "setAVBlocked";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_AV_BLOCKED_APPS = "getBlockedAVApplications";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_KEY_REPEAT_CONFIG = "keyRepeatConfig";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_GRAPHICS_FRAME_RATE = "getGraphicsFrameRate";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_GRAPHICS_FRAME_RATE = "setGraphicsFrameRate";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_MOVE_TO_FRONT = "moveToFront";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_MOVE_TO_BACK = "moveToBack";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_MOVE_BEHIND = "moveBehind";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_FOCUS = "setFocus";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_FOCUSED = "getFocused";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_KILL = "kill";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ADD_KEY_INTERCEPT = "addKeyIntercept";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ADD_KEY_INTERCEPTS = "addKeyIntercepts";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_KEY_INTERCEPT = "removeKeyIntercept";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ADD_KEY_LISTENER = "addKeyListener";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_KEY_LISTENER = "removeKeyListener";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ADD_KEY_METADATA_LISTENER = "addKeyMetadataListener";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_KEY_METADATA_LISTENER = "removeKeyMetadataListener";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_INJECT_KEY = "injectKey";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GENERATE_KEYS = "generateKey";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_SCREEN_RESOLUTION = "getScreenResolution";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_SCREEN_RESOLUTION = "setScreenResolution";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_CREATE_DISPLAY = "createDisplay";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_CLIENTS = "getClients";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_Z_ORDER = "getZOrder";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_BOUNDS = "getBounds";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_BOUNDS = "setBounds";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_VISIBILITY = "getVisibility";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_VISIBILITY = "setVisibility";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_OPACITY = "getOpacity";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_OPACITY = "setOpacity";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_SCALE = "getScale";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_SCALE = "setScale";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_HOLE_PUNCH = "getHolePunch";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_HOLE_PUNCH = "setHolePunch";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_LOG_LEVEL = "getLogLevel";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_LOG_LEVEL = "setLogLevel";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SHOW_SPLASH_LOGO = "showSplashLogo";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_HIDE_SPLASH_LOGO = "hideSplashLogo";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_ANIMATION = "removeAnimation";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ADD_ANIMATION = "addAnimation";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_INACTIVITY_REPORTING = "enableInactivityReporting";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_INACTIVITY_INTERVAL = "setInactivityInterval";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_RESET_INACTIVITY_TIME = "resetInactivityTime";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SCALE_TO_FIT = "scaleToFit";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH = "launch";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_APP = "launchApplication";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SUSPEND = "suspend";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SUSPEND_APP = "suspendApplication";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_RESUME_APP = "resumeApplication";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_DESTROY = "destroy";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_AVAILABLE_TYPES = "getAvailableTypes";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_STATE = "getState";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_SYSTEM_MEMORY = "getSystemMemory";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_SYSTEM_RESOURCE_INFO = "getSystemResourceInfo";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_MEMORY_MONITOR = "setMemoryMonitor";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SHOW_WATERMARK = "showWatermark";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SHOW_FULL_SCREEN_IMAGE = "showFullScreenImage";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_HIDE_FULL_SCREEN_IMAGE = "hideFullScreenImage";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_FACTORY_APP = "launchFactoryApp";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_FACTORY_APP_SHORTCUT = "launchFactoryAppShortcut";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_RESIDENT_APP = "launchResidentApp";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_TOGGLE_FACTORY_APP = "toggleFactoryApp";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_EXIT_AGING_MODE = "exitAgingMode";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_KEYREPEATS = "enableKeyRepeats";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_KEYREPEATS_ENABLED = "getKeyRepeatsEnabled";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_TOPMOST = "setTopmost";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_VIRTUAL_RESOLUTION = "getVirtualResolution";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_VIRTUAL_RESOLUTION = "setVirtualResolution";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_VIRTUAL_DISPLAY = "enableVirtualDisplay";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_VIRTUAL_DISPLAY_ENABLED = "getVirtualDisplayEnabled";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_LAST_WAKEUP_KEY = "getLastWakeupKey";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_HIDE_ALL_CLIENTS = "hideAllClients";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_IGNORE_KEY_INPUTS = "ignoreKeyInputs";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_SCREENSHOT = "getScreenshot";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_EASTER_EGGS = "enableEasterEggs";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_LOGS_FLUSHING = "enableLogsFlushing";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_LOGS_FLUSHING_ENABLED = "getLogsFlushingEnabled";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ADD_EASTER_EGGS = "addEasterEggs";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_REMOVE_EASTER_EGGS = "removeEasterEggs";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_EASTER_EGGS = "getEasterEggs";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SHOW_CURSOR = "showCursor";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_HIDE_CURSOR = "hideCursor";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_CURSOR_SIZE = "getCursorSize";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_CURSOR_SIZE = "setCursorSize";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_INPUT_EVENTS = "enableInputEvents";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_AV_BLOCKED = "setAVBlocked";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_AV_BLOCKED_APPS = "getBlockedAVApplications";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_KEY_REPEAT_CONFIG = "keyRepeatConfig";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_GET_GRAPHICS_FRAME_RATE = "getGraphicsFrameRate";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_SET_GRAPHICS_FRAME_RATE = "setGraphicsFrameRate";
 #ifdef HIBERNATE_SUPPORT_ENABLED
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_HIBERNATE = "hibernate";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_RESTORE = "restore";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_HIBERNATE = "hibernate";
+const string Thunder::Plugin::RDKShell::RDKSHELL_METHOD_RESTORE = "restore";
 #endif
 
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_USER_INACTIVITY = "onUserInactivity";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_LAUNCHED = "onApplicationLaunched";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_CONNECTED = "onApplicationConnected";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_DISCONNECTED = "onApplicationDisconnected";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_TERMINATED = "onApplicationTerminated";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_FIRST_FRAME = "onApplicationFirstFrame";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_SUSPENDED = "onApplicationSuspended";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_RESUMED = "onApplicationResumed";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_ACTIVATED = "onApplicationActivated";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_FOCUSCHANGED = "onApplicationFocusChanged";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_LAUNCHED = "onLaunched";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_SUSPENDED = "onSuspended";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_DESTROYED = "onDestroyed";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_PLUGIN_SUSPENDED = "onPluginSuspended";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_DEVICE_LOW_RAM_WARNING = "onDeviceLowRamWarning";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_DEVICE_CRITICALLY_LOW_RAM_WARNING = "onDeviceCriticallyLowRamWarning";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_DEVICE_LOW_RAM_WARNING_CLEARED = "onDeviceLowRamWarningCleared";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_DEVICE_CRITICALLY_LOW_RAM_WARNING_CLEARED = "onDeviceCriticallyLowRamWarningCleared";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_EASTER_EGG = "onEasterEgg";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_WILL_DESTROY = "onWillDestroy";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_SCREENSHOT_COMPLETE = "onScreenshotComplete";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_USER_INACTIVITY = "onUserInactivity";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_LAUNCHED = "onApplicationLaunched";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_CONNECTED = "onApplicationConnected";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_DISCONNECTED = "onApplicationDisconnected";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_TERMINATED = "onApplicationTerminated";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_FIRST_FRAME = "onApplicationFirstFrame";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_SUSPENDED = "onApplicationSuspended";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_RESUMED = "onApplicationResumed";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_ACTIVATED = "onApplicationActivated";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_APP_FOCUSCHANGED = "onApplicationFocusChanged";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_LAUNCHED = "onLaunched";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_SUSPENDED = "onSuspended";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_DESTROYED = "onDestroyed";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_PLUGIN_SUSPENDED = "onPluginSuspended";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_DEVICE_LOW_RAM_WARNING = "onDeviceLowRamWarning";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_DEVICE_CRITICALLY_LOW_RAM_WARNING = "onDeviceCriticallyLowRamWarning";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_DEVICE_LOW_RAM_WARNING_CLEARED = "onDeviceLowRamWarningCleared";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_DEVICE_CRITICALLY_LOW_RAM_WARNING_CLEARED = "onDeviceCriticallyLowRamWarningCleared";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_EASTER_EGG = "onEasterEgg";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_WILL_DESTROY = "onWillDestroy";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_SCREENSHOT_COMPLETE = "onScreenshotComplete";
 #ifdef HIBERNATE_SUPPORT_ENABLED
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_HIBERNATED = "onHibernated";
-const string WPEFramework::Plugin::RDKShell::RDKSHELL_EVENT_ON_RESTORED = "onRestored";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_HIBERNATED = "onHibernated";
+const string Thunder::Plugin::RDKShell::RDKSHELL_EVENT_ON_RESTORED = "onRestored";
 #endif
 
 using namespace std;
@@ -190,7 +190,7 @@ unsigned int resolutionWidth = 1280;
 unsigned int resolutionHeight = 720;
 bool gRdkShellSurfaceModeEnabled = false;
 static std::string sThunderSecurityToken;
-std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> gSystemServiceConnection;
+std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement>> gSystemServiceConnection;
 bool gSystemServiceEventsSubscribed = false;
 static bool sResidentAppFirstActivated = false;
 bool sPersistentStoreWaitProcessed = false;
@@ -304,7 +304,7 @@ static bool waitForHibernateUnblocked(int timeoutMs)
 
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
     namespace Plugin {
 
         void RDKShell::TaskQueue::push(RDKShell::TaskQueue::Task task)
@@ -1271,7 +1271,7 @@ namespace WPEFramework {
                        gPluginDataMutex.unlock();
                    }
                 }
-                else if (currentState == PluginHost::IShell::ACTIVATED && service->Callsign() == WPEFramework::Plugin::RDKShell::SERVICE_NAME)
+                else if (currentState == PluginHost::IShell::ACTIVATED && service->Callsign() == Thunder::Plugin::RDKShell::SERVICE_NAME)
                 {
                    /*PluginHost::ISubSystem* subSystems(service->SubSystems());
                     if (subSystems != nullptr)
@@ -2046,26 +2046,26 @@ namespace WPEFramework {
             return(string("{\"service\": \"") + SERVICE_NAME + string("\"}"));
         }
 
-        std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > RDKShell::getThunderControllerClient(std::string callsign, std::string localidentifier)
+        std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement> > RDKShell::getThunderControllerClient(std::string callsign, std::string localidentifier)
         {
             string query = "token=" + sThunderSecurityToken;
             Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T(gThunderAccessValue)));
-            std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > thunderClient = make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> >(callsign.c_str(), localidentifier.c_str(), false, query);
+            std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement> > thunderClient = make_shared<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement> >(callsign.c_str(), localidentifier.c_str(), false, query);
             return thunderClient;
         }
 
-        std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> RDKShell::getPackagerPlugin()
+        std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement>> RDKShell::getPackagerPlugin()
         {
             string query = "token=" + sThunderSecurityToken;
             Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T(gThunderAccessValue)));
-            return make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>>("Packager.1", "", false, query);
+            return make_shared<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement>>("Packager.1", "", false, query);
         }
 
-        std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> RDKShell::getOCIContainerPlugin()
+        std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement>> RDKShell::getOCIContainerPlugin()
         {
             string query = "token=" + sThunderSecurityToken;
             Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T(gThunderAccessValue)));
-            return make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>>("org.rdk.OCIContainer.1", "", false, query);
+            return make_shared<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement>>("org.rdk.OCIContainer.1", "", false, query);
         }
 
         void RDKShell::pluginEventHandler(const JsonObject& parameters)
@@ -2593,11 +2593,11 @@ namespace WPEFramework {
                 // RDKShell::kill only destroys wayland display
                 // and hibernated app will not detect missing display.
                 // Wakeup app by getting its state
-                WPEFramework::Core::JSON::String stateString;
+                Thunder::Core::JSON::String stateString;
                 auto thunderPlugin = getThunderControllerClient(client);
                 if(thunderPlugin)
                 {
-                    thunderPlugin->Get<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
+                    thunderPlugin->Get<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
                 }
 #endif
 
@@ -4474,9 +4474,9 @@ namespace WPEFramework {
                                 launchType = RDKShellLaunchType::SUSPEND;
                             }
 
-                            WPEFramework::Core::JSON::String stateString;
+                            Thunder::Core::JSON::String stateString;
                             stateString = "suspended";
-                            status = JSONRPCDirectLink(mCurrentService, callsign).Set<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
+                            status = JSONRPCDirectLink(mCurrentService, callsign).Set<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
                             
                             std::cout << "setting the state to suspended\n";
                             visible = false;
@@ -4497,9 +4497,9 @@ namespace WPEFramework {
                                 launchType = RDKShellLaunchType::RESUME;
                             }
                             
-                            WPEFramework::Core::JSON::String stateString;
+                            Thunder::Core::JSON::String stateString;
                             stateString = "resumed";
-                            status = JSONRPCDirectLink(mCurrentService, callsign).Set<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
+                            status = JSONRPCDirectLink(mCurrentService, callsign).Set<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
 
                             std::cout << "setting the state to resumed\n";
                         }
@@ -4521,9 +4521,9 @@ namespace WPEFramework {
                     JsonObject urlResult;
                     if (!uri.empty())
                     {
-                        WPEFramework::Core::JSON::String urlString;
+                        Thunder::Core::JSON::String urlString;
                         urlString = uri;
-                        status = JSONRPCDirectLink(mCurrentService, callsign).Set<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "url",urlString);
+                        status = JSONRPCDirectLink(mCurrentService, callsign).Set<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "url",urlString);
                         if (status > 0)
                         {
                             std::cout << "failed to set url to " << uri << " with status code " << status << std::endl;
@@ -4640,10 +4640,10 @@ namespace WPEFramework {
 		else
 		{
                     gDestroyMutex.unlock();
-                    WPEFramework::Core::JSON::String stateString;
+                    Thunder::Core::JSON::String stateString;
                     stateString = "suspended";
                     const string callsignWithVersion = callsign + ".1";
-                    status = getThunderControllerClient(callsignWithVersion)->Set<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
+                    status = getThunderControllerClient(callsignWithVersion)->Set<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
                 }
                 if (status > 0)
                 {
@@ -5261,7 +5261,7 @@ namespace WPEFramework {
                             service.Callsign.ToString(callsign);
                             callsign.erase(std::remove(callsign.begin(),callsign.end(),'\"'),callsign.end());
 
-                            WPEFramework::Core::JSON::String stateString;
+                            Thunder::Core::JSON::String stateString;
                             const string callsignWithVersion = callsign + ".1";
                             uint32_t stateStatus = 0;
 
@@ -5269,7 +5269,7 @@ namespace WPEFramework {
                             if(service.JSONState != PluginHost::MetaData::Service::state::HIBERNATED)
                             {
 #endif
-                                stateStatus = getThunderControllerClient(callsignWithVersion)->Get<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
+                                stateStatus = getThunderControllerClient(callsignWithVersion)->Get<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
 #ifdef HIBERNATE_SUPPORT_ENABLED
                             }
                             else
@@ -5281,13 +5281,13 @@ namespace WPEFramework {
 
                             if (stateStatus == 0)
                             {
-                                WPEFramework::Core::JSON::String urlString;
+                                Thunder::Core::JSON::String urlString;
                                 uint32_t urlStatus = 1;
 #ifdef HIBERNATE_SUPPORT_ENABLED
                                 if(service.JSONState != PluginHost::MetaData::Service::state::HIBERNATED)
                                 {
 #endif
-                                    urlStatus = getThunderControllerClient(callsignWithVersion)->Get<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "url",urlString);
+                                    urlStatus = getThunderControllerClient(callsignWithVersion)->Get<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "url",urlString);
 #ifdef HIBERNATE_SUPPORT_ENABLED
                                 }
 #endif
@@ -5384,9 +5384,9 @@ namespace WPEFramework {
                             service.Callsign.ToString(callsign);
                             callsign.erase(std::remove(callsign.begin(),callsign.end(),'\"'),callsign.end());
 
-                            WPEFramework::Core::JSON::String stateString;
+                            Thunder::Core::JSON::String stateString;
                             const string callsignWithVersion = callsign + ".1";
-                            uint32_t stateStatus = getThunderControllerClient(callsignWithVersion)->Get<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
+                            uint32_t stateStatus = getThunderControllerClient(callsignWithVersion)->Get<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
 
                             if (stateStatus == 0)
                             {
@@ -5718,9 +5718,9 @@ namespace WPEFramework {
 
             if (!updatedUrl.empty())
             {
-                WPEFramework::Core::JSON::String urlString;
+                Thunder::Core::JSON::String urlString;
                 urlString = updatedUrl;
-                status = JSONRPCDirectLink(mCurrentService, "ResidentApp").Set<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "url",urlString);
+                status = JSONRPCDirectLink(mCurrentService, "ResidentApp").Set<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "url",urlString);
                 std::cout << "set url status " << updatedUrl << " " << status << std::endl;
                 if (status > 0)
                 {
@@ -6427,11 +6427,11 @@ namespace WPEFramework {
                 if( callsign.find("Netflix") != string::npos || callsign.find("Cobalt") != string::npos || callsign.find("Amazon") != string::npos || callsign.find("YouTube") != string::npos )
                 {
                     //Check if native app is suspended
-                    WPEFramework::Core::JSON::String stateString;
+                    Thunder::Core::JSON::String stateString;
                     const string callsignWithVersion = callsign + ".1";
                     auto thunderPlugin = getThunderControllerClient(callsignWithVersion);
                     uint32_t stateStatus = 0;
-                    stateStatus = thunderPlugin->Get<WPEFramework::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
+                    stateStatus = thunderPlugin->Get<Thunder::Core::JSON::String>(RDKSHELL_THUNDER_TIMEOUT, "state", stateString);
                     if(stateStatus || stateString != "suspended")
                     {
                         std::cout << "ignoring hibenrate for " << callsign << " as it is not suspended " << std::endl;
@@ -7645,7 +7645,7 @@ namespace WPEFramework {
             return ret;
         }
 
-        PluginStateChangeData::PluginStateChangeData(std::string callsign, std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> pluginConnection, RDKShell* rdkshell):mCallSign(callsign), mRDKShell(*rdkshell)
+        PluginStateChangeData::PluginStateChangeData(std::string callsign, std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement>> pluginConnection, RDKShell* rdkshell):mCallSign(callsign), mRDKShell(*rdkshell)
         {
             mPluginConnection = pluginConnection;
             mLaunchEnabled = false;
@@ -7967,4 +7967,4 @@ namespace WPEFramework {
         }
         // Internal methods end
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

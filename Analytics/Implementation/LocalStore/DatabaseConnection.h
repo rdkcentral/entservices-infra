@@ -27,7 +27,7 @@
 #include <vector>
 #include <memory>
 
-namespace WPEFramework {
+namespace Thunder {
     namespace Plugin {
 
         class DatabaseTable {

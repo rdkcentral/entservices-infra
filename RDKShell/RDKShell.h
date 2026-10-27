@@ -30,7 +30,7 @@
 #include "RialtoConnector.h"
 #define RIALTO_TIMEOUT_MILLIS 5000
 #endif
-namespace WPEFramework {
+namespace Thunder {
 
     namespace Plugin {
 
@@ -354,11 +354,11 @@ namespace WPEFramework {
             bool enableInputEvents(const JsonArray& clients, bool enable);
 
         public:
-            static std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > getThunderControllerClient(std::string callsign="", std::string localidentifier="");
+            static std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement> > getThunderControllerClient(std::string callsign="", std::string localidentifier="");
 
         private:
-            static std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > getPackagerPlugin();
-            static std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > getOCIContainerPlugin();
+            static std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement> > getPackagerPlugin();
+            static std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement> > getOCIContainerPlugin();
 
         private/*classes */:
 
@@ -511,7 +511,7 @@ namespace WPEFramework {
         class PluginStateChangeData
         {
            public:
-                PluginStateChangeData(std::string callsign, std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> pluginConnection, RDKShell* rdkshell);
+                PluginStateChangeData(std::string callsign, std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement>> pluginConnection, RDKShell* rdkshell);
                 ~PluginStateChangeData();
                 void onStateChangeEvent(const JsonObject& params);
                 void enableLaunch(bool enable);
@@ -519,10 +519,10 @@ namespace WPEFramework {
 
            private:
                 std::string mCallSign;
-                std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> mPluginConnection;
+                std::shared_ptr<Thunder::JSONRPC::LinkType<Thunder::Core::JSON::IElement>> mPluginConnection;
                 RDKShell& mRDKShell;
                 bool mLaunchEnabled;
         };
 
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

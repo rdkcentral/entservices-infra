@@ -48,7 +48,7 @@ target_compile_definitions(${MODULE_NAME} PRIVATE
 target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 target_include_directories(${MODULE_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/helpers")
 target_include_directories(${MODULE_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Analytics/Implementation/Interfaces")
-target_include_directories(${MODULE_NAME} PRIVATE "${WPEFRAMEWORK_INCLUDE_DIRS}")
+target_include_directories(${MODULE_NAME} PRIVATE "${THUNDER_INCLUDE_DIRS}")
 
 set_property(TARGET ${MODULE_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(${MODULE_NAME} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)

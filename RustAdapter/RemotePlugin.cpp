@@ -22,7 +22,7 @@
 #include "Logger.h"
 #include <plugins/Channel.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 namespace Rust {
 
@@ -95,16 +95,16 @@ RemotePlugin::SendTo(uint32_t channel_id, const char *json)
 }
 #if JSON_RPC_CONTEXT
 #if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
-WPEFramework::Core::hresult RemotePlugin::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
+Thunder::Core::hresult RemotePlugin::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
 {
   m_stream.SendInvoke(channelId, token, response);
   return {};
 }
 #else
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSONRPC::Message>
+Thunder::Core::ProxyType<Thunder::Core::JSONRPC::Message>
 RemotePlugin::Invoke(
-  const WPEFramework::Core::JSONRPC::Context &ctx,
-  const WPEFramework::Core::JSONRPC::Message &req)
+  const Thunder::Core::JSONRPC::Context &ctx,
+  const Thunder::Core::JSONRPC::Message &req)
 {
   string json;
   req.ToString(json);
@@ -113,7 +113,7 @@ RemotePlugin::Invoke(
 }
 #endif
 #else
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSONRPC::Message>
+Thunder::Core::ProxyType<Thunder::Core::JSONRPC::Message>
 RemotePlugin::Invoke(
     const string& token, const uint32_t channelId, const Core::JSONRPC::Message& req)
 {
@@ -127,7 +127,7 @@ RemotePlugin::Invoke(
 #if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
 void
 RemotePlugin::Activate(
-  WPEFramework::PluginHost::IShell *shell)
+  Thunder::PluginHost::IShell *shell)
 {
 }
 void
@@ -151,14 +151,14 @@ RemotePlugin::Detach(PluginHost::Channel &channel)
   m_stream.SendAttach(channel.Id(), false);
 }
 
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>
+Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>
 RemotePlugin::Inbound(const string &identifier)
 {
-  return WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>(
-    WPEFramework::PluginHost::IFactories::Instance().JSONRPC());
+  return Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>(
+    Thunder::PluginHost::IFactories::Instance().JSONRPC());
 }
 
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>
+Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>
 RemotePlugin::Inbound(const uint32_t id,
     const Core::ProxyType<Core::JSON::IElement> &element)
 {
@@ -193,11 +193,11 @@ void RemotePlugin::Close(const uint32_t channelId) /* override */
 }
 #endif
 #if (THUNDER_VERSION_MINOR == 4)
-WPEFramework::Core::hresult RemotePlugin::Revoke(ICallback* callback)
+Thunder::Core::hresult RemotePlugin::Revoke(ICallback* callback)
 {
     return {};
 }
-WPEFramework::Core::hresult RemotePlugin::Validate(const string& token, const string& method, const string& paramaters) const
+Thunder::Core::hresult RemotePlugin::Validate(const string& token, const string& method, const string& paramaters) const
 {
     return {};
 }

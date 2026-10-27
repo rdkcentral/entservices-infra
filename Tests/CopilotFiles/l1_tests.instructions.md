@@ -2,7 +2,7 @@
 applyTo: "**/Tests/L1Tests/tests/*"
 ---
 
-# WPEFramework Plugin L1 Unit Testing Guide
+# Thunder Plugin L1 Unit Testing Guide
 
 ### L1 Testing Objectives
 

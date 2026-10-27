@@ -25,7 +25,7 @@
 #include <interfaces/json/JsonData_Analytics.h>
 #include <interfaces/json/JAnalytics.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
     namespace Plugin {
 
@@ -72,4 +72,4 @@ namespace WPEFramework {
             Exchange::IAnalytics* mAnalytics;
         };
 	} // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

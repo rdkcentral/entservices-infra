@@ -22,7 +22,7 @@
 #include <plugins/Channel.h>
 #include <sstream>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 namespace Rust {
   struct RequestContext {
@@ -40,12 +40,12 @@ namespace Rust {
 
 namespace {
   std::atomic_int ctx_next_id = {1};
-  std::vector< WPEFramework::Plugin::Rust::PluginContext * > ctx_array;
+  std::vector< Thunder::Plugin::Rust::PluginContext * > ctx_array;
 
   // this function is passed into Rust as a pointer
   extern "C" void wpe_send_to(uint32_t channel_id, const char *json, uint32_t ctx_id)
   {
-    for (WPEFramework::Plugin::Rust::PluginContext *ctx : ctx_array) {
+    for (Thunder::Plugin::Rust::PluginContext *ctx : ctx_array) {
       if (ctx->id == ctx_id) {
         ctx->send_to(channel_id, json);
         break;
@@ -75,7 +75,7 @@ namespace {
     return paths;
   }
 
-  inline string to_string(const WPEFramework::Core::JSONRPC::Message &m)
+  inline string to_string(const Thunder::Core::JSONRPC::Message &m)
   {
     string s;
     m.ToString(s);
@@ -114,7 +114,7 @@ namespace {
   }
 }
 
-WPEFramework::Plugin::Rust::LocalPlugin::LocalPlugin(const RustAdapter::Config &config)
+Thunder::Plugin::Rust::LocalPlugin::LocalPlugin(const RustAdapter::Config &config)
   : m_rust_plugin_create(nullptr)
   , m_rust_plugin_destroy(nullptr)
   , m_rust_plugin_init(nullptr)
@@ -130,7 +130,7 @@ WPEFramework::Plugin::Rust::LocalPlugin::LocalPlugin(const RustAdapter::Config &
 }
 
 const string
-WPEFramework::Plugin::Rust::LocalPlugin::Initialize(PluginHost::IShell *shell)
+Thunder::Plugin::Rust::LocalPlugin::Initialize(PluginHost::IShell *shell)
 {
   m_service = shell;
   m_auth_token = RustAdapter::GetAuthToken(shell, shell->Callsign());
@@ -146,7 +146,7 @@ WPEFramework::Plugin::Rust::LocalPlugin::Initialize(PluginHost::IShell *shell)
   }
 
   //
-  // TODO: we should compile libWPEFrameworkRust.so into libWPEFrameworkRust.a
+  // TODO: we should compile libThunderRust.so into libThunderRust.a
   // and link it with libthunder_rs.so. In that case, we probably won't have to 
   // dynamically bind all the functions
   //
@@ -179,7 +179,7 @@ WPEFramework::Plugin::Rust::LocalPlugin::Initialize(PluginHost::IShell *shell)
 }
 
 void
-WPEFramework::Plugin::Rust::LocalPlugin::Deinitialize(PluginHost::IShell *shell)
+Thunder::Plugin::Rust::LocalPlugin::Deinitialize(PluginHost::IShell *shell)
 {
   if (m_rust_plugin) {
     m_rust_plugin_destroy(m_rust_plugin);
@@ -188,7 +188,7 @@ WPEFramework::Plugin::Rust::LocalPlugin::Deinitialize(PluginHost::IShell *shell)
 }
 
 void
-WPEFramework::Plugin::Rust::LocalPlugin::SendTo(uint32_t channel_id, const char *json)
+Thunder::Plugin::Rust::LocalPlugin::SendTo(uint32_t channel_id, const char *json)
 {
   auto res = Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>>::Create();
   res->FromString(json);
@@ -198,8 +198,8 @@ WPEFramework::Plugin::Rust::LocalPlugin::SendTo(uint32_t channel_id, const char 
 #if JSON_RPC_CONTEXT
 
 #if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
-WPEFramework::Core::hresult
-  WPEFramework::Plugin::Rust::LocalPlugin::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
+Thunder::Core::hresult
+  Thunder::Plugin::Rust::LocalPlugin::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
 {
   Rust::RequestContext req_ctx;
   req_ctx.channel_id = channelId;
@@ -209,10 +209,10 @@ WPEFramework::Core::hresult
   return {};
 }
 #else
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSONRPC::Message>
-WPEFramework::Plugin::Rust::LocalPlugin::Invoke(
-  const WPEFramework::Core::JSONRPC::Context &ctx,
-  const WPEFramework::Core::JSONRPC::Message &req)
+Thunder::Core::ProxyType<Thunder::Core::JSONRPC::Message>
+Thunder::Plugin::Rust::LocalPlugin::Invoke(
+  const Thunder::Core::JSONRPC::Context &ctx,
+  const Thunder::Core::JSONRPC::Message &req)
 {
   Rust::RequestContext req_ctx;
   req_ctx.channel_id = ctx.ChannelId();
@@ -225,8 +225,8 @@ WPEFramework::Plugin::Rust::LocalPlugin::Invoke(
 }
 #endif
 #else
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSONRPC::Message>
-  WPEFramework::Plugin::Rust::LocalPlugin::Invoke(
+Thunder::Core::ProxyType<Thunder::Core::JSONRPC::Message>
+  Thunder::Plugin::Rust::LocalPlugin::Invoke(
     const string& token, const uint32_t channelId, const Core::JSONRPC::Message& req)
 {
   Rust::RequestContext req_ctx;
@@ -241,11 +241,11 @@ WPEFramework::Core::ProxyType<WPEFramework::Core::JSONRPC::Message>
 #endif
 
 #if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
-WPEFramework::Core::hresult WPEFramework::Plugin::Rust::LocalPlugin::Revoke(ICallback* callback)
+Thunder::Core::hresult Thunder::Plugin::Rust::LocalPlugin::Revoke(ICallback* callback)
 {
     return {};
 }
-WPEFramework::Core::hresult WPEFramework::Plugin::Rust::LocalPlugin::Validate(const string& token, const string& method, const string& paramaters) const
+Thunder::Core::hresult Thunder::Plugin::Rust::LocalPlugin::Validate(const string& token, const string& method, const string& paramaters) const
 {
   return {};
 }
@@ -253,39 +253,39 @@ WPEFramework::Core::hresult WPEFramework::Plugin::Rust::LocalPlugin::Validate(co
 
 #if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2)))
 void
-WPEFramework::Plugin::Rust::LocalPlugin::Activate(
-  WPEFramework::PluginHost::IShell *shell)
+Thunder::Plugin::Rust::LocalPlugin::Activate(
+  Thunder::PluginHost::IShell *shell)
 {
 }
 
 void
-WPEFramework::Plugin::Rust::LocalPlugin::Deactivate()
+Thunder::Plugin::Rust::LocalPlugin::Deactivate()
 {
 }
 #endif
 
 bool
-WPEFramework::Plugin::Rust::LocalPlugin::Attach(PluginHost::Channel &channel)
+Thunder::Plugin::Rust::LocalPlugin::Attach(PluginHost::Channel &channel)
 {
   m_rust_plugin_on_client_connect(m_rust_plugin, channel.Id());
   return true;
 }
 
 void
-WPEFramework::Plugin::Rust::LocalPlugin::Detach(PluginHost::Channel &channel)
+Thunder::Plugin::Rust::LocalPlugin::Detach(PluginHost::Channel &channel)
 {
   m_rust_plugin_on_client_disconnect(m_rust_plugin, channel.Id());
 }
 
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>
-WPEFramework::Plugin::Rust::LocalPlugin::Inbound(const string &identifier)
+Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>
+Thunder::Plugin::Rust::LocalPlugin::Inbound(const string &identifier)
 {
-  return WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>(
-    WPEFramework::PluginHost::IFactories::Instance().JSONRPC());
+  return Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>(
+    Thunder::PluginHost::IFactories::Instance().JSONRPC());
 }
 
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>
-WPEFramework::Plugin::Rust::LocalPlugin::Inbound(const uint32_t id,
+Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>
+Thunder::Plugin::Rust::LocalPlugin::Inbound(const uint32_t id,
     const Core::ProxyType<Core::JSON::IElement> &element)
 {
   Core::ProxyType<Core::JSONRPC::Message> req(element);
@@ -302,26 +302,26 @@ WPEFramework::Plugin::Rust::LocalPlugin::Inbound(const uint32_t id,
 }
 
 void
-WPEFramework::Plugin::Rust::LocalPlugin::AddRef() const
+Thunder::Plugin::Rust::LocalPlugin::AddRef() const
 {
   // TODO
 }
 
 uint32_t
-WPEFramework::Plugin::Rust::LocalPlugin::Release() const
+Thunder::Plugin::Rust::LocalPlugin::Release() const
 {
   // TODO
   return 0;
 }
 
 string
-WPEFramework::Plugin::Rust::LocalPlugin::Information() const
+Thunder::Plugin::Rust::LocalPlugin::Information() const
 {
   return { };
 }
 
 #if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 2))
-void WPEFramework::Plugin::Rust::LocalPlugin::Close(const uint32_t channelId) /* override */
+void Thunder::Plugin::Rust::LocalPlugin::Close(const uint32_t channelId) /* override */
 {
   return;
 }

@@ -25,7 +25,7 @@
 #include <string>
 #include <iostream>
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {
@@ -108,4 +108,4 @@ namespace WPEFramework
             void RestartReferenceApp();
         };
     } // Plugin
-} // WPEFramework
+} // Thunder

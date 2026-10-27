@@ -25,7 +25,7 @@
 #include "UtilsLibraryLoader.h"
 
 // Interface for Analytics Backends
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class AnalyticsBackendLoader

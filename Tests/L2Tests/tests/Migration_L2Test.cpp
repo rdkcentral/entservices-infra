@@ -39,9 +39,9 @@
 #define CLEANUP_DELAY_MICROSECONDS  500000  // 500ms - Cleanup delay after releasing interfaces
 
 using ::testing::NiceMock;
-using namespace WPEFramework;
+using namespace Thunder;
 using testing::StrictMock;
-using ::WPEFramework::Exchange::IMigration;
+using ::Thunder::Exchange::IMigration;
 
 /**
  * @brief Migration L2 test class declaration

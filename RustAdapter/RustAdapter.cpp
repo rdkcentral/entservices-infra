@@ -27,7 +27,7 @@
 #define API_VERSION_NUMBER_MINOR 0
 #define API_VERSION_NUMBER_PATCH 1
 
-namespace WPEFramework {
+namespace Thunder {
 namespace {
     static Plugin::Metadata<Plugin::RustAdapter> metadata(
         // Version (Major, Minor, Patch)
@@ -45,13 +45,13 @@ namespace Plugin {
   SERVICE_REGISTRATION(RustAdapter, 1, 0);
 } }
 
-WPEFramework::Plugin::RustAdapter::RustAdapter()
+Thunder::Plugin::RustAdapter::RustAdapter()
   : m_refcount(1)
 {
 }
 
 const string
-WPEFramework::Plugin::RustAdapter::Initialize(PluginHost::IShell *shell)
+Thunder::Plugin::RustAdapter::Initialize(PluginHost::IShell *shell)
 {
   /* The RustAdapter plugin should always run in-process
      We run the rust plugin itself either in-process or out-of-process
@@ -71,15 +71,15 @@ WPEFramework::Plugin::RustAdapter::Initialize(PluginHost::IShell *shell)
   LOGINFO("RustAdapter::Initialize Config=%s", shell->ConfigLine().c_str());
 
   if (conf.OutOfProcess)
-    m_impl.reset(new WPEFramework::Plugin::Rust::RemotePlugin(conf));
+    m_impl.reset(new Thunder::Plugin::Rust::RemotePlugin(conf));
   else
-    m_impl.reset(new WPEFramework::Plugin::Rust::LocalPlugin(conf));
+    m_impl.reset(new Thunder::Plugin::Rust::LocalPlugin(conf));
 
   return m_impl->Initialize(shell);
 }
 
 void
-WPEFramework::Plugin::RustAdapter::Deinitialize(PluginHost::IShell *shell)
+Thunder::Plugin::RustAdapter::Deinitialize(PluginHost::IShell *shell)
 {
 
   profileType = searchRdkProfile();
@@ -94,19 +94,19 @@ WPEFramework::Plugin::RustAdapter::Deinitialize(PluginHost::IShell *shell)
 }
 
 string
-WPEFramework::Plugin::RustAdapter::Information() const
+Thunder::Plugin::RustAdapter::Information() const
 {
   return m_impl->Information();
 }
 
 void
-WPEFramework::Plugin::RustAdapter::AddRef() const
+Thunder::Plugin::RustAdapter::AddRef() const
 {
   m_refcount++;
 }
 
 uint32_t
-WPEFramework::Plugin::RustAdapter::Release() const
+Thunder::Plugin::RustAdapter::Release() const
 {
   uint32_t n = m_refcount.fetch_sub(1);
   if (n == 1) {
@@ -119,24 +119,24 @@ WPEFramework::Plugin::RustAdapter::Release() const
 
 #if JSON_RPC_CONTEXT
 #if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
-WPEFramework::Core::hresult
-WPEFramework::Plugin::RustAdapter::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response )
+Thunder::Core::hresult
+Thunder::Plugin::RustAdapter::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response )
 {
   return m_impl->Invoke(callback, channelId,id, token, method, parameters, response);
 }
 #else
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSONRPC::Message>
-WPEFramework::Plugin::RustAdapter::Invoke(
-  const WPEFramework::Core::JSONRPC::Context &ctx,
-  const WPEFramework::Core::JSONRPC::Message &req)
+Thunder::Core::ProxyType<Thunder::Core::JSONRPC::Message>
+Thunder::Plugin::RustAdapter::Invoke(
+  const Thunder::Core::JSONRPC::Context &ctx,
+  const Thunder::Core::JSONRPC::Message &req)
 {
   return m_impl->Invoke(ctx, req);
 }
 #endif
 #else
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSONRPC::Message> 
-  WPEFramework::Plugin::RustAdapter::Invoke(
-    const string& token, const uint32_t channelId, const WPEFramework::Core::JSONRPC::Message& req)
+Thunder::Core::ProxyType<Thunder::Core::JSONRPC::Message> 
+  Thunder::Plugin::RustAdapter::Invoke(
+    const string& token, const uint32_t channelId, const Thunder::Core::JSONRPC::Message& req)
 {
   return m_impl->Invoke(token, channelId, req);
 }
@@ -144,62 +144,62 @@ WPEFramework::Core::ProxyType<WPEFramework::Core::JSONRPC::Message>
 
 #if ((THUNDER_VERSION == 2) || ((THUNDER_VERSION == 4)  && (THUNDER_VERSION_MINOR == 2)))
 void
-WPEFramework::Plugin::RustAdapter::Activate(
-  WPEFramework::PluginHost::IShell *shell)
+Thunder::Plugin::RustAdapter::Activate(
+  Thunder::PluginHost::IShell *shell)
 {
   m_impl->Activate(shell);
 }
 void
-WPEFramework::Plugin::RustAdapter::Deactivate()
+Thunder::Plugin::RustAdapter::Deactivate()
 {
   m_impl->Deactivate();
 }
 #endif
 bool
-WPEFramework::Plugin::RustAdapter::Attach(PluginHost::Channel &channel)
+Thunder::Plugin::RustAdapter::Attach(PluginHost::Channel &channel)
 {
   return m_impl->Attach(channel);
 }
 void
-WPEFramework::Plugin::RustAdapter::Detach(PluginHost::Channel &channel)
+Thunder::Plugin::RustAdapter::Detach(PluginHost::Channel &channel)
 {
   m_impl->Detach(channel);
 }
 
 #if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 2))
 void
-WPEFramework::Plugin::RustAdapter::Close(const uint32_t channelId)
+Thunder::Plugin::RustAdapter::Close(const uint32_t channelId)
 {
     m_impl->Close(channelId);
 }
 #endif /* THUNDER_VERSION */
 
 #if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
-WPEFramework::Core::hresult WPEFramework::Plugin::RustAdapter::Revoke(ICallback* callback)
+Thunder::Core::hresult Thunder::Plugin::RustAdapter::Revoke(ICallback* callback)
 {
      return {};
 }
-WPEFramework::Core::hresult WPEFramework::Plugin::RustAdapter::Validate(const string& token, const string& method, const string& paramaters) const
+Thunder::Core::hresult Thunder::Plugin::RustAdapter::Validate(const string& token, const string& method, const string& paramaters) const
 {
   return {};
 }
 #endif
 
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>
-WPEFramework::Plugin::RustAdapter::Inbound(const string &identifier)
+Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>
+Thunder::Plugin::RustAdapter::Inbound(const string &identifier)
 {
   return m_impl->Inbound(identifier);
 }
 
-WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>
-WPEFramework::Plugin::RustAdapter::Inbound(const uint32_t id,
+Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>
+Thunder::Plugin::RustAdapter::Inbound(const uint32_t id,
     const Core::ProxyType<Core::JSON::IElement> &element)
 {
   return m_impl->Inbound(id, element);
 }
 
 std::string
-WPEFramework::Plugin::RustAdapter::GetLibraryPathOrName(
+Thunder::Plugin::RustAdapter::GetLibraryPathOrName(
   const std::string &lib_name,
   const std::string &callsign)
 {
@@ -216,7 +216,7 @@ WPEFramework::Plugin::RustAdapter::GetLibraryPathOrName(
 }
 
 std::string
-WPEFramework::Plugin::RustAdapter::GetAuthToken(WPEFramework::PluginHost::IShell* service, const std::string &callsign)
+Thunder::Plugin::RustAdapter::GetAuthToken(Thunder::PluginHost::IShell* service, const std::string &callsign)
 {
   std::string auth_token;
 
@@ -226,10 +226,10 @@ WPEFramework::Plugin::RustAdapter::GetAuthToken(WPEFramework::PluginHost::IShell
   int n = snprintf(buff, sizeof(buff), "plugin://%s", callsign.c_str());
   buff[255] = '\0';
 
-  auto auth = service->QueryInterfaceByCallsign<WPEFramework::PluginHost::IAuthenticate>("SecurityAgent");
+  auto auth = service->QueryInterfaceByCallsign<Thunder::PluginHost::IAuthenticate>("SecurityAgent");
   if (auth != nullptr) {
     string encoded;
-    if (auth->CreateToken(n, (const uint8_t*) buff, encoded) == WPEFramework::Core::ERROR_NONE) {
+    if (auth->CreateToken(n, (const uint8_t*) buff, encoded) == Thunder::Core::ERROR_NONE) {
       auth_token = encoded;
     }
     auth->Release();

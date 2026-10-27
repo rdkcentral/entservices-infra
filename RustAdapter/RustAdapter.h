@@ -21,7 +21,7 @@
 #include "Module.h"
 #include "RustPlugin.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 namespace Rust {
@@ -137,7 +137,7 @@ public:
 #endif
 #endif
   /**
-   * WPEFramework::PluginHost::IDispatcher::Invoke
+   * Thunder::PluginHost::IDispatcher::Invoke
    */
 #if JSON_RPC_CONTEXT
 
@@ -171,11 +171,11 @@ public:
     const std::string& libname,
     const std::string& callsign);
 
-  static std::string GetAuthToken(WPEFramework::PluginHost::IShell* service, const std::string &callsign);
+  static std::string GetAuthToken(Thunder::PluginHost::IShell* service, const std::string &callsign);
 
 #if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
 public:
-   WPEFramework::PluginHost::ILocalDispatcher* Local() override {
+   Thunder::PluginHost::ILocalDispatcher* Local() override {
         return nullptr; // Replace nullptr with your actual implementation.
     }
 #endif

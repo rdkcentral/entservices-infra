@@ -19,7 +19,7 @@
 #include "AnalyticsBackendLoader.h"
 #include "UtilsLogging.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 uint32_t AnalyticsBackendLoader::Load(std::string path)

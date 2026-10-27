@@ -22,7 +22,7 @@
 
 #define SCENESET_DEFAULT_APPNAME "rdk-reference-app"
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {
@@ -155,4 +155,4 @@ namespace WPEFramework
         }
 
     } // Plugin
-} // WPEFramework
+} // Thunder

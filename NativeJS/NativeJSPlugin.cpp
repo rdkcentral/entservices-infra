@@ -19,11 +19,11 @@
 
 #include "NativeJSPlugin.h"
 
-const string WPEFramework::Plugin::NativeJS::SERVICE_NAME = "org.rdk.NativeJS";
+const string Thunder::Plugin::NativeJS::SERVICE_NAME = "org.rdk.NativeJS";
 
 using namespace std;
 
-namespace WPEFramework {
+namespace Thunder {
     namespace Plugin {
 
         SERVICE_REGISTRATION(NativeJS, 1, 0);
@@ -100,4 +100,4 @@ namespace WPEFramework {
         }
         
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

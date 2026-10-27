@@ -27,7 +27,7 @@
 #include <condition_variable>
 #include "rialto/ServerManagerServiceFactory.h"
 
-namespace WPEFramework
+namespace Thunder
 {
     using namespace rialto::servermanager::service;
     // Shadowing to keep Rialto contained in this
@@ -60,4 +60,4 @@ namespace WPEFramework
 
         const RialtoServerStates getCurrentAppState(const std::string &callsign);
     };
-} // namespace WPEFramework
+} // namespace Thunder

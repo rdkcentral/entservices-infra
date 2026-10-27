@@ -30,7 +30,7 @@
 #include "ISystemTime.h"
 #include <interfaces/ISystemServices.h>
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {

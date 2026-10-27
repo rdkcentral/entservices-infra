@@ -18,7 +18,7 @@
  */
 #include "SocketServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 namespace Rust {
 
@@ -101,7 +101,7 @@ public:
   Core::hresult Validate(const string& token, const string& method, const string& paramaters /* @restrict:(4M-1) */) const override;
 #endif /* THUNDER_VERSION */
   /**
-   * WPEFramework::PluginHost::IDispatcher::Invoke
+   * Thunder::PluginHost::IDispatcher::Invoke
    */
 #if JSON_RPC_CONTEXT   
 
@@ -126,7 +126,7 @@ public:
   void onRead(const Response& rsp);
 #if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
 public:
-   WPEFramework::PluginHost::ILocalDispatcher* Local() override {
+   Thunder::PluginHost::ILocalDispatcher* Local() override {
         return nullptr; // Replace nullptr with your actual implementation.
     }
 #endif

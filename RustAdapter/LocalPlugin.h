@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 namespace Rust {
 
@@ -92,7 +92,7 @@ public:
   void Close(const uint32_t channelId) override;
 #endif /* THUNDER_VERSION */
   /**
-   * WPEFramework::PluginHost::IDispatcher::Invoke
+   * Thunder::PluginHost::IDispatcher::Invoke
    */
 #if JSON_RPC_CONTEXT
 
@@ -122,7 +122,7 @@ public:
 
 #if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
 public:
-   WPEFramework::PluginHost::ILocalDispatcher* Local() override {
+   Thunder::PluginHost::ILocalDispatcher* Local() override {
         return nullptr; // Replace nullptr with your actual implementation.
     }
 #endif /* THUNDER_VERSION */

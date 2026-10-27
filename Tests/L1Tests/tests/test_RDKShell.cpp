@@ -26,7 +26,7 @@
 #include "ServiceMock.h"
 #include "ThunderPortability.h"
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 class RDKShellTest : public ::testing::Test {
 protected:

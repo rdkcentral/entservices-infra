@@ -24,7 +24,7 @@
 #define API_VERSION_NUMBER_MINOR    ANALYTICS_MINOR_VERSION
 #define API_VERSION_NUMBER_PATCH    ANALYTICS_PATCH_VERSION
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace {
     static Plugin::Metadata<Plugin::Analytics> metadata(
@@ -70,7 +70,7 @@ namespace Plugin {
                 configConnection->Configure(service);
                 configConnection->Release();
             }
-            // Invoking Plugin API register to wpeframework
+            // Invoking Plugin API register to Thunder
             Exchange::JAnalytics::Register(*this, mAnalytics);  
         }
         else
@@ -125,4 +125,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework   
+} // namespace Thunder   

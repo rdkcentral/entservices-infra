@@ -45,9 +45,9 @@
 #define STORAGEMANAGERL2TEST_CALLSIGN _T("L2tests.1")
 
 using ::testing::NiceMock;
-using namespace WPEFramework;
+using namespace Thunder;
 using testing::StrictMock;
-using ::WPEFramework::Exchange::IStorageManager;
+using ::Thunder::Exchange::IStorageManager;
 
 class StorageManagerTest : public L2TestMocks {
 protected:

@@ -11,7 +11,7 @@
 #include <core/core.h>
 #include <plugins/plugins.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Core {
 
     template <typename SOURCE, typename ALLOCATOR, typename INTERFACE /*= Core::JSON::IElement or IMessagePack*/>
@@ -262,5 +262,5 @@ namespace Core {
     };
 
 } // namespace Core
-} // namespace WPEFramework
+} // namespace Thunder
 

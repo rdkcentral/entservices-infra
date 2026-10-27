@@ -33,9 +33,9 @@
     fflush(stderr);
 
 using ::testing::NiceMock;
-using namespace WPEFramework;
+using namespace Thunder;
 using testing::StrictMock;
-using ContainerState = WPEFramework::Exchange::IOCIContainer::ContainerState;
+using ContainerState = Thunder::Exchange::IOCIContainer::ContainerState;
 using OmiErrorListener = omi::IOmiProxy::OmiErrorListener;
 
 typedef enum : uint32_t {
@@ -423,13 +423,13 @@ TEST_F(OCIContainer_L2Test, GetContainerInfo_COMRPC)
                                                 "\"total\" : 16619970598}},\"gpu\":{\"memory\" :{\"failcnt\" : 0,\"limit\" : 209715200,\"max\" : 3911680,\"usage\" : 0}},"
                                                 "\"id\":\"Cobalt-0\",\"ion\":{\"heaps\" :{\"ion.\" :{\"failcnt\" : null,\"limit\" : null,\"max\" : null,\"usage\" : null}}},"
                                                 "\"memory\":{\"user\" :{\"failcnt\" : 0,\"limit\" : 419430400,\"max\" : 73375744,\"usage\" : 53297152}},\"pids\":[13132,13418],"
-                                                "\"processes\":[{\"cmdline\" : \"/usr/libexec/DobbyInit /usr/bin/WPEProcess -l libWPEFrameworkCobaltImpl.so -c"
+                                                "\"processes\":[{\"cmdline\" : \"/usr/libexec/DobbyInit /usr/bin/WPEProcess -l libThunderCobaltImpl.so -c"
                                                 " CobaltImplementation -C Cobalt-0 -r /tmp/communicator -i 64 -x 48 -p \"/opt/persistent/rdkservices/Cobalt-0/\" -s"
-                                                " \"/usr/lib/wpeframework/plugins/\" -d \"/usr/share/WPEFramework/Cobalt/\" -a \"/usr/bin/\" -v \"/tmp/Cobalt-0/\" -m"
-                                                " \"/usr/lib/wpeframework/proxystubs/\" -P \"/opt/minidumps/\" \",\"executable\" : \"/usr/libexec/DobbyInit\",\"nsPid\" : 1,"
-                                                "\"pid\" : 13132},{\"cmdline\" : \"WPEProcess -l libWPEFrameworkCobaltImpl.so -c CobaltImplementation -C Cobalt-0 -r /tmp/communicator"
-                                                " -i 64 -x 48 -p \"/opt/persistent/rdkservices/Cobalt-0/\" -s \"/usr/lib/wpeframework/plugins/\" -d \"/usr/share/WPEFramework/Cobalt/\""
-                                                " -a \"/usr/bin/\" -v \"/tmp/Cobalt-0/\" -m \"/usr/lib/wpeframework/proxystubs/\" -P \"/opt/minidumps/\" \",\"executable\" : "
+                                                " \"/usr/lib/Thunder/plugins/\" -d \"/usr/share/Thunder/Cobalt/\" -a \"/usr/bin/\" -v \"/tmp/Cobalt-0/\" -m"
+                                                " \"/usr/lib/Thunder/proxystubs/\" -P \"/opt/minidumps/\" \",\"executable\" : \"/usr/libexec/DobbyInit\",\"nsPid\" : 1,"
+                                                "\"pid\" : 13132},{\"cmdline\" : \"WPEProcess -l libThunderCobaltImpl.so -c CobaltImplementation -C Cobalt-0 -r /tmp/communicator"
+                                                " -i 64 -x 48 -p \"/opt/persistent/rdkservices/Cobalt-0/\" -s \"/usr/lib/Thunder/plugins/\" -d \"/usr/share/Thunder/Cobalt/\""
+                                                " -a \"/usr/bin/\" -v \"/tmp/Cobalt-0/\" -m \"/usr/lib/Thunder/proxystubs/\" -P \"/opt/minidumps/\" \",\"executable\" : "
                                                 "\"/usr/bin/WPEProcess\",\"nsPid\" : 6,\"pid\" : 13418}],\"state\":\"running\",\"timestamp\":1298657054196}"));
 
                 status = m_OCIContainerplugin->GetContainerInfo(containerID, info, success, errorReason);
@@ -1424,13 +1424,13 @@ TEST_F(OCIContainer_L2Test, getcontainerInfo_JSONRPC)
                                     "\"total\" : 16619970598}},\"gpu\":{\"memory\" :{\"failcnt\" : 0,\"limit\" : 209715200,\"max\" : 3911680,\"usage\" : 0}},"
                                     "\"id\":\"Cobalt-0\",\"ion\":{\"heaps\" :{\"ion.\" :{\"failcnt\" : null,\"limit\" : null,\"max\" : null,\"usage\" : null}}},"
                                     "\"memory\":{\"user\" :{\"failcnt\" : 0,\"limit\" : 419430400,\"max\" : 73375744,\"usage\" : 53297152}},\"pids\":[13132,13418],"
-                                    "\"processes\":[{\"cmdline\" : \"/usr/libexec/DobbyInit /usr/bin/WPEProcess -l libWPEFrameworkCobaltImpl.so -c"
+                                    "\"processes\":[{\"cmdline\" : \"/usr/libexec/DobbyInit /usr/bin/WPEProcess -l libThunderCobaltImpl.so -c"
                                     " CobaltImplementation -C Cobalt-0 -r /tmp/communicator -i 64 -x 48 -p \"/opt/persistent/rdkservices/Cobalt-0/\" -s"
-                                    " \"/usr/lib/wpeframework/plugins/\" -d \"/usr/share/WPEFramework/Cobalt/\" -a \"/usr/bin/\" -v \"/tmp/Cobalt-0/\" -m"
-                                    " \"/usr/lib/wpeframework/proxystubs/\" -P \"/opt/minidumps/\" \",\"executable\" : \"/usr/libexec/DobbyInit\",\"nsPid\" : 1,"
-                                    "\"pid\" : 13132},{\"cmdline\" : \"WPEProcess -l libWPEFrameworkCobaltImpl.so -c CobaltImplementation -C Cobalt-0 -r /tmp/communicator"
-                                    " -i 64 -x 48 -p \"/opt/persistent/rdkservices/Cobalt-0/\" -s \"/usr/lib/wpeframework/plugins/\" -d \"/usr/share/WPEFramework/Cobalt/\""
-                                    " -a \"/usr/bin/\" -v \"/tmp/Cobalt-0/\" -m \"/usr/lib/wpeframework/proxystubs/\" -P \"/opt/minidumps/\" \",\"executable\" : "
+                                    " \"/usr/lib/Thunder/plugins/\" -d \"/usr/share/Thunder/Cobalt/\" -a \"/usr/bin/\" -v \"/tmp/Cobalt-0/\" -m"
+                                    " \"/usr/lib/Thunder/proxystubs/\" -P \"/opt/minidumps/\" \",\"executable\" : \"/usr/libexec/DobbyInit\",\"nsPid\" : 1,"
+                                    "\"pid\" : 13132},{\"cmdline\" : \"WPEProcess -l libThunderCobaltImpl.so -c CobaltImplementation -C Cobalt-0 -r /tmp/communicator"
+                                    " -i 64 -x 48 -p \"/opt/persistent/rdkservices/Cobalt-0/\" -s \"/usr/lib/Thunder/plugins/\" -d \"/usr/share/Thunder/Cobalt/\""
+                                    " -a \"/usr/bin/\" -v \"/tmp/Cobalt-0/\" -m \"/usr/lib/Thunder/proxystubs/\" -P \"/opt/minidumps/\" \",\"executable\" : "
                                     "\"/usr/bin/WPEProcess\",\"nsPid\" : 6,\"pid\" : 13418}],\"state\":\"running\",\"timestamp\":1298657054196}"));
 
     JsonObject params, result;

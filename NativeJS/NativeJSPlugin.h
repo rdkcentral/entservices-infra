@@ -26,7 +26,7 @@
 #include <interfaces/json/JNativeJS.h>
 #include <interfaces/INativeJS.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
     namespace Plugin {
 
@@ -85,4 +85,4 @@ namespace WPEFramework {
             Config mConfig;
         };
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

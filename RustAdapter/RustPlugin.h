@@ -18,13 +18,13 @@
  */
 #pragma once
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 namespace Rust {
   struct IPlugin 
-    : public WPEFramework::PluginHost::IPluginExtended
-    , public WPEFramework::PluginHost::IDispatcher
-    , public WPEFramework::PluginHost::IWebSocket
+    : public Thunder::PluginHost::IPluginExtended
+    , public Thunder::PluginHost::IDispatcher
+    , public Thunder::PluginHost::IWebSocket
   {
   };
 } } }

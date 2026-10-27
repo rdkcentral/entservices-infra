@@ -30,7 +30,7 @@
 #include <vector>
 using namespace JsRuntime;
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {
@@ -58,4 +58,4 @@ namespace WPEFramework
             std::shared_ptr<NativeJSRenderer> mNativeJSRenderer;
         };
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

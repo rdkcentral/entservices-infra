@@ -22,7 +22,7 @@
 
 #define SYSTEM_CALLSIGN "org.rdk.System"
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {

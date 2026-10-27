@@ -24,7 +24,7 @@
 #include <streambuf>
 #include <sys/sysinfo.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     const uint32_t POPULATE_DEVICE_INFO_RETRY_MS = 3000;

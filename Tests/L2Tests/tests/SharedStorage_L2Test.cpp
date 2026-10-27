@@ -38,14 +38,14 @@
     fflush(stderr);
 
 using ::testing::NiceMock;
-using namespace WPEFramework;
+using namespace Thunder;
 using testing::StrictMock;
-using ::WPEFramework::Exchange::ISharedStorage;
-using ::WPEFramework::Exchange::ISharedStorageCache;
-using ::WPEFramework::Exchange::ISharedStorageInspector;
-using ::WPEFramework::Exchange::ISharedStorageLimit;
-using ScopeType = WPEFramework::Exchange::ISharedStorage::ScopeType;
-using Success = WPEFramework::Exchange::ISharedStorage::Success;
+using ::Thunder::Exchange::ISharedStorage;
+using ::Thunder::Exchange::ISharedStorageCache;
+using ::Thunder::Exchange::ISharedStorageInspector;
+using ::Thunder::Exchange::ISharedStorageLimit;
+using ScopeType = Thunder::Exchange::ISharedStorage::ScopeType;
+using Success = Thunder::Exchange::ISharedStorage::Success;
 
 typedef enum : uint32_t {
 
