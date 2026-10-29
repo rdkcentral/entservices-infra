@@ -1,4 +1,4 @@
-autostart = "false"
+autostart = "@PLUGIN_NATIVEJS_AUTOSTART@"
 precondition = ["Graphics"]
 callsign = "org.rdk.jsruntime"
 configuration = JSON()
