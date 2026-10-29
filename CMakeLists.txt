@@ -29,6 +29,11 @@ if(NOT Thunder_FOUND)
     add_compile_definitions(Thunder=WPEFramework)
 endif()
 
+set(PLUGIN_NATIVEJS_AUTOSTART "false" CACHE STRING "Automatically start nativejs plugin")
+set(PLUGIN_RDKSHELL_AUTOSTART "false" CACHE STRING "Automatically start rdkshell plugin")
+set(PLUGIN_SCENE_SET_AUTOSTART "false" CACHE STRING "Automatically start scene_set plugin")
+set(PLUGIN_ANALYTICS_AUTOSTART "false" CACHE STRING "Automatically start analytics plugin")
+
 # All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed)
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
