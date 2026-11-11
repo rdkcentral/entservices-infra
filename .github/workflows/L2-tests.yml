@@ -113,7 +113,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-systemservices
           path: entservices-systemservices
-          ref: feature/RDKEMW-19415_ds_comrpc
+          ref: develop
 
       - name: Checkout entservices-powermanager
         uses: actions/checkout@v3
@@ -127,7 +127,7 @@ jobs:
         with:
           repository: rdkcentral/entservices-testframework
           path: entservices-testframework
-          ref: feature/RDKEMW-25013
+          ref: 2.1.3
 
       - name: Checkout rdk-halif-device_settings
         uses: actions/checkout@v3
@@ -180,6 +180,7 @@ jobs:
           -DBUILD_TYPE=${{env.BUILD_TYPE}}
           -DBINDING=127.0.0.1
           -DPORT=9998
+          -DCONFIG_PATH="$GITHUB_WORKSPACE/install/etc/WPEFramework/plugins"
           -DEXCEPTIONS_ENABLE=ON
           &&
           cmake --build build/Thunder -j8
