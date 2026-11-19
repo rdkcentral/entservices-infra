@@ -43,6 +43,7 @@ set(PLUGIN_ANALYTICS_LIBLOADER_DFL_DIR "${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DI
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Helpers CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         Analytics.cpp
@@ -78,6 +79,7 @@ target_link_libraries(${MODULE_NAME}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        ${NAMESPACE}::${NAMESPACE}Helpers
         ${MODULE_NAME}Backends
         ${MODULE_NAME}SystemTime
         ${MODULE_NAME}LocalStore)

@@ -35,4 +35,4 @@ target_include_directories(${TARGET_LIB} PRIVATE "${CMAKE_SOURCE_DIR}/Analytics/
 target_include_directories(${TARGET_LIB} PRIVATE "${CMAKE_SOURCE_DIR}/helpers")
 set_property(TARGET ${TARGET_LIB} PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(${TARGET_LIB} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
-target_link_libraries(${TARGET_LIB} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+target_link_libraries(${TARGET_LIB} PRIVATE ${NAMESPACE}Plugins::${NAMESPACE}Plugins ${NAMESPACE}::${NAMESPACE}Helpers)
