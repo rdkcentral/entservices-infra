@@ -16,14 +16,11 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -DCMAKE_VERBOSE_MAKEFILE=ON \
 -DCMAKE_DISABLE_FIND_PACKAGE_IARMBus=ON \
 -DCMAKE_DISABLE_FIND_PACKAGE_RFC=ON \
--DCMAKE_DISABLE_FIND_PACKAGE_DS=ON \
 -DCOMCAST_CONFIG=OFF \
 -DRDK_SERVICES_COVERITY=ON \
--DDS_FOUND=ON \
 -DCMAKE_CXX_FLAGS="-DEXCEPTIONS_ENABLE=ON \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/audiocapturemgr \
--I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/rdk/ds \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/rdk/iarmbus \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/rdk/iarmmgrs-hal \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/headers/ccec/drivers \
@@ -35,7 +32,6 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks \
 -I ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/thunder \
 -I /usr/include/libdrm \
--include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/devicesettings.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Iarm.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/Rfc.h \
 -include ${GITHUB_WORKSPACE}/entservices-testframework/Tests/mocks/RBus.h \
@@ -56,7 +52,7 @@ cmake -G Ninja -S "$GITHUB_WORKSPACE" -B build/entservices-infra \
 -DENABLE_SYSTEM_GET_STORE_DEMO_LINK -DENABLE_DEEP_SLEEP \
 -DENABLE_SET_WAKEUP_SRC_CONFIG -DENABLE_THERMAL_PROTECTION \
 -DUSE_DRM_SCREENCAPTURE -DHAS_API_SYSTEM -DHAS_API_POWERSTATE \
--DHAS_RBUS -DDISABLE_SECURITY_TOKEN -DENABLE_DEVICE_MANUFACTURER_INFO -DUSE_THUNDER_R4=ON -DTHUNDER_VERSION=4 -DTHUNDER_VERSION_MAJOR=4 -DTHUNDER_VERSION_MINOR=4" \
+-DHAS_RBUS -DDISABLE_SECURITY_TOKEN -DENABLE_DEVICE_MANUFACTURER_INFO -DTHUNDER_VERSION=4 -DTHUNDER_VERSION_MAJOR=4 -DTHUNDER_VERSION_MINOR=4" \
 
 
 cmake --build build/entservices-infra --target install
