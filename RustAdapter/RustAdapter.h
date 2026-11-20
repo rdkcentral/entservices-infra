@@ -102,7 +102,11 @@ public:
   /**
    * IDispatcher -> IUknown -> IReferenceCounted::AddRef
    */
+#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4) &&  (THUNDER_VERSION_PATCH == 3))
+  uint32_t AddRef() const override;
+#else
   void AddRef() const override;
+#endif
 
   /**
    * IDispatcher -> IUnknown -> IReferenceCounted::AddRef

@@ -99,11 +99,20 @@ WPEFramework::Plugin::RustAdapter::Information() const
   return m_impl->Information();
 }
 
+#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4) &&  (THUNDER_VERSION_PATCH == 3))
+uint32_t
+WPEFramework::Plugin::RustAdapter::AddRef() const
+{
+  m_refcount++;
+  return Core::ERROR_NONE;
+}
+#else
 void
 WPEFramework::Plugin::RustAdapter::AddRef() const
 {
   m_refcount++;
 }
+#endif
 
 uint32_t
 WPEFramework::Plugin::RustAdapter::Release() const
