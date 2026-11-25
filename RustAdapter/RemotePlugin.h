@@ -96,16 +96,17 @@ public:
   /**
    * IDispatcher::Close
    */
-#if ((THUNDER_VERSION >= 4 && THUNDER_VERSION_MINOR == 4))
+#if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
   Core::hresult Revoke(ICallback* callback) override;
   Core::hresult Validate(const string& token, const string& method, const string& paramaters /* @restrict:(4M-1) */) const override;
 #endif /* THUNDER_VERSION */
   /**
    * Thunder::PluginHost::IDispatcher::Invoke
    */
-#if JSON_RPC_CONTEXT   
-
-#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
+#if (THUNDER_VERSION >= 5)
+  Core::hresult Invoke(const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response ) override;
+#elif JSON_RPC_CONTEXT
+#if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
   Core::hresult Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response ) override;
 #else
   Core::ProxyType<Core::JSONRPC::Message> Invoke(

@@ -509,11 +509,12 @@ namespace Thunder {
         private:
           uint32_t mId { 0 };
           std::string mCallSign { };
-#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
-          PluginHost::ILocalDispatcher * dispatcher_ {nullptr};
+#if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
+          using DispatcherType = PluginHost::ILocalDispatcher;
 #else
-          PluginHost::IDispatcher * dispatcher_ {nullptr};
+          using DispatcherType = PluginHost::IDispatcher;
 #endif
+          DispatcherType * dispatcher_ {nullptr};
 
           Core::ProxyType<Core::JSONRPC::Message> Message() const
           {
@@ -562,11 +563,7 @@ namespace Thunder {
             : mCallSign(callsign)
           {
             if (service)
-#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
-              dispatcher_ = service->QueryInterfaceByCallsign<PluginHost::ILocalDispatcher>(mCallSign);
-#else
-              dispatcher_ = service->QueryInterfaceByCallsign<PluginHost::IDispatcher>(mCallSign);
-#endif
+            dispatcher_ = service->QueryInterfaceByCallsign<DispatcherType>(mCallSign);
           }
       
           JSONRPCDirectLink(PluginHost::IShell* service)
@@ -610,16 +607,18 @@ namespace Thunder {
             ToMessage(parameters, message);
 
             const uint32_t channelId = ~0;
-#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
+#if (THUNDER_VERSION >= 5) || ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
             string output = "";
             uint32_t result = Core::ERROR_BAD_REQUEST;
 
             if (dispatcher_  != nullptr) {
+#if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
                 PluginHost::ILocalDispatcher* localDispatcher = dispatcher_->Local();
 
                 ASSERT(localDispatcher != nullptr);
 
                 if (localDispatcher != nullptr)
+#endif
                     result =  dispatcher_->Invoke(channelId, message->Id.Value(), sThunderSecurityToken, message->Designator.Value(), message->Parameters.Value(),output);
             }
 
@@ -1028,7 +1027,7 @@ namespace Thunder {
 	void RDKShell::MonitorClients::handleInitialize(PluginHost::IShell* service)
         {
                 if(service)
-                {
+                            dispatcher_ = service->QueryInterfaceByCallsign<DispatcherType>(mCallSign);
                    std::string configLine = service->ConfigLine();
                    if (configLine.empty())
                    {

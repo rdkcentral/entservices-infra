@@ -93,8 +93,14 @@ RemotePlugin::SendTo(uint32_t channel_id, const char *json)
   res->FromString(json);
   m_service->Submit(channel_id, Core::ProxyType<Core::JSON::IElement>(res));
 }
-#if JSON_RPC_CONTEXT
-#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
+#if (THUNDER_VERSION >= 5)
+Thunder::Core::hresult RemotePlugin::Invoke(const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
+{
+  m_stream.SendInvoke(channelId, token, response);
+  return {};
+}
+#elif JSON_RPC_CONTEXT
+#if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
 Thunder::Core::hresult RemotePlugin::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
 {
   m_stream.SendInvoke(channelId, token, response);

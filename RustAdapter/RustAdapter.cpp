@@ -117,7 +117,13 @@ Thunder::Plugin::RustAdapter::Release() const
   return Core::ERROR_NONE;
 }
 
-#if JSON_RPC_CONTEXT
+#if (THUNDER_VERSION >= 5)
+Thunder::Core::hresult
+Thunder::Plugin::RustAdapter::Invoke(const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response )
+{
+  return m_impl->Invoke(channelId, id, token, method, parameters, response);
+}
+#elif JSON_RPC_CONTEXT
 #if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
 Thunder::Core::hresult
 Thunder::Plugin::RustAdapter::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response )

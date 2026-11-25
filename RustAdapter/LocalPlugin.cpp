@@ -195,9 +195,18 @@ Thunder::Plugin::Rust::LocalPlugin::SendTo(uint32_t channel_id, const char *json
   m_service->Submit(channel_id, Core::ProxyType<Core::JSON::IElement>(res));
 }
 
-#if JSON_RPC_CONTEXT
-
-#if ((THUNDER_VERSION >= 4) && (THUNDER_VERSION_MINOR == 4))
+#if (THUNDER_VERSION >= 5)
+Thunder::Core::hresult
+Thunder::Plugin::Rust::LocalPlugin::Invoke(const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
+{
+  Rust::RequestContext req_ctx;
+  req_ctx.channel_id = channelId;
+  req_ctx.auth_token = token.c_str();
+  m_rust_plugin_invoke(m_rust_plugin, response.c_str(), req_ctx);
+  return {};
+}
+#elif JSON_RPC_CONTEXT
+#if ((THUNDER_VERSION == 4) && (THUNDER_VERSION_MINOR == 4))
 Thunder::Core::hresult
   Thunder::Plugin::Rust::LocalPlugin::Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
 {
